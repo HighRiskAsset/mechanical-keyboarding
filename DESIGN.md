@@ -67,6 +67,16 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
 - Side panel inventory with pixel icons; fly-to-inventory animations; float
   "+N"; icon rows sit on dark plates (legible over windows); welcome card
   carries a pixel vignette; EN/РУ interface.
+- **Settings menu** (⚙ header button → overlay card): interface language
+  EN/РУ; keyboard layout switch (ЙЦУКЕН active, QWERTY a disabled
+  placeholder); save file export/import (JSON wrapper `{app, version:1,
+  profile, sound, uilang}`; import confirms, then reloads); reset all
+  progress (confirm-gated, cancel returns to settings); tip jar with two
+  rails like Sketchmill's free tier (PayPal international + YooMoney RU),
+  each rail crowned by glowing gold coin badges straddling the button's top
+  edge ($ £ € fan / single ₽) so the relevant rail reads before any text.
+  Language toggle and reset live only here — off the main screen. The header
+  keeps sound + stats; the footer keeps passport + summary.
 - **Dynamic viewport**: fills all space the drill + keyboard don't need, at
   the largest integer zoom that keeps ≥300×170 world px visible — bigger
   window means bigger pixels first, then more world. Never letterboxes more

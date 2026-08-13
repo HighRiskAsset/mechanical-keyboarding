@@ -929,6 +929,21 @@
   // ---------- footer / header ----------
   $('btn-summary').onclick = () => showSessionSummary();
   $('btn-passport').onclick = () => showPassport();
+
+  const soundBtn = $('btn-sound');
+  function refreshSoundBtn() { soundBtn.textContent = A.isEnabled() ? '🔊' : '🔇'; }
+  soundBtn.onclick = () => { A.setEnabled(!A.isEnabled()); refreshSoundBtn(); soundBtn.blur(); };
+
+  // ---------- settings ----------
+  // Tip links follow Sketchmill's free-tier pattern: two payment rails so
+  // international (PayPal) and RU/CIS (YooMoney) both have an easy path.
+  // One label per rail's audience, shown in both interface languages.
+  // coins = currency badges over each button, so the right rail reads at a glance
+  const DONATE = [
+    { label: 'Buy me a beer', sub: 'PayPal · cards & balance', url: 'https://paypal.me/HighRiskAsset', coins: ['$', '£', '€'] },
+    { label: 'Оставить на пиво', sub: 'YooMoney · ₽ RUB', url: 'https://yoomoney.ru/to/4100119579691782', coins: ['₽'] },
+  ];
+
   const showResetConfirm = () => {
     overlayRerender = showResetConfirm;
     showOverlay(`
@@ -937,7 +952,7 @@
       <button id="ov-cancel" class="btn-primary">${T.t('resetCancel')}</button>
       <button id="ov-reset" class="link-btn danger">${T.t('resetConfirm')}</button>
     `);
-    $('ov-cancel').onclick = () => { hideOverlay(); };
+    $('ov-cancel').onclick = () => showSettings();
     $('ov-reset').onclick = () => {
       profile = E.resetProfile();
       E.saveProfile(profile);
@@ -949,33 +964,127 @@
       clearLine();
     };
   };
-  $('btn-reset').onclick = showResetConfirm;
 
-  const soundBtn = $('btn-sound');
-  function refreshSoundBtn() { soundBtn.textContent = A.isEnabled() ? '🔊' : '🔇'; }
-  soundBtn.onclick = () => { A.setEnabled(!A.isEnabled()); refreshSoundBtn(); soundBtn.blur(); };
+  function exportSave() {
+    E.saveProfile(profile);
+    const data = {
+      app: 'mechanical-keyboarding', kind: 'save', version: 1,
+      exportedAt: new Date().toISOString(),
+      profile,
+      sound: A.isEnabled(),
+      uilang: T.getLang(),
+    };
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+    a.download = `mechanical-keyboarding-save-${data.exportedAt.slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+
+  function pickImportFile() {
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = '.json,application/json';
+    inp.onchange = () => {
+      const f = inp.files && inp.files[0];
+      if (f) f.text().then(handleImportText, showImportError);
+    };
+    inp.click();
+  }
+  function handleImportText(text) {
+    let data = null;
+    try { data = JSON.parse(text); } catch { /* invalid JSON → error card below */ }
+    if (!data || data.app !== 'mechanical-keyboarding' || !data.profile || data.profile.version !== 1) {
+      showImportError();
+      return;
+    }
+    showImportConfirm(data);
+  }
+  function showImportError() {
+    overlayRerender = showImportError;
+    showOverlay(`
+      <div class="card-station">⚙ ${T.t('settingsTitle')}</div>
+      <p class="muted">${T.t('importErrNote')}</p>
+      <button id="ov-continue" class="btn-primary">${T.t('resetCancel')}</button>
+    `);
+    $('ov-continue').onclick = () => showSettings();
+    $('ov-continue').focus();
+  }
+  function showImportConfirm(data) {
+    overlayRerender = () => showImportConfirm(data);
+    const date = data.exportedAt ? String(data.exportedAt).slice(0, 10) : null;
+    showOverlay(`
+      <h2>${T.t('importConfirmTitle')}</h2>
+      ${date ? `<p class="muted">${T.t('importMeta', { date })}</p>` : ''}
+      <p class="muted">${T.t('importConfirmNote')}</p>
+      <button id="ov-cancel" class="btn-primary">${T.t('resetCancel')}</button>
+      <button id="ov-load" class="link-btn danger">${T.t('importConfirmGo')}</button>
+    `);
+    $('ov-cancel').onclick = () => showSettings();
+    $('ov-load').onclick = () => {
+      E.saveProfile(data.profile);
+      if (typeof data.sound === 'boolean') A.setEnabled(data.sound);
+      if (data.uilang) T.setLang(data.uilang);
+      location.reload(); // clean re-init from the imported save
+    };
+  }
+
+  function showSettings() {
+    overlayRerender = showSettings;
+    const langBtns = T.LANGS.map((l) =>
+      `<button class="seg-btn${l === T.getLang() ? ' active' : ''}" data-lang="${l}">${l === 'ru' ? 'РУ' : l.toUpperCase()}</button>`).join('');
+    const tips = DONATE.map((d) => {
+      const coins = d.coins.map((c) => `<i class="coin">${c}</i>`).join('');
+      return `<a class="tip-btn" href="${d.url}" target="_blank" rel="noopener"><span class="tip-coins">${coins}</span><b>${d.label}</b><span>${d.sub}</span></a>`;
+    }).join('');
+    showOverlay(`
+      <div class="card-station">⚙ ${T.t('settingsTitle')}</div>
+      <div class="settings-body">
+        <div class="set-row">
+          <span class="set-label">${T.t('setLanguage')}</span>
+          <span class="seg" id="set-lang">${langBtns}</span>
+        </div>
+        <div class="set-row">
+          <span class="set-label">${T.t('setLayout')}</span>
+          <span class="seg"><button class="seg-btn active">ЙЦУКЕН</button><button class="seg-btn" disabled>QWERTY</button></span>
+        </div>
+        <p class="set-note">${T.t('setLayoutSoon')}</p>
+        <div class="set-row">
+          <span class="set-label">${T.t('setSaveFile')}</span>
+          <span class="seg"><button class="seg-btn" id="set-export">${T.t('setExport')}</button><button class="seg-btn" id="set-import">${T.t('setImport')}</button></span>
+        </div>
+        <div class="tip-box">
+          <div class="tip-head">${T.t('tipHead')}</div>
+          <p class="set-note">${T.t('tipNote')}</p>
+          <div class="tip-btns">${tips}</div>
+        </div>
+      </div>
+      <button id="set-reset" class="link-btn danger">${T.t('btnReset')}</button>
+      <div><button id="ov-continue" class="btn-primary">${T.t('passportClose')}</button></div>
+    `);
+    document.querySelectorAll('#set-lang .seg-btn').forEach((b) => {
+      b.onclick = () => { T.setLang(b.dataset.lang); applyI18n(); showSettings(); };
+    });
+    $('set-export').onclick = () => exportSave();
+    $('set-import').onclick = () => pickImportFile();
+    $('set-reset').onclick = () => showResetConfirm();
+    $('ov-continue').onclick = () => hideOverlay();
+    $('ov-continue').focus();
+  }
+  $('btn-settings').onclick = () => { $('btn-settings').blur(); showSettings(); };
 
   // ---------- interface language ----------
   function applyI18n() {
     document.documentElement.lang = T.getLang();
     document.title = T.t('docTitle');
     document.querySelectorAll('[data-i18n]').forEach((el) => { el.innerHTML = T.t(el.dataset.i18n); });
-    document.querySelectorAll('#lang-toggle button').forEach((b) => {
-      b.classList.toggle('active', b.dataset.lang === T.getLang());
-    });
     refreshInventory();
     refreshStatus();
     if (!station) clearLine();
     rebuildWorld();
   }
-  document.querySelectorAll('#lang-toggle button').forEach((b) => {
-    b.onclick = () => {
-      T.setLang(b.dataset.lang);
-      applyI18n();
-      if (!overlay.classList.contains('hidden') && overlayRerender) overlayRerender();
-      b.blur();
-    };
-  });
 
   // ---------- boot ----------
   applyI18n();

@@ -45,32 +45,11 @@ body {
 #wordmark span { color: var(--ink-dim); }
 #topbar-right { display: flex; align-items: center; gap: 26px; }
 #session-stats { display: flex; gap: 28px; }
-#lang-toggle {
-  display: flex;
-  border: 1px solid #2c4a58;
-  border-radius: 6px;
-  overflow: hidden;
-}
-#lang-toggle button {
-  background: none;
-  border: none;
-  color: #55707c;
-  font-family: inherit;
-  font-size: 12px;
-  letter-spacing: 1px;
-  padding: 5px 10px;
-  cursor: pointer;
-}
-#lang-toggle button.active {
-  background: var(--bg-card);
-  color: var(--brass);
-}
-#lang-toggle button:hover:not(.active) { color: var(--ink-dim); }
-#btn-sound {
+#btn-sound, #btn-settings {
   background: none; border: none; cursor: pointer;
   font-size: 16px; opacity: 0.7;
 }
-#btn-sound:hover { opacity: 1; }
+#btn-sound:hover, #btn-settings:hover { opacity: 1; }
 .stat { display: flex; flex-direction: column; align-items: center; min-width: 60px; }
 .stat-value { font-size: 20px; color: var(--ink); font-variant-numeric: tabular-nums; }
 .stat-label { font-size: 11px; color: var(--ink-dim); letter-spacing: 1px; }
@@ -345,6 +324,99 @@ footer {
 body.night { background: #0a141a; }
 body.night .keycap:not(.hint) { background: #0d161c; color: #2b3d46; border-bottom-color: #16232b; }
 body.night .keycap.home::after { background: #23343d; }
+
+/* ---------- settings ---------- */
+.seg {
+  display: inline-flex;
+  border: 1px solid #2c4a58;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.seg-btn {
+  background: none;
+  border: none;
+  color: #7d97a3;
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 1px;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+.seg-btn + .seg-btn { border-left: 1px solid #2c4a58; }
+.seg-btn.active { background: var(--bg-raised); color: var(--brass); }
+.seg-btn:hover:not(.active):not(:disabled) { color: var(--ink); }
+.seg-btn:disabled { color: #3d545e; cursor: default; }
+.settings-body { text-align: left; margin-top: 14px; }
+.set-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 12px 0;
+}
+.set-label { font-size: 15px; }
+.set-note { font-size: 12.5px; color: var(--ink-dim); margin: -6px 0 12px; }
+.tip-box {
+  margin-top: 18px;
+  background: rgba(212, 169, 78, 0.07);
+  border: 1px solid var(--brass-dim);
+  border-radius: 8px;
+  padding: 12px 14px 10px;
+  text-align: center;
+}
+.tip-box .set-note { margin: 6px 0 10px; }
+.tip-head { color: var(--brass); font-size: 15px; }
+.tip-btns { display: flex; gap: 10px; justify-content: center; margin-top: 18px; }
+.tip-btn {
+  flex: 1;
+  display: block;
+  position: relative;
+  background: var(--bg-raised);
+  border: 1px solid #2c4a58;
+  border-radius: 8px;
+  padding: 14px 10px 8px;
+  text-decoration: none;
+  color: var(--ink);
+}
+.tip-btn b { display: block; font-size: 14px; }
+.tip-btn span { display: block; font-size: 11px; color: var(--ink-dim); margin-top: 2px; }
+.tip-btn:hover { border-color: var(--brass); background: var(--bg-raised); }
+/* currency coins straddle each button's top edge — which rail is yours reads
+   before any text does */
+.tip-btn .tip-coins {
+  position: absolute;
+  top: -13px;
+  left: 0;
+  right: 0;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.coin {
+  font-style: normal;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  font-family: Arial, sans-serif;
+  color: #221a08;
+  background: radial-gradient(circle at 35% 30%, #f7e3a8, var(--brass) 55%, #9c7530);
+  border: 1px solid #6f5624;
+  animation: coin-glow 2.4s ease-in-out infinite alternate;
+}
+.coin + .coin { margin-left: -7px; }
+.coin:nth-child(2) { animation-delay: 0.4s; }
+.coin:nth-child(3) { animation-delay: 0.8s; }
+@keyframes coin-glow {
+  from { box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5), 0 0 5px rgba(212, 169, 78, 0.25); }
+  to { box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(212, 169, 78, 0.7); }
+}
+#set-reset { margin-top: 16px; }
 
 /* ---------- passport ---------- */
 #passport-body {
