@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mechanical Keyboarding — learn to type Russian</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header id="topbar">
+    <div id="wordmark">MECHANICAL <span>KEYBOARDING</span></div>
+    <div id="topbar-right">
+      <div id="session-stats">
+        <div class="stat"><span class="stat-value" id="stat-acc">—</span><span class="stat-label" data-i18n="statAccuracy"></span></div>
+        <div class="stat"><span class="stat-value" id="stat-wpm">—</span><span class="stat-label" data-i18n="statWpm"></span></div>
+        <div class="stat"><span class="stat-value" id="stat-streak">0</span><span class="stat-label" data-i18n="statStreak"></span></div>
+        <div class="stat"><span class="stat-value" id="stat-time">0:00</span><span class="stat-label" data-i18n="statToday"></span></div>
+      </div>
+      <button id="btn-sound" title="sound">🔊</button>
+      <div id="lang-toggle">
+        <button data-lang="en">EN</button><button data-lang="ru">РУ</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="playfield">
+      <div id="factory">
+        <div id="factory-mount"></div>
+      </div>
+    </section>
+
+    <section id="drill">
+      <div id="line-display" tabindex="0"></div>
+      <div id="gloss-line">&nbsp;</div>
+    </section>
+
+    <section id="keyboard"></section>
+
+  </main>
+
+  <footer>
+    <button id="btn-passport" class="link-btn" data-i18n="btnPassport"></button>
+    <button id="btn-summary" class="link-btn" data-i18n="btnSummary"></button>
+    <button id="btn-reset" class="link-btn danger" data-i18n="btnReset"></button>
+  </footer>
+
+  <!-- overlays -->
+  <div id="overlay" class="hidden">
+    <div id="overlay-card"></div>
+  </div>
+
+  <script src="libs/pixi.min.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/language-ru.js"></script>
+  <script src="js/layout-ru.js"></script>
+  <script src="js/chain.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/pixels.js"></script>
+  <script src="js/factory.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

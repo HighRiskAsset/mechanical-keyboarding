@@ -1,0 +1,374 @@
+/* Транссиб — M1 styling. Night-train palette: deep blue-green + brass. */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #0e1b21;
+  --bg-raised: #14252d;
+  --bg-card: #1a303a;
+  --ink: #e8e2d4;
+  --ink-dim: #8fa1a8;
+  --brass: #d4a94e;
+  --brass-dim: #8a743f;
+  --ok: #7fb98a;
+  --err: #d4685e;
+  --hint: #e8c877;
+  /* left hand cool, right hand warm — the split is readable at a glance */
+  --finger-l5: #5d86b0; --finger-l4: #5f9d9a; --finger-l3: #6da06b; --finger-l2: #93a35c;
+  --finger-r2: #c09a63; --finger-r3: #bd8672; --finger-r4: #b57a8c; --finger-r5: #a8756a;
+  --hand-l-bg: #12242e; --hand-r-bg: #1c2527;
+}
+
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: Georgia, 'Times New Roman', serif;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ---------- top bar ---------- */
+#topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 28px;
+  border-bottom: 1px solid #23404c;
+}
+#wordmark {
+  font-size: 22px;
+  letter-spacing: 4px;
+  color: var(--brass);
+  font-weight: bold;
+}
+#wordmark span { color: var(--ink-dim); }
+#topbar-right { display: flex; align-items: center; gap: 26px; }
+#session-stats { display: flex; gap: 28px; }
+#lang-toggle {
+  display: flex;
+  border: 1px solid #2c4a58;
+  border-radius: 6px;
+  overflow: hidden;
+}
+#lang-toggle button {
+  background: none;
+  border: none;
+  color: #55707c;
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 1px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+#lang-toggle button.active {
+  background: var(--bg-card);
+  color: var(--brass);
+}
+#lang-toggle button:hover:not(.active) { color: var(--ink-dim); }
+#btn-sound {
+  background: none; border: none; cursor: pointer;
+  font-size: 16px; opacity: 0.7;
+}
+#btn-sound:hover { opacity: 1; }
+.stat { display: flex; flex-direction: column; align-items: center; min-width: 60px; }
+.stat-value { font-size: 20px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.stat-label { font-size: 11px; color: var(--ink-dim); letter-spacing: 1px; }
+
+/* ---------- main ---------- */
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px 8px;
+  max-width: 1180px;
+  width: 100%;
+  margin: 0 auto;
+  overflow-x: clip;
+  min-height: 0;
+}
+/* narrow windows: shrink the keyboard visually, keep geometry intact */
+@media (max-width: 760px) {
+  #keyboard { transform: scale(0.66); transform-origin: top center; margin-bottom: -80px; }
+  .current-line { font-size: 26px; }
+}
+
+/* ---------- the works ---------- */
+body.night #factory-mount canvas { filter: brightness(0.45) saturate(0.8); }
+/* the playfield takes all vertical space the drill + keyboard don't need */
+#playfield {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  align-items: stretch;
+  flex: 1;
+  min-height: 150px;
+}
+#factory { position: relative; flex: 1; min-width: 0; display: flex; }
+/* integer pixel upscale: JS sizes the canvas; the mount letterboxes the rest */
+#factory-mount {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #23404c;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #17161a;
+  image-rendering: pixelated;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#factory-mount canvas { display: block; image-rendering: pixelated; }
+.current-line { font-size: 27px; }
+
+/* ---------- drill (fixed height — nothing shifts when docking) ---------- */
+#drill {
+  width: 100%;
+  text-align: center;
+  padding: 0;
+  height: 52px;
+  overflow: hidden;
+}
+.line { line-height: 1.6; }
+.current-line { font-size: 34px; letter-spacing: 1px; }
+.preview-line { font-size: 20px; color: #45606c; margin-top: 6px; }
+
+.ch { border-radius: 3px; padding: 0 1px; white-space: pre; }
+.ch.done { color: #5d7d70; }
+.ch.caret {
+  background: rgba(212, 169, 78, 0.22);
+  box-shadow: 0 2px 0 var(--brass);
+  display: inline-block;
+  transform: scale(1.12);
+}
+.ch.err {
+  background: rgba(212, 104, 94, 0.35);
+  box-shadow: 0 2px 0 var(--err);
+}
+
+#gloss-line {
+  margin-top: 2px;
+  font-size: 16px;
+  font-style: italic;
+  color: var(--ink-dim);
+  opacity: 0;
+  transition: opacity 0.4s;
+  min-height: 22px;
+}
+#gloss-line.visible { opacity: 1; }
+#gloss-line b { color: var(--brass); font-style: normal; }
+.collect-mark { color: var(--ok); font-style: normal; font-size: 13px; margin-left: 8px; }
+
+/* ---------- keyboard ---------- */
+/* Keys are absolutely positioned by app.js using real ANSI geometry, with a
+   visual gap splitting the board between the hands. */
+#keyboard {
+  position: relative;
+  user-select: none;
+}
+.keycap {
+  position: absolute;
+  height: 42px;
+  border-radius: 6px;
+  background: var(--bg-raised);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-family: Arial, sans-serif;
+  color: var(--ink);
+  border-bottom: 3px solid transparent;
+}
+.keycap.hand-l { background: var(--hand-l-bg); }
+.keycap.hand-r { background: var(--hand-r-bg); }
+.keycap.inert {
+  background: #0f1a20;
+  color: #31454e;
+  border-bottom-color: #17262d;
+  font-size: 13px;
+}
+.cap-shift {
+  position: absolute;
+  top: 3px;
+  right: 7px;
+  font-size: 10px;
+  color: var(--ink-dim);
+}
+.keycap.finger-l5 { border-bottom-color: var(--finger-l5); }
+.keycap.finger-l4 { border-bottom-color: var(--finger-l4); }
+.keycap.finger-l3 { border-bottom-color: var(--finger-l3); }
+.keycap.finger-l2 { border-bottom-color: var(--finger-l2); }
+.keycap.finger-r2 { border-bottom-color: var(--finger-r2); }
+.keycap.finger-r3 { border-bottom-color: var(--finger-r3); }
+.keycap.finger-r4 { border-bottom-color: var(--finger-r4); }
+.keycap.finger-r5 { border-bottom-color: var(--finger-r5); }
+.keycap.home::after {
+  content: '';
+  position: absolute;
+  bottom: 6px;
+  width: 12px;
+  height: 2px;
+  border-radius: 1px;
+  background: #3d545e;
+}
+.keycap.locked { color: #34474f; background: #101d23; border-bottom-color: #1a2b33; }
+.keycap.locked .cap-shift { color: #34474f; }
+.keycap.hint {
+  color: #1a1508;
+  background: rgba(232, 200, 119, calc(0.12 + 0.88 * var(--hint-strength, 1)));
+  box-shadow: 0 0 calc(18px * var(--hint-strength, 1)) rgba(232, 200, 119, calc(0.7 * var(--hint-strength, 1)));
+}
+/* lesson lights: the docked bench's letters glow steadily on the keyboard */
+.keycap.lesson {
+  box-shadow: inset 0 -3px 0 var(--brass);
+  color: var(--brass);
+}
+.keycap.lesson.hint { color: #1a1508; }
+/* materials flying from bench to the inventory panel */
+.fly-mat {
+  position: fixed;
+  z-index: 60;
+  width: 24px; height: 24px;
+  pointer-events: none;
+  image-rendering: pixelated;
+  transition: transform 0.55s cubic-bezier(0.4, 0, 0.9, 0.6), opacity 0.6s;
+}
+.keycap.unlock-glow {
+  background: var(--brass);
+  color: #1a1508;
+  box-shadow: 0 0 24px rgba(212, 169, 78, 0.9);
+  animation: pulse 1s infinite alternate;
+}
+@keyframes pulse { from { transform: scale(1); } to { transform: scale(1.12); } }
+
+#hint-note {
+  font-size: 13px;
+  color: #55707c;
+  font-style: italic;
+}
+
+/* ---------- footer ---------- */
+footer {
+  display: flex;
+  justify-content: center;
+  gap: 26px;
+  padding: 10px 0 16px;
+}
+.link-btn {
+  background: none;
+  border: none;
+  color: #55707c;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.link-btn:hover { color: var(--ink-dim); }
+.link-btn.danger:hover { color: var(--err); }
+
+/* ---------- overlay ---------- */
+#overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 15, 19, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+#overlay.hidden { display: none; }
+#overlay-card {
+  background: var(--bg-card);
+  border: 1px solid #2c4a58;
+  border-radius: 12px;
+  padding: 32px 40px;
+  max-width: 520px;
+  width: calc(100% - 40px);
+  text-align: center;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.5);
+}
+#overlay-card h2 { margin: 8px 0 14px; font-size: 26px; }
+#overlay-card p { margin: 10px 0; line-height: 1.5; }
+#overlay-card .muted { color: var(--ink-dim); font-size: 15px; }
+.card-station {
+  color: var(--brass);
+  letter-spacing: 3px;
+  font-size: 13px;
+  text-transform: uppercase;
+}
+.big-letter { color: var(--brass); }
+.pix-scene { image-rendering: pixelated; display: block; margin: 10px auto 0; }
+.rules { text-align: left; margin: 14px 0 8px 20px; line-height: 1.7; font-size: 15px; }
+.btn-primary {
+  margin-top: 18px;
+  background: var(--brass);
+  color: #221a08;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 26px;
+  font-family: inherit;
+  font-size: 17px;
+  cursor: pointer;
+}
+.btn-primary:hover { filter: brightness(1.1); }
+.summary-grid {
+  display: flex;
+  justify-content: center;
+  gap: 34px;
+  margin: 18px 0 6px;
+}
+.summary-grid .sum-val { display: block; font-size: 28px; color: var(--brass); font-variant-numeric: tabular-nums; }
+.summary-grid .sum-label { font-size: 12px; color: var(--ink-dim); letter-spacing: 1px; }
+.weak-chip {
+  display: inline-block;
+  background: var(--bg-raised);
+  border-radius: 5px;
+  padding: 2px 9px;
+  margin: 0 2px;
+  font-size: 17px;
+}
+.weak-chip small { color: var(--ink-dim); }
+.soft-stop {
+  background: rgba(212, 169, 78, 0.1);
+  border: 1px solid var(--brass-dim);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+}
+.flavor { font-style: italic; color: #b9c6c0; }
+.night-offer { margin-top: 16px; font-size: 14px; }
+
+/* night run: the whole room dims, keyboard goes dark */
+body.night { background: #0a141a; }
+body.night .keycap:not(.hint) { background: #0d161c; color: #2b3d46; border-bottom-color: #16232b; }
+body.night .keycap.home::after { background: #23343d; }
+
+/* ---------- passport ---------- */
+#passport-body {
+  max-height: 46vh;
+  overflow-y: auto;
+  text-align: left;
+  margin-top: 10px;
+  padding-right: 6px;
+}
+.pw-set h3 {
+  font-size: 15px;
+  color: var(--brass);
+  margin: 14px 0 6px;
+  font-weight: normal;
+  letter-spacing: 1px;
+}
+.pw-set h3 small { color: var(--ink-dim); }
+.pw-grid { display: flex; flex-wrap: wrap; gap: 5px; }
+.pw {
+  background: var(--bg-raised);
+  border-radius: 5px;
+  padding: 2px 9px;
+  font-size: 15px;
+  border: 1px solid transparent;
+}
+.pw.locked { color: #3d545e; background: transparent; border: 1px dashed #22394395; }
+.pw.rare { border-color: var(--brass-dim); color: var(--brass); }

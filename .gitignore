@@ -1,0 +1,10 @@
+# Personal Claude Code state (permission grants) — launch.json stays tracked
+.claude/settings.local.json
+
+# Concept-art drop target (serve.ps1 POST /upload)
+assets/inbox/
+
+# OS / OneDrive noise
+Thumbs.db
+desktop.ini
+.DS_Store
