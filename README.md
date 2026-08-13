@@ -1,11 +1,11 @@
 # Mechanical Keyboarding
 
-Learn to touch-type Russian (ЙЦУКЕН) by running a machine frontier. A typing
+Learn to touch-type English (QWERTY) or Russian (ЙЦУКЕН) by running a machine frontier. A typing
 trainer wearing a factory game: you land among dormant machines in bright
 anime-flavored pixel art, and every one of them runs on keystrokes.
 
-- **Typing is the only power source.** Nothing produces or advances without
-  your keystrokes — no idle progress, no timers, no time pressure ever.
+- **Typing is your power source.** Nothing advances without your keystrokes.
+  As you advance, you'll unlock the ability to automate earlier machines.
 - **Machines are lessons.** Each machine drills a letter set that lights up
   on the keyboard when you dock. Walking is the menu.
 - **Materials are the curriculum.** Ores are letter groups; smelting,
