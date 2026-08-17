@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Mechanical Keyboarding">
+  <!-- Palette mirrors css/style.css: bg-raised #14252d, ink #e8e2d4, brass #d4a94e -->
+  <rect width="32" height="32" rx="6" fill="#14252d"/>
+
+  <!-- Keycap, lower-left: outer skirt + dished top face -->
+  <rect x="4.5" y="12.5" width="15" height="15" rx="3" fill="#e8e2d4"/>
+  <rect x="6.6" y="14.4" width="10.8" height="10.2" rx="2" fill="#bdb6a4"/>
+
+  <!-- Open-end wrench, head upper-right, handle crossing the keycap.
+       Each shape is drawn twice: a background-coloured halo first, so the
+       wrench keeps a clean gap where it overlaps the keycap at 16px. -->
+  <g transform="translate(20.6 11.4) rotate(45) scale(0.88)">
+    <rect x="-2.55" y="0.15" width="5.1" height="14.1" rx="2.55" fill="#14252d"/>
+    <path d="M 2.777 -3.084 A 4.15 4.15 0 1 1 -2.777 -3.084"
+          fill="none" stroke="#14252d" stroke-width="4.6"/>
+    <rect x="-1.7" y="1" width="3.4" height="12.4" rx="1.7" fill="#d4a94e"/>
+    <path d="M 2.777 -3.084 A 4.15 4.15 0 1 1 -2.777 -3.084"
+          fill="none" stroke="#d4a94e" stroke-width="2.9"/>
+  </g>
+</svg>

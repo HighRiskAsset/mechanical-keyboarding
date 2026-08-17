@@ -8,7 +8,7 @@
 
   const STRINGS = {
     en: {
-      docTitle: 'Mechanical Keyboarding — learn to type Russian',
+      docTitle: 'Mechanical Keyboarding',
       statAccuracy: 'accuracy',
       statWpm: 'WPM',
       statStreak: 'streak',
@@ -93,7 +93,7 @@
       chipLocked: 'not yet unlocked',
       welcomeStation: '⛏ The Frontier',
       welcomeTitle: 'Mechanical Keyboarding',
-      welcomeIntro: 'You\'ve landed on a resource frontier dotted with dormant machines — and every one of them runs on typing. Each letter you learn becomes power: all 33, plus the punctuation Russian can\'t live without. The first six (<b>о е а и н т</b>) are nearly half of all Russian text.',
+      welcomeIntro: 'You\'ve landed on a resource frontier dotted with dormant machines — and every one of them runs on typing. Each letter you learn becomes power: the whole alphabet, plus the punctuation that holds it together. You begin with the most frequent letters — just a handful of them account for a large share of everything you\'ll type.',
       welcomeRules: [
         '<b>Walk with the arrow keys.</b> Stand at a machine to run it; each machine is a lesson and produces its material. Higher machines consume lower ones.',
         '<b>Recall first.</b> The keyboard stays dark — read the letter and try to remember. The hint lights up only if you hesitate or miss.',
@@ -143,7 +143,7 @@
       },
     },
     ru: {
-      docTitle: 'Mechanical Keyboarding — учимся печатать по-русски',
+      docTitle: 'Mechanical Keyboarding',
       statAccuracy: 'точность',
       statWpm: 'WPM',
       statStreak: 'серия',
@@ -228,7 +228,7 @@
       chipLocked: 'ещё не открыта',
       welcomeStation: '⛏ Фронтир',
       welcomeTitle: 'Mechanical Keyboarding',
-      welcomeIntro: 'Вы высадились на фронтире, усеянном спящими машинами — и все они работают на печати. Каждая выученная буква — это энергия: все 33 и знаки препинания, без которых русский не обходится. Первые шесть (<b>о е а и н т</b>) — почти половина любого текста.',
+      welcomeIntro: 'Вы высадились на фронтире, усеянном спящими машинами — и все они работают на печати. Каждая выученная буква — это энергия: весь алфавит и знаки препинания, которые его скрепляют. Вы начинаете с самых частых букв — всего несколько из них составляют значительную часть любого текста.',
       welcomeRules: [
         '<b>Ходите стрелками.</b> Встаньте у машины, чтобы запустить её; каждая машина — урок, и каждая производит свой материал. Высшие машины расходуют низшие.',
         '<b>Сначала вспоминайте.</b> Клавиатура тёмная — прочитайте букву и попробуйте вспомнить. Подсказка загорится, только если вы замешкались или ошиблись.',

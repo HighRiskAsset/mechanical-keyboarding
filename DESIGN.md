@@ -1,15 +1,24 @@
 # Mechanical Keyboarding — Design Document (the one source of truth)
 
-A typing trainer for Russian ЙЦУКЕН, worn as an outdoor machine-frontier
-factory game in bright anime-flavored pixel art: **Satisfactory's production
-chain with constrained building — the player spends their time running
-machines, not planning layouts.** You land on a resource frontier dotted with
+A **language-agnostic touch-typing trainer**, worn as an outdoor machine-frontier
+factory game in bright anime-flavored pixel art (style reference since
+2026-08-17: SNES RPGs — Final Fantasy III, USA release): **Satisfactory's
+production chain with constrained building — the player spends their time
+running machines, not planning layouts.** You land on a resource frontier dotted with
 dormant machines. Typing is the literal power source.
+
+**Scope: this is not a Russian typing product.** The engine, economy, art, and
+pedagogy are independent of any one alphabet or keyboard layout. Russian
+ЙЦУКЕН is simply the **first course** — the only one playable today — and
+**English QWERTY is committed scope, not a stretch goal.** More
+language/layout pairs are expected after. Wherever this document specifies
+letters, word lists, or frequency data, that content is *per-course*; the
+structure around it is shared.
 
 (Re-themed 2026-08-11 on user direction from «Печатня», an 1890s print works.
 Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeholder.)
 
-## The four invariants (survived every pivot; never trade away)
+## The five invariants (survived every pivot; never trade away)
 
 1. **Typing is the only power source.** Nothing produces, feeds, or advances
    without keystrokes. No idle progress, no timers, no time pressure ever.
@@ -30,6 +39,14 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
    automations, lay belts) is bought with materials — and buys paint and
    convenience, never skill progress. An automated machine refuses labor:
    hold Space at it to draw a full load of 100 (the graduation reward).
+5. **Language and layout are data, never assumptions.** This is not a Russian
+   product with other languages bolted on later. Everything language-specific
+   (letter frequencies, unlock order, phonotactics, word lists, glosses) lives
+   in a `language-<code>.js`; everything layout-specific (key geometry, shift
+   rules, intrusion mapping) lives in a `layout-<code>.js`. The engine,
+   economy, tier structure, and art must hold for any alphabet + layout pair.
+   Adding a course means adding two data files, not editing the engine —
+   if a change would break that, it is the wrong change.
 
 ## Current mechanics (implemented)
 
@@ -97,10 +114,12 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
 
 ## The outdoor pivot — SHIPPED 2026-08-11
 
-- Tilemap world: grass base with wildflowers, dirt work-aprons under
-  machines, an unwalkable pond, ore nodes beneath the mines, a treeline
-  border, solid trees/rocks shaping routes. All data in chain.js `MAP`
-  (DIRT/WATER/NODES rects) + `SCENERY` — a new map is a new set of rects.
+- Tilemap world on a **16×16 square tile grid** (`PIXELS.TILE`; was 16×12
+  until 2026-08-17; world = 33×15 tiles): grass base with wildflowers, dirt
+  work-aprons under machines, an unwalkable pond, ore nodes beneath the mines,
+  a treeline border, solid trees/rocks shaping routes. All data in chain.js
+  `MAP` (DIRT/WATER/NODES rects, grid-aligned) + `SCENERY` — a new map is a
+  new set of rects.
 - Machine roster: hand drill rigs → powered mines (tier-1, on nodes, fixed);
   Smelter / Constructor / Assembler kits on chosen plots; Freight Depot with
   a working crane; the Hub (roofed contract board). Anime-bright palette:
@@ -111,6 +130,69 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   there as an icon row — ⚙ + automation cost on tier-1, belt cost after
   automation — visible even when unaffordable (dimmed). Fixes "I can't see
   how to automate / build tier 2."
+
+## ENVIRONMENT PLAN (rulings 2026-08-17 — precedes the graphical overhaul)
+
+Environment only: machines, belts, pipes, and any power system are **tabled**
+(the user is open to a power system if it serves the typing goal; nothing is
+designed). The tech tree is still being planned; region↔tier mapping below
+follows the current draft and moves with it.
+
+**Yardstick — 80%+ of play is typing.** Anything in the world that adds a
+player *action*, a *decision*, or *walking time* must justify itself against
+that. Pure rendering is free. This is why the cuts below were cut.
+
+**Style — SNES RPG, Final Fantasy III (USA) as the reference**, on the existing
+one-pixel-grid rules: 16×16 tiles, ¾ top-down; per-tile palette discipline
+(few colours per tile, dithered shading on ground); dark outlines on objects,
+soft on ground; cliffs as stratified faces with a lit top edge and a base
+shadow; water as banded, slowly animated ripples; distinct per-region
+palettes the way FF3's areas read at a glance.
+
+**Grid & data.** 16×16 square tiles (`PIXELS.TILE`), world 33×15. Ground is
+authored as kinded, grid-aligned rects in chain.js `MAP`, baked to a tile grid
+at load and autotiled by neighbour bitmask (to do). Collision from tile flags
+for water/cliffs; prop boxes stay for scenery. Nothing here is per-course
+(invariant 5).
+
+**Ground kinds (planned):** grass ×3 tints + a worn variant on well-walked
+tiles · gravel pad under machines (replaces the dirt apron) · water deep +
+shallow ford (walkable) · shore fringes · stream + waterfall · sand · rock
+floor / scree · marsh + boardwalk (a look, never a slow-walk penalty) · cracked
+earth + tar pool · snow / ice / frost-grass blend · ore patch ×7 (plain, tinted
+to region; no purity, no "tells") · auto-laid trail Hub→each built machine
+(rendering only; helps "walking is the menu").
+
+**Elevation & routing (approved):** cliff faces + ramps/stairs; bridges (plank,
+stone); fords; authored hedges/logs/boulders as soft walls; tunnel mouths.
+
+**Regions (approved — for navigation and memory):** Meadow (T0–1, home) →
+Quarry hills (T2) → Crystal canyon (T3) → Coal bog (T4) → Oil flats (T5) →
+Titanium peaks (T6). Each: own ground set, palette, ambient particle, one
+landmark. Distinct by *look* and adjacent — seconds apart, not a trek.
+
+**Region crossings — stretch goal, Stardew bundle style.** Every region border
+is authored with a *closed* crossing (broken bridge over the stream, rockslide
+at the canyon mouth, washed-out boardwalk into the bog, snowed-in pass).
+Interim: a crossing opens on the previous tier's Издание (the gate the tech
+tree already has). Stretch: Hub-board **bundles** — an icon row of slots that
+fill *partially* (unlike today's all-or-nothing milestones); completing a
+bundle repairs the crossing. Rewards are routes and space for new materials,
+not kits. Authoring the choke points now means the mechanic drops in later
+without redrawing the map.
+
+**Ambient life (low priority, pure rendering):** birds, butterflies, fireflies
+on the lamp toggle, pond ripples, grass sway, cast shadows.
+
+**Cut 2026-08-17:** clearable debris · forage pickups · node purity/tells ·
+player-placed fences, paths, or any placement mode (customization that takes
+time from typing) · slow terrain · crops · a "launch" finale (finishing the
+course is a later question) · a pylon/"typing is power" visual (never a
+mechanic; dropped as factory-noise).
+
+**Build order:** 0 grid ✔ → 1 autotile ground/shore/cliff/ramp kit applied to
+the meadow → 2 regions east + 4 ore patches + ~6 plots + closed crossings →
+3 landmarks → 4 ambient life → stretch: bundle board + partial-fill milestones.
 
 ## THE TECH TREE (v2, 2026-08-11 — 7 tiers × 2 lessons)
 
@@ -136,7 +218,12 @@ contracts demand big batches from EARLIER mines — go back and type them, or
 earn their automation (which itself requires sticky letter mastery);
 (d) each Издание is a review exam over everything learned so far.
 
-### The tiers
+### The tiers — Russian ЙЦУКЕН course
+
+The 7×2 tier STRUCTURE, the material ladder, and the Издание-benchmark pacing
+are shared by every course. The letter sets and WPM bars below are the Russian
+curriculum specifically; an English QWERTY course reuses the same skeleton with
+its own frequency-ordered letters, its own word lists, and its own bars.
 
 | Tier / era | Mine (letters mode) | Processor (skill mode) | Издание bar (tunable) |
 |---|---|---|---|
@@ -146,19 +233,22 @@ earn their automation (which itself requires sticky letter mastery);
 | **3 · crystal** | Quartz Mine — ы у б я ь (15–19) | Molder — suffix chunks -ться -ого (quartz + stone → moldings) | 21 WPM · 97% |
 | **4 · coal** | Coal Pit — г з ч й (20–23) | Fastener Plant — punctuated lines «.» «,» (24–25; copper + ingots → screws) | 24 WPM · 97%, dimmed hints |
 | **5 · oil** | Oil Derrick — ж х ш ю ё (26–30) | Circuit Fab — rare-letter words (oil + copper → circuits) | 28 WPM · 97%, hint-free (night runs return here) |
-| **6 · titanium** | Titanium Mine — ц э щ ф ъ (31–35) | Manufacturer — real-text pages (modules + screws + moldings + circuits → heavy modules) | 35 WPM · 97% · one flawless page → launch |
+| **6 · titanium** | Titanium Mine — ц э щ ф ъ (31–35) | Manufacturer — real-text pages (modules + screws + moldings + circuits → heavy modules) | 35 WPM · 97% · one flawless page (course finale TBD — decided later) |
 
 Letter positions are UNLOCK_ORDER indices; a mine's kit gates on its first
 letter being unlocked (curriculum) AND the previous tier's Издание (economy).
 Both gates must pass — skill first, always.
 
-- Comma = Shift+Slash is the layout's signature hurdle → its own machine.
+- Every layout nominates its own signature hurdle, which earns its own machine.
+  In ЙЦУКЕН that is comma = Shift+Slash; QWERTY's will differ and must be
+  chosen from that layout's own data, not inherited from this table.
 - Suffix chunks adapt to unlocked letters (engine picks available frames).
 - Tier 5+ benchmarks are hint-free: the night-run mechanic returns as exam
   conditions rather than an opt-in block.
-- After launch: endless free-play, and REPLAY = a new layout (phonetic
-  ЯВЕРТЫ / EN QWERTY — engine is layout-pluggable) or a speed run with
-  raised bars (50+ WPM). A playthrough is weeks, not an evening.
+- Finishing a course unlocks endless free-play and speed runs with raised bars
+  (50+ WPM). Starting a DIFFERENT course (EN QWERTY, phonetic ЯВЕРТЫ) is a
+  first-class playthrough with its own progress and its own tier ladder — not
+  a replay skin of the Russian one. A playthrough is weeks, not an evening.
 
 ### Materials ladder
 
@@ -189,6 +279,12 @@ modules late; accuracy³ pay everywhere. ₽ buys décor, never progress.
 
 - **Phase II per the tech tree** (recommended next): Fastener Plant + Coal
   Pit + Molder, the powered-era contract ladder, Издание II.
+- **English QWERTY course** (committed scope, not optional): `language-en.js`
+  + `layout-en.js`, an EN frequency-ordered unlock order and word list, and a
+  course picker so progress is tracked per course. The settings menu already
+  has the layout switch stubbed (QWERTY disabled) — this lights it up. Doing
+  this early is the honest test of invariant 5; the longer it waits, the more
+  Russian assumptions leak into the engine.
 - UI chrome reskin to match the bright outdoor world (the page frame is
   still night-train blue). Naming is done: Mechanical Keyboarding.
 - Art polish: smelter sprite reads house-like — make it more furnace;
@@ -202,20 +298,32 @@ modules late; accuracy³ pay everywhere. ₽ buys décor, never progress.
 - Cosmetics economy (₽ buys décor only). Night-shift lamp toggle.
 - Possible delivery meta (ship листы to market cities — the retired Транссиб
   train content could return here; cut until the core is polished).
-- Additional layouts (phonetic ЯВЕРТЫ, EN QWERTY) — engine is layout-pluggable.
+- Further courses beyond EN QWERTY (phonetic ЯВЕРТЫ, other languages
+  entirely) — additive data files only. EN QWERTY itself is NOT parked; it is
+  committed scope, listed under next epoch candidates.
 
 ## Pedagogy references (kept from research)
 
-Accuracy before speed (95–97% gates); frequency-ordered introduction
-(о е а и н т ≈ 47% of text); blind typing with recall-first hints; no free
-backspace; 15–30 min/day beats marathons (soft-stop card); real-text transfer;
-comma = Shift+Slash is the layout's signature hurdle; ~40h ≈ 40 WPM
-expectation; Fitts & Posner automaticity = the automation metaphor.
+These findings are language-neutral and apply to every course; the worked
+numbers happen to be Russian because it is the first course.
+
+Accuracy before speed (95–97% gates); frequency-ordered introduction, computed
+per language (in Russian, о е а и н т ≈ 47% of text); blind typing with
+recall-first hints; no free backspace; 15–30 min/day beats marathons
+(soft-stop card); real-text transfer; each layout has a signature hurdle worth
+its own drill (in ЙЦУКЕН, comma = Shift+Slash); ~40h ≈ 40 WPM expectation;
+Fitts & Posner automaticity = the automation metaphor.
 
 ## Files
 
-`js/engine.js` learning engine · `js/language-ru.js` RU data ·
+`js/engine.js` learning engine · `js/language-ru.js` RU course data ·
 `js/layout-ru.js` ЙЦУКЕН · `js/chain.js` world/economy data ·
 `js/factory.js` Pixi world · `js/pixels.js` sprite kit · `js/app.js`
 orchestration · `js/audio.js` synth · `js/i18n.js` EN/РУ · `serve.ps1` dev
 server (+ POST /upload for QA frames) · `libs/pixi.min.js` vendored Pixi 8.
+
+The `-ru` suffix is the convention, not an afterthought (invariant 5): a new
+course is a new `language-<code>.js` + `layout-<code>.js` pair and nothing
+else. Note that `i18n.js` is a separate axis — it translates the *interface*,
+and the interface language is independent of the course being typed (you can
+read English UI while drilling Cyrillic, or the reverse).

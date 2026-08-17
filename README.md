@@ -1,8 +1,14 @@
 # Mechanical Keyboarding
 
-Learn to touch-type English (QWERTY) or Russian (ЙЦУКЕН) by running a machine frontier. A typing
-trainer wearing a factory game: you land among dormant machines in bright
-anime-flavored pixel art, and every one of them runs on keystrokes.
+A **language-agnostic touch-typing trainer** wearing a factory game: you land
+among dormant machines in bright anime-flavored pixel art, and every one of
+them runs on keystrokes.
+
+Any alphabet and keyboard layout can be plugged in as data. **Russian
+(ЙЦУКЕН) is the first course** and the only one playable today; **English
+(QWERTY) is next and is committed scope**, with further languages and layouts
+expected after. Nothing about the game, the economy, or the pedagogy is
+specific to Russian.
 
 - **Typing is your power source.** Nothing advances without your keystrokes.
   As you advance, you'll unlock the ability to automate earlier machines.
@@ -29,11 +35,20 @@ your browser (localStorage).
 
 No installation, no build step: plain HTML/CSS/JS with a vendored copy of
 [PixiJS](https://pixijs.com/) (MIT) in `libs/`. All art is drawn in code —
-there are no image assets. Interface in English or Russian; you type Russian
-via your physical keys (no OS layout switch needed).
+there are no image assets.
+
+Interface language and course language are independent axes: the interface is
+available in English or Russian, and the trainer maps your physical keys
+itself, so you can drill a foreign alphabet without switching your OS layout.
 
 ## Development
 
 [DESIGN.md](DESIGN.md) is the design document and single source of truth.
 The game is in active development; the current build covers the first
 production tiers of a planned seven-tier curriculum.
+
+Adding a language or layout is meant to be purely additive — a
+`js/language-<code>.js` (frequencies, unlock order, words, glosses) plus a
+`js/layout-<code>.js` (key geometry, shift rules, intrusion mapping). The
+engine is layout-pluggable and should need no changes; if it does, that's a
+bug against invariant 5 in DESIGN.md.
