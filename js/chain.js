@@ -63,19 +63,21 @@
 
   // The terrain: dirt work-aprons, water (unwalkable), and the ore nodes the
   // tier-1 mines sit on. All data — a future map is a new set of rects.
+  // Rects are aligned to the 16x16 tile grid (a tile takes the terrain under
+  // its centre, so unaligned rects render, but aligned ones say what they mean).
   const MAP = {
     DIRT: [
-      { x: 80, y: 52, w: 64, h: 28 },   // iron mine
-      { x: 160, y: 52, w: 60, h: 28 },  // plot p2
-      { x: 120, y: 136, w: 64, h: 26 }, // copper mine
-      { x: 240, y: 176, w: 60, h: 26 }, // quartz quarry
-      { x: 240, y: 94, w: 60, h: 26 },  // plot p4
-      { x: 340, y: 116, w: 60, h: 26 }, // plot p6
-      { x: 428, y: 82, w: 68, h: 28 },  // depot
-      { x: 14, y: 94, w: 48, h: 26 },   // the hub
+      { x: 80, y: 48, w: 64, h: 32 },   // iron mine
+      { x: 160, y: 48, w: 64, h: 32 },  // plot p2
+      { x: 112, y: 128, w: 64, h: 32 }, // copper mine
+      { x: 240, y: 176, w: 64, h: 32 }, // quartz quarry
+      { x: 240, y: 96, w: 64, h: 32 },  // plot p4
+      { x: 336, y: 112, w: 64, h: 32 }, // plot p6
+      { x: 432, y: 80, w: 64, h: 32 },  // depot
+      { x: 16, y: 96, w: 48, h: 32 },   // the hub
     ],
     WATER: [
-      { x: 0, y: 192, w: 92, h: 48 },   // the pond, southwest
+      { x: 0, y: 192, w: 96, h: 48 },   // the pond, southwest
     ],
     NODES: [
       { kind: 'iron', x: 92, y: 54 },
@@ -109,7 +111,7 @@
 
   const PICKUP_CAP = 100; // automated benches refill you to this on approach
 
-  const WORLD_W = 520;
+  const WORLD_W = 528; // 33 x 15 tiles of 16px
   const WORLD_H = 240;
 
   function available(profile) {

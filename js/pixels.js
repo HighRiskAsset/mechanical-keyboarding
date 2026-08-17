@@ -110,39 +110,40 @@
     return c;
   }
 
-  // ---------- terrain tiles 16x12 ----------
+  // ---------- terrain tiles: 16x16 square grid (exported as PIXELS.TILE) ----------
+  const TILE = 16;
   function tileGrass(seed) {
-    const [c, x] = canvas(16, 12);
-    R(x, P.grass1, 0, 0, 16, 12);
-    for (let i = 0; i < 5; i++) {
+    const [c, x] = canvas(TILE, TILE);
+    R(x, P.grass1, 0, 0, TILE, TILE);
+    for (let i = 0; i < 6; i++) {
       R(x, dr(i, seed, 7) > 0.6 ? P.grass3 : P.grass2,
-        Math.floor(dr(i, seed, 3) * 16), Math.floor(dr(seed, i, 5) * 12), 1, 1);
+        Math.floor(dr(i, seed, 3) * TILE), Math.floor(dr(seed, i, 5) * TILE), 1, 1);
     }
     // grass blade tufts
     if (seed % 3 === 0) {
-      const bx = 2 + (seed % 11), by = 2 + (seed % 7);
+      const bx = 2 + (seed % 11), by = 3 + (seed % 10);
       R(x, P.grass4, bx, by, 1, 2); R(x, P.grass3, bx + 1, by - 1, 1, 2);
     }
     return c;
   }
   function tileDirt(seed) {
-    const [c, x] = canvas(16, 12);
-    R(x, P.dirt1, 0, 0, 16, 12);
-    for (let i = 0; i < 4; i++) {
+    const [c, x] = canvas(TILE, TILE);
+    R(x, P.dirt1, 0, 0, TILE, TILE);
+    for (let i = 0; i < 5; i++) {
       R(x, dr(i, seed, 11) > 0.5 ? P.dirt2 : P.dirt3,
-        Math.floor(dr(i, seed, 13) * 15), Math.floor(dr(seed, i, 17) * 11), 2, 1);
+        Math.floor(dr(i, seed, 13) * (TILE - 1)), Math.floor(dr(seed, i, 17) * (TILE - 1)), 2, 1);
     }
-    if (seed % 4 === 1) R(x, P.dirt3, 3 + (seed % 9), 2 + (seed % 6), 1, 1);
+    if (seed % 4 === 1) R(x, P.dirt3, 3 + (seed % 9), 3 + (seed % 9), 1, 1);
     return c;
   }
   function tileWater(frame) {
-    const [c, x] = canvas(16, 12);
-    R(x, P.water1, 0, 0, 16, 12);
-    R(x, P.water2, 0, 8, 16, 4);
+    const [c, x] = canvas(TILE, TILE);
+    R(x, P.water1, 0, 0, TILE, TILE);
+    R(x, P.water2, 0, 11, TILE, 5);
     const o = frame === 0 ? 0 : 5;
-    R(x, P.water3, 2 + o, 2, 3, 1);
-    R(x, P.water3, 9 - o < 0 ? 11 : 9 - o, 6, 2, 1);
-    R(x, P.water3, 12, 9, 2, 1);
+    R(x, P.water3, 2 + o, 3, 3, 1);
+    R(x, P.water3, 9 - o < 0 ? 11 : 9 - o, 8, 2, 1);
+    R(x, P.water3, 12, 13, 2, 1);
     return c;
   }
   // shoreline fringe drawn over grass at a water rect's top edge
@@ -591,6 +592,7 @@
 
   window.PIXELS = {
     P,
+    TILE,
     grassTex: (s) => tex(tileGrass(s)),
     dirtTex: (s) => tex(tileDirt(s)),
     waterTex: (f) => cachedTex('water:' + f, () => tileWater(f)),

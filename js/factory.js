@@ -153,18 +153,19 @@
     labelsC.scale.set(S);
     app.stage.addChild(labelsC);
 
-    // shell: the tilemap — grass base, dirt work-aprons, the pond, ore nodes
-    const W = CHAIN.WORLD_W, H = CHAIN.WORLD_H;
+    // shell: the tilemap — grass base, dirt work-aprons, the pond, ore nodes.
+    // Square 16x16 grid (PIXELS.TILE); a tile takes the terrain under its centre.
+    const W = CHAIN.WORLD_W, H = CHAIN.WORLD_H, T = PIXELS.TILE;
     const dirtIn = (px, py) => CHAIN.MAP.DIRT.some((r) => px >= r.x && px < r.x + r.w && py >= r.y && py < r.y + r.h);
     const waterIn = (px, py) => CHAIN.MAP.WATER.some((r) => px >= r.x && px < r.x + r.w && py >= r.y && py < r.y + r.h);
-    for (let ty = 0; ty < Math.ceil(H / 12); ty++) {
-      for (let tx = 0; tx < Math.ceil(W / 16); tx++) {
-        const cx = tx * 16 + 8, cy = ty * 12 + 6;
+    for (let ty = 0; ty < Math.ceil(H / T); ty++) {
+      for (let tx = 0; tx < Math.ceil(W / T); tx++) {
+        const cx = tx * T + T / 2, cy = ty * T + T / 2;
         let s;
         if (waterIn(cx, cy)) { s = new PIXI.Sprite(PIXELS.waterTex(0)); waterSprites.push(s); }
         else if (dirtIn(cx, cy)) s = new PIXI.Sprite(PIXELS.dirtTex((tx * 7 + ty * 13) % 23));
         else s = new PIXI.Sprite(PIXELS.grassTex((tx * 7 + ty * 13) % 23));
-        s.position.set(tx * 16, ty * 12);
+        s.position.set(tx * T, ty * T);
         s.zIndex = -1000;
         cameraC.addChild(s);
       }
