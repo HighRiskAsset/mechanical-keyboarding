@@ -509,10 +509,24 @@
     }
     return { c, dy: 4 };
   }
-  function crossing(kind, w, h, open, style, seed) {
-    if (kind === 'bridge') return bridge(w, h, open);
-    if (kind === 'boardwalk') return boardwalk(w, h, open);
-    if (open) return null;                                  // pass / drift: open = bare ground
+  // dir 'h' (default): you cross it walking E–W; 'v': walking N–S (the art
+  // is drawn for 'h' and turned a quarter). Pass/drift/stairs are heaps when
+  // closed and nothing when open (bare ground / the baked stairs).
+  function rot90(c) {
+    const [r, x] = canvas(c.height, c.width);
+    x.translate(c.height, 0); x.rotate(Math.PI / 2); x.drawImage(c, 0, 0);
+    return r;
+  }
+  function crossing(kind, w, h, open, style, seed, dir) {
+    if (kind === 'bridge' || kind === 'boardwalk') {
+      const draw = kind === 'bridge' ? bridge : boardwalk;
+      if (dir === 'v') {
+        const a = draw(h, w, open);                       // drawn as if walked E–W, then turned
+        return { c: rot90(a.c), dx: a.c.height - a.dy - w * T, dy: 0 };   // what hung below now hangs left
+      }
+      return draw(w, h, open);
+    }
+    if (open) return null;
     return { c: slide(w, h, kind === 'drift' ? 'drift' : (style || 'tan'), seed || 0), dy: 4 };
   }
 
@@ -651,13 +665,21 @@
       const x1 = Math.min(cols, Math.ceil((r.x + r.w) / T)), y1 = Math.min(rows, Math.ceil((r.y + r.h) / T));
       for (let ty = y0; ty < y1; ty++) for (let tx = x0; tx < x1; tx++) arr[idx(tx, ty)] = v;
     };
+    // regions are rects anywhere (a biome is placeable, not a column): base
+    // ground, cliff palette, elevation (default 0) and the height of the face
+    // it shows where it drops (default 2). Later rects paint over earlier.
     for (const rg of MAP.REGIONS) {
-      paint(kind, kid(rg.base), { x: rg.x, y: 0, w: rg.w, h: H });
-      paint(style, Math.max(0, STYLE_IDS.indexOf(rg.cliff || 'tan')), { x: rg.x, y: 0, w: rg.w, h: H });
+      const r = { x: rg.x, y: rg.y || 0, w: rg.w, h: rg.h || H };
+      paint(kind, kid(rg.base), r);
+      paint(style, Math.max(0, STYLE_IDS.indexOf(rg.cliff || 'tan')), r);
+      paint(elev, rg.elev || 0, r);
+      paint(faceH, rg.face || 2, r);
     }
     for (const g of MAP.GROUND || []) paint(kind, kid(g.kind), g);
+    // plateaus: raised ground within a region (default one level above 0);
+    // faces one row unless said; ramps: S = stairs down the face, W/E = side stairs
     for (const p of MAP.PLATEAUS || []) {
-      paint(elev, 1, p);
+      paint(elev, p.elev || 1, p);
       paint(faceH, p.face || 1, p);
       for (const rp of p.ramps || []) {
         const tx = Math.floor(rp.x / T), ty = Math.floor(rp.y / T);
@@ -666,17 +688,25 @@
         else ramp[idx(tx, ty)] = rp.side === 'W' ? 2 : 3;
       }
     }
+    // a 'stairs' crossing is a flight cut through a face (open/closed is the
+    // heap on top of it, decided at run time)
+    for (const c of MAP.CROSSINGS || []) {
+      if (c.kind !== 'stairs') continue;
+      const x0 = Math.floor(c.x / T), x1 = Math.ceil((c.x + c.w) / T), y0 = Math.floor(c.y / T), y1 = Math.ceil((c.y + c.h) / T);
+      for (let ty = y0; ty < y1; ty++) for (let tx = x0; tx < x1; tx++) if (inb(tx, ty)) ramp[idx(tx, ty)] = 1;
+    }
     for (const w of MAP.WALLS || []) paint(flags, FL.WALL | FL.SOLID, w);
-    const treeTop = Math.floor((MAP.TREELINE || 0) / T);   // rows above this are the border forest
-    // faces below plateau south edges; water/tar are solid
+    const forest = MAP.FOREST || { n: MAP.TREELINE || 0 };
+    const treeTop = Math.floor((forest.n || 0) / T);   // rows above this are the border forest
+    // faces below any drop in elevation; water/tar are solid
     for (let ty = 0; ty < rows; ty++) for (let tx = 0; tx < cols; tx++) {
       const i = idx(tx, ty);
       const kn = KIND_IDS[kind[i]];
       if (KINDS[kn].walk === false) flags[i] |= FL.SOLID | (kn === 'water' ? FL.WATER : 0);
-      if (elev[i] === 1 && inb(tx, ty + 1) && elev[idx(tx, ty + 1)] === 0) {
+      if (inb(tx, ty + 1) && elev[idx(tx, ty + 1)] < elev[i]) {
         const fh = faceH[i] || 1;
         for (let k = 1; k <= fh; k++) {
-          if (!inb(tx, ty + k) || elev[idx(tx, ty + k)] === 1) break;
+          if (!inb(tx, ty + k) || elev[idx(tx, ty + k)] >= elev[i]) break;
           const j = idx(tx, ty + k);
           if (ramp[j] === 1) { flags[j] |= FL.RAMP; flags[j] &= ~FL.SOLID; }
           else flags[j] |= FL.FACE | FL.SOLID;
@@ -684,13 +714,13 @@
       }
       if (ramp[i] >= 2) flags[i] |= FL.RAMP;
     }
-    // rims: a plateau's ring tiles on the N/E/W sides are cliff band too —
+    // rims: high ground's ring tiles on the N/E/W sides are cliff band too —
     // unwalkable, so the top of high ground always shows its edge (FF3 rule).
     // A side ramp keeps its ring tile as stairs.
     for (let ty = 0; ty < rows; ty++) for (let tx = 0; tx < cols; tx++) {
       const i = idx(tx, ty);
-      if (elev[i] !== 1 || ramp[i] >= 2) continue;
-      const lower = (nx, ny) => inb(nx, ny) && elev[idx(nx, ny)] === 0 && !(flags[idx(nx, ny)] & FL.FACE);
+      if (ramp[i] >= 2) continue;
+      const lower = (nx, ny) => inb(nx, ny) && elev[idx(nx, ny)] < elev[i] && !(flags[idx(nx, ny)] & FL.FACE);
       if ((ty > treeTop && lower(tx, ty - 1)) || lower(tx + 1, ty) || lower(tx - 1, ty)) flags[i] |= FL.RIM | FL.SOLID;
     }
     const isBand = (tx, ty) => inb(tx, ty) && (flags[idx(tx, ty)] & (FL.WALL | FL.FACE | FL.RIM));
@@ -730,9 +760,10 @@
       }
       // stairs, side ramps, and the shade a band casts on the ground beside it
       if (ramp[i] === 1) {
-        let k = 1; while (inb(tx, ty - k) && (flags[idx(tx, ty - k)] & (FL.FACE | FL.RAMP)) && elev[idx(tx, ty - k)] === 0) k++;
-        const fh = inb(tx, ty - k) ? (faceH[idx(tx, ty - k)] || 1) : 1;
-        x.drawImage(stairs(fh > 1 && k < fh ? 'top' : 'bot', st), px, py);
+        let k = 1; while (inb(tx, ty - k) && (flags[idx(tx, ty - k)] & (FL.FACE | FL.RAMP)) && elev[idx(tx, ty - k)] === elev[i]) k++;
+        const up = inb(tx, ty - k) ? idx(tx, ty - k) : i;
+        const fh = faceH[up] || 1;
+        x.drawImage(stairs(fh > 1 && k < fh ? 'top' : 'bot', STYLE_IDS[style[up]]), px, py);
       } else if (ramp[i] === 2 || ramp[i] === 3) {
         x.drawImage(slope(ramp[i] === 2 ? 'W' : 'E', st, seed, kn), px, py);
       } else if (!isBand(tx, ty)) {
@@ -749,11 +780,20 @@
           if (!inb(nx, ny)) { conn |= bit; continue; }              // world edge: run straight off
           const j = idx(nx, ny);
           if (isBand(nx, ny) || (flags[j] & FL.RAMP)) conn |= bit;
-          else if (elev[j] === 1 && (flags[i] & (FL.RIM | FL.FACE))) { high |= bit; topKind = topKind || KIND_IDS[kind[j]]; }
+          else if (!(flags[j] & FL.SOLID) && (((flags[i] & FL.FACE) && elev[j] > elev[i]) || ((flags[i] & FL.RIM) && elev[j] === elev[i]))) {
+            high |= bit; topKind = topKind || KIND_IDS[kind[j]];   // the high ground this band belongs to
+          }
+        }
+        // a face is the side of the high ground above it — it wears THAT
+        // biome's cliff palette, not the lowland's it happens to stand on
+        let bandStyle = st;
+        if (flags[i] & FL.FACE) {
+          let k = 1; while (inb(tx, ty - k) && (flags[idx(tx, ty - k)] & (FL.FACE | FL.RAMP)) && elev[idx(tx, ty - k)] === elev[i]) k++;
+          if (inb(tx, ty - k)) bandStyle = STYLE_IDS[style[idx(tx, ty - k)]];
         }
         // z = the tile's TOP: a band tile beside the operator draws under them
         // (SNES low-priority tile), one below them draws over (they're behind it)
-        walls.push({ x: tx * T - 2, y: ty * T - 6, canvas: cliff(conn, high, st, topKind, seed), z: ty * T });
+        walls.push({ x: tx * T - 2, y: ty * T - 6, canvas: cliff(conn, high, bandStyle, topKind, seed), z: ty * T });
       }
     }
     for (const ch of chunks) delete ch.ctx;

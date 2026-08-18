@@ -13,7 +13,8 @@
   // Bigger window → bigger pixels first, then more world.
   const MIN_VW = 300, MIN_VH = 170;
   let viewW = 430, viewH = 230;        // world pixels currently visible
-  const FLOOR_TOP = 48;                // player's north limit (the treeline)
+  // the walkable limits: inside the border forest (CHAIN.MAP.FOREST, px per side)
+  const LIM = { n: 48, e: 0, s: 0, w: 0 };
   const DOCK_RANGE = 20;
   const SPEED = 1.35;
 
@@ -161,6 +162,8 @@
     // the baked ground (the shore spill sits on top of them); rock walls are
     // y-sorted sprites so the operator walks behind them.
     const W = CHAIN.WORLD_W, H = CHAIN.WORLD_H, T = PIXELS.TILE;
+    const FOREST = CHAIN.MAP.FOREST || { n: 48 };
+    LIM.n = FOREST.n || 0; LIM.e = W - (FOREST.e || 0) - 8; LIM.s = H - (FOREST.s || 0) - 6; LIM.w = (FOREST.w || 0) + 8;
     grid = TILES.bake(CHAIN.MAP, W, H);
     const tx = PIXELS.util.tex;
     waterTexes = [0, 1].map((f) => Array.from({ length: 23 }, (_, s) => tx(TILES.fill('water', s, f))));
@@ -201,22 +204,35 @@
       f.zIndex = -970;
       cameraC.addChild(f);
     }
-    // the border forest along the north edge (player can't reach past
-    // FLOOR_TOP): two staggered rows on the tile grid — the back row on odd
-    // columns with its base in row 1, the front row on even columns with its
-    // base on the row above the limit — so no bare strip reads as walkable.
-    // Each region grows its own kind of border.
-    const cols = Math.ceil(W / T);
-    for (let col = 0; col < cols; col++) {
-      const front = col % 2 === 0;
-      const rg = CHAIN.regionAt(col * T + 8);
+    // the border forest (CHAIN.MAP.FOREST: px per side; the player can't
+    // reach into it): two staggered rows on the tile grid per side, bottom-
+    // aligned, the inner row's trunks on the limit itself so no bare strip
+    // reads as walkable. Each biome grows its own kind of border.
+    const cols = Math.ceil(W / T), rows = Math.ceil(H / T);
+    const plant = (col, row, i, kindsAt, dy) => {
+      const rg = kindsAt();
       const kinds = rg.treeline || ['tree', 'tree2'];
-      const t = new PIXI.Sprite(PIXELS.sceneryTex(kinds[(col >> 1) % kinds.length]));
-      const baseRow = front ? Math.floor(FLOOR_TOP / T) - 1 : 1;
-      const by = (baseRow + 1) * T - (front ? 2 : 4 + (col >> 1) % 2 * 3);
+      const t = new PIXI.Sprite(PIXELS.sceneryTex(kinds[(i >> 1) % kinds.length]));
+      const by = (row + 1) * T - dy;
       t.position.set(Math.round(col * T + (T - t.texture.width) / 2), by - t.texture.height);
       t.zIndex = by;
       cameraC.addChild(t);
+    };
+    if (FOREST.n) for (let col = 0; col < cols; col++) {
+      const front = col % 2 === 0, row = front ? Math.floor(FOREST.n / T) - 1 : 1;
+      plant(col, row, col, () => CHAIN.regionAt(col * T + 8, 8), front ? 2 : 4 + ((col >> 1) % 2) * 3);
+    }
+    if (FOREST.s) for (let col = 0; col < cols; col++) {
+      const front = col % 2 === 0, row = front ? rows - Math.floor(FOREST.s / T) : rows - 1;
+      plant(col, row, col, () => CHAIN.regionAt(col * T + 8, H - 8), front ? 4 : 2);
+    }
+    if (FOREST.w) for (let row = 1; row < rows; row++) {
+      const front = row % 2 === 0, col = front ? Math.floor(FOREST.w / T) - 1 : 0;
+      plant(col, row, row, () => CHAIN.regionAt(8, row * T + 8), 3);
+    }
+    if (FOREST.e) for (let row = 1; row < rows; row++) {
+      const front = row % 2 === 0, col = front ? cols - Math.floor(FOREST.e / T) : cols - 1;
+      plant(col, row, row, () => CHAIN.regionAt(W - 8, row * T + 8), 3);
     }
 
     // set dressing; lampposts glow warmly
@@ -247,7 +263,7 @@
       cameraC.addChild(m);
       petals.push({
         sp: m,
-        x: Math.random() * CHAIN.MAP.REGIONS[0].w, y: 36 + Math.random() * (H - 50),
+        x: Math.random() * CHAIN.MAP.REGIONS[0].w, y: 36 + Math.random() * ((CHAIN.MAP.REGIONS[0].h || H) - 50),
         vx: 0.05 + Math.random() * 0.08, phase: Math.random() * 6.28,
       });
     }
@@ -369,10 +385,10 @@
     for (const cr of CHAIN.MAP.CROSSINGS) {
       const open = CHAIN.crossingOpen(profile, cr);
       (open ? openRects : closedRects).push({ x: cr.x, y: cr.y, w: cr.w, h: cr.h });
-      const art = TILES.crossing(cr.kind, cr.w / PIXELS.TILE, cr.h / PIXELS.TILE, open, cr.style, cr.x);
+      const art = TILES.crossing(cr.kind, cr.w / PIXELS.TILE, cr.h / PIXELS.TILE, open, cr.style, cr.x, cr.dir);
       if (!art) continue;
       const sp = new PIXI.Sprite(PIXELS.util.tex(art.c));
-      sp.position.set(cr.x, cr.y - art.dy);
+      sp.position.set(cr.x - (art.dx || 0), cr.y - (art.dy || 0));
       // closed heaps sort by their TOP like the cliff band: beside you = under you
       sp.zIndex = open ? -900 : cr.y;
       cameraC.addChild(sp);
@@ -588,9 +604,9 @@
       workTtl = 0;
       facing = Math.abs(vy) > Math.abs(vx) ? (vy < 0 ? 'up' : 'down') : 'side';
       if (vx !== 0) faceSign = vx > 0 ? 1 : -1;
-      const nx = Math.max(8, Math.min(CHAIN.WORLD_W - 8, playerX + vx * dt));
+      const nx = Math.max(LIM.w, Math.min(LIM.e, playerX + vx * dt));
       if (!collides(nx, playerY) && terrainOK(playerX, playerY, nx, playerY)) playerX = nx;
-      const ny = Math.max(FLOOR_TOP, Math.min(CHAIN.WORLD_H - 6, playerY + vy * dt));
+      const ny = Math.max(LIM.n, Math.min(LIM.s, playerY + vy * dt));
       if (!collides(playerX, ny) && terrainOK(playerX, playerY, playerX, ny)) playerY = ny;
       walkClock += dt;
       if (walkClock > 7) { walkClock = 0; walkFrame = (walkFrame + 1) % 4; }
@@ -686,8 +702,9 @@
     for (const m of petals) {
       m.x += m.vx * dt;
       m.y += 0.05 * dt;
-      if (m.x > CHAIN.MAP.REGIONS[0].w) m.x = 0;   // petals belong to the meadow
-      if (m.y > CHAIN.WORLD_H) m.y = 36;
+      const home = CHAIN.MAP.REGIONS[0];            // petals belong to the home biome
+      if (m.x > home.x + home.w) m.x = home.x;
+      if (m.y > (home.y || 0) + (home.h || CHAIN.WORLD_H)) m.y = (home.y || 0) + 36;
       const wob = Math.sin(frameClock * 0.03 + m.phase);
       m.sp.texture = PIXELS.petalTex(Math.abs(Math.floor(frameClock / 14 + m.phase)) % 2);
       m.sp.position.set(Math.round(m.x + wob * 2), Math.round(m.y));

@@ -233,26 +233,40 @@ the meadow ✔ → 2 regions east + 4 ore patches + ~6 plots + closed crossings 
   `CHAIN.MAP` into a tile grid (kind / elev / flags) and ground canvases per
   512px chunk; `passable()` is the walk rule (solid blocks; elevation change
   blocks unless one side is a ramp).
-- **`CHAIN.MAP` schema**: `TREELINE`, `REGIONS` (x, w, base kind, cliff
-  palette, treeline kinds), `GROUND` rects (kind), `PLATEAUS` (face height,
-  ramps S/W/E; the walkable top is the rect inset one tile on N/E/W — author
-  with that in mind), `WALLS`, `CROSSINGS` (kind, rect, `opensAfter` edition
-  id, style), `NODES` ×7. `crossingOpen(profile, c)` — a crossing naming an
-  edition that doesn't exist yet is honestly closed.
-- **The world**: 2128×240 (133×15 tiles). Meadow (grass, tan) with the pond
-  + sand shore, worn road hub→depot with spurs, cobble pads under hub/depot,
-  a **knoll** (plot p8) with face + stairs; then a tan rock wall with a gate
-  (x1, opens after Издание I). Quarry hills (rock, tan): two terraces (p13
-  on top, the stone seam on the other), grass tufts on stone. Crystal canyon
-  (shale, violet): the stream with a sand bank, a broken bridge (x2), north
-  wall face, south boulder wall, crystals. Coal bog (marsh, grey): bog water
-  strip with a washed-out boardwalk (x3), pools, plank walks, reeds, dead
-  trees, the coal seam. Oil flats (cracked earth, tan): grey rockslide in a
-  tan wall (x4), tar pools, scrub, a mesa with side stairs, the oil seam.
-  Titanium peaks (snow): a snowdrift (x5), frost patches, an ice pond,
-  snowpines, a shelf with a 2-row snow-capped face + stairs and the titanium
-  seam. Six new plots p13–p18, one per region. Existing stations untouched;
-  the quartz node stays in the meadow until tier 3 lands.
+- **`CHAIN.MAP` schema (user ruling 2026-08-18: biomes are placeable, the
+  map is never locked to one shape)**: `FOREST` {n,e,s,w} border-forest px
+  per side (= the walkable limits); `REGIONS` = biome rects anywhere
+  {x,y,w,h, base kind, cliff palette, `elev` (default 0), `face` height where
+  it drops (default 2), treeline kinds} — later rects paint over earlier;
+  `GROUND` rects (kind); `PLATEAUS` (raised ground within a biome: `elev`,
+  face height, ramps S/W/E; the walkable top is the rect inset one tile on
+  N/E/W — author with that in mind); `WALLS`; `CROSSINGS` (kind pass | drift
+  | bridge | boardwalk | stairs, rect, `opensAfter` edition id, style, `dir`
+  'h' walked E–W / 'v' walked N–S — stairs bake as a flight through a face);
+  `NODES` ×7. Elevation is multi-level: any drop shows a face on the row(s)
+  below in the HIGH biome's cliff palette, any higher edge shows a rim.
+  `regionAt(x, y)`; `crossingOpen(profile, c)` — a crossing naming an
+  edition that doesn't exist yet is honestly closed. A new map = a new set of
+  rects (a `MAPS` registry is a one-liner when a second map exists).
+- **The world (this layout — a snake, 1168×496 = 73×31 tiles)**. North
+  row, high ground (elev 1): **Meadow** (grass, tan) with the pond + sand
+  shore, worn road hub→depot with spurs, cobble pads under hub/depot, a
+  knoll (plot p8, elev 2) with face + stairs, a tan wall with a gate (x1,
+  opens after Издание I) → **Quarry hills** (rock, tan): two terraces (p13
+  on top, the stone seam on the other), grass tufts on stone; a bridge (x2)
+  over the stream → **Crystal canyon** (shale, violet): stream with a sand
+  bank, north wall face, crystals, plot p15, and a **stairs crossing (x3)
+  down the two-row face** into the lowlands. South row (elev 0), running back
+  west under the north row: **Coal bog** under the canyon (marsh, grey):
+  pools, plank walks, reeds, dead trees, coal seam, p16; a grey wall with a
+  gap (x4) → **Oil flats** under the quarry (cracked earth, tan): tar pools,
+  scrub, a mesa with side stairs, oil seam, p17; a tan wall with a snowdrift
+  (x5) → **Titanium peaks** under the meadow (snow): frost patches, an ice
+  pond, snowpines, a shelf with a 2-row snow-capped face + stairs and the
+  titanium seam, p18. Existing stations untouched; the quartz node stays in
+  the meadow until tier 3 lands. Cliff faces along the whole north/south
+  drop wear each high biome's palette (tan under meadow/quarry, violet under
+  the canyon).
 - **`dev/tiles.html`** — proof sheet: bakes synthetic maps through the real
   `bake()` and POSTs a 3× PNG to `/upload` for review. Not linked from the game.
 - Verified: no console errors; 17 passability probes (faces, water, walls,
