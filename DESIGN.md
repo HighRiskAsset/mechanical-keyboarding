@@ -67,20 +67,34 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   ~90% of the plan visible at once (430×230 logical @2×, canvas 860×460).
 - Docking by proximity. ONE interact key: **hold Space for 0.5s** — a pixel
   charge bar fills over the operator; release early and nothing fires (a tap
-  is just a typed space). The hold does whatever the dock offers: build on a
-  plot → deliver a contract → automate → collect 100 from an automation →
-  lay a belt. Glow turns green when the action is affordable.
+  is just a typed space). **v3 (2026-08-19, build-plan phases 1–2):** the hold
+  opens the place's icon menu — a plot lists the machines it could hold, an
+  ore vein its mine, a mine its next Mk / ⚙ / collect — arrows choose, a
+  second hold confirms, a tap or Escape closes. Glow turns green when a row
+  is affordable. Everything is paid from the bag; no Hub, kits, contracts or
+  Depot remain.
 - **All game UI is pixels in-canvas**: the inventory HUD (icons + bitmap
   numbers, top-right of the canvas), requirement rows, charge bar. Only the
   page header and the keyboard visualizer are DOM. (The drill text line stays
   DOM for now — it's the reading surface.)
-- Per-letter consumption accumulators; dry stations stop producing; belts
-  auto-feed only after purchase and only while typing happens.
+- **Recipes and consumption (v3):** a processor makes whatever its inputs
+  can pay for — the recipe rows above it show every recipe it offers, the
+  active one bright (weakest letters first, then newest); a unit of output
+  is paid for at its first keystroke and emitted at its `perUnit`-th; a
+  starved unit runs dry (typing still trains). Mines yield one ore per
+  correct letter. Belts and machine buffers arrive with phase 3.
 - Learning engine: hesitation-gated hints (recall first), stop-on-error,
-  per-letter EW latency/error stats, min-readiness unlock gates, focus sets
-  per bench, word passport with glosses (user reads Cyrillic, little vocab).
-- All three tier-1 benches exist from the start; press pays ₽ by accuracy³
-  (строки preferred, азы-handbill fallback).
+  per-letter EW latency/error stats; **v3 curriculum:** letters unlock in
+  mirror key-pairs per ore Mk (`LANG_RU.PAIRS`), a pair is bought at the
+  place once every unlocked letter passes the tier bar; alphabets come from
+  the recipe graph (`CHAIN.alphabetOf`); drill grammars keys / letters /
+  syllables / clusters / words; word passport with glosses.
+- Three T0 mines (iron а о, copper е н, stone и т) stand from the start;
+  the ⚙ on a mine needs its letters sticky and refuses labor afterwards
+  (hold Space → collect 100). Profile v2 with a v1 migration; save files
+  version 2 (v1 files import and migrate). Debug: Ctrl+Alt+M gives 100 of
+  every material that exists for the save. `dev/verify.html` runs the data
+  checks.
 - **One pixel grid, no exceptions**: integer device-pixel upscale with
   letterboxing (roundPixels, whole-pixel camera and sprite positions), bitmap
   pixel font for all in-world text (digits/arrows/₽, ink outline baked),
@@ -172,13 +186,11 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   occupies each plot from a build menu, paid from the bag; kits and the Hub
   go. Implemented behaviour is still the kit flow until the build plan's
   phase 2 lands.)
-- **Milestone board («Контора») & Издания v1**: a notice board station shows
-  the current commission as an icon row (goal → reward); Enter delivers
-  materials; rewards are KITS for tier-2+ stations (still curriculum-gated by
-  unlockAt). The era's final milestone is an ИЗДАНИЕ — it cannot be
-  hand-stocked: it demands an automated азы base plus 3 consecutive live
-  press pages at ≥97%, and advances the era (hand → steam: automated benches
-  feed belts 0.5 → 0.8 per keystroke-pair).
+- ~~Milestone board («Контора») & Издания v1~~ — removed 2026-08-19 with the
+  v3 build (phases 1–2): no Hub, contracts, kits, Depot, ₽ or edition
+  station; crossings open on tier bars (`opensAfter: <tier>`); the old
+  BELTS list and per-keystroke autofeed are gone until phase 3 brings belts
+  and machine buffers back properly.
 
 ## The outdoor pivot — SHIPPED 2026-08-11
 

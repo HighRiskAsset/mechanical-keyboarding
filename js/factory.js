@@ -1,6 +1,6 @@
-// The overworld, now in two dimensions: a floor-plan hall the typesetter walks
-// with all four arrows. Belts run in L-shaped paths; stations depth-sort with
-// the player. Walking IS the menu. Global namespace: FACTORY
+// The overworld, in two dimensions: a frontier the operator walks with all
+// four arrows. Machines stand on plots and ore nodes; walking IS the menu;
+// hold Space at a place opens its icon menu (rows drawn here). Global: FACTORY
 //
 // One pixel grid, no exceptions: the canvas upscales by a whole number of
 // device pixels (letterboxed), every sprite renders at integer world
@@ -8,12 +8,8 @@
 (function () {
   'use strict';
 
-  // The viewport is dynamic: it fills the mount at the LARGEST integer zoom
-  // that still shows a useful slice of the world (≥ MIN_VW × MIN_VH world px).
-  // Bigger window → bigger pixels first, then more world.
   const MIN_VW = 300, MIN_VH = 170;
   let viewW = 430, viewH = 230;        // world pixels currently visible
-  // the walkable limits: inside the border forest (CHAIN.MAP.FOREST, px per side)
   const LIM = { n: 48, e: 0, s: 0, w: 0 };
   const DOCK_RANGE = 20;
   const SPEED = 1.35;
@@ -21,31 +17,27 @@
   let app, cameraC, labelsC, ready = false;
   let mountEl = null;
   let S = 2;                           // device px per world px — integer, set by resize()
-  let stations = {};
-  let beltsDrawn = [];                 // {fromId, path:[{x,y}...], c(container)}
+  let stations = {};                   // dock id → {def:{id,x,y,kind,m?,plot?,node?}, root, sp, glow, ...}
   let player = null;
   const charTex = { down: [], up: [], side: [], work: [] };
   let facing = 'side', faceSign = 1, walkClock = 0, walkFrame = 0;
-  // workTtl: the machine's own "just powered" window (drill spins while keys
-  // land). working: the operator's pose — sticky from the first keystroke at
-  // a machine until they walk away or undock, pauses in typing included.
   let workTtl = 0, workClock = 0, working = false;
   let playerX = 40, playerY = 90;
   const moving = { left: false, right: false, up: false, down: false };
   let dockedId = null;
-  let pressBurst = 0, frameClock = 0, frameIdx = 0;
-  let beltTexes = [], pressTexes = [], dotTex = null;
-  const particles = [], floats = [], dots = [], flashes = [], sparks = [], scraps = [];
+  let frameClock = 0, frameIdx = 0;
+  let dotTex = null;
+  const particles = [], floats = [], flashes = [], sparks = [];
   const petals = [];
-  let ambient = [], waterSprites = [], terrain = [];   // per-map sprites, torn down by loadMap
+  let ambient = [], waterSprites = [], terrain = [];
   let waterTexes = [];
-  let grid = null;                     // baked terrain (TILES.bake): kinds, flags, elevation
-  let crossSprites = [], openRects = [], closedRects = [];  // region crossings, rebuilt per profile
+  let grid = null;
+  let crossSprites = [], openRects = [], closedRects = [];
   const machineTexCache = {};
-  // in-canvas pixel HUD (inventory) + the hold-to-interact charge bar
-  let uiC = null;
-  const hudRows = {}, invValues = {};
-  const HUD_KEYS = ['money', 'az', 'buki', 'vedi', 'slogi', 'slova', 'stroki', 'listy'];
+  // in-canvas pixel HUD (the bag) + the hold-to-interact charge bar
+  let uiC = null, hudPanel = null;
+  let hudRows = {}, hudKeys = [];
+  const invValues = {};
   const HUD_W = 46, HUD_ROW = 14;
   let chargeVal = null, chargeG = null;
 
@@ -55,7 +47,6 @@
   }
   const cssColor = (c) => typeof c === 'number' ? '#' + c.toString(16).padStart(6, '0') : c;
 
-  // integer upscale in device pixels; the mount letterboxes any remainder
   function resize() {
     if (!app || !mountEl) return;
     const dpr = window.devicePixelRatio || 1;
@@ -79,7 +70,7 @@
     layoutHud();
   }
 
-  // ---------- the pixel HUD: inventory in-canvas, icons + numbers only ----------
+  // ---------- the pixel HUD: the bag in-canvas, icons + numbers only ----------
   function layoutHud() {
     if (!uiC) return;
     uiC.scale.set(S);
@@ -88,11 +79,21 @@
   function buildHud() {
     uiC = new PIXI.Container();
     app.stage.addChild(uiC);
-    const panel = new PIXI.Graphics()
-      .rect(0, 0, HUD_W, HUD_KEYS.length * HUD_ROW + 5)
+    setHudKeys(hudKeys);
+    layoutHud();
+  }
+  // the rows the HUD shows: materials the player has held, in tree order
+  function setHudKeys(keys) {
+    hudKeys = keys.slice();
+    if (!uiC) return;
+    for (const ch of uiC.children.slice()) { uiC.removeChild(ch); ch.destroy({ children: true }); }
+    hudRows = {};
+    if (!hudKeys.length) return;
+    hudPanel = new PIXI.Graphics()
+      .rect(0, 0, HUD_W, hudKeys.length * HUD_ROW + 5)
       .fill({ color: 0x221d29, alpha: 0.74 });
-    uiC.addChild(panel);
-    HUD_KEYS.forEach((k, i) => {
+    uiC.addChild(hudPanel);
+    hudKeys.forEach((k, i) => {
       const ic = new PIXI.Sprite(PIXELS.matIconTex(k));
       ic.position.set(3, 3 + i * HUD_ROW);
       uiC.addChild(ic);
@@ -101,7 +102,6 @@
       uiC.addChild(t);
       hudRows[k] = t;
     });
-    layoutHud();
   }
   function setInvValue(key, n) {
     invValues[key] = n;
@@ -110,7 +110,6 @@
     t.texture = PIXELS.textTex(String(n), PIXELS.P.paper);
     t.position.x = HUD_W - 3 - t.texture.width;
   }
-  // canvas-space position of a HUD row (for the DOM fly-to-inventory)
   function invScreenPos(key) {
     const t = hudRows[key];
     if (!t) return null;
@@ -130,8 +129,6 @@
     ambient.push({ sp: g, base, phase: Math.random() * 6.28 });
   }
 
-  // one-time setup: the Pixi app, the camera, shared textures, the HUD.
-  // The ground itself is per map — see loadMap.
   async function init(mount) {
     if (typeof PIXI === 'undefined') return;
     app = new PIXI.Application();
@@ -154,7 +151,6 @@
     const tx = PIXELS.util.tex;
     waterTexes = [0, 1].map((f) => Array.from({ length: 23 }, (_, s) => tx(TILES.fill('water', s, f))));
 
-    // petals drifting on the breeze (re-homed to each map's first biome)
     for (let i = 0; i < 14; i++) {
       const m = new PIXI.Sprite(PIXELS.petalTex(0));
       m.zIndex = 4000;
@@ -162,8 +158,6 @@
       petals.push({ sp: m, x: 0, y: 0, vx: 0.05 + Math.random() * 0.08, phase: Math.random() * 6.28 });
     }
 
-    beltTexes = [0, 1, 2, 3].map((f) => PIXELS.beltTex(f));
-    pressTexes = [0, 1, 2, 3].map((f) => PIXELS.pressTex(f));
     dotTex = PIXELS.matDotTex();
     for (let f = 0; f < 4; f++) {
       charTex.down.push(PIXELS.characterTex('down', f));
@@ -183,8 +177,7 @@
   }
 
   // Raise the current map (CHAIN.useMap first): tear down the previous
-  // ground, bake and plant this one, put the operator on its spawn. Stations,
-  // plots, belts and crossings follow in buildWorld (they depend on the save).
+  // ground, bake and plant this one, put the operator on its spawn.
   function loadMap() {
     if (!ready) return;
     for (const s of terrain) { cameraC.removeChild(s); s.destroy(); }
@@ -194,10 +187,6 @@
     dockedId = null;
     const keep = (sp) => { cameraC.addChild(sp); terrain.push(sp); return sp; };
 
-    // the terrain: tiles.js bakes CHAIN.MAP (regions, ground, plateaus, walls)
-    // into a 16x16 tile grid + ground canvases. Water tiles animate beneath
-    // the baked ground (the shore spill sits on top of them); rock walls are
-    // y-sorted sprites so the operator walks behind them.
     const W = CHAIN.WORLD_W, H = CHAIN.WORLD_H, T = PIXELS.TILE;
     const FOREST = CHAIN.MAP.FOREST || { n: 48 };
     LIM.n = FOREST.n || 0; LIM.e = W - (FOREST.e || 0) - 8; LIM.s = H - (FOREST.s || 0) - 6; LIM.w = (FOREST.w || 0) + 8;
@@ -219,13 +208,12 @@
       s.position.set(w.x, w.y);
       s.zIndex = w.z;
     }
-    // ore nodes under the mines (one kind per tier)
+    // ore nodes (the mines stand on them)
     for (const n of CHAIN.MAP.NODES) {
       const sp = keep(new PIXI.Sprite(PIXELS.nodeTex(n.kind)));
       sp.position.set(n.x, n.y);
       sp.zIndex = -960;
     }
-    // wildflowers on open grass only
     const grassId = TILES.KIND_IDS.indexOf('grass');
     for (let i = 0; i < Math.floor(W / 20); i++) {
       const fx = (i * 97) % W, fy = 42 + (i * 61) % (H - 56);
@@ -235,10 +223,6 @@
       f.position.set(fx, fy);
       f.zIndex = -970;
     }
-    // the border forest (CHAIN.MAP.FOREST: px per side; the player can't
-    // reach into it): two staggered rows on the tile grid per side, bottom-
-    // aligned, the inner row's trunks on the limit itself so no bare strip
-    // reads as walkable. Each biome grows its own kind of border.
     const cols = Math.ceil(W / T), rows = Math.ceil(H / T);
     const plant = (col, row, i, kindsAt, dy) => {
       const rg = kindsAt();
@@ -264,34 +248,23 @@
       const front = row % 2 === 0, col = front ? cols - Math.floor(FOREST.e / T) : cols - 1;
       plant(col, row, row, () => CHAIN.regionAt(W - 8, row * T + 8), 3);
     }
-
-    // set dressing (CHAIN.PROPS — cosmetic, walk-through); lampposts glow warmly
     for (const pr of CHAIN.PROPS) {
       const sp = keep(new PIXI.Sprite(PIXELS.propTex(pr.kind)));
       sp.position.set(pr.x, pr.y);
       sp.zIndex = pr.y + sp.texture.height;
       if (pr.glow) addGlow(pr.x + 4, pr.y + 3, 0.9);
     }
-
-    // solid scenery shapes the walking routes — map variance. Trees sort by
-    // their base (you walk under the crown); low rock-like things sort by the
-    // top of their footprint (SNES low priority: beside you = under you)
     for (const sc of CHAIN.SCENERY) {
       const sp = keep(new PIXI.Sprite(PIXELS.sceneryTex(sc.kind)));
-      // centred on its footprint tiles, base on the tile bottom
       sp.position.set(Math.round(sc.tx * T + (sc.fw * T - sp.texture.width) / 2), (sc.ty + 1) * T - sp.texture.height);
       const low = /^(rock|boulder|tarpool|scrub|reeds|crystal|spire)/.test(sc.kind);
       sp.zIndex = low ? sc.ty * T : (sc.ty + 1) * T;
     }
-
-    // petals belong to the home biome
     const home = CHAIN.MAP.REGIONS[0];
     for (const m of petals) {
       m.x = home.x + Math.random() * home.w;
       m.y = (home.y || 0) + 36 + Math.random() * ((home.h || H) - 50);
     }
-
-    // the operator arrives at the map's spawn; the camera follows on the next tick
     playerX = CHAIN.SPAWN.x; playerY = CHAIN.SPAWN.y;
     facing = 'side'; faceSign = 1; workTtl = 0; working = false;
     for (const k of Object.keys(moving)) moving[k] = false;
@@ -299,100 +272,136 @@
     resize();
   }
 
-  // icon row on a dark plate, bitmap font only. preGlyphs renders a leading
-  // pixel-text chunk (e.g. '✦3' for editions).
-  function iconRowAt(specObj, outMat, cx, topY, preGlyphs) {
-    const row = new PIXI.Container();
+  // ---------- icon rows and the place menu (pixel UI in labelsC) ----------
+  // A row: {pre?: text, kind?: kind id (12px icon), items?: {mat:n} icons+counts,
+  //         out?: mat, gauge?: 0..1, enabled?: bool, ok?: bool}
+  function rowContainer(row, dimText) {
+    const c = new PIXI.Container();
     let ix = 0;
-    const put = (spr, dy) => { spr.position.set(ix, dy); row.addChild(spr); };
-    if (preGlyphs) {
-      const t = new PIXI.Sprite(PIXELS.textTex(preGlyphs, PIXELS.P.brass3));
+    const put = (spr, dy) => { spr.position.set(ix, dy); c.addChild(spr); };
+    if (row.pre) {
+      const t = new PIXI.Sprite(PIXELS.textTex(row.pre, dimText || PIXELS.P.brass3));
       put(t, 3); ix += t.texture.width + 3;
     }
-    for (const [mat, n] of Object.entries(specObj || {})) {
+    if (row.kind) {
+      const ic = new PIXI.Sprite(PIXELS.kindIconTex(row.kind));
+      put(ic, 0); ix += 14;
+    }
+    if (row.ore) {
+      const ic = new PIXI.Sprite(PIXELS.matIconTex(row.ore));
+      put(ic, 0); ix += 14;
+    }
+    for (const [mat, n] of Object.entries(row.items || {})) {
       const ic = new PIXI.Sprite(PIXELS.matIconTex(mat));
       put(ic, 0); ix += 13;
       const cnt = new PIXI.Sprite(PIXELS.textTex(String(n), PIXELS.P.paper));
       put(cnt, 3); ix += cnt.texture.width + 3;
     }
-    if (outMat) {
+    if (row.out) {
       const arrow = new PIXI.Sprite(PIXELS.textTex('→', PIXELS.P.brass2));
       put(arrow, 3); ix += arrow.texture.width + 3;
-      const oc = new PIXI.Sprite(PIXELS.matIconTex(outMat));
+      const oc = new PIXI.Sprite(PIXELS.matIconTex(row.out));
       put(oc, 0); ix += 12;
     }
-    const back = new PIXI.Graphics().rect(-3, -2, ix + 6, 16).fill({ color: 0x17161a, alpha: 0.7 });
-    row.addChildAt(back, 0);
-    row.position.set(Math.round(cx - ix / 2), topY);
-    labelsC.addChild(row);
-    return row;
+    if (row.ok === true) {
+      const t = new PIXI.Sprite(PIXELS.textTex('✓', '#6cc46c'));
+      put(t, 3); ix += t.texture.width + 2;
+    } else if (row.ok === false) {
+      const t = new PIXI.Sprite(PIXELS.textTex('✗', '#d84f4f'));
+      put(t, 3); ix += t.texture.width + 2;
+    }
+    if (typeof row.gauge === 'number') {
+      const g = new PIXI.Graphics()
+        .rect(0, 4, 14, 4).fill(0x221d29)
+        .rect(1, 5, Math.round(12 * Math.max(0, Math.min(1, row.gauge))), 2).fill(row.gauge >= 1 ? 0x6cc46c : 0xf2c14e);
+      put(g, 0); ix += 17;
+    }
+    c._w = Math.max(ix, 8);
+    return c;
+  }
+  // a stack of info rows above a place (dimmed = not affordable/active)
+  let infoRows = [];
+  function clearInfo() {
+    for (const r of infoRows) { if (r.parent) r.parent.removeChild(r); r.destroy({ children: true }); }
+    infoRows = [];
+  }
+  function showInfo(dockId, rows) {
+    clearInfo();
+    if (!ready || !dockId || !rows || !rows.length) return;
+    const st = stations[dockId];
+    if (!st) return;
+    const cx = st.def.x + 13;
+    let y = st.def.y - 46 - (rows.length - 1) * 16;
+    for (const row of rows) {
+      const c = rowContainer(row);
+      const back = new PIXI.Graphics().rect(-3, -2, c._w + 6, 16).fill({ color: 0x17161a, alpha: 0.7 });
+      c.addChildAt(back, 0);
+      c.position.set(Math.round(cx - c._w / 2), y);
+      c.alpha = row.enabled === false ? 0.5 : 1;
+      labelsC.addChild(c);
+      infoRows.push(c);
+      y += 16;
+    }
+  }
+  // the place menu: a panel of rows with a highlighted selection
+  let menuC = null;
+  function clearMenu() {
+    if (!menuC) return;
+    if (menuC.parent) menuC.parent.removeChild(menuC);
+    menuC.destroy({ children: true });
+    menuC = null;
+  }
+  function showMenu(dockId, rows, sel) {
+    clearMenu();
+    if (!ready || !dockId || !rows || !rows.length) return;
+    const st = stations[dockId];
+    if (!st) return;
+    menuC = new PIXI.Container();
+    const built = rows.map((r) => rowContainer(r));
+    const w = Math.max(...built.map((c) => c._w)) + 10;
+    const h = rows.length * 16 + 6;
+    const cx = st.def.x + 13;
+    let px = Math.round(cx - w / 2), py = st.def.y - 50 - h;
+    px = Math.max(2, Math.min(CHAIN.WORLD_W - w - 2, px));
+    if (py < 4) py = st.def.y + 8;
+    const panel = new PIXI.Graphics()
+      .rect(0, 0, w, h).fill({ color: 0x17161a, alpha: 0.9 })
+      .rect(0, 0, w, 1).fill(0xc9a24a).rect(0, h - 1, w, 1).fill(0xc9a24a);
+    menuC.addChild(panel);
+    built.forEach((c, i) => {
+      if (i === sel) {
+        const hl = new PIXI.Graphics().rect(2, 3 + i * 16, w - 4, 14).fill({ color: 0xf2c14e, alpha: rows[i].enabled === false ? 0.18 : 0.35 });
+        menuC.addChild(hl);
+      }
+      c.position.set(5, 4 + i * 16);
+      c.alpha = rows[i].enabled === false ? 0.5 : 1;
+      menuC.addChild(c);
+    });
+    menuC.position.set(px, py);
+    labelsC.addChild(menuC);
   }
 
-  function stationSpriteTex(def, auto) {
-    if (def.kind === 'board') return PIXELS.boardTex(false);
-    if (def.kind === 'bench') return texFor(auto ? 3 : 1)[0];
-    if (def.kind === 'press') return pressTexes[0];
-    return PIXELS.stationTex(def.kind === 'slogi' ? 'bigrams' : def.kind === 'slova' ? 'words' : 'lines');
+  function stationSpriteTex(m) {
+    if (m.kind === 'mine') return texFor(m.autoLive ? 3 : 1)[0];
+    if (m.kind === 'smelter') return PIXELS.stationTex('bigrams');
+    if (m.kind === 'foundry') return PIXELS.stationTex('foundry');
+    if (m.kind === 'constructor') return PIXELS.stationTex('words');
+    return PIXELS.stationTex('lines');
   }
 
-  // what Enter needs at the docked machine (automation / belt costs) —
-  // shown even when unaffordable, dimmed, so the goal is always visible
-  let dockInfo = null;
-  function clearDockInfo() {
-    if (!dockInfo) return;
-    if (dockInfo.parent) dockInfo.parent.removeChild(dockInfo);
-    dockInfo.destroy({ children: true });
-    dockInfo = null;
-  }
-  function showDockInfo(stationId, spec, preGlyph, affordable) {
-    clearDockInfo();
-    if (!ready || !stationId || !spec) return;
-    const def = CHAIN.get(stationId);
-    if (!def) return;
-    dockInfo = iconRowAt(spec, null, def.x + 13, def.y - 62, preGlyph);
-    dockInfo.alpha = affordable ? 1 : 0.55;
-  }
-
-  // ghost preview of the pending kit on the docked plot
-  let plotPreview = null;
-  function clearPlotPreview() {
-    if (!plotPreview) return;
-    if (plotPreview.row.parent) plotPreview.row.parent.removeChild(plotPreview.row);
-    plotPreview.row.destroy({ children: true });
-    if (plotPreview.gh.parent) plotPreview.gh.parent.removeChild(plotPreview.gh);
-    plotPreview.gh.destroy();
-    plotPreview = null;
-  }
-  function showPlotKit(plotId, kit) {
-    clearPlotPreview();
-    if (!ready || !plotId || !kit) return;
-    const p = CHAIN.plotById(plotId);
-    if (!p) return;
-    const gh = new PIXI.Sprite(stationSpriteTex(kit, false));
-    gh.alpha = 0.35;
-    gh.position.set(p.x, p.y - 36);
-    gh.zIndex = p.y;
-    cameraC.addChild(gh);
-    const row = iconRowAt(kit.buildCost, kit.out, p.x + 13, p.y - 46);
-    plotPreview = { row, gh };
-  }
-
-  function buildWorld(profile, names) {
+  // Build the world from the save: machines on plots and nodes, free plots,
+  // unbuilt nodes, crossings. `autoLive(m)` says whether a machine is running
+  // by itself right now (⚙ bought and its letters sticky).
+  function buildWorld(profile, autoLive) {
     if (!ready) return;
-    clearPlotPreview();
-    dockInfo = null; // its container lives in labelsC, cleared below
-    CHAIN.resolvePositions(profile);
+    clearInfo(); clearMenu();
     for (const s of Object.values(stations)) { cameraC.removeChild(s.root); s.root.destroy({ children: true }); }
     for (const l of labelsC.children.slice()) { labelsC.removeChild(l); l.destroy(); }
-    floats.length = 0;   // their texts lived in labelsC — gone with it
-    flashes.length = 0;  // likewise the station sprites they were tinting
-    for (const b of beltsDrawn) { cameraC.removeChild(b.c); b.c.destroy({ children: true }); }
-    stations = {}; beltsDrawn = [];
+    floats.length = 0;
+    flashes.length = 0;
+    stations = {};
     if (player) { cameraC.removeChild(player); player.destroy(); player = null; }
 
-    // region crossings: closed = a rockslide / broken bridge / washed-out
-    // boardwalk / snowdrift (solid, y-sorted); open = the bridge or boards
-    // underfoot, or bare ground for a cleared pass
     for (const c of crossSprites) { cameraC.removeChild(c); c.destroy(); }
     crossSprites = []; openRects = []; closedRects = [];
     for (const cr of CHAIN.MAP.CROSSINGS) {
@@ -402,86 +411,28 @@
       if (!art) continue;
       const sp = new PIXI.Sprite(PIXELS.util.tex(art.c));
       sp.position.set(cr.x - (art.dx || 0), cr.y - (art.dy || 0));
-      // closed heaps sort by their TOP like the cliff band: beside you = under you
       sp.zIndex = open ? -900 : cr.y;
       cameraC.addChild(sp);
       crossSprites.push(sp);
     }
 
-    // belts: L-shaped runs between wherever the two stations actually stand
-    // (direction-agnostic — the player chooses plots). Both endpoints must be
-    // built; an unpurchased link renders as a faint ghost of the plan.
-    for (const link of CHAIN.BELTS) {
-      const from = CHAIN.get(link.from), to = CHAIN.get(link.to);
-      if (profile.unlockedCount < from.unlockAt || profile.unlockedCount < to.unlockAt) continue;
-      if (!CHAIN.isBuilt(profile, from) || !CHAIN.isBuilt(profile, to)) continue;
-      const built = !!profile.belts[CHAIN.beltKey(link)];
-      const c = new PIXI.Container();
-      c.zIndex = -500;
-      c.alpha = built ? 1 : 0.22;
-      const y0 = from.y - 10, y1 = to.y - 10;
-      const x0 = from.x + 24, x1 = to.x + 1;
-      const midX = x1 - 8;
-      const runH = (xa, xb, y) => {
-        for (let x = Math.min(xa, xb); x < Math.max(xa, xb); x += 12) {
-          const seg = new PIXI.Sprite(beltTexes[0]);
-          seg.position.set(x, y);
-          c.addChild(seg);
-        }
-      };
-      const runV = (xc, ya, yb) => {
-        for (let y = Math.min(ya, yb); y < Math.max(ya, yb); y += 12) {
-          const seg = new PIXI.Sprite(beltTexes[0]);
-          seg.rotation = Math.PI / 2;
-          seg.position.set(xc + 8, y);
-          c.addChild(seg);
-        }
-      };
-      runH(x0, midX, y0);
-      runV(midX, y0, y1);
-      runH(midX, x1 + 6, y1);
-      cameraC.addChild(c);
-      beltsDrawn.push({
-        fromId: link.from, c, built,
-        path: [{ x: x0, y: y0 + 2 }, { x: midX + 4, y: y0 + 2 }, { x: midX + 4, y: y1 + 2 }, { x: x1 + 4, y: y1 + 2 }],
-      });
-    }
-
-    for (const def of CHAIN.STATIONS) {
-      // kit stations don't exist until the player erects them on a chosen plot
-      if (def.buildCost && !CHAIN.isBuilt(profile, def)) continue;
-      const locked = profile.unlockedCount < def.unlockAt;
-      const auto = !!profile.autoBench[def.id];
+    // machines
+    for (const m of profile.machines) {
+      const pos = CHAIN.machinePos(m);
+      const live = !!(autoLive && autoLive(m));
       const root = new PIXI.Container();
-      let sp;
-      if (def.kind === 'board') sp = new PIXI.Sprite(PIXELS.boardTex(CHAIN.canDeliver(profile)));
-      else sp = new PIXI.Sprite(stationSpriteTex(def, auto));
+      const sp = new PIXI.Sprite(stationSpriteTex({ ...m, autoLive: live }));
       root.addChild(sp);
-      if (locked) sp.tint = 0x4a4a58;
-
-      // icon row above the station: recipe → output; the board shows the
-      // current milestone (goal → reward, or ✦N for an edition benchmark).
-      if (!locked) {
-        if (def.kind === 'board') {
-          const m = CHAIN.currentMilestone(profile);
-          if (!m) iconRowAt(null, null, def.x + 13, def.y - 46, '✦');
-          else if (m.edition) iconRowAt(null, 'listy', def.x + 13, def.y - 46, '✦' + m.lines);
-          else iconRowAt(m.goal, CHAIN.get(m.reward).out, def.x + 13, def.y - 46);
-        } else if (def.tier === 1) iconRowAt(null, def.out, def.x + 13, def.y - 46);
-        else iconRowAt(def.recipe, def.out, def.x + 13, def.y - 46);
-      }
-
       const glow = new PIXI.Graphics().rect(0, 36, 26, 2).fill(0xc9a24a);
       glow.visible = false;
       root.addChild(glow);
-      root.position.set(def.x, def.y - 36);
-      root.zIndex = def.y;
+      root.position.set(pos.x, pos.y - 36);
+      root.zIndex = pos.y;
       cameraC.addChild(root);
-      stations[def.id] = { def, root, sp, glow, locked, auto, built: true, sqTtl: 0 };
+      const id = 'm:' + m.id;
+      stations[id] = { def: { id, x: pos.x, y: pos.y, kind: m.kind, m }, root, sp, glow, built: true, auto: live, sqTtl: 0 };
     }
-
-    // free plots: surveyed markers, dockable; they pulse while a kit awaits
-    const kit = CHAIN.pendingKit(profile);
+    // free plots: surveyed markers, dockable, walk-through
     for (const p of CHAIN.freePlots(profile)) {
       const root = new PIXI.Container();
       const sp = new PIXI.Sprite(PIXELS.plotTex());
@@ -492,19 +443,44 @@
       root.position.set(p.x - 2, p.y - 13);
       root.zIndex = -700;
       cameraC.addChild(root);
+      sp.alpha = 0.75;
       stations['plot:' + p.id] = {
-        def: { id: 'plot:' + p.id, x: p.x, y: p.y, kind: 'plot' },
-        root, sp, glow, locked: false, auto: false, built: false, sqTtl: 0,
+        def: { id: 'plot:' + p.id, x: p.x, y: p.y, kind: 'plot', plot: p },
+        root, sp, glow, built: false, auto: false, sqTtl: 0,
         glowRect: { x: 0, y: 15, w: 30, h: 2 },
-        plotPulse: !!kit,
       };
-      sp.alpha = kit ? 1 : 0.75;
+    }
+    // unbuilt ore nodes: the vein, surveyed
+    for (const n of CHAIN.unbuiltNodes(profile)) {
+      const root = new PIXI.Container();
+      const sp = new PIXI.Sprite(PIXELS.plotTex());
+      root.addChild(sp);
+      const glow = new PIXI.Graphics().rect(0, 15, 30, 2).fill(0xc9a24a);
+      glow.visible = false;
+      root.addChild(glow);
+      root.position.set(n.x + 2, n.y - 1);
+      root.zIndex = -700;
+      cameraC.addChild(root);
+      sp.alpha = 0.6;
+      stations['node:' + n.index] = {
+        def: { id: 'node:' + n.index, x: n.x + 4, y: n.y + 12, kind: 'node', node: n },
+        root, sp, glow, built: false, auto: false, sqTtl: 0,
+        glowRect: { x: 0, y: 15, w: 30, h: 2 },
+      };
     }
 
     player = new PIXI.Sprite(charTex.side[0]);
     player.anchor.set(0.5, 1);
     player.position.set(Math.round(playerX), Math.round(playerY));
     cameraC.addChild(player);
+    if (dockedId && stations[dockedId]) stations[dockedId].glow.visible = true;
+  }
+  // an automated mine changes look without a full rebuild
+  function setAutoLook(dockId, live) {
+    const st = stations[dockId];
+    if (!st || st.def.kind !== 'mine') return;
+    st.auto = live;
+    st.sp.texture = texFor(live ? 3 : 1)[0];
   }
 
   function setMove(which, down) { moving[which] = down; }
@@ -526,12 +502,13 @@
   function castLetter(ok) {
     if (!ready || !dockedId) return;
     const st = stations[dockedId];
+    if (!st || !st.built) return;
     st.sp.tint = ok ? 0xffe9a0 : 0xff8a70;
-    flashes.push({ sp: st.sp, ttl: 6, locked: st.locked });
-    workTtl = 50;   // the machine runs on this keystroke
-    working = true; // and the operator stays at the controls until they walk away
+    flashes.push({ sp: st.sp, ttl: 6 });
+    workTtl = 50;
+    working = true;
     if (ok) {
-      st.sp.y = 1; st.sqTtl = 4; // 1px cast dip
+      st.sp.y = 1; st.sqTtl = 4;
       const p = new PIXI.Sprite(dotTex);
       p.zIndex = st.def.y + 1;
       cameraC.addChild(p);
@@ -542,43 +519,24 @@
     }
   }
 
-  function floatText(text, stationId, color) {
+  function posOf(dockId) {
+    const st = stations[dockId || dockedId];
+    return st ? st.def : null;
+  }
+  function floatText(text, dockId, color) {
     if (!ready) return;
-    const def = CHAIN.get(stationId || dockedId || 'az');
+    const def = posOf(dockId);
     if (!def) return;
     const css = cssColor(color || 0xeacc78);
     const t = new PIXI.Sprite(PIXELS.textTex(text, css));
     floats.push({ t, ttl: 60, wx: def.x + 13, wy: def.y - 44 });
     labelsC.addChild(t);
-    // low fountain arc — stays below the icon plate where it can be seen
     spawnSparks(def.x + 13, def.y - 22, 5, parseInt(css.slice(1), 16));
   }
-
   function stamp() {
-    pressBurst = 16;
-    // printed sheets flutter off the press
-    const def = CHAIN.get('press');
-    for (let i = 0; i < 3; i++) {
-      const sp = new PIXI.Sprite(PIXELS.paperScrapTex(0));
-      sp.zIndex = def.y + 2;
-      cameraC.addChild(sp);
-      scraps.push({
-        sp, x: def.x + 8 + Math.random() * 26, y: def.y - 30 - Math.random() * 6,
-        vy: 0.2 + Math.random() * 0.14, phase: Math.random() * 6.28, clock: 0, ttl: 70,
-      });
-    }
+    const def = posOf(dockedId);
+    if (def) spawnSparks(def.x + 13, def.y - 26, 6, 0xffe08a);
   }
-
-  function beltDot(fromId) {
-    if (!ready) return;
-    const belt = beltsDrawn.find((b) => b.fromId === fromId);
-    if (!belt) return;
-    const p = new PIXI.Sprite(dotTex);
-    p.zIndex = -400;
-    cameraC.addChild(p);
-    dots.push({ sp: p, x: belt.path[0].x, y: belt.path[0].y, path: belt.path, seg: 0, v: 1.6 });
-  }
-
   function getDocked() { return dockedId; }
 
   let camX = 0, camY = 0;
@@ -592,10 +550,9 @@
     if (moving.right) vx += SPEED;
     if (moving.up) vy -= SPEED;
     if (moving.down) vy += SPEED;
-    // built machines and scenery are solid; plot markers are walk-through
     const collides = (px, py) => {
       for (const s of Object.values(stations)) {
-        if (!s.built || s.locked) continue;
+        if (!s.built) continue;
         const d = s.def;
         if (px > d.x - 3 && px < d.x + 29 && py > d.y - 14 && py < d.y + 2) return true;
       }
@@ -605,9 +562,6 @@
       }
       return false;
     };
-    // terrain: water, cliff faces and rock walls block; a change of elevation
-    // blocks unless you're on stairs; a closed crossing blocks; an OPEN
-    // crossing overrides whatever it spans (a bridge over water, a cleared gap)
     const inRect = (r, px, py) => px >= r.x && px < r.x + r.w && py >= r.y && py < r.y + r.h;
     const terrainOK = (fx, fy, tx2, ty2) => {
       if (closedRects.some((r) => inRect(r, tx2, ty2))) return false;
@@ -615,13 +569,16 @@
       return TILES.passable(grid, fx, fy, tx2, ty2);
     };
     if (vx !== 0 || vy !== 0) {
-      workTtl = 0; working = false;   // walking away ends the work pose
+      workTtl = 0; working = false;
       facing = Math.abs(vy) > Math.abs(vx) ? (vy < 0 ? 'up' : 'down') : 'side';
       if (vx !== 0) faceSign = vx > 0 ? 1 : -1;
+      // a machine built where you stand must not trap you: a move is blocked
+      // only when it enters a solid the operator isn't already inside
+      const stuck = collides(playerX, playerY);
       const nx = Math.max(LIM.w, Math.min(LIM.e, playerX + vx * dt));
-      if (!collides(nx, playerY) && terrainOK(playerX, playerY, nx, playerY)) playerX = nx;
+      if ((stuck || !collides(nx, playerY)) && terrainOK(playerX, playerY, nx, playerY)) playerX = nx;
       const ny = Math.max(LIM.n, Math.min(LIM.s, playerY + vy * dt));
-      if (!collides(playerX, ny) && terrainOK(playerX, playerY, playerX, ny)) playerY = ny;
+      if ((stuck || !collides(playerX, ny)) && terrainOK(playerX, playerY, playerX, ny)) playerY = ny;
       walkClock += dt;
       if (walkClock > 7) { walkClock = 0; walkFrame = (walkFrame + 1) % 4; }
     } else {
@@ -629,7 +586,7 @@
     }
     if (workTtl > 0) workTtl -= dt;
     if (working && dockedId) {
-      workClock += dt;   // the pose keeps playing through pauses in typing
+      workClock += dt;
       player.texture = charTex.work[Math.floor(workClock / 8) % charTex.work.length];
       player.scale.x = 1;
     } else {
@@ -643,14 +600,12 @@
       : Math.max(0, Math.min(CHAIN.WORLD_W - viewW, playerX - viewW / 2));
     camY = CHAIN.WORLD_H <= viewH ? (CHAIN.WORLD_H - viewH) / 2
       : Math.max(0, Math.min(CHAIN.WORLD_H - viewH, playerY - viewH / 2 - 8));
-    // camera locks to whole world pixels — the grid never shimmers
     cameraC.position.set(-Math.round(camX) * S, -Math.round(camY) * S);
     labelsC.position.set(-Math.round(camX) * S, -Math.round(camY) * S);
 
-    // docking: 2D proximity to the station's work spot (front-center)
+    // docking: 2D proximity to the place's work spot (front-center)
     let best = null, bestD = 1e9;
     for (const s of Object.values(stations)) {
-      if (s.locked) continue;
       const dx = playerX - (s.def.x + 13);
       const dy = playerY - (s.def.y + 6);
       const d = Math.hypot(dx, dy);
@@ -658,8 +613,7 @@
     }
     if (best !== dockedId) {
       dockedId = best;
-      workTtl = 0; working = false;   // a new dock (or none) starts fresh
-
+      workTtl = 0; working = false;
       for (const s of Object.values(stations)) s.glow.visible = s.def.id === dockedId;
       if (window.FACTORY.onDock) window.FACTORY.onDock(dockedId);
     }
@@ -668,30 +622,15 @@
     if (frameClock % 9 === 0) {
       frameIdx = (frameIdx + 1) % 4;
       for (const s of Object.values(stations)) {
-        if (s.def.kind === 'bench' && s.auto) s.sp.texture = texFor(3)[frameIdx];
-        // the drill spins while the operator works the mine
-        if (s.def.kind === 'bench' && !s.auto) s.sp.texture = texFor(1)[(s.def.id === dockedId && workTtl > 0) ? frameIdx : 0];
-        if (s.def.kind === 'press' && pressBurst <= 0) s.sp.texture = pressTexes[frameIdx];
-      }
-      for (const b of beltsDrawn) {
-        if (b.built && stations[b.fromId] && stations[b.fromId].auto) {
-          for (const seg of b.c.children) seg.texture = beltTexes[frameIdx];
-        }
+        if (s.def.kind !== 'mine') continue;
+        if (s.auto) s.sp.texture = texFor(3)[frameIdx];
+        else s.sp.texture = texFor(1)[(s.def.id === dockedId && workTtl > 0) ? frameIdx : 0];
       }
     }
-    if (pressBurst > 0) {
-      pressBurst--;
-      const pr = stations.press;
-      if (pr) pr.sp.texture = pressTexes[(pressBurst >> 1) % 4];
-    }
-
-    // 1px cast squash recovers; kit-pending plot markers pulse
     for (const s of Object.values(stations)) {
       if (s.sqTtl > 0) { s.sqTtl--; if (s.sqTtl <= 0) s.sp.y = 0; }
-      if (s.plotPulse) s.sp.alpha = 0.75 + 0.25 * Math.sin(frameClock * 0.12);
     }
 
-    // the hold-to-interact charge bar over the operator's head
     if (chargeG) chargeG.clear();
     if (chargeVal !== null) {
       if (!chargeG) {
@@ -705,7 +644,6 @@
         .rect(bx + 1, by + 1, Math.round(14 * Math.min(1, chargeVal)), 2).fill(0xf2c14e);
     }
 
-    // lamppost glow breathes; water shimmers
     for (const a of ambient) {
       a.sp.alpha = a.base * (0.75 + 0.25 * Math.sin(frameClock * 0.05 + a.phase));
     }
@@ -713,11 +651,10 @@
       const f = Math.floor(frameClock / 26) % 2;
       for (const w of waterSprites) w.sp.texture = waterTexes[f][w.seed];
     }
-    // petals drift and flutter
     for (const m of petals) {
       m.x += m.vx * dt;
       m.y += 0.05 * dt;
-      const home = CHAIN.MAP.REGIONS[0];            // petals belong to the home biome
+      const home = CHAIN.MAP.REGIONS[0];
       if (m.x > home.x + home.w) m.x = home.x;
       if (m.y > (home.y || 0) + (home.h || CHAIN.WORLD_H)) m.y = (home.y || 0) + 36;
       const wob = Math.sin(frameClock * 0.03 + m.phase);
@@ -727,7 +664,7 @@
     }
 
     for (let i = flashes.length - 1; i >= 0; i--) {
-      if (--flashes[i].ttl <= 0) { flashes[i].sp.tint = flashes[i].locked ? 0x4a4a58 : 0xffffff; flashes.splice(i, 1); }
+      if (--flashes[i].ttl <= 0) { flashes[i].sp.tint = 0xffffff; flashes.splice(i, 1); }
     }
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
@@ -744,16 +681,6 @@
       p.sp.alpha = p.ttl < 8 ? 0.5 : 1;
       if (p.ttl <= 0) { cameraC.removeChild(p.sp); p.sp.destroy(); sparks.splice(i, 1); }
     }
-    for (let i = scraps.length - 1; i >= 0; i--) {
-      const p = scraps[i];
-      p.clock += dt;
-      p.y += p.vy * dt;
-      p.sp.texture = PIXELS.paperScrapTex(Math.floor(p.clock / 12) % 2);
-      p.sp.position.set(Math.round(p.x + Math.sin(p.clock * 0.15 + p.phase) * 3), Math.round(p.y));
-      p.ttl -= dt;
-      if (p.ttl < 15) p.sp.alpha = p.ttl / 15;
-      if (p.ttl <= 0) { cameraC.removeChild(p.sp); p.sp.destroy(); scraps.splice(i, 1); }
-    }
     for (let i = floats.length - 1; i >= 0; i--) {
       const f = floats[i];
       f.wy -= 0.16 * dt;
@@ -761,19 +688,8 @@
       f.t.alpha = Math.min(1, f.ttl / 25);
       if ((f.ttl -= dt) <= 0) { labelsC.removeChild(f.t); f.t.destroy(); floats.splice(i, 1); }
     }
-    for (let i = dots.length - 1; i >= 0; i--) {
-      const d = dots[i];
-      const target = d.path[d.seg + 1];
-      if (!target) { cameraC.removeChild(d.sp); d.sp.destroy(); dots.splice(i, 1); continue; }
-      const ddx = target.x - d.x, ddy = target.y - d.y;
-      const dist = Math.hypot(ddx, ddy);
-      if (dist < d.v * dt) { d.x = target.x; d.y = target.y; d.seg++; }
-      else { d.x += (ddx / dist) * d.v * dt; d.y += (ddy / dist) * d.v * dt; }
-      d.sp.position.set(Math.round(d.x), Math.round(d.y));
-    }
   }
 
-  // canvas-space pixel position for a world point (for DOM fly-to-inventory)
   function screenPos(wx, wy) {
     return { x: wx * S + cameraC.x, y: wy * S + cameraC.y };
   }
@@ -786,9 +702,10 @@
   }
 
   window.FACTORY = {
-    init, loadMap, buildWorld, setMove, castLetter, floatText, stamp, beltDot, getDocked,
-    screenPos, setDockGlow, showPlotKit, showDockInfo,
-    setInvValue, invScreenPos, setCharge,
+    init, loadMap, buildWorld, setMove, castLetter, floatText, stamp, getDocked, posOf,
+    playerPos: () => ({ x: playerX, y: playerY }),
+    screenPos, setDockGlow, showInfo, clearInfo, showMenu, clearMenu, setAutoLook,
+    setInvValue, invScreenPos, setHudKeys, setCharge,
     onDock: null,
   };
 })();

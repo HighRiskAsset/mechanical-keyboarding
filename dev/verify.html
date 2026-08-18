@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MK · data checks (tech tree v3)</title>
+<style>
+  body { font: 14px/1.5 Consolas, monospace; background: #14181b; color: #e4ece9; padding: 20px 28px; max-width: 980px; }
+  h1 { font-size: 18px; margin: 0 0 6px; } p { color: #9aa9ab; margin: 0 0 14px; }
+  .ok { color: #6cc46c; } .fail { color: #ff8a70; } .warn { color: #f2c14e; }
+  li { margin: 2px 0; } .sum { margin-top: 14px; font-weight: bold; }
+  details { margin: 6px 0 6px 18px; color: #9aa9ab; } summary { cursor: pointer; }
+</style>
+</head>
+<body>
+<h1>Data checks — tech tree v3</h1>
+<p>Loads the live data files (language-ru, layout-ru, chain, engine) and asserts the rules DESIGN.md states. Not linked from the game.</p>
+<ul id="out"></ul>
+<div class="sum" id="sum"></div>
+<script src="../js/i18n.js"></script>
+<script src="../js/language-ru.js"></script>
+<script src="../js/layout-ru.js"></script>
+<script src="../js/chain.js"></script>
+<script src="../js/engine.js"></script>
+<script>
+(async () => {
+  const L = window.LANG_RU, LAY = window.LAYOUT_RU, C = window.CHAIN, E = window.ENGINE;
+  const out = document.getElementById('out');
+  let pass = 0, fail = 0, warn = 0;
+  const line = (ok, text, detail) => {
+    const li = document.createElement('li');
+    li.className = ok === true ? 'ok' : ok === false ? 'fail' : 'warn';
+    li.textContent = (ok === true ? '✓ ' : ok === false ? '✗ ' : '! ') + text;
+    if (detail) { const d = document.createElement('details'); d.innerHTML = '<summary>details</summary>' + detail; li.appendChild(d); }
+    out.appendChild(li);
+    if (ok === true) pass++; else if (ok === false) fail++; else warn++;
+  };
+  const isVowel = (c) => L.VOWELS.has(c);
+  const isLetter = (c) => !L.PUNCT.has(c);
+  const RU = 'абвгдеёжзийклмнопрстуфхцчшщъыьэюя';
+
+  // a synthetic profile with every pair of tier ≤ t unlocked
+  const profileAt = (t) => {
+    let n = 0; while (n < L.PAIRS.length && L.PAIRS[n].tier <= t) n++;
+    return { pairsUnlocked: n, letters: {}, seen: {}, machines: [], bag: {} };
+  };
+
+  // 1. pairs cover the alphabet exactly once
+  const seen = {}; for (const p of L.PAIRS) for (const k of p.keys) seen[k] = (seen[k] || 0) + 1;
+  const missing = [...RU].filter((c) => !seen[c]); const dupes = Object.entries(seen).filter(([, n]) => n > 1).map(([k]) => k);
+  line(!missing.length && !dupes.length, `pairs cover the 33 letters exactly once${missing.length ? ' — missing ' + missing.join(' ') : ''}${dupes.length ? ' — repeated ' + dupes.join(' ') : ''}`);
+  line(seen['.'] === 1, 'the period is introduced once (Oil Mk1)');
+
+  // 2. each mine pair = one finger, both hands
+  const bad = [];
+  for (const p of L.PAIRS) {
+    if (!p.ore || p.keys.length !== 2) continue;
+    const f = p.keys.map((k) => LAY.FINGER[LAY.CHAR_TO_CODE[k]]);
+    if (!f[0] || !f[1] || f[0].slice(1) !== f[1].slice(1) || f[0][0] === f[1][0]) bad.push(p.keys.join('') + ' → ' + f.join('/'));
+  }
+  line(!bad.length, 'every two-key mine pair is one finger on both hands', bad.join('<br>'));
+
+  // 3. ore Mk levels contiguous, in order
+  const mkBad = [];
+  for (const ore of C.ORE_IDS) {
+    const mks = L.PAIRS.filter((p) => p.ore === ore).map((p) => p.mk);
+    mks.forEach((m, i) => { if (m !== i + 1) mkBad.push(ore + ': ' + mks.join(',')); });
+  }
+  line(!mkBad.length, 'ore Mk levels are contiguous and ascending', mkBad.join('<br>'));
+
+  // 4. every 2-ore alloy has ≥1 vowel + 1 consonant at its intro tier
+  const vcBad = [];
+  for (const r of C.RECIPES.filter((x) => x.kind === 'smelter')) {
+    const a = C.recipeAlphabet(r, profileAt(r.tier)).filter(isLetter);
+    if (!(a.some(isVowel) && a.some((c) => !isVowel(c)))) vcBad.push(r.out + ' @T' + r.tier + ' = ' + a.join(''));
+  }
+  line(!vcBad.length, 'every smelter alloy holds a vowel and a consonant at its intro tier', vcBad.join('<br>'));
+
+  // 5. every smelter/foundry recipe is offered at its tier (min alphabet, V+C)
+  const minBad = [], minInfo = [];
+  for (const r of C.RECIPES) {
+    const kind = C.KINDS[r.kind];
+    if (!kind.ready || r.kind === 'constructor') continue;
+    const a = C.recipeAlphabet(r, profileAt(r.tier));
+    const ok = C.offerable(r, profileAt(r.tier));
+    minInfo.push(`${r.kind} → ${r.out} @T${r.tier}: ${a.length} letters ${ok ? '✓' : '✗'}`);
+    if (!ok) minBad.push(`${r.kind} → ${r.out} is not offered at its tier T${r.tier} (${a.length} letters, min ${kind.minAlpha})`);
+  }
+  line(!minBad.length, 'every smelter and foundry recipe is offered at its tier', (minBad.length ? minBad.join('<br>') + '<br>' : '') + minInfo.join('<br>'));
+
+  // 6. constructor pools: 3-ore alloys must reach 25 words within a tier of
+  // arriving; 2-ore alloys may never (vowel-poor ones skip the Constructor
+  // by design) — reported, not failed
+  const cInfo = [];
+  let cFail = false, cWarn = false;
+  for (const r of C.RECIPES.filter((x) => x.kind === 'constructor')) {
+    const mat = Object.keys(r.in)[0];
+    let firstOk = null;
+    for (let t = r.tier; t <= 6; t++) {
+      if (C.offerable(r, profileAt(t))) { firstOk = t; break; }
+    }
+    const nAtIntro = C.wordPool(C.recipeAlphabet(r, profileAt(r.tier))).length;
+    const three = C.MATS[mat].form === 'ingot3';
+    let note = '';
+    if (firstOk === null) { note = three ? ' — NEVER offered (3-ore alloy: fix the word list)' : ' — never offered (2-ore alloy: by design)'; if (three) cFail = true; }
+    else if (firstOk > r.tier) { note = ` — first offered at T${firstOk}`; if (three && firstOk > r.tier + 1) cFail = true; else if (!three) cWarn = true; }
+    cInfo.push(`${mat} → parts: ${nAtIntro} words @T${r.tier}${note}`);
+  }
+  line(cFail ? false : (cWarn ? null : true), 'constructor recipes: 3-ore alloys offered within a tier of arriving; 2-ore alloys reported', cInfo.join('<br>'));
+
+  // 7. ending families ≥ 6 items, tagged by ore
+  const endBad = C.ORE_IDS.filter((o) => !L.ENDINGS[o] || L.ENDINGS[o].length < 6);
+  line(!endBad.length, 'every ore has an ending family of ≥ 6 items', endBad.join(', '));
+
+  // 8. syllables use letters only; words have glosses; no duplicate words
+  const sylBad = L.SYLLABLES.filter(([s]) => [...s].some((c) => !RU.includes(c))).map(([s]) => s);
+  line(!sylBad.length, `syllable table (${L.SYLLABLES.length}) uses letters only`, sylBad.join(' '));
+  const noGloss = L.WORDS.filter(([, g]) => !g).map(([w]) => w);
+  line(!noGloss.length, `word list (${L.WORDS.length}) — every word has a gloss`, noGloss.join(' '));
+  const clBad = L.CLUSTERS.filter((c) => [...c].some((x) => !RU.includes(x) || isVowel(x)));
+  line(!clBad.length, `cluster list (${L.CLUSTERS.length}) is consonants only`, clBad.join(' '));
+
+  // 9. prices reference materials the player can hold by then
+  const priceBad = [];
+  const checkPrice = (label, tier, cost) => {
+    for (const mat of Object.keys(cost || {})) {
+      if (!C.MATS[mat]) { priceBad.push(`${label}: unknown material ${mat}`); continue; }
+      const mt = C.matTier(mat);
+      if (mt > tier) priceBad.push(`${label} (T${tier}) asks for ${mat} (T${mt})`);
+    }
+  };
+  for (const [ore, cost] of Object.entries(C.PRICES.node)) { const p = L.PAIRS.find((q) => q.ore === ore); checkPrice('node ' + ore, p ? p.tier : 0, cost); }
+  for (const [ore, levels] of Object.entries(C.PRICES.mk)) for (const [lvl, cost] of Object.entries(levels)) { const p = L.PAIRS.find((q) => q.ore === ore && q.mk === +lvl); checkPrice(`mk ${ore}${lvl}`, p ? p.tier : 0, cost); }
+  for (const [k, cost] of Object.entries(C.PRICES.machine)) checkPrice('machine ' + k, C.KINDS[k].tier, cost);
+  line(!priceBad.length, 'every price is payable in materials that exist by that tier', priceBad.join('<br>'));
+
+  // 10. arity matches recipe inputs
+  const arBad = C.RECIPES.filter((r) => Object.keys(r.in).length !== C.KINDS[r.kind].arity).map((r) => `${r.kind} → ${r.out}: ${Object.keys(r.in).length} inputs, arity ${C.KINDS[r.kind].arity}`);
+  line(!arBad.length, 'recipe input counts match their kind\'s arity', arBad.join('<br>'));
+
+  // 11. every ore has a node on every map; T0 ores have a starter node
+  const nodeBad = [];
+  for (const id of C.MAP_IDS) {
+    const m = C.MAPS[id];
+    for (const ore of C.ORE_IDS) {
+      const has = m.MAP.NODES.some((n) => C.ORE_BY_NODE[n.kind] === ore);
+      if (!has) nodeBad.push(`${id}: no ${ore} node`);
+    }
+  }
+  line(!nodeBad.length, 'every map has a node for every ore', nodeBad.join('<br>'));
+
+  // 12. the engine knows no Cyrillic
+  try {
+    const src = await (await fetch('../js/engine.js')).text();
+    const cyr = src.match(/[Ѐ-ӿ]+/g) || [];
+    line(!cyr.length, 'engine.js contains no Cyrillic literal (invariant 5)', cyr.join(' '));
+  } catch (e) { line(null, 'engine.js source could not be fetched (open through the dev server)'); }
+
+  // 13. tier bars ascend
+  let barsOk = true;
+  for (let i = 1; i < C.BARS.length; i++) if (C.BARS[i].wpm < C.BARS[i - 1].wpm || C.BARS[i].acc < C.BARS[i - 1].acc) barsOk = false;
+  line(barsOk, 'tier bars ascend');
+
+  document.getElementById('sum').textContent = `${pass} passed · ${fail} failed · ${warn} to look at`;
+})();
+</script>
+</body>
+</html>

@@ -34,8 +34,11 @@ crossings) or *Open Range* (one flat meadow, every node in reach, room to
 build) —
 each keeps its own save, so nothing mined, built or unlocked carries over.
 Then walk with the **arrow keys**, stand at a machine and **type** to run
-it, **hold Space** to build, upgrade, collect, or deliver. Progress is saved
-in your browser (localStorage), one slot per world; switch worlds from ⚙.
+it, **hold Space** to open the menu of the place you stand at — build a
+machine on a plot, open an ore vein, give a mine new keys, automate it,
+collect from it (arrows choose, a second hold confirms, a tap closes).
+Everything is paid from what you have mined and made. Progress is saved in
+your browser (localStorage), one slot per world; switch worlds from ⚙.
 
 No installation, no build step: plain HTML/CSS/JS with a vendored copy of
 [PixiJS](https://pixijs.com/) (MIT) in `libs/`. All art is drawn in code —

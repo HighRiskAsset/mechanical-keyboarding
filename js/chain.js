@@ -1,49 +1,343 @@
-// The production chain and the maps: stations, plots, scenery, milestones.
-// Walking IS the menu; this file is the world's data. Global: CHAIN
+// The production chain and the maps (tech tree v3, DESIGN.md): ores, machine
+// kinds, recipes, prices, tier bars, plots, nodes, scenery. Walking IS the
+// menu; this file is the world's data. Global: CHAIN
 //
-// Building ruling (2026-08-11): the chain is AUTHORED — what stations exist
-// and what they consume/produce is the curriculum. The player chooses WHICH
-// free plot each new station occupies (kits earned at the milestone board).
-// Scenery makes the map uneven: some areas walled off, plots unevenly spread.
-// Bounded strategy — arranging walk routes, never ratio planning.
+// v3 rules this file encodes: an ore is a finger and a Mk is a reach (the
+// pairs live in language-ru.js); a material's alphabet is the union of the
+// ores that went into it, computed live; a recipe is only offered once its
+// union clears the kind's minimum alphabet; everything is bought from the
+// bag at the place (no Hub, no kits, no contracts, no Depot); kinds are
+// templates — several instances may stand.
 //
 // Maps (2026-08-18): the chain is shared, the ground is not. MAPS is a
-// registry of worlds — each one its own terrain, plots, scenery, props and
-// spawn — and CHAIN.useMap(id) makes one of them current. Every world
-// keeps its own save (engine.js), so nothing earned on one carries to another.
+// registry of worlds — each one its own terrain, plots, nodes, scenery,
+// props and spawn — and CHAIN.useMap(id) makes one of them current. Every
+// world keeps its own save (engine.js).
 (function () {
   'use strict';
 
   const L = window.LANG_RU;
+  const TILE = 16;
 
-  // Letter sets per tier-1 bench (curriculum legs wearing old Slavic letter names).
-  const SET_AZ = L.UNLOCK_ORDER.slice(0, 6);     // о е а и н т
-  const SET_BUKI = L.UNLOCK_ORDER.slice(6, 14);  // с л в р к м д п
-  const SET_VEDI = L.UNLOCK_ORDER.slice(14, 23); // ы у б я ь г з ч й
+  // ---- ores: six fingers. ids are material ids (legacy names never rename) ----
+  const ORES = {
+    az:    { id: 'az',    node: 'iron',   order: 0 },
+    buki:  { id: 'buki',  node: 'copper', order: 1 },
+    stone: { id: 'stone', node: 'stone',  order: 2 },
+    vedi:  { id: 'vedi',  node: 'quartz', order: 3 },
+    coal:  { id: 'coal',  node: 'coal',   order: 4 },
+    oil:   { id: 'oil',   node: 'oil',    order: 5 },
+  };
+  const ORE_IDS = Object.keys(ORES);
+  const ORE_BY_NODE = {};
+  for (const o of Object.values(ORES)) ORE_BY_NODE[o.node] = o.id;
 
-  // Station defs. x/y are RESOLVED per map: pre-built stations stand on the
-  // map's home plots (the board on its fixed spot); kit stations on whatever
-  // plot the player chose (profile.plots). Consumption ratios are
-  // per-correct-letter (fractions accumulate); perLine consumes on line finish.
-  // upgradeCost turns a tier-1 bench into an automation (auto-feeds its belt).
-  // buildCost marks a kit-built station: its kit is earned at the milestone
-  // board, then erected on any free plot the player chooses.
-  const STATIONS = [
-    { id: 'board', x: 0, y: 0, tier: 0, kind: 'board', unlockAt: 0 },
-    { id: 'az', x: 0, y: 0, tier: 1, kind: 'bench', mode: 'letters', focus: SET_AZ, out: 'az', unlockAt: 0, upgradeCost: { slogi: 30, az: 90 } },
-    { id: 'slogi', x: 0, y: 0, tier: 2, kind: 'slogi', mode: 'bigrams', out: 'slogi', consume: { az: 0.5 }, recipe: { az: 2 }, buildCost: { az: 60 }, unlockAt: 8 },
-    { id: 'buki', x: 0, y: 0, tier: 1, kind: 'bench', mode: 'letters', focus: SET_BUKI, out: 'buki', unlockAt: 0, upgradeCost: { slova: 18, buki: 90 } },
-    { id: 'slova', x: 0, y: 0, tier: 3, kind: 'slova', mode: 'words', out: 'slova', consume: { az: 0.2, slogi: 0.34, buki: 0.34 }, recipe: { az: 1, slogi: 2, buki: 2 }, buildCost: { slogi: 40, buki: 50 }, unlockAt: 10 },
-    { id: 'vedi', x: 0, y: 0, tier: 1, kind: 'bench', mode: 'letters', focus: SET_VEDI, out: 'vedi', unlockAt: 0, upgradeCost: { stroki: 10, vedi: 90 } },
-    { id: 'stroki', x: 0, y: 0, tier: 4, kind: 'stroki', mode: 'lines', out: 'stroki', consume: { slova: 0.25, vedi: 0.2 }, recipe: { slova: 8, vedi: 6 }, buildCost: { slova: 30, vedi: 40 }, unlockAt: 14 },
-    { id: 'press', x: 0, y: 0, tier: 5, kind: 'press', mode: 'lines', out: 'listy', perLine: { stroki: 1 }, fallbackPerLine: { az: 8 }, recipe: { stroki: 1 }, unlockAt: 0 },
+  // letters an ore holds at a given Mk (from the course pairs)
+  function oreLetters(ore, mk) {
+    const out = [];
+    for (const p of L.PAIRS) if (p.ore === ore && p.mk <= mk) out.push(...p.keys);
+    return out;
+  }
+  function oreMaxMk(ore) {
+    let m = 0;
+    for (const p of L.PAIRS) if (p.ore === ore) m = Math.max(m, p.mk);
+    return m;
+  }
+
+  // ---- machine kinds: grammar = kind; arity fixed; minimum alphabets ----
+  // perUnit = correct keystrokes per unit of output when worked by hand.
+  // autoFrom = the tier from which ⚙ is purchasable (mines: when keys are
+  // sticky). ready = implemented in this build (phases 4–5 add the rest).
+  const KINDS = {
+    mine:         { id: 'mine',         arity: 0, grammar: 'letters',   minAlpha: 2,  perUnit: 1,  autoFrom: 0,  tier: 0, ready: true },
+    smelter:      { id: 'smelter',      arity: 2, grammar: 'syllables', minAlpha: 4,  perUnit: 4,  autoFrom: 1,  tier: 0, ready: true, needsVC: true },
+    foundry:      { id: 'foundry',      arity: 2, grammar: 'clusters',  minAlpha: 8,  perUnit: 5,  autoFrom: 2,  tier: 1, ready: true },
+    constructor:  { id: 'constructor',  arity: 1, grammar: 'words',     minAlpha: 8,  perUnit: 6,  autoFrom: 2,  tier: 1, ready: true, minWords: 25 },
+    molder:       { id: 'molder',       arity: 2, grammar: 'endings',   minAlpha: 14, perUnit: 6,  autoFrom: 3,  tier: 2, ready: false, full: true },
+    assembler:    { id: 'assembler',    arity: 2, grammar: 'phrases',   minAlpha: 16, perUnit: 8,  autoFrom: 3,  tier: 2, ready: false, full: true },
+    fastener:     { id: 'fastener',     arity: 2, grammar: 'punct',     minAlpha: 20, perUnit: 8,  autoFrom: 4,  tier: 3, ready: false, full: true },
+    crane:        { id: 'crane',        arity: 2, grammar: 'capitals',  minAlpha: 30, perUnit: 8,  autoFrom: 6,  tier: 5, ready: false, full: true },
+    manufacturer: { id: 'manufacturer', arity: 3, grammar: 'pages',     minAlpha: 33, perUnit: 12, autoFrom: 99, tier: 6, ready: false, full: true },
+  };
+  const KIND_IDS = Object.keys(KINDS);
+
+  // ---- materials: ores, 2-ore ingots, 3-ore ingots, deeper forms ----
+  // Legacy ids: slogi = the first ingot (bronze), slova = parts, stroki =
+  // modules; listy retired. Icons are ore-colour stacks (pixels.js).
+  const MATS = {
+    az: { form: 'ore', ores: ['az'] }, buki: { form: 'ore', ores: ['buki'] }, stone: { form: 'ore', ores: ['stone'] },
+    vedi: { form: 'ore', ores: ['vedi'] }, coal: { form: 'ore', ores: ['coal'] }, oil: { form: 'ore', ores: ['oil'] },
+    slogi:      { form: 'ingot', ores: ['az', 'buki'] },      // bronze
+    castiron:   { form: 'ingot', ores: ['az', 'stone'] },
+    qziron:     { form: 'ingot', ores: ['az', 'vedi'] },
+    steel:      { form: 'ingot', ores: ['az', 'coal'] },
+    brass:      { form: 'ingot', ores: ['buki', 'stone'] },
+    blackiron:  { form: 'ingot', ores: ['az', 'oil'] },
+    gunmetal:   { form: 'ingot', ores: ['buki', 'coal'] },
+    glass:      { form: 'ingot', ores: ['vedi', 'oil'] },
+    qzbronze:   { form: 'ingot3', ores: ['az', 'buki', 'vedi'] },
+    caststeel:  { form: 'ingot3', ores: ['az', 'stone', 'coal'] },
+    blackbrass: { form: 'ingot3', ores: ['buki', 'stone', 'oil'] },
+    qzsteel:    { form: 'ingot3', ores: ['az', 'coal', 'vedi'] },
+    cokeiron:   { form: 'ingot3', ores: ['az', 'oil', 'coal'] },
+    slova: { form: 'parts', ores: [] }, mold: { form: 'moldings', ores: [] }, stroki: { form: 'modules', ores: [] },
+    fast: { form: 'fastened', ores: [] }, crate: { form: 'crates', ores: [] }, heavy: { form: 'heavy', ores: [] },
+    listy: { form: 'legacy', ores: [] },
+  };
+  const MAT_IDS = Object.keys(MATS).filter((id) => MATS[id].form !== 'legacy');
+  const INGOT_IDS = MAT_IDS.filter((id) => MATS[id].form === 'ingot' || MATS[id].form === 'ingot3');
+
+  // ---- recipes: authored, never emergent. Ratios are placeholders. ----
+  const RECIPES = [
+    { kind: 'smelter', in: { az: 2, buki: 1 }, out: 'slogi', tier: 0 },
+    { kind: 'smelter', in: { az: 2, stone: 1 }, out: 'castiron', tier: 0 },
+    { kind: 'smelter', in: { az: 2, vedi: 1 }, out: 'qziron', tier: 1 },
+    { kind: 'smelter', in: { az: 3, coal: 1 }, out: 'steel', tier: 2 },
+    { kind: 'smelter', in: { buki: 2, stone: 1 }, out: 'brass', tier: 2 },
+    { kind: 'smelter', in: { az: 2, oil: 1 }, out: 'blackiron', tier: 3 },
+    { kind: 'smelter', in: { buki: 2, coal: 1 }, out: 'gunmetal', tier: 4 },
+    { kind: 'smelter', in: { vedi: 2, oil: 1 }, out: 'glass', tier: 5 },
+    { kind: 'foundry', in: { slogi: 2, vedi: 1 }, out: 'qzbronze', tier: 1 },
+    { kind: 'foundry', in: { castiron: 2, coal: 1 }, out: 'caststeel', tier: 2 },
+    { kind: 'foundry', in: { brass: 2, oil: 1 }, out: 'blackbrass', tier: 3 },
+    { kind: 'foundry', in: { steel: 2, vedi: 1 }, out: 'qzsteel', tier: 4 },
+    { kind: 'foundry', in: { blackiron: 2, coal: 1 }, out: 'cokeiron', tier: 5 },
+    // deeper kinds — data for phases 4–5 (kinds not ready in this build)
+    { kind: 'molder', in: { slova: 2, az: 1 }, out: 'mold', tier: 2 },
+    { kind: 'molder', in: { slova: 2, buki: 1 }, out: 'mold', tier: 2 },
+    { kind: 'molder', in: { slova: 2, stone: 1 }, out: 'mold', tier: 2 },
+    { kind: 'molder', in: { slova: 2, vedi: 1 }, out: 'mold', tier: 2 },
+    { kind: 'molder', in: { slova: 2, coal: 1 }, out: 'mold', tier: 2 },
+    { kind: 'molder', in: { slova: 2, oil: 1 }, out: 'mold', tier: 3 },
+    { kind: 'assembler', in: { slova: 2, steel: 1 }, out: 'stroki', tier: 2 },
+    { kind: 'assembler', in: { slova: 2, brass: 1 }, out: 'stroki', tier: 2 },
+    { kind: 'assembler', in: { slova: 2, blackiron: 1 }, out: 'stroki', tier: 3 },
+    { kind: 'assembler', in: { slova: 2, gunmetal: 1 }, out: 'stroki', tier: 4 },
+    { kind: 'fastener', in: { stroki: 2, oil: 1 }, out: 'fast', tier: 3 },
+    { kind: 'fastener', in: { stroki: 2, coal: 1 }, out: 'fast', tier: 4 },
+    { kind: 'crane', in: { fast: 2, oil: 1 }, out: 'crate', tier: 5 },
+    { kind: 'manufacturer', in: { crate: 2, mold: 1, slova: 2 }, out: 'heavy', tier: 6 },
   ];
+  // Constructor: any ingot → parts (2 → 1). Tier = the ingot's recipe tier.
+  for (const id of INGOT_IDS) {
+    const src = RECIPES.find((r) => r.out === id);
+    RECIPES.push({ kind: 'constructor', in: { [id]: 2 }, out: 'slova', tier: Math.max(KINDS.constructor.tier, src ? src.tier : 1) });
+  }
+  const recipesFor = (kind) => RECIPES.filter((r) => r.kind === kind);
+  const recipeFor = (mat) => RECIPES.find((r) => r.out === mat) || null;
+  // the tier a material first exists at
+  function matTier(id) {
+    if (MATS[id].form === 'ore') { const p = L.PAIRS.find((q) => q.ore === id); return p ? p.tier : 0; }
+    const r = recipeFor(id);
+    return r ? r.tier : 0;
+  }
 
-  // Solid scenery: shapes the walking routes. Everything stands ON a tile —
-  // sc(kind, tx, ty) names the tile under its base; wide kinds (FOOT_W) span
-  // that many tiles to the east. The sprite is drawn centred on the footprint
-  // with its base on the tile bottom (factory.js); the collision box is the
-  // footprint, inset a hair. Art sizes live in pixels.js / tiles.js.
+  // ---- tier bars: readiness targets on every unlocked letter ----
+  const BARS = [
+    { wpm: 12, acc: 0.95 }, { wpm: 15, acc: 0.96 }, { wpm: 18, acc: 0.96 }, { wpm: 21, acc: 0.97 },
+    { wpm: 24, acc: 0.97 }, { wpm: 28, acc: 0.97 }, { wpm: 35, acc: 0.97 },
+  ];
+  // the trade good of each tier — the "current-tier good" prices lean on
+  const TIER_GOOD = ['slogi', 'slova', 'stroki', 'fast', 'fast', 'crate', 'heavy'];
+
+  const TUNING = {
+    PICKUP_CAP: 100,       // an automated mine refills your bag to this on collect
+    MIN_WORDS: 25,         // Constructor pool size before a recipe is offered
+    RATIO_TILT_CAP: 3,     // ratio → sampling tilt, capped (variance only)
+    RATIO_MIN_POOL: 25,    // below this many words the tilt is off
+    K_HEAVY: 200,          // heavy modules to finish (placeholder)
+    MACHINE_PRICE_STEP: 0.5, // nth instance of a kind costs ×(1 + step·(n−1))
+  };
+
+  // ---- prices (placeholders, all in the pattern "own material + tier good") ----
+  const PRICES = {
+    // opening an ore (its first mine): the tier's goods
+    node: {
+      vedi: { slogi: 40, castiron: 40 },
+      coal: { slova: 60, qziron: 40 },
+      oil: { stroki: 60, steel: 40 },
+    },
+    // Mk levels per ore
+    mk: {
+      az: { 2: { az: 80, slogi: 30 } },
+      buki: { 2: { buki: 80, steel: 30 } },
+      stone: { 2: { stone: 80, steel: 30 } },
+      vedi: { 2: { vedi: 60, qziron: 40 }, 3: { vedi: 60, blackiron: 30 } },
+      coal: { 2: { fast: 60, steel: 40 }, 3: { coal: 60, qzsteel: 40 } },
+      oil: { 2: { oil: 60, blackiron: 30 }, 3: { oil: 60, gunmetal: 40 }, 4: { oil: 60, fast: 60 } },
+    },
+    // first instance of a kind at a plot
+    machine: {
+      smelter: { az: 30, buki: 30, stone: 30 },
+      foundry: { slova: 40, slogi: 40 },
+      constructor: { qziron: 40, castiron: 40 },
+      molder: { slova: 60, brass: 30 },
+      assembler: { mold: 60, slova: 40 },
+      fastener: { blackiron: 40, stroki: 40 },
+      crane: { fast: 80, glass: 40 },
+      manufacturer: { crate: 100, mold: 60, slova: 60 },
+    },
+  };
+  const scaleCost = (cost, k) => {
+    const out = {};
+    for (const [m, n] of Object.entries(cost)) out[m] = Math.max(1, Math.round(n * k));
+    return out;
+  };
+  // an extra mine of an already-open ore: its ore + the tier's good
+  function priceExtraMine(ore, tier) {
+    return { [ore]: 60, [TIER_GOOD[Math.min(tier, TIER_GOOD.length - 1)]]: 20 };
+  }
+  function priceMk(ore, level) {
+    return (PRICES.mk[ore] && PRICES.mk[ore][level]) || null;
+  }
+  function priceMachine(kind, nth) {
+    const base = PRICES.machine[kind];
+    if (!base) return null;
+    return scaleCost(base, 1 + TUNING.MACHINE_PRICE_STEP * Math.max(0, nth - 1));
+  }
+  // ⚙ on a mine: its ore + the tier's good (processors: phase 3)
+  function priceAuto(m, tier) {
+    if (m.kind === 'mine') return { [m.ore]: 80, [TIER_GOOD[Math.min(tier, TIER_GOOD.length - 1)]]: 20 };
+    return null;
+  }
+
+  // ---- the curriculum position, from the save ----
+  // pairsUnlocked counts L.PAIRS unlocked in order; ore Mk levels derive.
+  function oreMk(profile, ore) {
+    let mk = 0;
+    for (let i = 0; i < profile.pairsUnlocked && i < L.PAIRS.length; i++) {
+      const p = L.PAIRS[i];
+      if (p.ore === ore) mk = Math.max(mk, p.mk);
+    }
+    return mk;
+  }
+  function unlockedKeys(profile) {
+    const out = [];
+    for (let i = 0; i < profile.pairsUnlocked && i < L.PAIRS.length; i++) out.push(...L.PAIRS[i].keys);
+    return out;
+  }
+  function currentTier(profile) {
+    let t = 0;
+    for (let i = 0; i < profile.pairsUnlocked && i < L.PAIRS.length; i++) t = Math.max(t, L.PAIRS[i].tier);
+    return t;
+  }
+  function nextPair(profile) {
+    return L.PAIRS[profile.pairsUnlocked] || null;
+  }
+  // the bar every unlocked letter must pass before the next pair: the bar
+  // that closes the tier before the next pair's tier (T0 → none)
+  function gateBar(profile) {
+    const np = nextPair(profile);
+    const t = np ? np.tier : BARS.length;
+    return BARS[Math.max(0, Math.min(BARS.length - 1, t - 1))];
+  }
+
+  // ---- alphabets: union of the inputs, live ----
+  function alphabetOf(mat, profile) {
+    const m = MATS[mat];
+    if (!m) return [];
+    if (m.form === 'ore') return oreLetters(mat, oreMk(profile, mat));
+    if (m.ores.length) {
+      const set = new Set();
+      for (const o of m.ores) for (const ch of oreLetters(o, oreMk(profile, o))) set.add(ch);
+      return [...set];
+    }
+    return unlockedKeys(profile); // parts and deeper: the full unlocked set
+  }
+  // a recipe's drill alphabet (+ focus letters from the flux, for full kinds)
+  function recipeAlphabet(r, profile) {
+    const kind = KINDS[r.kind];
+    if (kind.full) return unlockedKeys(profile);
+    const set = new Set();
+    for (const mat of Object.keys(r.in)) for (const ch of alphabetOf(mat, profile)) set.add(ch);
+    return [...set];
+  }
+  // letters the recipe should lean on: its ore inputs, weighted by ratio
+  function recipeTilt(r, profile) {
+    const w = {};
+    for (const [mat, n] of Object.entries(r.in)) {
+      for (const ch of alphabetOf(mat, profile)) w[ch] = Math.max(w[ch] || 0, n);
+    }
+    return w;
+  }
+  const isVowel = (ch) => L.VOWELS.has(ch);
+  const isLetter = (ch) => !L.PUNCT.has(ch) && /\p{L}/u.test(ch);
+  // does this ore exist for the player yet (its first pair unlocked)?
+  const oreOpen = (profile, ore) => oreMk(profile, ore) >= 1;
+  // does every ore behind a material exist yet
+  function matExists(profile, mat) {
+    const m = MATS[mat];
+    if (!m) return false;
+    if (m.form === 'ore') return oreOpen(profile, mat);
+    if (m.ores.length) return m.ores.every((o) => oreOpen(profile, o));
+    return true;
+  }
+  // real words typeable with an alphabet
+  function wordPool(alpha) {
+    const set = new Set(alpha);
+    return L.WORDS.filter(([w]) => [...w].every((c) => set.has(c)));
+  }
+  // is a recipe offered now: kind ready, tier reached, inputs exist,
+  // alphabet clears the minimum (and V+C / word-pool rules)
+  function offerable(r, profile) {
+    const kind = KINDS[r.kind];
+    if (!kind.ready) return false;
+    if (r.tier > currentTier(profile)) return false;
+    for (const mat of Object.keys(r.in)) if (!matExists(profile, mat)) return false;
+    const alpha = recipeAlphabet(r, profile);
+    const letters = alpha.filter(isLetter);
+    if (alpha.length < kind.minAlpha) return false;
+    if (kind.needsVC && !(letters.some(isVowel) && letters.some((c) => !isVowel(c)))) return false;
+    if (kind.minWords && wordPool(alpha).length < kind.minWords) return false;
+    return true;
+  }
+  function offerableRecipes(kind, profile) {
+    return recipesFor(kind).filter((r) => offerable(r, profile));
+  }
+  function affordable(bag, cost) {
+    return !!cost && Object.entries(cost).every(([mat, n]) => (bag[mat] || 0) >= n);
+  }
+
+  // ---- machines standing on the map ----
+  function machinePos(m) {
+    if (m.node !== undefined && m.node !== null) {
+      const n = cur.MAP.NODES[m.node];
+      return n ? { x: n.x + 4, y: n.y + 12 } : { x: 0, y: 0 };
+    }
+    const p = plotById(m.plot);
+    return p ? { x: p.x, y: p.y } : { x: 0, y: 0 };
+  }
+  const machinesOfKind = (profile, kind) => profile.machines.filter((m) => m.kind === kind);
+  const machinesOfOre = (profile, ore) => profile.machines.filter((m) => m.kind === 'mine' && m.ore === ore);
+  const nodeBuilt = (profile, i) => profile.machines.some((m) => m.node === i);
+  function freePlots(profile) {
+    const taken = new Set(profile.machines.map((m) => m.plot).filter(Boolean));
+    return cur.PLOTS.filter((p) => !taken.has(p.id));
+  }
+  function unbuiltNodes(profile) {
+    const out = [];
+    cur.MAP.NODES.forEach((n, i) => {
+      if (ORE_BY_NODE[n.kind] && !nodeBuilt(profile, i)) out.push({ ...n, index: i, ore: ORE_BY_NODE[n.kind] });
+    });
+    return out;
+  }
+  // machine kinds a plot could hold now: ready, tier reached, and the player
+  // has held every material the price asks for (progressive reveal)
+  function buildableKinds(profile) {
+    const tier = currentTier(profile);
+    return KIND_IDS.filter((k) => {
+      const kind = KINDS[k];
+      if (k === 'mine' || !kind.ready || kind.tier > tier) return false;
+      const price = priceMachine(k, machinesOfKind(profile, k).length + 1);
+      return price && Object.keys(price).every((mat) => profile.seen[mat]);
+    });
+  }
+
+  // ---- solid scenery ----
+  // Everything stands ON a tile — sc(kind, tx, ty) names the tile under its
+  // base; wide kinds (FOOT_W) span that many tiles to the east. The sprite is
+  // drawn centred on the footprint with its base on the tile bottom
+  // (factory.js); the collision box is the footprint, inset a hair.
   const FOOT_W = { boulder: 2, tarpool: 2 };
   const sc = (kind, tx, ty) => {
     const fw = FOOT_W[kind.replace(/\d+$/, '')] || 1;
@@ -52,24 +346,19 @@
 
   // ======================================================================
   // THE FRONTIER — the world proper: six biomes laid as a snake, cliffs,
-  // closed crossings, plots scattered where the land allows. Tests the
-  // environments and the geographical progression.
+  // closed crossings, plots scattered where the land allows.
   // ======================================================================
 
-  // Buildable plots. Pre-built stations occupy their home plots (HOME below);
-  // the rest are the player's to choose. Unevenly spread on purpose — map
-  // variance. p13+ live in the eastern regions (2026-08-18) — reachable once
-  // the region's crossing opens.
   const FRONTIER_PLOTS = [
-    { id: 'p1', x: 96, y: 66 },
+    { id: 'p1', x: 96, y: 66 },        // (the iron mine stands here — filtered)
     { id: 'p2', x: 176, y: 66 },
-    { id: 'p3', x: 136, y: 150 },
+    { id: 'p3', x: 136, y: 150 },      // (copper mine — filtered)
     { id: 'p4', x: 256, y: 108 },
-    { id: 'p5', x: 256, y: 190 },
+    { id: 'p5', x: 256, y: 190 },      // (quartz node — filtered)
     { id: 'p6', x: 356, y: 130 },
     { id: 'p7', x: 446, y: 96 },
-    { id: 'p8', x: 356, y: 66 },     // on the meadow knoll (stairs at x=352)
-    { id: 'p9', x: 60, y: 150 },
+    { id: 'p8', x: 356, y: 66 },       // on the meadow knoll (stairs at x=352)
+    { id: 'p9', x: 60, y: 150 },       // (stone mine — filtered)
     { id: 'p10', x: 446, y: 190 },
     { id: 'p11', x: 176, y: 210 },
     { id: 'p12', x: 316, y: 190 },
@@ -110,70 +399,60 @@
     { kind: 'lamppost', x: 420, y: 108, glow: true },
     { kind: 'crate', x: 482, y: 156 },
     { kind: 'crate2', x: 492, y: 168 },
-    { kind: 'drum', x: 18, y: 150 },
+    { kind: 'drum', x: 18, y: 178 },
     { kind: 'bush', x: 186, y: 84 },
     { kind: 'bush', x: 498, y: 204 },
     { kind: 'sign', x: 12, y: 126 },
   ];
 
-  // The terrain. REGIONS are biome rects placed anywhere on the map — a biome
-  // has a base ground kind, a cliff palette, an elevation (higher ground shows
-  // a boulder face where it drops south and a rim on its other edges) and a
-  // border-forest kind. This layout is a snake: the high north row runs
-  // meadow → quarry → canyon, stairs drop into the low south row, which runs
-  // back west bog → flats → peaks. Nothing else assumes that shape: a new map
-  // is a new set of rects. GROUND rects paint over the region base in order;
-  // PLATEAUS are raised ground within a region (their N/E/W ring bakes as
-  // solid rim, so author the walkable top one tile inset on those sides);
-  // WALLS are rock heaps (solid); CROSSINGS are the closed choke points
-  // between regions — pass/drift in a wall gap, bridge/boardwalk over water
-  // (dir 'h' walked E–W, 'v' walked N–S), stairs cut through a face — each
-  // opens after the edition (Издание) named in opensAfter. Rects are 16px-grid
-  // aligned. tiles.js bakes all of this into a tile grid.
+  // The terrain. REGIONS are biome rects placed anywhere on the map. This
+  // layout is a snake: the high north row runs meadow → quarry → canyon,
+  // stairs drop into the low south row, which runs back west bog → flats →
+  // peaks. CROSSINGS open once the tier bar named in opensAfter is passed
+  // (v3 re-basing: quarry at T1, canyon + bog by T2, flats at T3, peaks at
+  // T4). Rects are 16px-grid aligned. tiles.js bakes all of this.
   const FRONTIER_MAP = {
-    FOREST: { n: 48 },     // border forest thickness per side (n/e/s/w); the player's limit
+    FOREST: { n: 48 },
     REGIONS: [
-      // north row — high ground (elev 1), a two-row face along its south edge
       { id: 'meadow', x: 0, y: 0, w: 528, h: 240, elev: 1, base: 'grass', cliff: 'tan', treeline: ['tree', 'tree2'] },
       { id: 'quarry', x: 528, y: 0, w: 320, h: 240, elev: 1, base: 'rock', cliff: 'tan', treeline: ['spire', 'boulder', 'boulder2'] },
       { id: 'canyon', x: 848, y: 0, w: 320, h: 240, elev: 1, base: 'shale', cliff: 'violet', treeline: ['spire', 'deadtree', 'spire2'] },
-      // south row — lowlands (elev 0)
       { id: 'peaks', x: 0, y: 240, w: 528, h: 256, elev: 0, base: 'snow', cliff: 'snow', treeline: ['snowpine', 'snowpine2', 'spire'] },
       { id: 'flats', x: 528, y: 240, w: 320, h: 256, elev: 0, base: 'crack', cliff: 'tan', treeline: ['boulder', 'scrub', 'boulder2'] },
       { id: 'bog', x: 848, y: 240, w: 320, h: 256, elev: 0, base: 'marsh', cliff: 'grey', treeline: ['deadtree', 'deadtree2', 'reeds'] },
     ],
     GROUND: [
-      // — meadow: worn aprons under mines/plots, paved pads under hub + depot,
-      //   a worn road hub→depot with spurs, the pond with a sand shore
+      // — meadow: worn aprons under mines/plots, a worn road with spurs, the pond
       { kind: 'dirt', x: 80, y: 48, w: 64, h: 32 },    // iron mine
       { kind: 'dirt', x: 160, y: 48, w: 64, h: 32 },   // p2
       { kind: 'dirt', x: 112, y: 128, w: 64, h: 32 },  // copper mine
-      { kind: 'dirt', x: 240, y: 176, w: 64, h: 32 },  // quartz quarry
+      { kind: 'dirt', x: 48, y: 128, w: 64, h: 32 },   // stone mine (v3: a T0 ore, in the meadow)
+      { kind: 'dirt', x: 240, y: 176, w: 64, h: 32 },  // quartz node
       { kind: 'dirt', x: 240, y: 96, w: 64, h: 32 },   // p4
       { kind: 'dirt', x: 336, y: 112, w: 64, h: 32 },  // p6
       { kind: 'dirt', x: 336, y: 48, w: 64, h: 32 },   // p8 (knoll)
-      { kind: 'pad', x: 432, y: 80, w: 64, h: 32 },    // depot
-      { kind: 'pad', x: 16, y: 96, w: 48, h: 32 },     // the hub
+      { kind: 'pad', x: 432, y: 80, w: 64, h: 32 },    // p7 pad
+      { kind: 'pad', x: 16, y: 96, w: 48, h: 32 },     // the old hub pad (a landing now)
       { kind: 'dirt', x: 64, y: 112, w: 368, h: 16 },  // the road
       { kind: 'dirt', x: 96, y: 80, w: 16, h: 32 },    // spur north to the iron mine
-      { kind: 'dirt', x: 256, y: 128, w: 16, h: 48 },  // spur south to the quarry
+      { kind: 'dirt', x: 256, y: 128, w: 16, h: 48 },  // spur south to the quartz node
       { kind: 'dirt', x: 480, y: 128, w: 48, h: 32 },  // the track east to the gate
       { kind: 'sand', x: 0, y: 176, w: 112, h: 64 },
       { kind: 'water', x: 0, y: 192, w: 96, h: 48 },   // the pond, southwest
-      // — quarry hills: grass tufts on stone, a worn floor
+      // — quarry hills
       { kind: 'grass', x: 560, y: 208, w: 64, h: 32 },
       { kind: 'grass', x: 688, y: 96, w: 48, h: 32 },
       { kind: 'dirt', x: 544, y: 128, w: 48, h: 32 },  // inside the gate
       { kind: 'dirt', x: 592, y: 64, w: 64, h: 32 },   // p13 apron (terrace top)
       { kind: 'dirt', x: 656, y: 192, w: 64, h: 32 },  // p14 apron
-      { kind: 'dirt', x: 736, y: 160, w: 64, h: 32 },  // stone mine apron (terrace interior)
-      // — crystal canyon: the stream with a sand bank, worn floor, the way down
+      { kind: 'dirt', x: 736, y: 160, w: 64, h: 32 },  // stone seam apron (terrace interior)
+      // — crystal canyon
       { kind: 'sand', x: 880, y: 48, w: 16, h: 192 },
       { kind: 'water', x: 848, y: 48, w: 32, h: 192 },
       { kind: 'dirt', x: 992, y: 112, w: 64, h: 32 },  // p15 apron
       { kind: 'dirt', x: 928, y: 176, w: 96, h: 16 },
       { kind: 'dirt', x: 960, y: 192, w: 32, h: 48 },  // track to the stairs down
-      // — coal bog (south row, under the canyon): pools, plank walks
+      // — coal bog
       { kind: 'dirt', x: 960, y: 272, w: 32, h: 16 },  // foot of the stairs
       { kind: 'water', x: 912, y: 288, w: 64, h: 32 },
       { kind: 'water', x: 1024, y: 400, w: 80, h: 48 },
@@ -182,14 +461,14 @@
       { kind: 'board', x: 1024, y: 416, w: 80, h: 16 },
       { kind: 'dirt', x: 960, y: 336, w: 64, h: 32 },  // coal seam apron
       { kind: 'dirt', x: 1024, y: 304, w: 64, h: 32 }, // p16 apron
-      // — oil flats (under the quarry): tar pools, a mesa
+      // — oil flats
       { kind: 'tar', x: 592, y: 368, w: 48, h: 32 },
       { kind: 'tar', x: 720, y: 288, w: 64, h: 32 },
       { kind: 'tar', x: 768, y: 400, w: 48, h: 32 },
       { kind: 'dirt', x: 640, y: 336, w: 64, h: 32 },  // oil derrick apron
       { kind: 'dirt', x: 720, y: 336, w: 64, h: 32 },  // p17 apron
       { kind: 'rock', x: 640, y: 400, w: 96, h: 48 },  // mesa top
-      // — titanium peaks (under the meadow): frost grass, an ice pond, a shelf
+      // — titanium peaks
       { kind: 'frost', x: 48, y: 320, w: 48, h: 32 },
       { kind: 'frost', x: 272, y: 288, w: 64, h: 32 },
       { kind: 'ice', x: 96, y: 400, w: 80, h: 48 },
@@ -199,7 +478,7 @@
     PLATEAUS: [
       { x: 320, y: 48, w: 96, h: 48, elev: 2, face: 1, ramps: [{ x: 352, y: 96, side: 'S' }] },        // meadow knoll (p8)
       { x: 592, y: 48, w: 96, h: 48, elev: 2, face: 2, ramps: [{ x: 624, y: 96, side: 'S' }] },        // quarry terrace A (p13)
-      { x: 720, y: 128, w: 112, h: 64, elev: 2, face: 1, ramps: [{ x: 768, y: 192, side: 'S' }] },     // quarry terrace B (stone)
+      { x: 720, y: 128, w: 112, h: 64, elev: 2, face: 1, ramps: [{ x: 768, y: 192, side: 'S' }] },     // quarry terrace B (stone #2)
       { x: 912, y: 48, w: 128, h: 32, elev: 2, face: 1 },                                              // canyon north wall
       { x: 640, y: 400, w: 96, h: 48, elev: 1, face: 1, ramps: [{ x: 640, y: 416, side: 'W' }] },      // flats mesa
       { x: 160, y: 304, w: 96, h: 48, elev: 1, face: 2, ramps: [{ x: 192, y: 352, side: 'S' }] },      // peaks shelf (titanium)
@@ -210,48 +489,36 @@
       { x: 528, y: 272, w: 16, h: 80 }, { x: 528, y: 384, w: 16, h: 112 },     // peaks|flats, gap rows 22–23
     ],
     CROSSINGS: [
-      { id: 'x1', kind: 'pass', x: 528, y: 128, w: 16, h: 32, opensAfter: 'ed1', style: 'grey' },    // fallen grey rock in a tan wall
-      { id: 'x2', kind: 'bridge', x: 848, y: 96, w: 32, h: 32, opensAfter: 'ed2', dir: 'h' },        // over the canyon stream
-      { id: 'x3', kind: 'stairs', x: 960, y: 240, w: 32, h: 32, opensAfter: 'ed3', style: 'violet' }, // down the canyon face into the bog
-      { id: 'x4', kind: 'pass', x: 848, y: 304, w: 16, h: 32, opensAfter: 'ed4', style: 'grey' },    // bog → flats
-      { id: 'x5', kind: 'drift', x: 528, y: 352, w: 16, h: 32, opensAfter: 'ed5' },                  // flats → peaks
+      { id: 'x1', kind: 'pass', x: 528, y: 128, w: 16, h: 32, opensAfter: 1, style: 'grey' },    // meadow → quarry hills, at T1
+      { id: 'x2', kind: 'bridge', x: 848, y: 96, w: 32, h: 32, opensAfter: 2, dir: 'h' },        // over the canyon stream, T2
+      { id: 'x3', kind: 'stairs', x: 960, y: 240, w: 32, h: 32, opensAfter: 2, style: 'violet' }, // down into the bog, T2
+      { id: 'x4', kind: 'pass', x: 848, y: 304, w: 16, h: 32, opensAfter: 3, style: 'grey' },    // bog → flats, T3
+      { id: 'x5', kind: 'drift', x: 528, y: 352, w: 16, h: 32, opensAfter: 4 },                  // flats → peaks, T4
     ],
     NODES: [
       { kind: 'iron', x: 92, y: 54 },
       { kind: 'copper', x: 130, y: 138 },
-      { kind: 'quartz', x: 250, y: 178 },     // moves to the canyon when tier 3 lands
-      { kind: 'stone', x: 752, y: 166 },
+      { kind: 'stone', x: 60, y: 138 },        // v3: stone is a T0 ore — the meadow gets its node
+      { kind: 'quartz', x: 250, y: 178 },      // the T1 node
+      { kind: 'stone', x: 752, y: 166 },       // stone #2, quarry hills
       { kind: 'coal', x: 976, y: 342 },
       { kind: 'oil', x: 656, y: 342 },
-      { kind: 'titan', x: 208, y: 326 },
+      { kind: 'titan', x: 208, y: 326 },       // no ore in v3 — a landmark for now
     ],
   };
 
   // ======================================================================
   // OPEN RANGE — one flat meadow the width of the frontier, every node in a
-  // row by the hub, ranks of plots below, nothing in the way. Tests the
-  // mechanics: plentiful, easy resources = placement, never a rate.
+  // row, ranks of plots below, nothing in the way. Tests the mechanics.
   // ======================================================================
 
-  // Station grid: 13 columns 80px apart (X = 112 + 80k), rows at Y = 66 /
-  // 146 / 226 / 306; a worn apron {X-16, Y-18, 64×32} under each. Row A: the
-  // three mines on their nodes, the four later nodes (decorative until their
-  // machines exist, like the frontier's), five free plots, the depot at the
-  // east end. Ranks B–D: thirteen free plots each. The hub sits west,
-  // mid-height, and a road runs under row A from hub to depot.
   const RANGE_COLS = Array.from({ length: 13 }, (_, k) => 112 + 80 * k);
   const RANGE_ROWS = [146, 226, 306];
-  const RANGE_PLOTS = [
-    { id: 'p1', x: 112, y: 66 },      // iron mine
-    { id: 'p2', x: 192, y: 66 },      // copper mine
-    { id: 'p3', x: 272, y: 66 },      // quartz quarry
-    { id: 'p4', x: 1072, y: 66 },     // depot
-  ];
-  for (const x of RANGE_COLS.slice(7, 12)) RANGE_PLOTS.push({ id: 'p' + (RANGE_PLOTS.length + 1), x, y: 66 });
+  const RANGE_PLOTS = [];
+  for (const x of RANGE_COLS.slice(7, 13)) RANGE_PLOTS.push({ id: 'p' + (RANGE_PLOTS.length + 1), x, y: 66 });
   for (const y of RANGE_ROWS) for (const x of RANGE_COLS) RANGE_PLOTS.push({ id: 'p' + (RANGE_PLOTS.length + 1), x, y });
   const apron = (kind, x, y) => ({ kind, x: x - 16, y: y - 18, w: 64, h: 32 });
 
-  // trees and stones along the south strip — colour, never in a route
   const RANGE_SCENERY = [
     sc('tree', 5, 20), sc('tree2', 12, 21), sc('rock', 19, 20), sc('tree', 26, 21),
     sc('rock2', 33, 20), sc('tree2', 40, 21), sc('tree', 47, 20), sc('rock', 54, 21),
@@ -277,20 +544,13 @@
       { id: 'range', x: 0, y: 0, w: 1168, h: 416, elev: 0, base: 'grass', cliff: 'tan', treeline: ['tree', 'tree2'] },
     ],
     GROUND: [
-      // row A aprons: mines, the four later nodes, five plots, the depot pad
-      ...RANGE_COLS.slice(0, 12).map((x) => apron('dirt', x, 66)),
-      apron('pad', 1072, 66),
-      // the hub pad, west
+      ...RANGE_COLS.map((x) => apron('dirt', x, 66)),
       { kind: 'pad', x: 32, y: 128, w: 48, h: 32 },
-      // the road: hub → depot along the gap under row A, spurs to the hub,
-      // the mines and the depot
       { kind: 'dirt', x: 80, y: 96, w: 1024, h: 16 },
       { kind: 'dirt', x: 80, y: 112, w: 16, h: 16 },
       { kind: 'dirt', x: 128, y: 80, w: 16, h: 16 }, { kind: 'dirt', x: 208, y: 80, w: 16, h: 16 }, { kind: 'dirt', x: 288, y: 80, w: 16, h: 16 },
       { kind: 'dirt', x: 1088, y: 80, w: 16, h: 16 },
-      // ranks B–D aprons
       ...RANGE_ROWS.flatMap((y) => RANGE_COLS.map((x) => apron('dirt', x, y))),
-      // a pond with a sand shore in the south-east corner
       { kind: 'sand', x: 1024, y: 320, w: 112, h: 64 },
       { kind: 'water', x: 1040, y: 336, w: 80, h: 32 },
     ],
@@ -300,30 +560,24 @@
     NODES: [
       { kind: 'iron', x: 108, y: 54 },
       { kind: 'copper', x: 188, y: 54 },
-      { kind: 'quartz', x: 268, y: 54 },
-      { kind: 'stone', x: 348, y: 54 },
+      { kind: 'stone', x: 268, y: 54 },
+      { kind: 'quartz', x: 348, y: 54 },
       { kind: 'coal', x: 428, y: 54 },
       { kind: 'oil', x: 508, y: 54 },
-      { kind: 'titan', x: 588, y: 54 },
+      { kind: 'iron', x: 588, y: 54 },
     ],
   };
 
-  // The registry. Per map: world size, the operator's spawn, the hub's fixed
-  // spot, which plot each pre-built station stands on (HOME), where legacy
-  // saves' kit stations go if they predate plot choices (LEGACY), then the
-  // ground, plots, scenery and props. Order = the order the picker shows them.
+  // The registry. Per map: world size, the operator's spawn, then the ground,
+  // plots, scenery and props. LEGACY: where pre-plot saves' kit stations go.
   const MAPS = {
     frontier: {
       id: 'frontier', W: 1168, H: 496, spawn: { x: 40, y: 90 },
-      board: { x: 30, y: 108 },
-      HOME: { az: 'p1', buki: 'p3', vedi: 'p5', press: 'p7' },
       LEGACY: { slogi: 'p2', slova: 'p4', stroki: 'p6' },
       MAP: FRONTIER_MAP, PLOTS: FRONTIER_PLOTS, SCENERY: FRONTIER_SCENERY, PROPS: FRONTIER_PROPS,
     },
     range: {
       id: 'range', W: 1168, H: 416, spawn: { x: 84, y: 154 },
-      board: { x: 40, y: 146 },
-      HOME: { az: 'p1', buki: 'p2', vedi: 'p3', press: 'p4' },
       LEGACY: {},
       MAP: RANGE_MAP, PLOTS: RANGE_PLOTS, SCENERY: RANGE_SCENERY, PROPS: RANGE_PROPS,
     },
@@ -331,64 +585,43 @@
   const MAP_IDS = Object.keys(MAPS);
   const DEFAULT_MAP = 'frontier';
 
-  // The milestone ladder: goals paid with hand-crafted production; kit rewards
-  // open tier-2+ stations (still curriculum-gated by unlockAt). The final
-  // milestone of an era is an ИЗДАНИЕ — it cannot be hand-stocked: it demands
-  // an automated base plus a live benchmark run at the press.
-  const MILESTONES = [
-    { id: 'm1', goal: { az: 60 }, reward: 'slogi' },
-    { id: 'm2', goal: { slogi: 25, buki: 60 }, reward: 'slova' },
-    { id: 'm3', goal: { slova: 15, vedi: 50 }, reward: 'stroki' },
-    { id: 'ed1', edition: true, era: 'steam', needAuto: 'az', lines: 3, acc: 0.97 },
-  ];
-
-  // Belts: purchased links; once built, an automated source auto-feeds its target.
-  const BELTS = [
-    { from: 'az', to: 'slogi', cost: { az: 80 } },
-    { from: 'slogi', to: 'slova', cost: { slogi: 50 } },
-    { from: 'buki', to: 'slova', cost: { buki: 60 } },
-    { from: 'az', to: 'slova', cost: { az: 80 } },
-    { from: 'slova', to: 'stroki', cost: { slova: 40 } },
-    { from: 'vedi', to: 'stroki', cost: { vedi: 50 } },
-    { from: 'stroki', to: 'press', cost: { stroki: 25 } },
-  ];
-  const beltKey = (b) => b.from + '>' + b.to;
-
-  const PICKUP_CAP = 100; // automated benches refill you to this on approach
-  const TILE = 16;
-
   // ---- the current map ----
-  // useMap makes one world current: it exposes that map's data on CHAIN
-  // (MAP, PLOTS, SCENERY, PROPS, WORLD_W/H, SPAWN…) so factory.js and
-  // app.js read the live world, and it parks the pre-built stations on their
-  // home plots. Nothing here is per-course (invariant 5).
   let cur = null;
   function useMap(id) {
     cur = MAPS[id] || MAPS[DEFAULT_MAP];
     const C = window.CHAIN;
     C.MAP_ID = cur.id;
     C.MAP = cur.MAP;
-    C.PLOTS = cur.PLOTS;
+    // plots that coincide with an ore node are the node's (mines stand there)
+    C.PLOTS = cur.PLOTS.filter((p) => !cur.MAP.NODES.some((n) => Math.abs(n.x + 4 - p.x) <= 8 && Math.abs(n.y + 12 - p.y) <= 8));
+    cur.PLOTS = C.PLOTS;
     C.SCENERY = cur.SCENERY;
     C.PROPS = cur.PROPS;
     C.WORLD_W = cur.W;
     C.WORLD_H = cur.H;
     C.SPAWN = cur.spawn;
-    C.HOME = cur.HOME;
     C.LEGACY = cur.LEGACY || {};
-    resolvePositions({ plots: {} });
     return cur;
   }
   function currentMap() { return cur; }
-
-  // a crossing opens once the edition it names has been passed; naming an
-  // edition that doesn't exist yet keeps it honestly closed
-  function crossingOpen(profile, c) {
-    const i = MILESTONES.findIndex((m) => m.id === c.opensAfter);
-    return i !== -1 && (profile.milestoneIdx || 0) > i;
+  // the pre-built mines of a map: the first node of each T0 ore
+  function starterNodes() {
+    const out = [];
+    for (const ore of ORE_IDS) {
+      const p = L.PAIRS.find((q) => q.ore === ore);
+      if (!p || p.tier !== 0) continue;
+      const i = cur.MAP.NODES.findIndex((n) => ORE_BY_NODE[n.kind] === ore);
+      if (i >= 0) out.push({ ore, index: i });
+    }
+    return out;
   }
-  // the biome under a world point (later rects win, like the bake); the first
-  // region is home when the point is outside all of them
+  function plotById(id) { return cur.PLOTS.find((p) => p.id === id); }
+
+  // a crossing opens once the tier bar it names is passed
+  function crossingOpen(profile, c) {
+    return currentTier(profile) >= (typeof c.opensAfter === 'number' ? c.opensAfter : 99);
+  }
+  // the biome under a world point (later rects win, like the bake)
   function regionAt(px, py) {
     const MAP = cur.MAP;
     let hit = MAP.REGIONS[0];
@@ -399,81 +632,16 @@
     return hit;
   }
 
-  function available(profile) {
-    return STATIONS.filter((s) => profile.unlockedCount >= s.unlockAt);
-  }
-  function get(id) {
-    return STATIONS.find((s) => s.id === id);
-  }
-  function plotById(id) {
-    return cur.PLOTS.find((p) => p.id === id);
-  }
-  // stations resolve their coordinates through the map (hub spot, home plots)
-  // and the player's plot choices
-  function resolvePositions(profile) {
-    for (const st of STATIONS) {
-      if (st.kind === 'board') { st.x = cur.board.x; st.y = cur.board.y; continue; }
-      const plotId = (profile.plots && profile.plots[st.id]) || cur.HOME[st.id];
-      const plot = plotId && plotById(plotId);
-      if (plot) { st.x = plot.x; st.y = plot.y; }
-    }
-  }
-  function freePlots(profile) {
-    const taken = new Set([...Object.values(cur.HOME), ...Object.values(profile.plots || {})]);
-    return cur.PLOTS.filter((p) => !taken.has(p.id));
-  }
-  function affordable(profile, cost) {
-    return Object.entries(cost).every(([mat, n]) => (profile.mats[mat] || 0) >= n);
-  }
-  function isBuilt(profile, st) {
-    return !st.buildCost || !!profile.built[st.id];
-  }
-  // kit-built stations need their milestone earned before they can be placed
-  function kitUnlocked(profile, st) {
-    const idx = MILESTONES.findIndex((m) => m.reward === st.id);
-    return idx === -1 || idx < (profile.milestoneIdx || 0);
-  }
-  // the next kit awaiting placement: milestone earned, curriculum met, unbuilt
-  function pendingKit(profile) {
-    return STATIONS.find((s) =>
-      s.buildCost && !profile.built[s.id] &&
-      kitUnlocked(profile, s) && profile.unlockedCount >= s.unlockAt) || null;
-  }
-  function currentMilestone(profile) {
-    return MILESTONES[profile.milestoneIdx || 0] || null;
-  }
-  function canDeliver(profile) {
-    const m = currentMilestone(profile);
-    return !!(m && !m.edition && affordable(profile, m.goal));
-  }
-  function canUpgrade(profile, st) {
-    if (!st || !st.upgradeCost || profile.autoBench[st.id]) return false;
-    return affordable(profile, st.upgradeCost);
-  }
-  // next purchasable belt whose source is this station (source must be automated,
-  // both endpoints built)
-  function nextBelt(profile, st) {
-    if (!st || !profile.autoBench[st.id]) return null;
-    for (const b of BELTS) {
-      if (b.from !== st.id) continue;
-      if (profile.belts[beltKey(b)]) continue;
-      const to = get(b.to);
-      if (profile.unlockedCount < to.unlockAt || !isBuilt(profile, to)) continue;
-      return b;
-    }
-    return null;
-  }
-
   window.CHAIN = {
-    STATIONS, BELTS, MILESTONES, MAPS, MAP_IDS, DEFAULT_MAP,
-    TILE, PICKUP_CAP, beltKey,
-    useMap, currentMap,
-    available, get, plotById, resolvePositions, freePlots,
-    affordable, isBuilt, kitUnlocked, pendingKit, currentMilestone, canDeliver,
-    canUpgrade, nextBelt, crossingOpen, regionAt,
-    SET_AZ, SET_BUKI, SET_VEDI,
-    // per-map fields (MAP, PLOTS, SCENERY, PROPS, WORLD_W, WORLD_H, SPAWN,
-    // HOME, LEGACY, MAP_ID) are set by useMap
+    TILE, ORES, ORE_IDS, ORE_BY_NODE, KINDS, KIND_IDS, MATS, MAT_IDS, INGOT_IDS, RECIPES, BARS, TIER_GOOD, TUNING, PRICES,
+    MAPS, MAP_IDS, DEFAULT_MAP,
+    oreLetters, oreMaxMk, recipesFor, recipeFor, matTier,
+    priceExtraMine, priceMk, priceMachine, priceAuto, scaleCost,
+    oreMk, unlockedKeys, currentTier, nextPair, gateBar,
+    alphabetOf, recipeAlphabet, recipeTilt, wordPool, offerable, offerableRecipes, matExists, oreOpen, affordable,
+    machinePos, machinesOfKind, machinesOfOre, nodeBuilt, freePlots, unbuiltNodes, buildableKinds, starterNodes,
+    useMap, currentMap, plotById, crossingOpen, regionAt,
+    // per-map fields (MAP, PLOTS, SCENERY, PROPS, WORLD_W, WORLD_H, SPAWN, LEGACY, MAP_ID) are set by useMap
   };
   useMap(DEFAULT_MAP);
 })();

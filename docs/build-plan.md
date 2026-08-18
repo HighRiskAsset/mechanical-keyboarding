@@ -86,6 +86,16 @@ the gravy list.
 
 ### Phase 1 — Curriculum core
 
+**Status (2026-08-19): built, with Phase 2, in one pass.** `PAIRS` /
+`ORE_OF` / `SYLLABLES` (286) / `CLUSTERS` (50) / `ENDINGS` / `WORDS` (771)
+in `language-ru.js`; unlock by pair with tier bars, `alphabetOf` from the
+graph, grammars keys/letters/syllables/clusters/words and the capped ratio
+tilt in `engine.js` + `chain.js`; `dev/verify.html` runs the data checks
+(green; the vowel-poor 2-ore alloys are reported as never reaching a
+Constructor pool, by design). Key events at machines that don't exist yet
+(comma, `? ! -`, Shift, `: ; " ( )`) unlock as they are reached until
+phases 4–5 give them their machines.
+
 **Goal.** The letters arrive in pairs, by finger, per ore Mk; alphabets come
 from the recipe graph; syllables and clusters are real drills. Still the
 current world (three mines + smelter + constructor), still the current
@@ -125,6 +135,17 @@ build/kit flow — only the curriculum and the drills change.
 - Invariant 5: `engine.js` contains no Cyrillic literal.
 
 ### Phase 2 — Build from the bag
+
+**Status (2026-08-19): built.** Place menus at plots / nodes / mines (arrows,
+hold-Space confirm, tap/Escape close); prices in `chain.js` (`PRICES`,
+`priceMachine` scaling per instance, `priceExtraMine`, `priceMk`,
+`priceAuto`); machines are instances (`profile.machines`), several per
+kind; ⚙ on mines with the one rule (letters sticky → refuses labor →
+collect 100); Hub / kits / contracts / Depot / ₽ / editions removed;
+crossings open on tier bars; profile v2 + v1 migration + save-file version 2
+(v1 files import); the stone node added to The Frontier's meadow; the
+Ctrl+Alt+M debug bag. Not yet: ⚙ on processors (phase 3, needs buffers),
+belts (phase 3 — the old BELTS list and autofeed are gone).
 
 **Goal.** Kits, the Hub, contracts and the Depot go. Every purchase is a
 priced row at the place: Mk at a mine, a mine at a node, a machine at a plot,

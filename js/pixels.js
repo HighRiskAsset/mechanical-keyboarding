@@ -97,8 +97,14 @@
     '%': ['11001', '11010', '00100', '01011', '10011'],
     '₽': ['1110', '1010', '1110', '1100', '1000'],
     '→': ['00100', '00010', '11111', '00010', '00100'],
+    '↓': ['00100', '00100', '10101', '01110', '00100'],
     '✦': ['00100', '01110', '11111', '01110', '00100'],
     '⚙': ['01010', '11111', '11011', '11111', '01010'],
+    'M': ['10001', '11011', '10101', '10001', '10001'],
+    'K': ['1001', '1010', '1100', '1010', '1001'],
+    '✓': ['00001', '00010', '10100', '01000', '00000'],
+    '✗': ['101', '010', '101', '000', '000'],
+    '⇧': ['00100', '01110', '11111', '01110', '01110'],
   };
 
   const textCache = new Map();
@@ -316,6 +322,17 @@
       R(x, P.frame2, 23, 3, 2, 3);
       R(x, P.frame2, 21, 6, 3, 3); R(x, P.brass2, 22, 7, 1, 1);
       R(x, P.glow, 8, 17, 6, 4); R(x, P.dark, 9, 18, 4, 2);
+    } else if (kind === 'foundry') {
+      // FOUNDRY: squat cream crucible house, two short stacks, a tilted ladle
+      R(x, P.frame, 2, 28, 26, 2);
+      R(x, P.cream, 3, 12, 24, 16); R(x, P.white, 3, 12, 24, 1);
+      R(x, P.frame, 6, 3, 4, 10); R(x, P.frame2, 6, 3, 4, 1);
+      R(x, P.frame, 20, 5, 4, 8); R(x, P.frame2, 20, 5, 4, 1);
+      R(x, P.teal, 3, 22, 24, 3); R(x, P.teal2, 3, 25, 24, 1);
+      R(x, P.dark, 10, 15, 10, 7);
+      R(x, P.orange, 11, 16, 8, 5); R(x, P.glow, 13, 17, 4, 2);
+      R(x, P.frame2, 12, 9, 8, 3); R(x, P.steel, 13, 9, 6, 1);
+      R(x, P.brass2, 5, 14, 2, 1); R(x, P.brass2, 23, 14, 2, 1);
     } else {
       // ASSEMBLER: wide body, two arms, intake rollers
       R(x, P.frame, 1, 28, 28, 2);
@@ -665,48 +682,110 @@
 
   const SCENERY_DRAW = { tree: () => tree(0), tree2: () => tree(1), rock: () => rock(0), rock2: () => rock(1) };
 
-  // ---------- material icons 12x12 (side-panel inventory) ----------
+  // ---------- material icons 12x12 (HUD, menus, rows) ----------
+  // Ore colours by material id (chain ore ids). Alloys are ore-colour stacks
+  // — two- or three-tone ingots — so they read as combinations.
+  const ORE_TONE = {
+    az: [P.ironore, P.ironore2, P.steel],
+    buki: [P.copper, P.copper2, P.brass3],
+    stone: [P.stoneore, P.stoneore2, P.cream2],
+    vedi: [P.quartz, P.quartz2, P.quartz3],
+    coal: [P.coal3, P.coal2, P.coal],
+    oil: [P.oil3, P.oil2, P.oil],
+  };
   function matIcon(kind) {
     const [c, x] = canvas(12, 12);
+    const spec = (window.CHAIN && window.CHAIN.MATS && window.CHAIN.MATS[kind]) || null;
+    const form = spec ? spec.form : (kind === 'money' ? 'money' : 'legacy');
     const oreIcon = (main, dk, lt) => {
       R(x, dk, 2, 6, 5, 4); R(x, main, 2, 5, 5, 4); R(x, lt, 3, 5, 1, 1);
       R(x, dk, 7, 4, 4, 4); R(x, main, 7, 3, 4, 4); R(x, lt, 8, 3, 1, 1);
       R(x, dk, 5, 9, 4, 2); R(x, main, 5, 8, 4, 2);
     };
-    if (kind === 'money') {
+    if (form === 'money') {
       disc(x, P.brass2, 6, 6, 5);
       R(x, P.brass3, 3, 3, 3, 1); R(x, P.brass1, 5, 5, 2, 4);
-    } else if (kind === 'az') {
-      oreIcon(P.ironore, P.ironore2, P.steel);
-    } else if (kind === 'buki') {
-      oreIcon(P.copper, P.copper2, P.brass3);
-    } else if (kind === 'vedi') {
-      // quartz crystal spikes
-      R(x, P.quartz2, 3, 4, 3, 7); R(x, P.quartz, 3, 3, 2, 7); R(x, P.quartz3, 3, 3, 1, 2);
-      R(x, P.quartz2, 7, 2, 3, 9); R(x, P.quartz, 7, 1, 2, 9); R(x, P.quartz3, 7, 1, 1, 3);
-      R(x, P.rock2, 2, 10, 9, 2);
-    } else if (kind === 'slogi') {
-      // ingot stack
-      R(x, P.frame2, 1, 7, 6, 3); R(x, P.steel, 1, 7, 6, 1);
-      R(x, P.frame2, 6, 7, 5, 3); R(x, P.steel, 6, 7, 5, 1);
-      R(x, P.frame2, 3, 3, 6, 3); R(x, P.steel, 3, 3, 6, 1);
-    } else if (kind === 'slova') {
-      // gear
+    } else if (form === 'ore') {
+      const t = ORE_TONE[kind] || ORE_TONE.az;
+      if (kind === 'vedi') {
+        R(x, P.quartz2, 3, 4, 3, 7); R(x, P.quartz, 3, 3, 2, 7); R(x, P.quartz3, 3, 3, 1, 2);
+        R(x, P.quartz2, 7, 2, 3, 9); R(x, P.quartz, 7, 1, 2, 9); R(x, P.quartz3, 7, 1, 1, 3);
+        R(x, P.rock2, 2, 10, 9, 2);
+      } else if (kind === 'oil') {
+        R(x, P.frame, 3, 2, 6, 9); R(x, P.frame2, 3, 2, 6, 1);
+        R(x, P.oil, 4, 4, 4, 6); R(x, P.oil3, 4, 4, 1, 3);
+        R(x, P.frame2, 5, 0, 2, 2);
+      } else {
+        oreIcon(t[0], t[1], t[2]);
+      }
+    } else if (form === 'ingot' || form === 'ingot3') {
+      // stacked ingots, one tone per ore in the alloy
+      const tones = spec.ores.map((o) => ORE_TONE[o] || ORE_TONE.az);
+      const bars = form === 'ingot3'
+        ? [[1, 7, 5], [6, 7, 5], [3, 3, 6]]
+        : [[1, 7, 6], [6, 7, 5], [3, 3, 6]];
+      bars.forEach(([bx, by, bw], i) => {
+        const t = tones[Math.min(i, tones.length - 1)];
+        R(x, t[1], bx, by, bw, 3); R(x, t[0], bx, by, bw, 1); R(x, t[2], bx + 1, by, 1, 1);
+      });
+    } else if (form === 'parts') {
       R(x, P.frame2, 5, 1, 2, 10); R(x, P.frame2, 1, 5, 10, 2);
       disc(x, P.frame2, 6, 6, 3);
       disc(x, P.steel, 6, 6, 2);
       R(x, P.dark, 5, 5, 2, 2);
-    } else if (kind === 'stroki') {
-      // circuit module
+    } else if (form === 'moldings') {
+      // a moulded bracket
+      R(x, P.frame2, 2, 2, 8, 3); R(x, P.steel, 2, 2, 8, 1);
+      R(x, P.frame2, 2, 5, 3, 5); R(x, P.frame2, 7, 5, 3, 5);
+      R(x, P.brass2, 3, 8, 1, 1); R(x, P.brass2, 8, 8, 1, 1);
+    } else if (form === 'modules') {
       R(x, P.teal2, 1, 2, 10, 8); R(x, P.teal, 1, 2, 10, 1);
       R(x, P.brass2, 3, 4, 2, 2); R(x, P.brass2, 7, 4, 2, 2);
       R(x, P.green, 3, 7, 6, 1);
       R(x, P.brass1, 2, 10, 1, 2); R(x, P.brass1, 5, 10, 1, 2); R(x, P.brass1, 8, 10, 1, 2);
-    } else { // listy — sealed cargo crate
+    } else if (form === 'fastened') {
+      R(x, P.teal2, 1, 2, 10, 8); R(x, P.teal, 1, 2, 10, 1);
+      R(x, P.steel, 2, 3, 1, 1); R(x, P.steel, 9, 3, 1, 1); R(x, P.steel, 2, 8, 1, 1); R(x, P.steel, 9, 8, 1, 1);
+      R(x, P.brass2, 5, 5, 2, 2);
+    } else if (form === 'crates') {
       R(x, P.trunk, 1, 2, 10, 9); R(x, '#8f6a44', 1, 2, 10, 1);
       R(x, P.trunk2, 1, 10, 10, 1);
       R(x, P.brass1, 1, 5, 10, 2);
       R(x, P.paper2, 7, 3, 3, 2);
+    } else if (form === 'heavy') {
+      R(x, P.frame, 1, 1, 10, 10); R(x, P.frame2, 1, 1, 10, 1);
+      R(x, P.teal, 3, 3, 6, 6); R(x, P.glow, 4, 4, 2, 2); R(x, P.brass2, 7, 7, 1, 1);
+    } else { // legacy cargo
+      R(x, P.trunk, 1, 2, 10, 9); R(x, '#8f6a44', 1, 2, 10, 1);
+      R(x, P.trunk2, 1, 10, 10, 1);
+      R(x, P.brass1, 1, 5, 10, 2);
+    }
+    return c;
+  }
+
+  // ---------- machine-kind icons 12x12 (build menus) ----------
+  function kindIcon(kind) {
+    const [c, x] = canvas(12, 12);
+    if (kind === 'mine') {
+      // pick over a spoil mound
+      R(x, P.trunk, 5, 3, 2, 8); R(x, P.steel, 2, 2, 8, 2); R(x, P.frame2, 2, 4, 2, 1); R(x, P.frame2, 8, 4, 2, 1);
+      R(x, P.dirt2, 1, 10, 10, 2);
+    } else if (kind === 'smelter') {
+      R(x, P.cream, 2, 4, 8, 7); R(x, P.frame, 8, 0, 3, 5); R(x, P.dark, 3, 6, 6, 4); R(x, P.orange, 4, 7, 4, 2); R(x, P.glow, 5, 7, 2, 1);
+    } else if (kind === 'foundry') {
+      R(x, P.cream, 2, 5, 8, 6); R(x, P.frame, 3, 1, 2, 4); R(x, P.frame, 8, 2, 2, 3); R(x, P.dark, 4, 7, 4, 3); R(x, P.orange, 5, 8, 2, 1);
+    } else if (kind === 'constructor') {
+      R(x, P.teal, 2, 5, 8, 6); R(x, P.cream, 2, 3, 8, 2); R(x, P.frame, 6, 0, 1, 3); R(x, P.frame, 6, 0, 4, 1); R(x, P.glow, 4, 7, 3, 2);
+    } else if (kind === 'molder') {
+      R(x, P.cream, 2, 4, 8, 7); R(x, P.frame2, 3, 2, 6, 2); R(x, P.dark, 4, 6, 4, 3);
+    } else if (kind === 'assembler') {
+      R(x, P.cream, 1, 5, 10, 5); R(x, P.frame, 3, 2, 1, 3); R(x, P.frame, 8, 2, 1, 3); R(x, P.teal, 1, 7, 10, 1);
+    } else if (kind === 'fastener') {
+      R(x, P.teal, 2, 4, 8, 6); R(x, P.steel, 3, 5, 1, 1); R(x, P.steel, 8, 5, 1, 1); R(x, P.steel, 3, 8, 1, 1); R(x, P.steel, 8, 8, 1, 1);
+    } else if (kind === 'crane') {
+      R(x, P.frame, 8, 1, 2, 10); R(x, P.frame2, 2, 2, 8, 1); R(x, P.dark, 3, 3, 1, 4); R(x, P.trunk, 2, 7, 3, 3);
+    } else {
+      R(x, P.frame, 1, 3, 10, 8); R(x, P.teal, 3, 5, 6, 4); R(x, P.glow, 4, 6, 2, 2);
     }
     return c;
   }
@@ -765,11 +844,12 @@
     boardTex: (hasWork) => cachedTex('board:' + !!hasWork, () => noticeBoard(hasWork)),
     textTex: (str, fg) => cachedTex('t:' + fg + '|' + str, () => textCanvas(str, fg)),
     matIconURL: (kind) => matIcon(kind).toDataURL(),
+    kindIconTex: (kind) => cachedTex('kind:' + kind, () => kindIcon(kind)),
     // raw canvases for the dev proof page (dev/tiles.html) — no PIXI needed
     nodeCanvas: nodePatch,
     sceneryCanvas: (kind) => SCENERY_DRAW[kind] ? SCENERY_DRAW[kind]() : window.TILES.scenery(kind),
     machineCanvas: machine, stationCanvas: station, characterCanvas: character, workCanvas: characterWork,
-    matIconTex: (kind) => tex(matIcon(kind)),
+    matIconTex: (kind) => cachedTex('mat:' + kind, () => matIcon(kind)),
     pressTex: (frame) => tex(press(frame)),
     vignetteURL: () => vignette().toDataURL(),
   };

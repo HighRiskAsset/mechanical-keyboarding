@@ -1,12 +1,12 @@
 // UI + world orchestration: one persistent overworld, no scene switching.
-// Walk with arrows; dock at a station by standing near it; type to work it.
-// The one screen before the world is the map picker: each world (CHAIN.MAPS)
-// keeps its own save, and the session begins by choosing which one to play.
+// Walk with arrows; dock at a place by standing near it; type to work a
+// machine; hold Space to open the place's menu (arrows choose, hold Space
+// confirms, a tap or Escape closes). Tech tree v3: everything is bought from
+// the bag at the place — mines and Mk at ore nodes, machines at plots, ⚙ at
+// the machine. The one screen before the world is the map picker.
 (function () {
   'use strict';
 
-  // the loading card (index.html) has been on screen since first paint; the
-  // scripts have now arrived — light its second cell
   const loadingCard = document.getElementById('loading');
   if (loadingCard) loadingCard.classList.add('s2');
 
@@ -17,10 +17,9 @@
   const A = window.AUDIO;
 
   const SOFT_STOP_MIN = 25;
-  const NIGHT_MERCY = 5; // (night runs return later as a lamp toggle)
 
-  let profile = null;   // the current map's save; set by startMap
-  let mapId = null;     // the current map (CHAIN.MAPS key)
+  let profile = null;
+  let mapId = null;
 
   // ---- session state ----
   const session = {
@@ -38,21 +37,18 @@
   let wordHadError = false;
   let lineErrors = 0;
   let lastCorrectTime = null;
-  let nextWords = null;
 
   // ---- world state ----
-  let station = null;            // docked CHAIN station def, or null
-  let dockedPlot = null;         // docked free plot id, or null
-  let pendingUnlock = null;
-  let pendingAutomation = [];
-  let benchStreak = 0;           // consecutive benchmark-grade lines at the press
-  let pendingEdition = null;     // completed edition, card queued
-  const consAcc = {};            // per-mat fractional consumption accumulators
-  const feedAcc = {};            // per-bench autofeed accumulators
+  let dock = null;               // {id, kind:'machine'|'plot'|'node', m?, plot?, node?}
+  let recipe = null;             // active recipe at a processor
+  let unitAcc = 0;               // keystrokes into the current unit of output
+  let unitPaid = false;          // inputs deducted for the current unit
   let dryNow = false;
-  let producedSinceFloat = {};   // mat → n, batched into float text per word
-
-  const nightMode = false;       // reserved
+  let alphabet = [];             // the current lesson's letters
+  let menu = null;               // {rows:[{...row, action}], sel}
+  let pendingUnlock = null;      // a pair just unlocked, card queued
+  let pendingAutomation = [];
+  let producedSinceFloat = {};
 
   // ---- DOM ----
   const $ = (id) => document.getElementById(id);
@@ -100,7 +96,6 @@
 
   // ---------- hints: recall first, rescue on hesitation ----------
   let hintTimer = null;
-
   function clearHint() {
     if (hintTimer) { clearTimeout(hintTimer); hintTimer = null; }
     for (const cap of Object.values(keycapEls)) {
@@ -148,66 +143,46 @@
     }
     scheduleHint();
   }
+  // the lesson's letters light up
+  function refreshLessonLights() {
+    const set = canTypeHere() ? new Set(alphabet) : null;
+    for (const [code, cap] of Object.entries(keycapEls)) {
+      const ch = LAYOUT.CODE_TO_CHAR[code];
+      cap.classList.toggle('lesson', !!(set && ch && set.has(ch)));
+    }
+  }
 
-  // ---------- materials ----------
-  function produceMat(mat, n) {
+  // ---------- the bag ----------
+  function gain(mat, n) {
     if (n <= 0) return;
-    profile.mats[mat] = (profile.mats[mat] || 0) + n;
+    profile.bag[mat] = (profile.bag[mat] || 0) + n;
+    if (!profile.seen[mat]) { profile.seen[mat] = true; }
     producedSinceFloat[mat] = (producedSinceFloat[mat] || 0) + n;
   }
-  function tryConsumePerLetter() {
-    if (!station || !station.consume) return;
-    for (const [mat, ratio] of Object.entries(station.consume)) {
-      consAcc[mat] = (consAcc[mat] || 0) + ratio;
-      while (consAcc[mat] >= 1) {
-        if ((profile.mats[mat] || 0) > 0) {
-          profile.mats[mat]--;
-          consAcc[mat] -= 1;
-        } else {
-          consAcc[mat] = 1; // hold — station is starved
-          dryNow = true;
-          return;
-        }
-      }
-    }
+  function spend(cost) {
+    for (const [mat, n] of Object.entries(cost)) profile.bag[mat] = Math.max(0, (profile.bag[mat] || 0) - n);
   }
-  function autofeedTick() {
-    // automated benches feed only through PURCHASED belts
-    for (const id of Object.keys(profile.autoBench)) {
-      if (!profile.autoBench[id]) continue;
-      const hasBelt = CHAIN.BELTS.some((b) => b.from === id && profile.belts[CHAIN.beltKey(b)]);
-      if (!hasBelt) continue;
-      // steam-era machines feed their belts noticeably faster
-      feedAcc[id] = (feedAcc[id] || 0) + (profile.era === 'hand' ? 0.5 : 0.8);
-      if (feedAcc[id] >= 1) {
-        feedAcc[id] -= 1;
-        const def = CHAIN.get(id);
-        if (def && def.out) {
-          profile.mats[def.out] = (profile.mats[def.out] || 0) + 1;
-          FACTORY.beltDot(id);
-        }
-      }
-    }
-  }
+  const canPay = (cost) => CHAIN.affordable(profile.bag, cost);
   function flushFloats() {
     const parts = Object.entries(producedSinceFloat).filter(([, n]) => n > 0);
-    if (parts.length && station) {
-      FACTORY.floatText(parts.map(([m, n]) => `+${n}`).join(' '), station.id);
-      for (const [m, n] of parts) flyMat(m, station.id, Math.min(n, 3));
+    if (parts.length && dock) {
+      FACTORY.floatText(parts.map(([, n]) => `+${n}`).join(' '), dock.id);
+      for (const [m, n] of parts) flyMat(m, dock.id, Math.min(n, 3));
       A.mint();
     }
     producedSinceFloat = {};
   }
 
-  // The inventory lives inside the game canvas as a pixel HUD (icons +
-  // bitmap numbers, no words — nothing to overflow). This code only feeds
-  // it values; count-up animation ticks stay the addictive one.
-  let iconURLs = null;
+  // The bag lives inside the game canvas as a pixel HUD (icons + bitmap
+  // numbers). Rows are the materials the player has held, in tree order.
+  let iconURLs = {};
   const invPrev = {};
   const countTimers = {};
-  const INV_KEYS = ['money', 'az', 'buki', 'vedi', 'slogi', 'slova', 'stroki', 'listy'];
-  const invValue = (k) => (k === 'money' ? profile.money : (profile.mats[k] || 0));
-
+  let hudKeysShown = [];
+  const invValue = (k) => profile.bag[k] || 0;
+  function hudKeys() {
+    return CHAIN.MAT_IDS.filter((id) => profile.seen[id]);
+  }
   function animateCount(key, from, to) {
     clearInterval(countTimers[key]);
     const delta = to - from;
@@ -221,14 +196,15 @@
       if (i >= steps) clearInterval(countTimers[key]);
     }, 45);
   }
-
   function refreshInventory() {
     if (!profile) return;
-    if (!iconURLs) {
-      iconURLs = {};
-      for (const k of INV_KEYS) iconURLs[k] = PIXELS.matIconURL(k);
+    const keys = hudKeys();
+    if (keys.join() !== hudKeysShown.join()) {
+      hudKeysShown = keys;
+      FACTORY.setHudKeys(keys);
+      for (const k of keys) { if (!iconURLs[k]) iconURLs[k] = PIXELS.matIconURL(k); FACTORY.setInvValue(k, invPrev[k] === undefined ? invValue(k) : invPrev[k]); }
     }
-    for (const k of INV_KEYS) {
+    for (const k of keys) {
       const v = invValue(k);
       if (invPrev[k] === undefined) { invPrev[k] = v; FACTORY.setInvValue(k, v); continue; }
       if (v === invPrev[k]) continue;
@@ -237,58 +213,13 @@
       invPrev[k] = v;
     }
   }
-
-  // ---------- Enter-action + dock glow (icons in-world carry the info) ----------
-  function enterAction() {
-    if (dockedPlot) {
-      const kit = CHAIN.pendingKit(profile);
-      return kit && CHAIN.affordable(profile, kit.buildCost) ? 'build' : null;
-    }
-    if (!station) return null;
-    if (station.kind === 'board') return CHAIN.canDeliver(profile) ? 'milestone' : null;
-    if (CHAIN.canUpgrade(profile, station)) return 'upgrade';
-    if (profile.autoBench[station.id] && (profile.mats[station.out] || 0) < CHAIN.PICKUP_CAP) return 'collect';
-    const belt = CHAIN.nextBelt(profile, station);
-    if (belt && CHAIN.affordable(profile, belt.cost)) return 'belt';
-    return null;
-  }
-  function refreshStatus() {
-    if (!profile) return;
-    FACTORY.setDockGlow(enterAction() ? 0x7fb98a : 0xc9a24a);
-    // requirement row: what Enter could do here, visible even when
-    // unaffordable (dimmed) — the goal is never a secret
-    if (station && station.upgradeCost && !profile.autoBench[station.id]) {
-      FACTORY.showDockInfo(station.id, station.upgradeCost, '⚙', CHAIN.affordable(profile, station.upgradeCost));
-    } else if (station && CHAIN.nextBelt(profile, station)) {
-      const belt = CHAIN.nextBelt(profile, station);
-      FACTORY.showDockInfo(station.id, belt.cost, '→', CHAIN.affordable(profile, belt.cost));
-    } else {
-      FACTORY.showDockInfo(null);
-    }
-  }
-
-  // ---------- keyboard lesson lights: the bench's letters illuminate ----------
-  function refreshLessonLights() {
-    let set = null;
-    if (station && station.mode && CHAIN.isBuilt(profile, station) && !profile.autoBench[station.id]) {
-      const unlocked = E.unlockedLetters(profile);
-      const focused = (station.focus || unlocked).filter((ch) => unlocked.includes(ch));
-      // a bench whose letters are not yet unlocked drills the letters you have
-      set = new Set(focused.length ? focused : unlocked);
-    }
-    for (const [code, cap] of Object.entries(keycapEls)) {
-      const ch = LAYOUT.CODE_TO_CHAR[code];
-      cap.classList.toggle('lesson', !!(set && ch && set.has(ch)));
-    }
-  }
-
-  // ---------- materials fly to the in-canvas HUD ----------
-  function flyMat(mat, stationId, count) {
+  function flyMat(mat, dockId, count) {
     const canvas = document.querySelector('#factory-mount canvas');
-    if (!canvas || !iconURLs) return;
+    if (!canvas || !iconURLs[mat]) return;
     const rect = canvas.getBoundingClientRect();
     const scale = rect.width / canvas.width;
-    const def = CHAIN.get(stationId);
+    const def = FACTORY.posOf(dockId);
+    if (!def) return;
     const sp = FACTORY.screenPos(def.x + 13, def.y - 30);
     const sx = rect.left + sp.x * scale, sy = rect.top + sp.y * scale;
     const tp = FACTORY.invScreenPos(mat);
@@ -309,11 +240,223 @@
     }
   }
 
+  // ---------- automation: the one rule (mines in this build) ----------
+  const autoLive = (m) => !!(m && m.auto && m.kind === 'mine' && E.oreSticky(profile, m.ore));
+
+  // ---------- recipes: the inputs pick the recipe ----------
+  function pickRecipe(m) {
+    if (!m || m.kind === 'mine') return null;
+    const offered = CHAIN.offerableRecipes(m.kind, profile);
+    if (!offered.length) return null;
+    const affordable = offered.filter((r) => canPay(r.in));
+    const pool = affordable.length ? affordable : offered;
+    // weakest letters first (the recipe whose alphabet holds the shakiest
+    // key), then the newest
+    let best = null, bestScore = 1e9;
+    pool.forEach((r, i) => {
+      const alpha = CHAIN.recipeAlphabet(r, profile).filter(E.trainable);
+      const minR = alpha.length ? Math.min(...alpha.map((ch) => E.readiness(profile, ch))) : 1;
+      const score = minR - i * 0.001; // ties → later (newer) recipe
+      if (score < bestScore) { bestScore = score; best = r; }
+    });
+    return best;
+  }
+  function lessonFor() {
+    if (!dock || dock.kind !== 'machine') return null;
+    const m = dock.m;
+    if (m.kind === 'mine') {
+      const letters = CHAIN.oreLetters(m.ore, CHAIN.oreMk(profile, m.ore));
+      const mode = letters.filter((c) => !L.PUNCT.has(c)).length <= 2 ? 'keys' : 'letters';
+      return { mode, alphabet: letters, tilt: null };
+    }
+    if (!recipe) return null;
+    const kind = CHAIN.KINDS[m.kind];
+    return { mode: kind.grammar, alphabet: CHAIN.recipeAlphabet(recipe, profile), tilt: kind.full ? null : CHAIN.recipeTilt(recipe, profile) };
+  }
+  const canTypeHere = () => !!(dock && dock.kind === 'machine' && !autoLive(dock.m) && (dock.m.kind === 'mine' || recipe));
+
+  // per correct letter: mines yield an ore; processors pay for a unit at its
+  // first keystroke and emit at its last
+  function workKeystroke() {
+    const m = dock.m;
+    if (m.kind === 'mine') { gain(m.ore, 1); return; }
+    if (!recipe) return;
+    const kind = CHAIN.KINDS[m.kind];
+    if (!unitPaid) {
+      if (canPay(recipe.in)) { spend(recipe.in); unitPaid = true; dryNow = false; }
+      else {
+        // starved: try another recipe the bag can pay for, else run dry
+        const alt = pickRecipe(m);
+        if (alt && alt !== recipe && canPay(alt.in)) { recipe = alt; spend(recipe.in); unitPaid = true; dryNow = false; }
+        else { dryNow = true; return; }
+      }
+    }
+    unitAcc++;
+    if (unitAcc >= kind.perUnit) {
+      unitAcc = 0; unitPaid = false;
+      gain(recipe.out, 1);
+    }
+  }
+
+  // ---------- place menus ----------
+  function menuRowsFor(d) {
+    if (!d) return [];
+    const rows = [];
+    const tier = CHAIN.currentTier(profile);
+    if (d.kind === 'plot') {
+      for (const k of CHAIN.buildableKinds(profile)) {
+        const price = CHAIN.priceMachine(k, CHAIN.machinesOfKind(profile, k).length + 1);
+        rows.push({ kind: k, items: price, enabled: canPay(price), action: { type: 'build-machine', kind: k, plot: d.plot.id, price } });
+      }
+    } else if (d.kind === 'node') {
+      const ore = d.node.ore;
+      if (CHAIN.oreOpen(profile, ore)) {
+        const price = CHAIN.priceExtraMine(ore, tier);
+        rows.push({ kind: 'mine', ore, items: price, enabled: canPay(price), action: { type: 'build-mine', ore, node: d.node.index, price } });
+      } else {
+        const np = CHAIN.nextPair(profile);
+        const price = CHAIN.PRICES.node[ore] || {};
+        if (np && np.ore === ore && np.mk === 1) {
+          const gate = E.gateProgress(profile);
+          rows.push({ kind: 'mine', ore, items: price, gauge: gate.min, enabled: gate.ready && canPay(price), action: { type: 'build-mine', ore, node: d.node.index, price, unlock: true } });
+        } else {
+          rows.push({ kind: 'mine', ore, items: price, ok: false, enabled: false, action: null });
+        }
+      }
+    } else if (d.kind === 'machine' && d.m.kind === 'mine') {
+      const m = d.m, ore = m.ore;
+      const mk = CHAIN.oreMk(profile, ore);
+      const np = CHAIN.nextPair(profile);
+      if (mk < CHAIN.oreMaxMk(ore)) {
+        const price = CHAIN.priceMk(ore, mk + 1) || {};
+        if (np && np.ore === ore && np.mk === mk + 1) {
+          const gate = E.gateProgress(profile);
+          rows.push({ pre: 'MK' + (mk + 1), items: price, gauge: gate.min, enabled: gate.ready && canPay(price), action: { type: 'mk', ore, level: mk + 1, price } });
+        } else {
+          rows.push({ pre: 'MK' + (mk + 1), items: price, ok: false, enabled: false, action: null });
+        }
+      }
+      if (!m.auto) {
+        const price = CHAIN.priceAuto(m, tier);
+        const sticky = E.oreSticky(profile, ore);
+        rows.push({ pre: '⚙', items: price, ok: sticky ? undefined : false, enabled: sticky && canPay(price), action: { type: 'auto', m, price } });
+      } else if (autoLive(m)) {
+        const cap = CHAIN.TUNING.PICKUP_CAP;
+        rows.push({ pre: '↓', ore, enabled: (profile.bag[ore] || 0) < cap, action: { type: 'collect', m } });
+      }
+    }
+    return rows;
+  }
+  function openMenu() {
+    const rows = menuRowsFor(dock);
+    if (!rows.length) return false;
+    let sel = rows.findIndex((r) => r.enabled !== false);
+    if (sel < 0) sel = 0;
+    menu = { rows, sel };
+    FACTORY.showMenu(dock.id, rows, sel);
+    A.click();
+    return true;
+  }
+  function closeMenu() {
+    menu = null;
+    FACTORY.clearMenu();
+  }
+  function moveMenu(dir) {
+    if (!menu) return;
+    const n = menu.rows.length;
+    menu.sel = (menu.sel + dir + n) % n;
+    FACTORY.showMenu(dock.id, menu.rows, menu.sel);
+    A.click();
+  }
+  function confirmMenu() {
+    if (!menu) return;
+    const row = menu.rows[menu.sel];
+    if (!row || row.enabled === false || !row.action) { A.thud(); return; }
+    performAction(row.action);
+    closeMenu();
+  }
+
+  // ---------- actions ----------
+  function performAction(act) {
+    if (act.type === 'build-machine') {
+      if (!canPay(act.price)) return;
+      spend(act.price);
+      profile.machines.push({ id: 'm' + (profile.nextMachineId++), kind: act.kind, plot: act.plot, auto: false });
+      afterPurchase();
+    } else if (act.type === 'build-mine') {
+      if (!canPay(act.price)) return;
+      let pair = null;
+      if (act.unlock) {
+        if (!E.pairReady(profile)) return;
+        pair = E.unlockNextPair(profile);
+      }
+      spend(act.price);
+      profile.machines.push({ id: 'm' + (profile.nextMachineId++), kind: 'mine', ore: act.ore, node: act.node, auto: false });
+      afterPurchase();
+      if (pair) { pendingUnlock = pair; showUnlockCard(pair); }
+    } else if (act.type === 'mk') {
+      if (!canPay(act.price) || !E.pairReady(profile)) return;
+      const np = CHAIN.nextPair(profile);
+      if (!np || np.ore !== act.ore || np.mk !== act.level) return;
+      spend(act.price);
+      const pair = E.unlockNextPair(profile);
+      afterPurchase();
+      if (pair) { pendingUnlock = pair; showUnlockCard(pair); }
+    } else if (act.type === 'auto') {
+      if (!canPay(act.price) || !E.oreSticky(profile, act.m.ore)) return;
+      spend(act.price);
+      act.m.auto = true;
+      afterPurchase();
+      showBenchAutoCard(act.m);
+    } else if (act.type === 'collect') {
+      const m = act.m, cap = CHAIN.TUNING.PICKUP_CAP;
+      const have = profile.bag[m.ore] || 0;
+      if (have >= cap) return;
+      gain(m.ore, cap - have);
+      flyMat(m.ore, dock.id, 5);
+      FACTORY.floatText(`+${cap - have}`, dock.id, 0x7fb98a);
+      A.ding();
+      producedSinceFloat = {};
+      E.saveProfile(profile);
+      refreshInventory();
+      refreshStatus();
+    }
+  }
+  function afterPurchase() {
+    E.saveProfile(profile);
+    rebuildWorld();
+    refreshInventory();
+    refreshKeyboard();
+    redock();
+    A.build();
+  }
+  function rebuildWorld() {
+    if (!profile) return;
+    FACTORY.buildWorld(profile, autoLive);
+  }
+
+  // ---------- Enter-action + dock glow (icons in-world carry the info) ----------
+  function refreshStatus() {
+    if (!profile) return;
+    const rows = menu ? menu.rows : menuRowsFor(dock);
+    const any = rows.some((r) => r.enabled !== false);
+    FACTORY.setDockGlow(any ? 0x7fb98a : 0xc9a24a);
+    refreshInfo();
+  }
+  // info rows above the docked machine: its recipes (active bright)
+  function refreshInfo() {
+    if (!dock || dock.kind !== 'machine' || dock.m.kind === 'mine') { FACTORY.clearInfo(); return; }
+    const offered = CHAIN.offerableRecipes(dock.m.kind, profile).slice(0, 4);
+    if (!offered.length) { FACTORY.showInfo(dock.id, [{ pre: '✗', enabled: false }]); return; }
+    FACTORY.showInfo(dock.id, offered.map((r) => ({ items: r.in, out: r.out, enabled: r === recipe })));
+  }
+
   // ---------- line rendering ----------
   function newLine() {
-    if (!station) { clearLine(); return; }
-    const genMode = station.mode || 'lines';
-    words = E.generateLine(profile, undefined, genMode);
+    const lesson = lessonFor();
+    if (!lesson || !canTypeHere()) { clearLine(); return; }
+    alphabet = lesson.alphabet;
+    words = E.generateLine(profile, lesson);
     lineText = words.map((w) => w.text + (w.punct || '')).join(' ');
     pos = 0;
     erroredAt = -1;
@@ -322,6 +465,7 @@
     lineErrors = 0;
     renderLine();
     refreshKeyboard();
+    refreshLessonLights();
   }
   function clearLine() {
     words = []; lineText = ''; pos = 0;
@@ -400,22 +544,13 @@
 
   // ---------- input ----------
   // ONE interact key: hold Space for half a second (a charge bar fills above
-  // the operator). A quick tap is just a typed space; the hold fires the
-  // dock's action — build / deliver / automate / collect / belt.
+  // the operator). With no menu open the hold opens the place's menu; with a
+  // menu open it confirms the highlighted row. A tap is a typed space at a
+  // machine, or closes an open menu.
   const HOLD_MS = 500;
   let spaceState = null;   // {done, typedEmitted}
   let chargeTimer = null;
 
-  const canTypeHere = () =>
-    !!(station && station.mode && CHAIN.isBuilt(profile, station) && !profile.autoBench[station.id]);
-
-  function performAction(act) {
-    if (act === 'build') doBuildOnPlot();
-    else if (act === 'milestone') doDeliver();
-    else if (act === 'upgrade') doUpgrade();
-    else if (act === 'collect') doCollect();
-    else if (act === 'belt') doBelt();
-  }
   function cancelCharge() {
     if (chargeTimer) { clearInterval(chargeTimer); chargeTimer = null; }
     FACTORY.setCharge(null);
@@ -423,8 +558,8 @@
   function startSpace() {
     if (spaceState) return;
     spaceState = { done: false, typedEmitted: false };
-    if (!enterAction()) {
-      // nothing to interact with — space is just a keystroke
+    const canOpen = !menu && menuRowsFor(dock).length > 0;
+    if (!menu && !canOpen) {
       if (canTypeHere()) handleTyped(' ');
       spaceState.typedEmitted = true;
       return;
@@ -437,7 +572,8 @@
       if (p >= 1) {
         cancelCharge();
         if (spaceState) spaceState.done = true;
-        performAction(enterAction());
+        if (menu) confirmMenu(); else openMenu();
+        refreshStatus();
       }
     }, 33);
   }
@@ -445,26 +581,62 @@
     if (!spaceState) return;
     const wasCharging = !!chargeTimer;
     cancelCharge();
-    // released early: the tap types its space after all
-    if (wasCharging && !spaceState.done && !spaceState.typedEmitted && canTypeHere()) handleTyped(' ');
+    if (wasCharging && !spaceState.done) {
+      if (menu) { closeMenu(); refreshStatus(); }
+      else if (!spaceState.typedEmitted && canTypeHere()) handleTyped(' ');
+    }
     spaceState = null;
+  }
+
+  // debug: Ctrl+Alt+M — 100 of every material that exists for this save
+  function debugMaterials() {
+    const tier = CHAIN.currentTier(profile);
+    let n = 0;
+    for (const mat of CHAIN.MAT_IDS) {
+      const spec = CHAIN.MATS[mat];
+      let exists = false;
+      if (spec.form === 'ore') exists = CHAIN.oreOpen(profile, mat);
+      else {
+        const r = CHAIN.recipeFor(mat);
+        exists = !!(r && CHAIN.KINDS[r.kind].ready && r.tier <= tier && CHAIN.matExists(profile, mat));
+      }
+      if (!exists) continue;
+      profile.bag[mat] = (profile.bag[mat] || 0) + 100;
+      profile.seen[mat] = true;
+      n++;
+    }
+    E.saveProfile(profile);
+    refreshInventory();
+    refreshStatus();
+    if (dock) FACTORY.floatText(`+100×${n}`, dock.id, 0x7fb98a);
+    A.fanfare();
   }
 
   window.addEventListener('keydown', (e) => {
     const overlayOpen = !overlay.classList.contains('hidden');
-    // walking (always available when no overlay)
     const ARROWS = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
-    if (ARROWS[e.code]) {
+    if (e.ctrlKey && e.altKey && e.code === 'KeyM' && !overlayOpen && profile) {
       e.preventDefault();
-      if (!overlayOpen) FACTORY.setMove(ARROWS[e.code], true);
+      debugMaterials();
       return;
     }
+    if (ARROWS[e.code]) {
+      e.preventDefault();
+      if (overlayOpen) return;
+      if (menu) {
+        if (!e.repeat) moveMenu(e.code === 'ArrowUp' || e.code === 'ArrowLeft' ? -1 : 1);
+        return;
+      }
+      FACTORY.setMove(ARROWS[e.code], true);
+      return;
+    }
+    if (e.code === 'Escape' && menu && !overlayOpen) { e.preventDefault(); closeMenu(); refreshStatus(); return; }
     if (e.code === 'Space' && !overlayOpen) {
       e.preventDefault();
       if (!e.repeat) startSpace();
       return;
     }
-    if (overlayOpen) return;
+    if (overlayOpen || menu) return;
     if (e.ctrlKey || e.altKey || e.metaKey) return;
     if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') return;
     if (!canTypeHere()) return;
@@ -475,6 +647,11 @@
     }
     e.preventDefault();
     handleTyped(typed);
+  });
+  window.addEventListener('keyup', (e) => {
+    const ARROWS = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
+    if (ARROWS[e.code]) FACTORY.setMove(ARROWS[e.code], false);
+    if (e.code === 'Space') endSpace();
   });
 
   function handleTyped(typed) {
@@ -501,18 +678,13 @@
 
       if (expected !== ' ') {
         FACTORY.castLetter(true);
-        // the material chain, per correct letter
-        dryNow = false;
-        tryConsumePerLetter();
-        if (station.tier === 1 && !dryNow) produceMat(station.out, 1);
-        autofeedTick();
+        workKeystroke();
       }
 
       pos++;
       attemptsAtPos = 0;
       advanceCaret();
 
-      // word boundary
       if (lineText[pos] === ' ' || pos >= lineText.length) {
         const endedIdx = lineText.slice(0, pos).split(' ').length - 1;
         const word = words[endedIdx];
@@ -521,14 +693,6 @@
           const clean = !wordHadError;
           const justCollected = collectWord(word, clean);
           showGloss(word, justCollected);
-          if (!dryNow) {
-            if (station.id === 'slogi') {
-              const occ = E.bigramsIn(word.text);
-              if (occ > 0) produceMat('slogi', occ * (clean ? 2 : 1));
-            } else if (station.id === 'slova') {
-              if (clean) produceMat('slova', 1);
-            }
-          }
           flushFloats();
           refreshInventory();
           refreshStatus();
@@ -558,74 +722,26 @@
       refreshStats();
     }
   }
-  window.addEventListener('keyup', (e) => {
-    const ARROWS = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
-    if (ARROWS[e.code]) FACTORY.setMove(ARROWS[e.code], false);
-    if (e.code === 'Space') endSpace();
-  });
 
   // ---------- line completion / world progression ----------
   function finishLine() {
     session.linesDone++;
     lastCorrectTime = null;
-
-    const lineChars = lineText.length;
-    const accLine = lineChars / (lineChars + lineErrors);
-
-    if (station && station.id === 'stroki' && !dryNow) produceMat('stroki', 1);
-    if (station && station.id === 'press') {
-      const m = profile.mats;
-      let printed = false;
-      if ((m.stroki || 0) >= 1) {
-        m.stroki--;
-        const pay = Math.max(1, Math.round(5 * Math.pow(accLine, 3)));
-        profile.money += pay;
-        produceMat('listy', 1);
-        printed = true;
-        FACTORY.floatText(`+${pay} ₽`, 'press', 0x7fb98a);
-        FACTORY.stamp();
-        A.press();
-      } else if ((m.az || 0) >= 8) {
-        m.az -= 8;
-        const pay = Math.max(1, Math.round(2 * Math.pow(accLine, 3)));
-        profile.money += pay;
-        produceMat('listy', 1);
-        printed = true;
-        FACTORY.floatText(`+${pay} ₽`, 'press', 0x7fb98a);
-        FACTORY.stamp();
-        A.press();
-      } else {
-        dryNow = true;
-      }
-      // ИЗДАНИЕ benchmark: automated base + consecutive clean pages, live
-      const ms = CHAIN.currentMilestone(profile);
-      if (printed && ms && ms.edition && profile.autoBench[ms.needAuto]) {
-        if (accLine >= ms.acc) {
-          benchStreak++;
-          FACTORY.floatText('✦' + benchStreak, 'press', 0xeacc78);
-          if (benchStreak >= ms.lines) {
-            benchStreak = 0;
-            profile.milestoneIdx++;
-            profile.era = ms.era;
-            pendingEdition = ms;
-          }
-        } else {
-          benchStreak = 0;
-        }
-      }
-    } else if (station && station.id !== 'press') {
-      FACTORY.stamp();
-      A.press();
-    }
+    FACTORY.stamp();
+    A.press();
     flushFloats();
     refreshInventory();
-    refreshStatus();
 
-    pendingUnlock = E.checkUnlock(profile) || pendingUnlock;
     pendingAutomation.push(...E.updateAutomation(profile));
     E.saveProfile(profile);
+    // an automated mine whose letters just went sticky changes look
+    if (dock && dock.kind === 'machine' && dock.m.kind === 'mine' && dock.m.auto && autoLive(dock.m)) {
+      FACTORY.setAutoLook(dock.id, true);
+    }
+    // the bag may now pay for a different recipe
+    if (dock && dock.kind === 'machine' && dock.m.kind !== 'mine') recipe = pickRecipe(dock.m);
+    refreshStatus();
 
-    // soft-stop reminder, at most once per 10 minutes
     if (session.activeMs > SOFT_STOP_MIN * 60000 && session.activeMs - lastSoftStopAt > 10 * 60000) {
       lastSoftStopAt = session.activeMs;
       showSoftStopCard();
@@ -633,21 +749,7 @@
     }
     proceedAfterLine();
   }
-
   function proceedAfterLine() {
-    if (pendingEdition) {
-      const m = pendingEdition;
-      pendingEdition = null;
-      rebuildWorld();
-      showEditionCard(m);
-      return;
-    }
-    if (pendingUnlock) {
-      const letter = pendingUnlock;
-      pendingUnlock = null;
-      showUnlockCard(letter);
-      return;
-    }
     if (pendingAutomation.length) {
       showAutomationCard(pendingAutomation.shift());
       return;
@@ -655,102 +757,29 @@
     newLine();
   }
 
-  // ---------- the board's note shows in the gloss line while docked ----------
-  function showBoardGloss() {
-    const m = CHAIN.currentMilestone(profile);
-    glossLine.innerHTML = `<b>${T.t('boardName')}</b> — ${T.t(m ? 'boardGloss_' + m.id : 'boardGloss_done')}`;
-    glossLine.classList.add('visible');
-    clearTimeout(glossTimer);
-  }
-
   // ---------- docking ----------
   FACTORY.onDock = (id) => {
-    dockedPlot = id && id.startsWith('plot:') ? id.slice(5) : null;
-    station = id && !dockedPlot ? CHAIN.get(id) : null;
-    E.setFocusSet(station && station.focus ? station.focus : null);
-    for (const k of Object.keys(consAcc)) delete consAcc[k];
-    dryNow = false;
+    closeMenu();
+    dock = null;
+    if (id && id.startsWith('m:')) {
+      const m = profile.machines.find((x) => 'm:' + x.id === id);
+      if (m) dock = { id, kind: 'machine', m };
+    } else if (id && id.startsWith('plot:')) {
+      const plot = CHAIN.plotById(id.slice(5));
+      if (plot) dock = { id, kind: 'plot', plot };
+    } else if (id && id.startsWith('node:')) {
+      const node = CHAIN.unbuiltNodes(profile).find((n) => 'node:' + n.index === id);
+      if (node) dock = { id, kind: 'node', node };
+    }
+    recipe = dock && dock.kind === 'machine' ? pickRecipe(dock.m) : null;
+    unitAcc = 0; unitPaid = false; dryNow = false;
     lastCorrectTime = null;
     glossLine.classList.remove('visible');
-    FACTORY.showPlotKit(dockedPlot, dockedPlot ? CHAIN.pendingKit(profile) : null);
-    if (dockedPlot) {
-      clearLine();
-    } else if (station && station.kind === 'board') {
-      clearLine();
-      showBoardGloss();
-    } else if (station && profile.autoBench[station.id]) {
-      // automated machine = dispenser: hold Space to draw a full load
-      clearLine();
-    } else if (station && CHAIN.isBuilt(profile, station)) {
-      newLine();
-    } else {
-      clearLine();
-    }
+    if (canTypeHere()) newLine(); else clearLine();
     refreshLessonLights();
     refreshStatus();
   };
-
-  function rebuildWorld() {
-    if (!profile) return;
-    FACTORY.buildWorld(profile, {});
-  }
-
-  // ---------- purchases: build station / upgrade bench / lay belt ----------
-  function spend(cost) {
-    for (const [mat, n] of Object.entries(cost)) profile.mats[mat] -= n;
-  }
-  function afterPurchase() {
-    E.saveProfile(profile);
-    rebuildWorld();
-    refreshInventory();
-    refreshLessonLights();
-    refreshStatus();
-    A.build();
-  }
-  function doBuildOnPlot() {
-    const kit = CHAIN.pendingKit(profile);
-    if (!kit || !dockedPlot || !CHAIN.affordable(profile, kit.buildCost)) return;
-    spend(kit.buildCost);
-    profile.built[kit.id] = true;
-    profile.plots[kit.id] = dockedPlot;
-    afterPurchase();
-    // the plot marker is gone; the next tick re-docks onto the new machine
-  }
-  function doCollect() {
-    if (!station || !profile.autoBench[station.id]) return;
-    const cap = CHAIN.PICKUP_CAP;
-    const have = profile.mats[station.out] || 0;
-    if (have >= cap) return;
-    profile.mats[station.out] = cap;
-    flyMat(station.out, station.id, 5);
-    FACTORY.floatText(`+${cap - have}`, station.id, 0x7fb98a);
-    A.ding();
-    E.saveProfile(profile);
-    refreshInventory();
-    refreshStatus();
-  }
-  function doDeliver() {
-    const m = CHAIN.currentMilestone(profile);
-    if (!m || m.edition || !CHAIN.affordable(profile, m.goal)) return;
-    spend(m.goal);
-    profile.milestoneIdx++;
-    afterPurchase();
-    showBoardGloss();
-    showMilestoneCard(m);
-  }
-  function doUpgrade() {
-    spend(station.upgradeCost);
-    profile.autoBench[station.id] = true;
-    afterPurchase();
-    showBenchAutoCard(station);
-  }
-  function doBelt() {
-    const belt = CHAIN.nextBelt(profile, station);
-    if (!belt) return;
-    spend(belt.cost);
-    profile.belts[CHAIN.beltKey(belt)] = true;
-    afterPurchase();
-  }
+  const redock = () => FACTORY.onDock(FACTORY.getDocked());
 
   // ---------- overlays ----------
   let overlayRerender = null;
@@ -758,6 +787,8 @@
     clearHint();
     FACTORY.setMove('left', false);
     FACTORY.setMove('right', false);
+    FACTORY.setMove('up', false);
+    FACTORY.setMove('down', false);
     overlayCard.classList.toggle('wide', !!wide);
     overlayCard.innerHTML = html;
     overlay.classList.remove('hidden');
@@ -767,16 +798,16 @@
     overlayRerender = null;
   }
 
-  function showUnlockCard(letter) {
-    overlayRerender = () => showUnlockCard(letter);
-    const code = LAYOUT.CHAR_TO_CODE[letter];
+  function showUnlockCard(pair) {
+    overlayRerender = () => showUnlockCard(pair);
+    const keys = pair.keys;
+    const first = keys[0];
+    const code = LAYOUT.CHAR_TO_CODE[first];
     let finger = T.fingerName(LAYOUT.FINGER[code]);
-    if (LAYOUT.NEEDS_SHIFT.has(letter)) finger = T.t('shiftFinger', { finger });
-    const freq = L.LETTER_FREQ[letter];
-    const isPunct = L.PUNCT.has(letter);
-    const title = isPunct
-      ? T.t('unlockTitlePunct', { ch: letter, name: T.t('punctNames')[letter] })
-      : T.t('unlockTitle', { upper: letter.toUpperCase(), lower: letter });
+    if (LAYOUT.NEEDS_SHIFT.has(first)) finger = T.t('shiftFinger', { finger });
+    const freq = keys.reduce((a, k) => a + (L.LETTER_FREQ[k] || 0), 0).toFixed(1);
+    const big = keys.map((k) => (L.PUNCT.has(k) ? k : k.toUpperCase() + ' ' + k)).join(' · ');
+    const title = T.t('unlockTitlePair', { keys: `<span class="big-letter">${big}</span>` });
     showOverlay(`
       <div class="card-station">${T.t('unlockStation')}</div>
       <h2>${title}</h2>
@@ -784,18 +815,17 @@
       <p>${T.t('unlockNote')}</p>
       <button id="ov-continue" class="btn-primary">${T.t('unlockGo')}</button>
     `);
-    const cap = keycapEls[code];
-    if (cap) { cap.classList.remove('locked'); cap.classList.add('unlock-glow'); }
+    const caps = keys.map((k) => keycapEls[LAYOUT.CHAR_TO_CODE[k]]).filter(Boolean);
+    for (const cap of caps) { cap.classList.remove('locked'); cap.classList.add('unlock-glow'); }
     $('ov-continue').onclick = () => {
-      if (cap) cap.classList.remove('unlock-glow');
+      for (const cap of caps) cap.classList.remove('unlock-glow');
       hideOverlay();
+      pendingUnlock = null;
       lastCorrectTime = null;
-      rebuildWorld();
-      proceedAfterLine();
+      redock();
     };
     $('ov-continue').focus();
   }
-
   function showAutomationCard(ch) {
     overlayRerender = () => showAutomationCard(ch);
     A.fanfare();
@@ -808,46 +838,18 @@
     $('ov-continue').onclick = () => { hideOverlay(); lastCorrectTime = null; proceedAfterLine(); };
     $('ov-continue').focus();
   }
-
-  function showMilestoneCard(m) {
-    overlayRerender = () => showMilestoneCard(m);
-    A.fanfare();
-    showOverlay(`
-      <div class="card-station">${T.t('milestoneStation')}</div>
-      <h2>${T.t('milestoneTitle')}</h2>
-      <p>${T.t('milestoneNote', { name: T.t('stationNames')[m.reward] || '' })}</p>
-      <button id="ov-continue" class="btn-primary">${T.t('automationGo')}</button>
-    `);
-    $('ov-continue').onclick = () => { hideOverlay(); };
-    $('ov-continue').focus();
-  }
-
-  function showEditionCard(m) {
-    overlayRerender = () => showEditionCard(m);
-    A.fanfare();
-    showOverlay(`
-      <div class="card-station">${T.t('editionStation')}</div>
-      <h2>${T.t('editionTitle')}</h2>
-      <p>${T.t('editionNote')}</p>
-      <button id="ov-continue" class="btn-primary">${T.t('automationGo')}</button>
-    `);
-    $('ov-continue').onclick = () => { hideOverlay(); proceedAfterLine(); };
-    $('ov-continue').focus();
-  }
-
-  function showBenchAutoCard(st) {
-    overlayRerender = () => showBenchAutoCard(st);
+  function showBenchAutoCard(m) {
+    overlayRerender = () => showBenchAutoCard(m);
     A.fanfare();
     showOverlay(`
       <div class="card-station">${T.t('benchAutoStation')}</div>
-      <h2>${T.t('benchAutoTitle', { name: T.t('stationNames')[st.id] })}</h2>
+      <h2>${T.t('benchAutoTitle', { name: T.t('oreMineNames')[m.ore] || m.ore })}</h2>
       <p>${T.t('benchAutoNote')}</p>
       <button id="ov-continue" class="btn-primary">${T.t('automationGo')}</button>
     `);
     $('ov-continue').onclick = () => { hideOverlay(); };
     $('ov-continue').focus();
   }
-
   function showSoftStopCard() {
     overlayRerender = showSoftStopCard;
     showOverlay(`
@@ -861,6 +863,7 @@
 
   function weakestLetters(n) {
     return E.unlockedLetters(profile)
+      .filter(E.trainable)
       .map((ch) => ({ ch, r: E.readiness(profile, ch), stats: profile.letters[ch] }))
       .filter((x) => x.stats.n > 0)
       .sort((a, b) => a.r - b.r)
@@ -871,9 +874,8 @@
     const weakest = weakestLetters(3)
       .map((x) => `<span class="weak-chip">${x.ch} <small>${Math.round(Math.min(1, x.r) * 100)}%</small></span>`)
       .join(' ');
-    const next = E.nextLetter(profile);
-    const unlocked = E.unlockedLetters(profile);
-    const minReady = Math.min(...unlocked.map((ch) => Math.min(1, E.readiness(profile, ch))));
+    const next = E.nextPair(profile);
+    const gate = E.gateProgress(profile);
     showOverlay(`
       <div class="card-station">${T.t('blockStation')}</div>
       <h2>${T.t('blockLines', { n: session.linesDone })}</h2>
@@ -883,7 +885,7 @@
         <div><span class="sum-val">${session.bestStreak}</span><span class="sum-label">${T.t('sumStreak')}</span></div>
       </div>
       <p class="muted">${T.t('weakLetters')} ${weakest || '—'}</p>
-      ${next ? `<p class="muted">${T.t('progressTo', { ch: next, pct: Math.round(minReady * 100) })}</p>` : `<p class="muted">${T.t('allUnlocked')}</p>`}
+      ${next ? `<p class="muted">${T.t('progressTo', { ch: next.keys.join(' '), pct: Math.round(gate.min * 100) })}</p>` : `<p class="muted">${T.t('allUnlocked')}</p>`}
       <button id="ov-continue" class="btn-primary">${T.t('blockGo')}</button>
     `);
     $('ov-continue').onclick = () => { hideOverlay(); };
@@ -906,12 +908,8 @@
   }
 
   // ---------- the map picker: which world to play ----------
-  // Every world in CHAIN.MAPS has its own save. The picker opens the session
-  // (last-played world focused, so Enter continues at once) and is reachable
-  // again from settings. Each card carries a pixel minimap baked from the
-  // real terrain, the world's name and promise, and its save's progress.
   const thumbCache = {};
-  let thumbScale = 0;    // one px-per-tile for every world, so their sizes compare honestly
+  let thumbScale = 0;
   function mapThumb(id) {
     if (!thumbScale) {
       const widest = Math.max(...CHAIN.MAP_IDS.map((k) => Math.ceil(CHAIN.MAPS[k].W / 16)));
@@ -939,7 +937,7 @@
       const peek = E.peekProfile(id);
       const th = mapThumb(id);
       const progress = peek && peek.totalChars > 0
-        ? `${T.t('mapProgress', { letters: peek.unlockedCount, kits: peek.built, chars: peek.totalChars })}${peek.savedAt ? ` · ${T.t('mapLast', { day: fmtDay(peek.savedAt) })}` : ''}`
+        ? `${T.t('mapProgress', { letters: peek.letters, machines: peek.machines, chars: peek.totalChars })}${peek.savedAt ? ` · ${T.t('mapLast', { day: fmtDay(peek.savedAt) })}` : ''}`
         : T.t('mapNew');
       const go = peek && peek.totalChars > 0 ? T.t('mapContinue') : T.t('mapPlay');
       const cur = id === mapId ? ' current' : '';
@@ -969,9 +967,6 @@
     });
     const btns = [...document.querySelectorAll('#map-cards .map-card')];
     btns.forEach((b) => { b.onclick = () => startMap(b.dataset.map); });
-    // ← → move between worlds; Enter / Space plays the focused one (handled
-    // here, not left to the button's native activation, so the world's own
-    // Space/arrow handling never sees the keystroke that chose it)
     $('map-cards').onkeydown = (e) => {
       const i = btns.indexOf(document.activeElement);
       if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') {
@@ -987,28 +982,22 @@
     (btns.find((b) => b.dataset.map === focusId) || btns[0]).focus();
   }
 
-  // Make a world current: save the one we're leaving, swap the chain's map,
-  // load that world's save, raise its ground, and put the session's world
-  // state back to zero (nothing docked, nothing pending). A fresh save gets
-  // the welcome card.
   function startMap(id) {
     if (!CHAIN.MAPS[id]) id = CHAIN.DEFAULT_MAP;
-    if (id === mapId && profile) { hideOverlay(); return; }   // "continue" on the world you're standing in
+    if (id === mapId && profile) { hideOverlay(); return; }
     if (profile) E.saveProfile(profile);
     mapId = id;
     CHAIN.useMap(id);
     profile = E.loadProfile(id);
     E.setLastMap(id);
 
-    station = null; dockedPlot = null;
-    pendingUnlock = null; pendingAutomation = []; pendingEdition = null;
-    benchStreak = 0; dryNow = false; lastCorrectTime = null;
-    for (const k of Object.keys(consAcc)) delete consAcc[k];
-    for (const k of Object.keys(feedAcc)) delete feedAcc[k];
+    dock = null; recipe = null; menu = null;
+    pendingUnlock = null; pendingAutomation = [];
+    unitAcc = 0; unitPaid = false; dryNow = false; lastCorrectTime = null;
     producedSinceFloat = {};
-    for (const k of Object.keys(invPrev)) delete invPrev[k];   // HUD shows this save's numbers outright, no count-up from the last world
+    for (const k of Object.keys(invPrev)) delete invPrev[k];
     for (const k of Object.keys(countTimers)) clearInterval(countTimers[k]);
-    E.setFocusSet(null);
+    hudKeysShown = [];
     cancelCharge(); spaceState = null;
 
     FACTORY.loadMap();
@@ -1042,7 +1031,7 @@
         return `<span class="pw locked">···</span>`;
       }).join('');
       const done = got === list.length ? ' ✦' : '';
-      sections += `<div class="pw-set"><h3>${T.t('setNames')[set]} <small>${got}/${list.length}${done}</small></h3><div class="pw-grid">${chips}</div></div>`;
+      sections += `<div class="pw-set"><h3>${T.t('setNames')[set] || set} <small>${got}/${list.length}${done}</small></h3><div class="pw-grid">${chips}</div></div>`;
     }
     showOverlay(`
       <div class="card-station">🎫</div>
@@ -1064,16 +1053,10 @@
   soundBtn.onclick = () => { A.setEnabled(!A.isEnabled()); refreshSoundBtn(); soundBtn.blur(); };
 
   // ---------- settings ----------
-  // Tip links follow Sketchmill's free-tier pattern: two payment rails so
-  // international (PayPal) and RU/CIS (YooMoney) both have an easy path.
-  // One label per rail's audience, shown in both interface languages.
-  // coins = currency badges over each button, so the right rail reads at a glance
   const DONATE = [
     { label: 'Buy me a beer', sub: 'PayPal · cards & balance', url: 'https://paypal.me/HighRiskAsset', coins: ['$', '£', '€'] },
     { label: 'Оставить на пиво', sub: 'YooMoney · ₽ RUB', url: 'https://yoomoney.ru/to/4100119579691782', coins: ['₽'] },
   ];
-
-  // reset is scoped to the current world — the other worlds' saves stand
   const showResetConfirm = () => {
     overlayRerender = showResetConfirm;
     showOverlay(`
@@ -1085,17 +1068,16 @@
     $('ov-cancel').onclick = () => showSettings();
     $('ov-reset').onclick = () => {
       E.resetProfile(mapId);
-      profile = null;          // startMap must not save the profile we just wiped
+      profile = null;
       buildKeyboard();
       startMap(mapId);
     };
   };
 
-  // the save file names its world; importing puts it in that world's slot
   function exportSave() {
     E.saveProfile(profile);
     const data = {
-      app: 'mechanical-keyboarding', kind: 'save', version: 1,
+      app: 'mechanical-keyboarding', kind: 'save', version: 2,
       exportedAt: new Date().toISOString(),
       map: mapId,
       profile,
@@ -1110,7 +1092,6 @@
     a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }
-
   function pickImportFile() {
     const inp = document.createElement('input');
     inp.type = 'file';
@@ -1124,12 +1105,10 @@
   function handleImportText(text) {
     let data = null;
     try { data = JSON.parse(text); } catch { /* invalid JSON → error card below */ }
-    if (!data || data.app !== 'mechanical-keyboarding' || !data.profile || data.profile.version !== 1) {
+    if (!data || data.app !== 'mechanical-keyboarding' || !data.profile || (data.profile.version !== 1 && data.profile.version !== 2)) {
       showImportError();
       return;
     }
-    // which world the file belongs to: the wrapper's map, else the profile's,
-    // else (a pre-maps save) the default world
     const m = [data.map, data.profile.map].find((id) => id && CHAIN.MAPS[id]);
     data.map = m || CHAIN.DEFAULT_MAP;
     showImportConfirm(data);
@@ -1158,15 +1137,14 @@
     $('ov-cancel').onclick = () => showSettings();
     $('ov-load').onclick = () => {
       data.profile.map = data.map;
-      E.saveProfile(data.profile);
+      E.saveProfile(data.profile);   // v1 files migrate on the next load
       E.setLastMap(data.map);
       if (typeof data.sound === 'boolean') A.setEnabled(data.sound);
       if (data.uilang) T.setLang(data.uilang);
-      profile = null;        // nothing may save over the import before the reload
-      location.reload();     // clean re-init; the picker opens on the imported world
+      profile = null;
+      location.reload();
     };
   }
-
   function showSettings() {
     overlayRerender = showSettings;
     const langBtns = T.LANGS.map((l) =>
@@ -1223,16 +1201,10 @@
     document.title = T.t('docTitle');
     document.querySelectorAll('[data-i18n]').forEach((el) => { el.innerHTML = T.t(el.dataset.i18n); });
     refreshInventory();
-    refreshStatus();
-    if (!station) clearLine();
-    rebuildWorld();
+    if (profile) { rebuildWorld(); redock(); }
   }
 
   // ---------- boot ----------
-  // The world waits for a choice: the picker opens first (last-played world
-  // focused — Enter and you're back), then startMap raises it. Until then the
-  // loading card holds the overlay; its third cell lights when the renderer
-  // is up, and the picker (which bakes its minimaps first) replaces it.
   applyI18n();
   buildKeyboard();
   refreshStats();
@@ -1240,8 +1212,6 @@
   FACTORY.init(document.getElementById('factory-mount')).then(() => {
     if (loadingCard) loadingCard.classList.add('s3');
     clearLine();
-    // a beat so the lit cell can paint before the (synchronous) minimap bake —
-    // a timeout, not rAF, so a page loading in a background tab still arrives
     setTimeout(showMapSelect, 30);
   });
 })();
