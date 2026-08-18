@@ -1,0 +1,50 @@
+<!doctype html>
+<!-- Operator sprite proof (dev only). Every walk frame per direction, the
+     work frames, side mirrored, at 8x on grass, next to a mine for scale.
+     POSTs a PNG to /upload. Open: http://localhost:8123/dev/operator.html -->
+<meta charset="utf-8">
+<title>operator proof</title>
+<style>
+  body { margin: 0; background: #1a1a20; color: #ddd; font: 12px/1.4 monospace; }
+  #out { image-rendering: pixelated; display: block; margin: 8px; }
+  #log { padding: 8px; white-space: pre; }
+</style>
+<div id="log"></div>
+<canvas id="out"></canvas>
+<script src="../js/pixels.js"></script>
+<script src="../js/tiles.js"></script>
+<script>
+(async function () {
+  const SCALE = 8, W = 200, H = 150;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  for (let ty = 0; ty < Math.ceil(H / 16); ty++) for (let tx = 0; tx < Math.ceil(W / 16); tx++) x.drawImage(TILES.fill('grass', (tx * 7 + ty * 13) % 23), tx * 16, ty * 16);
+  const label = (s, px, py) => { x.fillStyle = '#ffffff'; x.font = '6px monospace'; x.fillText(s, px, py); };
+  const put = (cv, px, py, flip) => {
+    if (!flip) { x.drawImage(cv, px, py); return; }
+    x.save(); x.translate(px + cv.width, py); x.scale(-1, 1); x.drawImage(cv, 0, 0); x.restore();
+  };
+  const dirs = ['down', 'up', 'side'];
+  dirs.forEach((d, row) => {
+    label(d, 2, 10 + row * 34);
+    for (let f = 0; f < 4; f++) put(PIXELS.characterCanvas(d, f), 30 + f * 20, 2 + row * 34);
+    if (d === 'side') for (let f = 0; f < 4; f++) put(PIXELS.characterCanvas(d, f), 120 + f * 20, 2 + row * 34, true);
+  });
+  label('work', 2, 10 + 3 * 34);
+  for (let f = 0; f < 4; f++) put(PIXELS.workCanvas(f), 30 + f * 20, 2 + 3 * 34);
+  // scale check: the operator at a mine, docked (feet 6px below the machine foot)
+  x.drawImage(PIXELS.machineCanvas(1, 0), 130, 100);
+  put(PIXELS.workCanvas(0), 135, 130 - 25 + 6);
+  put(PIXELS.characterCanvas('down', 0), 160, 118);
+  const out = document.getElementById('out');
+  out.width = W * SCALE; out.height = H * SCALE;
+  const ox = out.getContext('2d'); ox.imageSmoothingEnabled = false;
+  ox.drawImage(c, 0, 0, W * SCALE, H * SCALE);
+  const name = new URLSearchParams(location.search).get('name') || 'operator.png';
+  try {
+    const blob = await (await fetch(out.toDataURL('image/png'))).blob();
+    const res = await fetch('/upload?name=' + encodeURIComponent(name), { method: 'POST', body: blob });
+    document.getElementById('log').textContent = 'uploaded ' + name + ': ' + res.status + ' ' + await res.text();
+  } catch (e) { document.getElementById('log').textContent = 'upload failed: ' + e; }
+})().catch((e) => { document.getElementById('log').textContent = 'ERROR ' + (e.stack || e); });
+</script>

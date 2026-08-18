@@ -72,6 +72,14 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   letterboxing (roundPixels, whole-pixel camera and sprite positions), bitmap
   pixel font for all in-world text (digits/arrows/₽, ink outline baked),
   pixel-pure circles, one named palette in pixels.js.
+- **The operator (redrawn 2026-08-18, SNES FF3 idiom)**: 16×25 hand-authored
+  pixel grids in `pixels.js` — big outlined head under the yellow hard hat,
+  2×2 eyes (highlight over dark), three tones per material, cream shirt under
+  blue overalls, tool belt, boots, a pack on the back; walk = stand / stride
+  / stand / stride per direction with a real leg scissor, a 1px body rise on
+  the strides and the near arm swinging in profile; work = back view at the
+  machine, hands tapping in alternation with a nod. `dev/operator.html` is
+  the proof sheet.
 - **Charm animation**: 4-frame directional walk (down/up/side) + working pose
   at the bench; 1px machine cast dip; rolling belt links; spark fountains on
   production; paper flutter at the press; window light shafts, drifting dust

@@ -167,7 +167,7 @@
       charTex.up.push(PIXELS.characterTex('up', f));
       charTex.side.push(PIXELS.characterTex('side', f));
     }
-    charTex.work = [PIXELS.characterWorkTex(0), PIXELS.characterWorkTex(1)];
+    charTex.work = [0, 1, 2, 3].map((f) => PIXELS.characterWorkTex(f));
 
     buildHud();
     resize();
@@ -626,7 +626,7 @@
     if (workTtl > 0 && dockedId) {
       workTtl -= dt;
       workClock += dt;
-      player.texture = charTex.work[Math.floor(workClock / 10) % 2];
+      player.texture = charTex.work[Math.floor(workClock / 8) % charTex.work.length];
       player.scale.x = 1;
     } else {
       player.texture = charTex[facing][walkFrame];

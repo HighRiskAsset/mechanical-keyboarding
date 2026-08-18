@@ -52,8 +52,10 @@
     titan: '#c8d0e0', titan2: '#8890a8', titan3: '#f0f4ff',
     // paper goods
     paper: '#f4ecd8', paper2: '#d8cba8',
-    // the operator
-    skin: '#f5cfa6', hair: '#6b4a32', suit: '#4a78c8', suit2: '#3a5f9e', hat: '#f2c14e', hat2: '#c99a35',
+    // the operator (SNES-style: 3 tones per material + one dark outline)
+    skin: '#f5cfa6', skin2: '#d9a878', hair: '#6b4a32', hair2: '#8c6a48',
+    suit: '#4a78c8', suit2: '#3a5f9e', suit3: '#6a98e0', hat: '#f2c14e', hat2: '#c99a35',
+    iris: '#5a9ce0', eye: '#1a2440', boot: '#4a3220', boot2: '#2c1c10',
     petal: '#f5b8d9',
   };
 
@@ -366,77 +368,181 @@
     return c;
   }
 
-  // ---------- the operator: chibi frontier engineer, 14x24 ----------
-  // dir: 'down' | 'up' | 'side' (side faces right; mirror for left).
-  // 4 walk frames: neutral, step-left, neutral, step-right. work(): 2 frames.
-  function headDown(x) {
-    R(x, P.hat, 3, 0, 8, 4); R(x, P.white, 4, 1, 2, 1);
-    R(x, P.hat2, 2, 4, 10, 1);
-    R(x, P.skin, 3, 5, 8, 5);
-    R(x, P.hair, 3, 5, 2, 1); R(x, P.hair, 9, 5, 2, 1);
-    // big anime eyes with a shine pixel
-    R(x, P.ink, 4, 6, 2, 2); R(x, P.white, 4, 6, 1, 1);
-    R(x, P.ink, 8, 6, 2, 2); R(x, P.white, 8, 6, 1, 1);
-  }
-  function headUp(x) {
-    R(x, P.hat, 3, 0, 8, 4); R(x, P.hat2, 2, 4, 10, 1);
-    R(x, P.hair, 3, 5, 8, 4);
-  }
-  function bodyFront(x) {
-    R(x, P.suit, 3, 10, 8, 6);
-    R(x, P.dark, 3, 14, 8, 1);
-    R(x, P.brass2, 6, 11, 2, 2);
-  }
-  function armsIdle(x) {
-    R(x, P.suit, 1, 10, 2, 4); R(x, P.skin, 1, 14, 2, 2);
-    R(x, P.suit, 11, 10, 2, 4); R(x, P.skin, 11, 14, 2, 2);
-  }
-  function legsFront(x, frame) {
-    const liftL = frame === 1, liftR = frame === 3;
-    R(x, P.suit2, 4, 16, 2, liftL ? 5 : 6);
-    R(x, P.suit2, 8, 16, 2, liftR ? 5 : 6);
-    R(x, P.trunk, 3, liftL ? 21 : 22, 3, 2);
-    R(x, P.trunk, 8, liftR ? 21 : 22, 3, 2);
-  }
-  function legsSide(x, frame) {
-    const L = [[4, 8], [2, 9], [4, 8], [5, 7]][frame];
-    const F = [[3, 8], [1, 9], [3, 8], [4, 7]][frame];
-    R(x, P.suit2, L[0], 16, 2, 6); R(x, P.suit2, L[1], 16, 2, 6);
-    R(x, P.trunk, F[0], 22, 3, 2); R(x, P.trunk, F[1], 22, 3, 2);
-  }
+  // ---------- the operator: frontier engineer, 16x25 (SNES FF3 idiom) ----------
+  // Hand-authored pixel grids: a big outlined head under a hard hat, 2x2
+  // eyes (highlight over dark), three tones per material, cream shirt under
+  // blue overalls, tool belt, boots, a small pack on the back. dir: 'down' |
+  // 'up' | 'side' (side faces RIGHT; factory mirrors for left). Four walk
+  // frames: stand, stride, stand, stride — the body rises one pixel on the
+  // strides (the canvas keeps a spare top row for it). work(): four frames at
+  // the machine, back view, hands working.
+  const OP = {
+    '.': null, o: () => P.ink,
+    H: () => P.hat, h: () => P.hat2, L: () => P.brass3,
+    S: () => P.skin, s: () => P.skin2, A: () => P.hair, a: () => P.hair2,
+    W: () => P.white, I: () => P.iris, E: () => P.eye,
+    B: () => P.suit, b: () => P.suit2, l: () => P.suit3, C: () => P.cream, c: () => P.cream2,
+    G: () => P.brass2, T: () => P.trunk, t: () => P.trunk2, K: () => P.boot, k: () => P.boot2,
+  };
+  const grid = (x, rows, ox, oy) => {
+    rows.forEach((row, ry) => {
+      for (let cx = 0; cx < row.length; cx++) {
+        const f = OP[row[cx]];
+        if (f) R(x, f(), ox + cx, oy + ry, 1, 1);
+      }
+    });
+  };
+  const mirror = (rows) => rows.map((r) => r.split('').reverse().join(''));
+
+  const HEAD_D = [
+    '......oooo......',
+    '....ooLLLHoo....',
+    '...oLLLHHHHHo...',
+    '..oLLHHHHHHHHo..',
+    '..oLHHHHHHHHho..',
+    '.oHHHHHHHHHHHho.',
+    '.ohhhhhhhhhhhho.',
+    '..oAAASSSSAAAo..',
+    '..oASSSSSSSsAo..',
+    '..oSSWISSWISso..',
+    '..oSSEESSEESso..',
+    '...oSSSSsSSso...',
+  ];
+  const HEAD_U = [
+    '......oooo......',
+    '....ooLLLHoo....',
+    '...oLLLHHHHHo...',
+    '..oLLHHHHHHHHo..',
+    '..oLHHHHHHHHho..',
+    '.oHHHHHHHHHHHho.',
+    '.ohhhhhhhhhhhho.',
+    '..oAAAAAAAAAAo..',
+    '..oAaAAAAAAaAo..',
+    '..oAAAAAAAAAAo..',
+    '...oAAAAAAAAo...',
+    '....oSSSSSSo....',
+  ];
+  const HEAD_S = [
+    '......oooo......',
+    '....ooLLHHoo....',
+    '...oLLHHHHHHo...',
+    '..oLLHHHHHHHHo..',
+    '..oLHHHHHHHHHo..',
+    '..oHHHHHHHHHHHo.',
+    '..ohhhhhhhhhhho.',
+    '...oAAAASSSSSo..',
+    '...oAAASSSSSSo..',
+    '...oAAASSSWISo..',
+    '...oAAASSSEESo..',
+    '....oAASSSSSo...',
+  ];
+  const TORSO_D = [
+    '....oCCBBCCo....',
+    '...oCCBBBBCCo...',
+    '..oCCcBGBBcCCo..',
+    '..oSoBBBBBboSo..',
+    '...ooBBBBBboo...',
+    '...oTTTGGTTTo...',
+  ];
+  const TORSO_U = [
+    '....oCCBBCCo....',
+    '...oCCBBBBCCo...',
+    '..oCCcTTTTcCCo..',
+    '..oSoBTtTtBoSo..',
+    '...ooBTTTTBoo...',
+    '...oTTTTTTTTo...',
+  ];
+  const TORSO_S = [
+    '.....oCBBBCo....',
+    '....oCCBBBBCo...',
+    '....oCcBBoCCo...',
+    '....oCBBBBoSo...',
+    '.....oBBBBoo....',
+    '.....oTTGTTo....',
+  ];
+  const TORSO_S_FWD = [
+    '.....oCBBBCo....',
+    '....oCCBBBBCo...',
+    '....oCcBBBoCCo..',
+    '....oCBBBBBoSo..',
+    '.....oBBBBoo....',
+    '.....oTTGTTo....',
+  ];
+  const TORSO_S_BACK = [
+    '.....oCBBBCo....',
+    '....oCCBBBBCo...',
+    '...oCoBBBBBo....',
+    '...oSoBBBBBo....',
+    '.....oBBBBoo....',
+    '.....oTTGTTo....',
+  ];
+  const LEGS_D = [
+    '...obbBBBBbbo...',
+    '...obbBooBbbo...',
+    '...obbBooBbbo...',
+    '...oKKKooKKKo...',
+    '...oKkKooKkKo...',
+    '....ooo..ooo....',
+  ];
+  const LEGS_D_STEP = [           // right leg forward (lower), left tucked up — a real scissor
+    '...obbBBBBbbo...',
+    '...obbBooBbbo...',
+    '...oKKKooBbbo...',
+    '...oKkKooBbbo...',
+    '....ooo.oKKKo...',
+    '........oKkKo...',
+    '.........ooo....',
+  ];
+  const LEGS_S = [
+    '.....obBBBo.....',
+    '.....obBoBo.....',
+    '.....obBoBo.....',
+    '.....oKKoKKo....',
+    '....oKkKoKkKo...',
+    '.....ooo.ooo....',
+  ];
+  const LEGS_S_STEP = [           // front leg forward (right), back leg back — a modest stride
+    '.....obBBBo.....',
+    '....obBBoBBo....',
+    '....obBo.oBBo...',
+    '...oKKKo.oKKo...',
+    '...oKkKo.oKkKo..',
+    '....ooo...ooo...',
+    '................',
+  ];
+  const TORSO_WORK = [            // back view, arms raised to the machine (hands added per frame)
+    '....oCCBBCCo....',
+    '..o.oCBBBBCo.o..',
+    '..oCoCTTTTCoCo..',
+    '...oCBTtTtBCo...',
+    '...ooBTTTTBoo...',
+    '...oTTTTTTTTo...',
+  ];
+
   function character(dir, frame) {
-    const [c, x] = canvas(14, 24);
+    const [c, x] = canvas(16, 25);
+    const stride = frame === 1 || frame === 3;
+    const oy = stride ? 0 : 1;             // the body rises a pixel on the strides
     if (dir === 'side') {
-      R(x, P.hat, 3, 0, 8, 4); R(x, P.white, 4, 1, 2, 1);
-      R(x, P.hat2, 3, 4, 10, 1);
-      R(x, P.skin, 4, 5, 7, 5); R(x, P.hair, 4, 5, 2, 2);
-      R(x, P.ink, 8, 6, 2, 2); R(x, P.white, 8, 6, 1, 1);
-      bodyFront(x);
-      const sw = frame === 1 ? -1 : frame === 3 ? 1 : 0;
-      R(x, P.suit, 1, 10, 2, 4); R(x, P.skin, 1, 14 + sw, 2, 2);
-      R(x, P.suit, 11, 10, 2, 4); R(x, P.skin, 11, 14 - sw, 2, 2);
-      legsSide(x, frame);
-    } else if (dir === 'up') {
-      headUp(x);
-      R(x, P.suit, 3, 10, 8, 6); R(x, P.dark, 3, 14, 8, 1);
-      armsIdle(x);
-      legsFront(x, frame);
+      grid(x, HEAD_S, 0, oy);
+      grid(x, frame === 1 ? TORSO_S_FWD : frame === 3 ? TORSO_S_BACK : TORSO_S, 0, oy + 12);
+      grid(x, stride ? (frame === 1 ? LEGS_S_STEP : mirror(LEGS_S_STEP)) : LEGS_S, 0, oy + 18);
     } else {
-      headDown(x);
-      bodyFront(x);
-      armsIdle(x);
-      legsFront(x, frame);
+      grid(x, dir === 'up' ? HEAD_U : HEAD_D, 0, oy);
+      grid(x, dir === 'up' ? TORSO_U : TORSO_D, 0, oy + 12);
+      grid(x, stride ? (frame === 1 ? LEGS_D_STEP : mirror(LEGS_D_STEP)) : LEGS_D, 0, oy + 18);
     }
     return c;
   }
+  // working at a machine: back view, arms up, hands tapping in alternation
   function characterWork(frame) {
-    const [c, x] = canvas(14, 24);
-    headUp(x);
-    R(x, P.suit, 3, 10, 8, 6); R(x, P.dark, 3, 14, 8, 1);
-    const lY = frame === 0 ? 6 : 7, rY = frame === 0 ? 7 : 6;
-    R(x, P.suit, 1, 9, 2, 3); R(x, P.skin, 1, lY, 2, 2);
-    R(x, P.suit, 11, 9, 2, 3); R(x, P.skin, 11, rY, 2, 2);
-    legsFront(x, 0);
+    const [c, x] = canvas(16, 25);
+    grid(x, TORSO_WORK, 0, 13);
+    grid(x, LEGS_D, 0, 19);
+    grid(x, HEAD_U, 0, 1 + (frame % 2));   // a nod on the off-beats
+    const lift = [0, 1, 0, -1][frame % 4];
+    const hand = (hx, hy) => { R(x, P.ink, hx - 1, hy - 1, 3, 3); R(x, P.skin, hx, hy, 1, 1); R(x, P.skin, hx, hy + 1, 1, 1); };
+    hand(3, 13 - lift); hand(12, 13 + lift);
     return c;
   }
 
@@ -662,7 +768,7 @@
     // raw canvases for the dev proof page (dev/tiles.html) — no PIXI needed
     nodeCanvas: nodePatch,
     sceneryCanvas: (kind) => SCENERY_DRAW[kind] ? SCENERY_DRAW[kind]() : window.TILES.scenery(kind),
-    machineCanvas: machine, stationCanvas: station, characterCanvas: character,
+    machineCanvas: machine, stationCanvas: station, characterCanvas: character, workCanvas: characterWork,
     matIconTex: (kind) => tex(matIcon(kind)),
     pressTex: (frame) => tex(press(frame)),
     vignetteURL: () => vignette().toDataURL(),
