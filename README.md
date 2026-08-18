@@ -29,9 +29,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File serve.ps1
 
 then visit http://localhost:8123.
 
-Walk with the **arrow keys**, stand at a machine and **type** to run it,
-**hold Space** to build, upgrade, collect, or deliver. Progress is saved in
-your browser (localStorage).
+Pick a **world** first — *The Frontier* (six lands, cliffs, closed
+crossings) or *Open Range* (one flat meadow, rich veins, room to build) —
+each keeps its own save, so nothing mined, built or unlocked carries over.
+Then walk with the **arrow keys**, stand at a machine and **type** to run
+it, **hold Space** to build, upgrade, collect, or deliver. Progress is saved
+in your browser (localStorage), one slot per world; switch worlds from ⚙.
 
 No installation, no build step: plain HTML/CSS/JS with a vendored copy of
 [PixiJS](https://pixijs.com/) (MIT) in `libs/`. All art is drawn in code —

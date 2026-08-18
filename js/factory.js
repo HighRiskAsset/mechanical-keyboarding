@@ -33,7 +33,8 @@
   let pressBurst = 0, frameClock = 0, frameIdx = 0;
   let beltTexes = [], pressTexes = [], dotTex = null;
   const particles = [], floats = [], dots = [], flashes = [], sparks = [], scraps = [];
-  const petals = [], ambient = [], waterSprites = [];
+  const petals = [];
+  let ambient = [], waterSprites = [], terrain = [];   // per-map sprites, torn down by loadMap
   let waterTexes = [];
   let grid = null;                     // baked terrain (TILES.bake): kinds, flags, elevation
   let crossSprites = [], openRects = [], closedRects = [];  // region crossings, rebuilt per profile
@@ -114,19 +115,6 @@
   }
   function setCharge(p) { chargeVal = p; }
 
-  // set dressing — cosmetic, walk-through
-  const PROPS = [
-    { kind: 'lamppost', x: 62, y: 78, glow: true },
-    { kind: 'lamppost', x: 230, y: 128, glow: true },
-    { kind: 'lamppost', x: 420, y: 108, glow: true },
-    { kind: 'crate', x: 482, y: 156 },
-    { kind: 'crate2', x: 492, y: 168 },
-    { kind: 'drum', x: 18, y: 150 },
-    { kind: 'bush', x: 186, y: 84 },
-    { kind: 'bush', x: 498, y: 204 },
-    { kind: 'sign', x: 12, y: 126 },
-  ];
-
   function addGlow(wx, wy, base) {
     const g = new PIXI.Sprite(PIXELS.glowHaloTex());
     g.anchor.set(0.5);
@@ -135,9 +123,12 @@
     g.zIndex = -860;
     g.alpha = base;
     cameraC.addChild(g);
+    terrain.push(g);
     ambient.push({ sp: g, base, phase: Math.random() * 6.28 });
   }
 
+  // one-time setup: the Pixi app, the camera, shared textures, the HUD.
+  // The ground itself is per map — see loadMap.
   async function init(mount) {
     if (typeof PIXI === 'undefined') return;
     app = new PIXI.Application();
@@ -157,115 +148,15 @@
     labelsC.scale.set(S);
     app.stage.addChild(labelsC);
 
-    // the terrain: tiles.js bakes CHAIN.MAP (regions, ground, plateaus, walls)
-    // into a 16x16 tile grid + ground canvases. Water tiles animate beneath
-    // the baked ground (the shore spill sits on top of them); rock walls are
-    // y-sorted sprites so the operator walks behind them.
-    const W = CHAIN.WORLD_W, H = CHAIN.WORLD_H, T = PIXELS.TILE;
-    const FOREST = CHAIN.MAP.FOREST || { n: 48 };
-    LIM.n = FOREST.n || 0; LIM.e = W - (FOREST.e || 0) - 8; LIM.s = H - (FOREST.s || 0) - 6; LIM.w = (FOREST.w || 0) + 8;
-    grid = TILES.bake(CHAIN.MAP, W, H);
     const tx = PIXELS.util.tex;
     waterTexes = [0, 1].map((f) => Array.from({ length: 23 }, (_, s) => tx(TILES.fill('water', s, f))));
-    for (const wt of grid.water) {
-      const s = new PIXI.Sprite(waterTexes[0][wt.seed % 23]);
-      s.position.set(wt.x, wt.y);
-      s.zIndex = -1100;
-      cameraC.addChild(s);
-      waterSprites.push({ sp: s, seed: wt.seed % 23 });
-    }
-    for (const ch of grid.chunks) {
-      const s = new PIXI.Sprite(tx(ch.canvas));
-      s.position.set(ch.x, 0);
-      s.zIndex = -1000;
-      cameraC.addChild(s);
-    }
-    for (const w of grid.walls) {
-      const s = new PIXI.Sprite(tx(w.canvas));
-      s.position.set(w.x, w.y);
-      s.zIndex = w.z;
-      cameraC.addChild(s);
-    }
-    // ore nodes under the mines (one kind per tier)
-    for (const n of CHAIN.MAP.NODES) {
-      const sp = new PIXI.Sprite(PIXELS.nodeTex(n.kind));
-      sp.position.set(n.x, n.y);
-      sp.zIndex = -960;
-      cameraC.addChild(sp);
-    }
-    // wildflowers on open grass only
-    const grassId = TILES.KIND_IDS.indexOf('grass');
-    for (let i = 0; i < Math.floor(W / 20); i++) {
-      const fx = (i * 97) % W, fy = 42 + (i * 61) % (H - 56);
-      const ti = TILES.tileAt(grid, fx, fy);
-      if (ti === null || grid.kind[ti] !== grassId || grid.flags[ti]) continue;
-      const f = new PIXI.Sprite(PIXELS.flowerTex(i));
-      f.position.set(fx, fy);
-      f.zIndex = -970;
-      cameraC.addChild(f);
-    }
-    // the border forest (CHAIN.MAP.FOREST: px per side; the player can't
-    // reach into it): two staggered rows on the tile grid per side, bottom-
-    // aligned, the inner row's trunks on the limit itself so no bare strip
-    // reads as walkable. Each biome grows its own kind of border.
-    const cols = Math.ceil(W / T), rows = Math.ceil(H / T);
-    const plant = (col, row, i, kindsAt, dy) => {
-      const rg = kindsAt();
-      const kinds = rg.treeline || ['tree', 'tree2'];
-      const t = new PIXI.Sprite(PIXELS.sceneryTex(kinds[(i >> 1) % kinds.length]));
-      const by = (row + 1) * T - dy;
-      t.position.set(Math.round(col * T + (T - t.texture.width) / 2), by - t.texture.height);
-      t.zIndex = by;
-      cameraC.addChild(t);
-    };
-    if (FOREST.n) for (let col = 0; col < cols; col++) {
-      const front = col % 2 === 0, row = front ? Math.floor(FOREST.n / T) - 1 : 1;
-      plant(col, row, col, () => CHAIN.regionAt(col * T + 8, 8), front ? 2 : 4 + ((col >> 1) % 2) * 3);
-    }
-    if (FOREST.s) for (let col = 0; col < cols; col++) {
-      const front = col % 2 === 0, row = front ? rows - Math.floor(FOREST.s / T) : rows - 1;
-      plant(col, row, col, () => CHAIN.regionAt(col * T + 8, H - 8), front ? 4 : 2);
-    }
-    if (FOREST.w) for (let row = 1; row < rows; row++) {
-      const front = row % 2 === 0, col = front ? Math.floor(FOREST.w / T) - 1 : 0;
-      plant(col, row, row, () => CHAIN.regionAt(8, row * T + 8), 3);
-    }
-    if (FOREST.e) for (let row = 1; row < rows; row++) {
-      const front = row % 2 === 0, col = front ? cols - Math.floor(FOREST.e / T) : cols - 1;
-      plant(col, row, row, () => CHAIN.regionAt(W - 8, row * T + 8), 3);
-    }
 
-    // set dressing; lampposts glow warmly
-    for (const pr of PROPS) {
-      const sp = new PIXI.Sprite(PIXELS.propTex(pr.kind));
-      sp.position.set(pr.x, pr.y);
-      sp.zIndex = pr.y + sp.texture.height;
-      cameraC.addChild(sp);
-      if (pr.glow) addGlow(pr.x + 4, pr.y + 3, 0.9);
-    }
-
-    // solid scenery shapes the walking routes — map variance. Trees sort by
-    // their base (you walk under the crown); low rock-like things sort by the
-    // top of their footprint (SNES low priority: beside you = under you)
-    for (const sc of CHAIN.SCENERY) {
-      const sp = new PIXI.Sprite(PIXELS.sceneryTex(sc.kind));
-      // centred on its footprint tiles, base on the tile bottom
-      sp.position.set(Math.round(sc.tx * T + (sc.fw * T - sp.texture.width) / 2), (sc.ty + 1) * T - sp.texture.height);
-      const low = /^(rock|boulder|tarpool|scrub|reeds|crystal|spire)/.test(sc.kind);
-      sp.zIndex = low ? sc.ty * T : (sc.ty + 1) * T;
-      cameraC.addChild(sp);
-    }
-
-    // petals drifting on the breeze
+    // petals drifting on the breeze (re-homed to each map's first biome)
     for (let i = 0; i < 14; i++) {
       const m = new PIXI.Sprite(PIXELS.petalTex(0));
       m.zIndex = 4000;
       cameraC.addChild(m);
-      petals.push({
-        sp: m,
-        x: Math.random() * CHAIN.MAP.REGIONS[0].w, y: 36 + Math.random() * ((CHAIN.MAP.REGIONS[0].h || H) - 50),
-        vx: 0.05 + Math.random() * 0.08, phase: Math.random() * 6.28,
-      });
+      petals.push({ sp: m, x: 0, y: 0, vx: 0.05 + Math.random() * 0.08, phase: Math.random() * 6.28 });
     }
 
     beltTexes = [0, 1, 2, 3].map((f) => PIXELS.beltTex(f));
@@ -286,6 +177,123 @@
     app.ticker.add(tick);
     ready = true;
     window.FACTORY._app = app;
+  }
+
+  // Raise the current map (CHAIN.useMap first): tear down the previous
+  // ground, bake and plant this one, put the operator on its spawn. Stations,
+  // plots, belts and crossings follow in buildWorld (they depend on the save).
+  function loadMap() {
+    if (!ready) return;
+    for (const s of terrain) { cameraC.removeChild(s); s.destroy(); }
+    terrain = []; ambient = []; waterSprites = [];
+    for (const c of crossSprites) { cameraC.removeChild(c); c.destroy(); }
+    crossSprites = []; openRects = []; closedRects = [];
+    dockedId = null;
+    const keep = (sp) => { cameraC.addChild(sp); terrain.push(sp); return sp; };
+
+    // the terrain: tiles.js bakes CHAIN.MAP (regions, ground, plateaus, walls)
+    // into a 16x16 tile grid + ground canvases. Water tiles animate beneath
+    // the baked ground (the shore spill sits on top of them); rock walls are
+    // y-sorted sprites so the operator walks behind them.
+    const W = CHAIN.WORLD_W, H = CHAIN.WORLD_H, T = PIXELS.TILE;
+    const FOREST = CHAIN.MAP.FOREST || { n: 48 };
+    LIM.n = FOREST.n || 0; LIM.e = W - (FOREST.e || 0) - 8; LIM.s = H - (FOREST.s || 0) - 6; LIM.w = (FOREST.w || 0) + 8;
+    grid = TILES.bake(CHAIN.MAP, W, H);
+    const tx = PIXELS.util.tex;
+    for (const wt of grid.water) {
+      const s = keep(new PIXI.Sprite(waterTexes[0][wt.seed % 23]));
+      s.position.set(wt.x, wt.y);
+      s.zIndex = -1100;
+      waterSprites.push({ sp: s, seed: wt.seed % 23 });
+    }
+    for (const ch of grid.chunks) {
+      const s = keep(new PIXI.Sprite(tx(ch.canvas)));
+      s.position.set(ch.x, 0);
+      s.zIndex = -1000;
+    }
+    for (const w of grid.walls) {
+      const s = keep(new PIXI.Sprite(tx(w.canvas)));
+      s.position.set(w.x, w.y);
+      s.zIndex = w.z;
+    }
+    // ore nodes under the mines (one kind per tier)
+    for (const n of CHAIN.MAP.NODES) {
+      const sp = keep(new PIXI.Sprite(PIXELS.nodeTex(n.kind)));
+      sp.position.set(n.x, n.y);
+      sp.zIndex = -960;
+    }
+    // wildflowers on open grass only
+    const grassId = TILES.KIND_IDS.indexOf('grass');
+    for (let i = 0; i < Math.floor(W / 20); i++) {
+      const fx = (i * 97) % W, fy = 42 + (i * 61) % (H - 56);
+      const ti = TILES.tileAt(grid, fx, fy);
+      if (ti === null || grid.kind[ti] !== grassId || grid.flags[ti]) continue;
+      const f = keep(new PIXI.Sprite(PIXELS.flowerTex(i)));
+      f.position.set(fx, fy);
+      f.zIndex = -970;
+    }
+    // the border forest (CHAIN.MAP.FOREST: px per side; the player can't
+    // reach into it): two staggered rows on the tile grid per side, bottom-
+    // aligned, the inner row's trunks on the limit itself so no bare strip
+    // reads as walkable. Each biome grows its own kind of border.
+    const cols = Math.ceil(W / T), rows = Math.ceil(H / T);
+    const plant = (col, row, i, kindsAt, dy) => {
+      const rg = kindsAt();
+      const kinds = rg.treeline || ['tree', 'tree2'];
+      const t = keep(new PIXI.Sprite(PIXELS.sceneryTex(kinds[(i >> 1) % kinds.length])));
+      const by = (row + 1) * T - dy;
+      t.position.set(Math.round(col * T + (T - t.texture.width) / 2), by - t.texture.height);
+      t.zIndex = by;
+    };
+    if (FOREST.n) for (let col = 0; col < cols; col++) {
+      const front = col % 2 === 0, row = front ? Math.floor(FOREST.n / T) - 1 : 1;
+      plant(col, row, col, () => CHAIN.regionAt(col * T + 8, 8), front ? 2 : 4 + ((col >> 1) % 2) * 3);
+    }
+    if (FOREST.s) for (let col = 0; col < cols; col++) {
+      const front = col % 2 === 0, row = front ? rows - Math.floor(FOREST.s / T) : rows - 1;
+      plant(col, row, col, () => CHAIN.regionAt(col * T + 8, H - 8), front ? 4 : 2);
+    }
+    if (FOREST.w) for (let row = 1; row < rows; row++) {
+      const front = row % 2 === 0, col = front ? Math.floor(FOREST.w / T) - 1 : 0;
+      plant(col, row, row, () => CHAIN.regionAt(8, row * T + 8), 3);
+    }
+    if (FOREST.e) for (let row = 1; row < rows; row++) {
+      const front = row % 2 === 0, col = front ? cols - Math.floor(FOREST.e / T) : cols - 1;
+      plant(col, row, row, () => CHAIN.regionAt(W - 8, row * T + 8), 3);
+    }
+
+    // set dressing (CHAIN.PROPS — cosmetic, walk-through); lampposts glow warmly
+    for (const pr of CHAIN.PROPS) {
+      const sp = keep(new PIXI.Sprite(PIXELS.propTex(pr.kind)));
+      sp.position.set(pr.x, pr.y);
+      sp.zIndex = pr.y + sp.texture.height;
+      if (pr.glow) addGlow(pr.x + 4, pr.y + 3, 0.9);
+    }
+
+    // solid scenery shapes the walking routes — map variance. Trees sort by
+    // their base (you walk under the crown); low rock-like things sort by the
+    // top of their footprint (SNES low priority: beside you = under you)
+    for (const sc of CHAIN.SCENERY) {
+      const sp = keep(new PIXI.Sprite(PIXELS.sceneryTex(sc.kind)));
+      // centred on its footprint tiles, base on the tile bottom
+      sp.position.set(Math.round(sc.tx * T + (sc.fw * T - sp.texture.width) / 2), (sc.ty + 1) * T - sp.texture.height);
+      const low = /^(rock|boulder|tarpool|scrub|reeds|crystal|spire)/.test(sc.kind);
+      sp.zIndex = low ? sc.ty * T : (sc.ty + 1) * T;
+    }
+
+    // petals belong to the home biome
+    const home = CHAIN.MAP.REGIONS[0];
+    for (const m of petals) {
+      m.x = home.x + Math.random() * home.w;
+      m.y = (home.y || 0) + 36 + Math.random() * ((home.h || H) - 50);
+    }
+
+    // the operator arrives at the map's spawn; the camera follows on the next tick
+    playerX = CHAIN.SPAWN.x; playerY = CHAIN.SPAWN.y;
+    facing = 'side'; faceSign = 1; workTtl = 0;
+    for (const k of Object.keys(moving)) moving[k] = false;
+    if (player) player.position.set(Math.round(playerX), Math.round(playerY));
+    resize();
   }
 
   // icon row on a dark plate, bitmap font only. preGlyphs renders a leading
@@ -373,6 +381,8 @@
     CHAIN.resolvePositions(profile);
     for (const s of Object.values(stations)) { cameraC.removeChild(s.root); s.root.destroy({ children: true }); }
     for (const l of labelsC.children.slice()) { labelsC.removeChild(l); l.destroy(); }
+    floats.length = 0;   // their texts lived in labelsC — gone with it
+    flashes.length = 0;  // likewise the station sprites they were tinting
     for (const b of beltsDrawn) { cameraC.removeChild(b.c); b.c.destroy({ children: true }); }
     stations = {}; beltsDrawn = [];
     if (player) { cameraC.removeChild(player); player.destroy(); player = null; }
@@ -771,7 +781,7 @@
   }
 
   window.FACTORY = {
-    init, buildWorld, setMove, castLetter, floatText, stamp, beltDot, getDocked,
+    init, loadMap, buildWorld, setMove, castLetter, floatText, stamp, beltDot, getDocked,
     screenPos, setDockGlow, showPlotKit, showDockInfo,
     setInvValue, invScreenPos, setCharge,
     onDock: null,

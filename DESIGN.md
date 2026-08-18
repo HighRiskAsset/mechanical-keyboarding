@@ -84,16 +84,46 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
 - Side panel inventory with pixel icons; fly-to-inventory animations; float
   "+N"; icon rows sit on dark plates (legible over windows); welcome card
   carries a pixel vignette; EN/РУ interface.
-- **Settings menu** (⚙ header button → overlay card): interface language
-  EN/РУ; keyboard layout switch (ЙЦУКЕН active, QWERTY a disabled
-  placeholder); save file export/import (JSON wrapper `{app, version:1,
-  profile, sound, uilang}`; import confirms, then reloads); reset all
-  progress (confirm-gated, cancel returns to settings); tip jar with two
-  rails like Sketchmill's free tier (PayPal international + YooMoney RU),
-  each rail crowned by glowing gold coin badges straddling the button's top
-  edge ($ £ € fan / single ₽) so the relevant rail reads before any text.
-  Language toggle and reset live only here — off the main screen. The header
-  keeps sound + stats; the footer keeps passport + summary.
+- **Settings menu** (⚙ header button → overlay card): the current world +
+  «Change» (back to the map picker); interface language EN/РУ; keyboard
+  layout switch (ЙЦУКЕН active, QWERTY a disabled placeholder); save file
+  export/import (JSON wrapper `{app, version:1, map, profile, sound,
+  uilang}`; the file names its world and imports into that world's slot — a
+  pre-maps file lands on the Frontier; import confirms, then reloads); reset
+  *this world* (confirm-gated, cancel returns to settings; other worlds
+  stand); tip jar with two rails like Sketchmill's free tier (PayPal
+  international + YooMoney RU), each rail crowned by glowing gold coin badges
+  straddling the button's top edge ($ £ € fan / single ₽) so the relevant
+  rail reads before any text. Language toggle and reset live only here — off
+  the main screen. The header keeps sound + stats; the footer keeps passport
+  + summary.
+- **Maps — one save per world (user ruling 2026-08-18).** `CHAIN.MAPS` is a
+  registry of worlds; the chain (stations, recipes, milestones, belts) is
+  shared, the ground is not: each map brings its own `MAP` rects, `PLOTS`,
+  `SCENERY`, `PROPS`, world size, spawn, the hub's spot, which plot each
+  pre-built station stands on (`HOME`), and a vein `yield` that multiplies
+  every material a machine makes (costs never scale). `CHAIN.useMap(id)`
+  makes one current; `FACTORY.loadMap()` tears down and re-plants the
+  ground; `ENGINE.loadProfile(mapId)` reads the slot `mk.profile.v1.<map>`
+  (the pre-maps `mk.profile.v1` is adopted once into the Frontier's slot;
+  `mk.map` remembers the last world). Nothing crosses worlds — materials,
+  machines, belts, milestones, *and the letter curriculum*: a save is one
+  object, so a fresh world starts at the seed letters (replay value; if the
+  skill model should ever be shared across worlds, that is a deliberate
+  split of the profile, not a leak). **The session opens on the map picker**
+  — a card per world with a pixel minimap baked from the real terrain
+  (`TILES.minimap`), the world's promise, its save's progress line, and
+  Begin/Continue; the last-played world is focused so Enter resumes at once;
+  ← → move, EN/РУ sits on the card. Two worlds today:
+  **The Frontier** (`frontier`, 1168×496, yield ×1) — the six-biome snake
+  below, the game proper: tests the environments and geographical
+  progression. **Open Range** (`range`, 768×336, yield ×3 «rich veins») —
+  one flat meadow ringed by forest: the three mines and the four later nodes
+  in a row along the north with the depot at the east end, the hub west, a
+  worn road under them, fourteen free plots in two ranks, nothing in any
+  route, a pond in the corner for colour: tests the mechanics (build,
+  deliver, automate, belt, edition) without walking or gating. Adding a
+  world = a new entry in `MAPS` + two i18n strings (name, tagline).
 - **Dynamic viewport**: fills all space the drill + keyboard don't need, at
   the largest integer zoom that keeps ≥300×170 world px visible — bigger
   window means bigger pixels first, then more world. Never letterboxes more
@@ -247,7 +277,8 @@ the meadow ✔ → 2 regions east + 4 ore patches + ~6 plots + closed crossings 
   below in the HIGH biome's cliff palette, any higher edge shows a rim.
   `regionAt(x, y)`; `crossingOpen(profile, c)` — a crossing naming an
   edition that doesn't exist yet is honestly closed. A new map = a new set of
-  rects (a `MAPS` registry is a one-liner when a second map exists).
+  rects — a `MAPS` entry (see Maps above; the second world, Open Range,
+  arrived 2026-08-18 and this layout became **The Frontier**).
 - **The world (this layout — a snake, 1168×496 = 73×31 tiles)**. North
   row, high ground (elev 1): **Meadow** (grass, tan) with the pond + sand
   shore, worn road hub→depot with spurs, cobble pads under hub/depot, a
@@ -397,11 +428,13 @@ Fitts & Posner automaticity = the automation metaphor.
 
 ## Files
 
-`js/engine.js` learning engine · `js/language-ru.js` RU course data ·
-`js/layout-ru.js` ЙЦУКЕН · `js/chain.js` world/economy data (incl. `MAP`) ·
-`js/factory.js` Pixi world · `js/pixels.js` sprite kit + the one palette ·
+`js/engine.js` learning engine + per-world save slots · `js/language-ru.js`
+RU course data · `js/layout-ru.js` ЙЦУКЕН · `js/chain.js` chain/economy data
++ the `MAPS` registry (Frontier, Open Range) · `js/factory.js` Pixi world
+(`loadMap` per world) · `js/pixels.js` sprite kit + the one palette ·
 `js/tiles.js` terrain kit (fills, autotile spills, walls, faces, crossings,
-region scenery, `bake`) · `js/app.js` orchestration · `js/audio.js` synth ·
+region scenery, `bake`, `minimap`) · `js/app.js` orchestration + the map
+picker · `js/audio.js` synth ·
 `js/i18n.js` EN/РУ · `serve.ps1` dev server (+ POST /upload for QA frames) ·
 `dev/tiles.html` terrain proof sheet · `libs/pixi.min.js` vendored Pixi 8.
 `assets/inbox/` (upload target) and `assets/ref/` (style references, study

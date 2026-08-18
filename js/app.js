@@ -1,5 +1,7 @@
 // UI + world orchestration: one persistent overworld, no scene switching.
 // Walk with arrows; dock at a station by standing near it; type to work it.
+// The one screen before the world is the map picker: each world (CHAIN.MAPS)
+// keeps its own save, and the session begins by choosing which one to play.
 (function () {
   'use strict';
 
@@ -12,7 +14,8 @@
   const SOFT_STOP_MIN = 25;
   const NIGHT_MERCY = 5; // (night runs return later as a lamp toggle)
 
-  let profile = E.loadProfile();
+  let profile = null;   // the current map's save; set by startMap
+  let mapId = null;     // the current map (CHAIN.MAPS key)
 
   // ---- session state ----
   const session = {
@@ -142,8 +145,11 @@
   }
 
   // ---------- materials ----------
+  // every material a machine makes is scaled by the map's vein yield
+  // (CHAIN.YIELD — 1 on the frontier, rich on the sandbox); costs never are
   function produceMat(mat, n) {
     if (n <= 0) return;
+    n *= CHAIN.YIELD || 1;
     profile.mats[mat] = (profile.mats[mat] || 0) + n;
     producedSinceFloat[mat] = (producedSinceFloat[mat] || 0) + n;
   }
@@ -215,6 +221,7 @@
   }
 
   function refreshInventory() {
+    if (!profile) return;
     if (!iconURLs) {
       iconURLs = {};
       for (const k of INV_KEYS) iconURLs[k] = PIXELS.matIconURL(k);
@@ -244,6 +251,7 @@
     return null;
   }
   function refreshStatus() {
+    if (!profile) return;
     FACTORY.setDockGlow(enterAction() ? 0x7fb98a : 0xc9a24a);
     // requirement row: what Enter could do here, visible even when
     // unaffordable (dimmed) — the goal is never a secret
@@ -681,6 +689,7 @@
   };
 
   function rebuildWorld() {
+    if (!profile) return;
     FACTORY.buildWorld(profile, {});
   }
 
@@ -743,10 +752,11 @@
 
   // ---------- overlays ----------
   let overlayRerender = null;
-  function showOverlay(html) {
+  function showOverlay(html, wide) {
     clearHint();
     FACTORY.setMove('left', false);
     FACTORY.setMove('right', false);
+    overlayCard.classList.toggle('wide', !!wide);
     overlayCard.innerHTML = html;
     overlay.classList.remove('hidden');
   }
@@ -882,7 +892,7 @@
     overlayRerender = showWelcome;
     const rules = T.t('welcomeRules').map((r) => `<li>${r}</li>`).join('');
     showOverlay(`
-      <div class="card-station">${T.t('welcomeStation')}</div>
+      <div class="card-station">⛏ ${T.t('mapNames')[mapId]}</div>
       <img class="pix-scene" src="${PIXELS.vignetteURL()}" width="300" height="144" alt="">
       <h2>${T.t('welcomeTitle')}</h2>
       <p>${T.t('welcomeIntro')}</p>
@@ -891,6 +901,125 @@
     `);
     $('ov-continue').onclick = () => { hideOverlay(); };
     $('ov-continue').focus();
+  }
+
+  // ---------- the map picker: which world to play ----------
+  // Every world in CHAIN.MAPS has its own save. The picker opens the session
+  // (last-played world focused, so Enter continues at once) and is reachable
+  // again from settings. Each card carries a pixel minimap baked from the
+  // real terrain, the world's name and promise, and its save's progress.
+  const thumbCache = {};
+  let thumbScale = 0;    // one px-per-tile for every world, so their sizes compare honestly
+  function mapThumb(id) {
+    if (!thumbScale) {
+      const widest = Math.max(...CHAIN.MAP_IDS.map((k) => Math.ceil(CHAIN.MAPS[k].W / 16)));
+      thumbScale = Math.max(1, Math.min(4, Math.floor(224 / widest)));
+    }
+    if (!thumbCache[id]) {
+      const m = CHAIN.MAPS[id];
+      const c = TILES.minimap(m.MAP, m.W, m.H, thumbScale);
+      thumbCache[id] = { url: c.toDataURL(), w: c.width, h: c.height };
+    }
+    return thumbCache[id];
+  }
+  function fmtDay(ts) {
+    const d = new Date(ts), now = new Date();
+    const day = (x) => Math.floor((x - new Date(x).getTimezoneOffset() * 60000) / 86400000);
+    const diff = day(now.getTime()) - day(ts);
+    if (diff <= 0) return T.t('dayToday');
+    if (diff === 1) return T.t('dayYesterday');
+    return d.toLocaleDateString(T.getLang() === 'ru' ? 'ru-RU' : 'en-GB', { day: 'numeric', month: 'short' });
+  }
+  function showMapSelect() {
+    overlayRerender = showMapSelect;
+    const focusId = mapId || E.getLastMap() || CHAIN.DEFAULT_MAP;
+    const cards = CHAIN.MAP_IDS.map((id) => {
+      const peek = E.peekProfile(id);
+      const th = mapThumb(id);
+      const yieldNote = (CHAIN.MAPS[id].yield || 1) > 1 ? `<span class="map-tag">${T.t('mapRich', { n: CHAIN.MAPS[id].yield })}</span>` : '';
+      const progress = peek && peek.totalChars > 0
+        ? `${T.t('mapProgress', { letters: peek.unlockedCount, kits: peek.built, chars: peek.totalChars })}${peek.savedAt ? ` · ${T.t('mapLast', { day: fmtDay(peek.savedAt) })}` : ''}`
+        : T.t('mapNew');
+      const go = peek && peek.totalChars > 0 ? T.t('mapContinue') : T.t('mapPlay');
+      const cur = id === mapId ? ' current' : '';
+      return `
+        <button class="map-card${cur}" data-map="${id}">
+          <span class="map-thumb"><img src="${th.url}" width="${th.w}" height="${th.h}" alt=""></span>
+          <b>${T.t('mapNames')[id]}</b>
+          <span class="map-tagline">${T.t('mapTaglines')[id]}</span>
+          ${yieldNote}
+          <span class="map-progress">${progress}</span>
+          <span class="map-go">${go}</span>
+        </button>`;
+    }).join('');
+    const langBtns = T.LANGS.map((l) =>
+      `<button class="seg-btn${l === T.getLang() ? ' active' : ''}" data-lang="${l}">${l === 'ru' ? 'РУ' : l.toUpperCase()}</button>`).join('');
+    showOverlay(`
+      <div class="card-station">${T.t('mapSelectStation')}</div>
+      <h2>${T.t('mapSelectTitle')}</h2>
+      <p class="muted">${T.t('mapSelectNote')}</p>
+      <div class="map-cards" id="map-cards">${cards}</div>
+      <div class="map-foot">
+        <span class="seg" id="map-lang">${langBtns}</span>
+        ${mapId ? `<button id="ov-cancel" class="link-btn">${T.t('mapSelectBack')}</button>` : ''}
+      </div>
+    `, true);
+    document.querySelectorAll('#map-lang .seg-btn').forEach((b) => {
+      b.onclick = () => { T.setLang(b.dataset.lang); applyI18n(); showMapSelect(); };
+    });
+    const btns = [...document.querySelectorAll('#map-cards .map-card')];
+    btns.forEach((b) => { b.onclick = () => startMap(b.dataset.map); });
+    // ← → move between worlds; Enter / Space plays the focused one (handled
+    // here, not left to the button's native activation, so the world's own
+    // Space/arrow handling never sees the keystroke that chose it)
+    $('map-cards').onkeydown = (e) => {
+      const i = btns.indexOf(document.activeElement);
+      if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') {
+        const j = i < 0 ? 0 : (i + (e.code === 'ArrowRight' ? 1 : btns.length - 1)) % btns.length;
+        btns[j].focus();
+      } else if ((e.code === 'Enter' || e.code === 'Space') && i >= 0) {
+        if (!e.repeat) startMap(btns[i].dataset.map);
+      } else return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    if ($('ov-cancel')) $('ov-cancel').onclick = () => hideOverlay();
+    (btns.find((b) => b.dataset.map === focusId) || btns[0]).focus();
+  }
+
+  // Make a world current: save the one we're leaving, swap the chain's map,
+  // load that world's save, raise its ground, and put the session's world
+  // state back to zero (nothing docked, nothing pending). A fresh save gets
+  // the welcome card.
+  function startMap(id) {
+    if (!CHAIN.MAPS[id]) id = CHAIN.DEFAULT_MAP;
+    if (id === mapId && profile) { hideOverlay(); return; }   // "continue" on the world you're standing in
+    if (profile) E.saveProfile(profile);
+    mapId = id;
+    CHAIN.useMap(id);
+    profile = E.loadProfile(id);
+    E.setLastMap(id);
+
+    station = null; dockedPlot = null;
+    pendingUnlock = null; pendingAutomation = []; pendingEdition = null;
+    benchStreak = 0; dryNow = false; lastCorrectTime = null;
+    for (const k of Object.keys(consAcc)) delete consAcc[k];
+    for (const k of Object.keys(feedAcc)) delete feedAcc[k];
+    producedSinceFloat = {};
+    for (const k of Object.keys(invPrev)) delete invPrev[k];   // HUD shows this save's numbers outright, no count-up from the last world
+    for (const k of Object.keys(countTimers)) clearInterval(countTimers[k]);
+    E.setFocusSet(null);
+    cancelCharge(); spaceState = null;
+
+    FACTORY.loadMap();
+    rebuildWorld();
+    clearLine();
+    refreshInventory();
+    refreshKeyboard();
+    refreshLessonLights();
+    refreshStatus();
+    hideOverlay();
+    if (profile.totalChars === 0) showWelcome();
   }
 
   // ---------- passport ----------
@@ -927,8 +1056,8 @@
   }
 
   // ---------- footer / header ----------
-  $('btn-summary').onclick = () => showSessionSummary();
-  $('btn-passport').onclick = () => showPassport();
+  $('btn-summary').onclick = () => { if (profile) showSessionSummary(); };
+  $('btn-passport').onclick = () => { if (profile) showPassport(); };
 
   const soundBtn = $('btn-sound');
   function refreshSoundBtn() { soundBtn.textContent = A.isEnabled() ? '🔊' : '🔇'; }
@@ -944,39 +1073,38 @@
     { label: 'Оставить на пиво', sub: 'YooMoney · ₽ RUB', url: 'https://yoomoney.ru/to/4100119579691782', coins: ['₽'] },
   ];
 
+  // reset is scoped to the current world — the other worlds' saves stand
   const showResetConfirm = () => {
     overlayRerender = showResetConfirm;
     showOverlay(`
-      <h2>${T.t('resetTitle')}</h2>
-      <p class="muted">${T.t('resetNote')}</p>
+      <h2>${T.t('resetTitle', { map: T.t('mapNames')[mapId] })}</h2>
+      <p class="muted">${T.t('resetNote', { map: T.t('mapNames')[mapId] })}</p>
       <button id="ov-cancel" class="btn-primary">${T.t('resetCancel')}</button>
       <button id="ov-reset" class="link-btn danger">${T.t('resetConfirm')}</button>
     `);
     $('ov-cancel').onclick = () => showSettings();
     $('ov-reset').onclick = () => {
-      profile = E.resetProfile();
-      E.saveProfile(profile);
+      E.resetProfile(mapId);
+      profile = null;          // startMap must not save the profile we just wiped
       buildKeyboard();
-      rebuildWorld();
-      refreshInventory();
-      refreshStatus();
-      hideOverlay();
-      clearLine();
+      startMap(mapId);
     };
   };
 
+  // the save file names its world; importing puts it in that world's slot
   function exportSave() {
     E.saveProfile(profile);
     const data = {
       app: 'mechanical-keyboarding', kind: 'save', version: 1,
       exportedAt: new Date().toISOString(),
+      map: mapId,
       profile,
       sound: A.isEnabled(),
       uilang: T.getLang(),
     };
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
-    a.download = `mechanical-keyboarding-save-${data.exportedAt.slice(0, 10)}.json`;
+    a.download = `mechanical-keyboarding-save-${mapId}-${data.exportedAt.slice(0, 10)}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -1000,6 +1128,10 @@
       showImportError();
       return;
     }
+    // which world the file belongs to: the wrapper's map, else the profile's,
+    // else (a pre-maps save) the default world
+    const m = [data.map, data.profile.map].find((id) => id && CHAIN.MAPS[id]);
+    data.map = m || CHAIN.DEFAULT_MAP;
     showImportConfirm(data);
   }
   function showImportError() {
@@ -1015,19 +1147,23 @@
   function showImportConfirm(data) {
     overlayRerender = () => showImportConfirm(data);
     const date = data.exportedAt ? String(data.exportedAt).slice(0, 10) : null;
+    const mapName = T.t('mapNames')[data.map];
     showOverlay(`
       <h2>${T.t('importConfirmTitle')}</h2>
-      ${date ? `<p class="muted">${T.t('importMeta', { date })}</p>` : ''}
-      <p class="muted">${T.t('importConfirmNote')}</p>
+      ${date ? `<p class="muted">${T.t('importMeta', { date, map: mapName })}</p>` : `<p class="muted">${T.t('importMap', { map: mapName })}</p>`}
+      <p class="muted">${T.t('importConfirmNote', { map: mapName })}</p>
       <button id="ov-cancel" class="btn-primary">${T.t('resetCancel')}</button>
       <button id="ov-load" class="link-btn danger">${T.t('importConfirmGo')}</button>
     `);
     $('ov-cancel').onclick = () => showSettings();
     $('ov-load').onclick = () => {
+      data.profile.map = data.map;
       E.saveProfile(data.profile);
+      E.setLastMap(data.map);
       if (typeof data.sound === 'boolean') A.setEnabled(data.sound);
       if (data.uilang) T.setLang(data.uilang);
-      location.reload(); // clean re-init from the imported save
+      profile = null;        // nothing may save over the import before the reload
+      location.reload();     // clean re-init; the picker opens on the imported world
     };
   }
 
@@ -1042,6 +1178,11 @@
     showOverlay(`
       <div class="card-station">⚙ ${T.t('settingsTitle')}</div>
       <div class="settings-body">
+        <div class="set-row">
+          <span class="set-label">${T.t('setWorld')}</span>
+          <span class="seg"><span class="seg-cur">${T.t('mapNames')[mapId]}</span><button class="seg-btn" id="set-map">${T.t('setChangeWorld')}</button></span>
+        </div>
+        <p class="set-note">${T.t('setWorldNote')}</p>
         <div class="set-row">
           <span class="set-label">${T.t('setLanguage')}</span>
           <span class="seg" id="set-lang">${langBtns}</span>
@@ -1067,13 +1208,14 @@
     document.querySelectorAll('#set-lang .seg-btn').forEach((b) => {
       b.onclick = () => { T.setLang(b.dataset.lang); applyI18n(); showSettings(); };
     });
+    $('set-map').onclick = () => showMapSelect();
     $('set-export').onclick = () => exportSave();
     $('set-import').onclick = () => pickImportFile();
     $('set-reset').onclick = () => showResetConfirm();
     $('ov-continue').onclick = () => hideOverlay();
     $('ov-continue').focus();
   }
-  $('btn-settings').onclick = () => { $('btn-settings').blur(); showSettings(); };
+  $('btn-settings').onclick = () => { $('btn-settings').blur(); if (profile) showSettings(); };
 
   // ---------- interface language ----------
   function applyI18n() {
@@ -1087,15 +1229,14 @@
   }
 
   // ---------- boot ----------
+  // The world waits for a choice: the picker opens first (last-played world
+  // focused — Enter and you're back), then startMap raises it.
   applyI18n();
   buildKeyboard();
   refreshStats();
   refreshSoundBtn();
   FACTORY.init(document.getElementById('factory-mount')).then(() => {
-    rebuildWorld();
-    refreshInventory();
-    refreshStatus();
     clearLine();
-    if (profile.totalChars === 0) showWelcome();
+    showMapSelect();
   });
 })();

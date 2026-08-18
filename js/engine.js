@@ -4,8 +4,13 @@
 
   const L = window.LANG_RU;
 
-  const STORAGE_KEY = 'mk.profile.v1';
-  const LEGACY_KEY = 'transsib.profile.v1'; // pre-rename saves; adopted once in loadProfile
+  // One save per map (2026-08-18): mk.profile.v1.<mapId>. Progress never
+  // crosses worlds — resources, machines, letters all live in the map's slot.
+  const STORAGE_PREFIX = 'mk.profile.v1.';
+  const LAST_MAP_KEY = 'mk.map';               // the world last played (the picker's default)
+  const SINGLE_KEY = 'mk.profile.v1';          // pre-maps save; adopted once into the frontier's slot
+  const LEGACY_KEY = 'transsib.profile.v1';    // pre-rename save; likewise
+  const keyFor = (mapId) => STORAGE_PREFIX + mapId;
 
   // Tuning constants
   const TARGET_WPM = 25;                     // modest speed target that gates unlocks
@@ -23,12 +28,14 @@
     return { ewLat: null, ewErr: 0.05, n: 0, misses: 0 };
   }
 
-  function defaultProfile() {
+  function defaultProfile(mapId) {
     const letters = {};
     for (const ch of L.UNLOCK_ORDER) letters[ch] = newLetterStats();
     return {
       version: 1,
+      map: mapId,        // the world this save belongs to (its slot key)
       createdAt: Date.now(),
+      savedAt: null,
       unlockedCount: L.SEED_COUNT,
       letters,
       totalActiveMs: 0,
@@ -51,33 +58,47 @@
     };
   }
 
-  // Stations built before the plot system get the plot matching their
-  // original coordinates.
+  // Kit stations erected before the plot system have no plot on record: park
+  // them where the map says legacy builds went, else on the first free plot.
+  // Pre-built stations need nothing — they resolve through the map's HOME.
+  // Runs against the CURRENT map (CHAIN.useMap first).
   function migratePlots(p) {
     if (!p.plots) p.plots = {};
     const C = window.CHAIN;
     if (!C) return;
     for (const st of C.STATIONS) {
-      if (st.kind === 'board') continue;
-      if (!C.isBuilt(p, st) || p.plots[st.id]) continue;
-      const plot = C.PLOTS.find((pl) => pl.x === st.x && pl.y === st.y);
+      if (!st.buildCost || !C.isBuilt(p, st) || p.plots[st.id]) continue;
+      const legacy = C.LEGACY[st.id];
+      const free = C.freePlots(p);
+      const plot = (legacy && free.find((pl) => pl.id === legacy)) || free[0];
       if (plot) p.plots[st.id] = plot.id;
     }
   }
 
-  function loadProfile() {
-    try {
-      let raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) {
-        raw = localStorage.getItem(LEGACY_KEY);
-        if (raw) {
-          localStorage.setItem(STORAGE_KEY, raw);
-          localStorage.removeItem(LEGACY_KEY);
-        }
+  // the raw save for a map's slot, or null; a pre-maps save is adopted into
+  // the default map's slot the first time anyone asks for it
+  function rawFor(mapId) {
+    let raw = localStorage.getItem(keyFor(mapId));
+    if (mapId === window.CHAIN.DEFAULT_MAP) {
+      for (const k of [SINGLE_KEY, LEGACY_KEY]) {
+        const old = localStorage.getItem(k);
+        if (!old) continue;
+        if (!raw) { raw = old; localStorage.setItem(keyFor(mapId), old); }
+        localStorage.removeItem(k);   // adopted, or superseded by the slot — either way retired
       }
-      if (!raw) { const p = defaultProfile(); migratePlots(p); return p; }
+    }
+    return raw;
+  }
+  function fresh(mapId) { const p = defaultProfile(mapId); migratePlots(p); return p; }
+
+  function loadProfile(mapId) {
+    try {
+      const raw = rawFor(mapId);
+      if (!raw) return fresh(mapId);
       const p = JSON.parse(raw);
-      if (p.version !== 1) { const d = defaultProfile(); migratePlots(d); return d; }
+      if (p.version !== 1) return fresh(mapId);
+      p.map = mapId;
+      if (typeof p.savedAt !== 'number') p.savedAt = null;
       // Ensure all letters exist (forward-compat if order list grows).
       for (const ch of L.UNLOCK_ORDER) if (!p.letters[ch]) p.letters[ch] = newLetterStats();
       // Additive migration for profiles saved before the game layer existed.
@@ -102,21 +123,49 @@
       migratePlots(p);
       return p;
     } catch {
-      const p = defaultProfile();
-      migratePlots(p);
-      return p;
+      return fresh(mapId);
+    }
+  }
+
+  // a look at a map's save without adopting it as current (the picker's
+  // progress line): {unlockedCount, totalChars, built, savedAt} or null
+  function peekProfile(mapId) {
+    try {
+      const raw = rawFor(mapId);
+      if (!raw) return null;
+      const p = JSON.parse(raw);
+      if (p.version !== 1) return null;
+      return {
+        unlockedCount: p.unlockedCount || 0,
+        totalChars: p.totalChars || 0,
+        built: Object.keys(p.built || {}).length,
+        milestoneIdx: p.milestoneIdx || 0,
+        savedAt: typeof p.savedAt === 'number' ? p.savedAt : null,
+      };
+    } catch {
+      return null;
     }
   }
 
   function saveProfile(p) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
+    p.savedAt = Date.now();
+    localStorage.setItem(keyFor(p.map), JSON.stringify(p));
   }
 
-  function resetProfile() {
-    localStorage.removeItem(STORAGE_KEY);
-    const p = defaultProfile();
-    migratePlots(p);
-    return p;
+  function resetProfile(mapId) {
+    localStorage.removeItem(keyFor(mapId));
+    return fresh(mapId);
+  }
+
+  // the world last played, if it still exists
+  function getLastMap() {
+    try {
+      const id = localStorage.getItem(LAST_MAP_KEY);
+      return id && window.CHAIN.MAPS[id] ? id : null;
+    } catch { return null; }
+  }
+  function setLastMap(mapId) {
+    try { localStorage.setItem(LAST_MAP_KEY, mapId); } catch { /* non-fatal */ }
   }
 
   function unlockedLetters(p) {
@@ -339,7 +388,7 @@
 
   window.ENGINE = {
     TARGET_WPM, MIN_SAMPLES, MAX_LATENCY,
-    loadProfile, saveProfile, resetProfile,
+    loadProfile, saveProfile, resetProfile, peekProfile, getLastMap, setLastMap,
     unlockedLetters, nextLetter, readiness,
     recordHit, recordMiss, checkUnlock,
     generateLine, realWordPool, bigramsIn,

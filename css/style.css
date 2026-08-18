@@ -269,6 +269,7 @@ footer {
   text-align: center;
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.5);
 }
+#overlay-card.wide { max-width: 660px; }
 #overlay-card h2 { margin: 8px 0 14px; font-size: 26px; }
 #overlay-card p { margin: 10px 0; line-height: 1.5; }
 #overlay-card .muted { color: var(--ink-dim); font-size: 15px; }
@@ -325,7 +326,56 @@ body.night { background: #0a141a; }
 body.night .keycap:not(.hint) { background: #0d161c; color: #2b3d46; border-bottom-color: #16232b; }
 body.night .keycap.home::after { background: #23343d; }
 
+/* ---------- the map picker: one card per world, each with its own save ---------- */
+.map-cards { display: flex; gap: 14px; justify-content: center; margin: 18px 0 4px; }
+.map-card {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-raised);
+  border: 1px solid #2c4a58;
+  border-radius: 10px;
+  padding: 12px 12px 14px;
+  color: var(--ink);
+  font-family: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+.map-card:hover, .map-card:focus { border-color: var(--brass); background: #1a3038; outline: none; }
+.map-card:focus-visible { box-shadow: 0 0 0 2px rgba(212, 169, 78, 0.35); }
+.map-card.current { border-style: dashed; }
+.map-thumb {
+  width: 100%;
+  height: 112px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0b151a;
+  border-radius: 6px;
+  padding: 6px;
+}
+.map-thumb img { image-rendering: pixelated; max-width: 100%; max-height: 100%; }
+.map-card b { font-size: 18px; color: var(--brass); margin-top: 4px; }
+.map-tagline { font-size: 13px; line-height: 1.4; }
+.map-tag { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--ok); }
+.map-progress { font-size: 12px; color: var(--ink-dim); line-height: 1.4; }
+.map-go {
+  margin-top: 6px;
+  background: var(--brass);
+  color: #221a08;
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-size: 14px;
+}
+.map-card:hover .map-go, .map-card:focus .map-go { filter: brightness(1.1); }
+.map-foot { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 16px; }
+
 /* ---------- settings ---------- */
+.seg-cur { padding: 6px 14px; font-size: 13px; letter-spacing: 1px; color: var(--brass); background: var(--bg-raised); }
+.seg-cur + .seg-btn { border-left: 1px solid #2c4a58; }
 .seg {
   display: inline-flex;
   border: 1px solid #2c4a58;

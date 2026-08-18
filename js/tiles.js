@@ -800,6 +800,53 @@
     return { cols, rows, kind, elev, flags, chunks, walls, water, KIND_IDS, FL };
   }
 
+  // A pixel minimap for the map picker: the map is baked for real, then each
+  // tile becomes one s×s block of its ground's average colour — water in the
+  // pond's own blue, the cliff band and walls darkened, the border forest a
+  // dark green fringe. No PIXI — a canvas.
+  function minimap(MAP, W, H, s) {
+    const g = bake(MAP, W, H);
+    const [c, x] = canvas(g.cols * s, g.rows * s);
+    const px = g.chunks.map((ch) => ({
+      x: ch.x, w: ch.canvas.width,
+      d: ch.canvas.getContext('2d').getImageData(0, 0, ch.canvas.width, ch.canvas.height).data,
+    }));
+    const avgOf = (d, w, x0, y0) => {
+      let r = 0, gg = 0, b = 0, n = 0;
+      for (let yy = 0; yy < T; yy++) for (let xx = 0; xx < T; xx++) {
+        const i = ((y0 + yy) * w + x0 + xx) * 4;
+        if (d[i + 3] === 0) continue;
+        r += d[i]; gg += d[i + 1]; b += d[i + 2]; n++;
+      }
+      return n ? [r / n, gg / n, b / n] : null;
+    };
+    const wc = fill('water', 0, 0);
+    const water = avgOf(wc.getContext('2d').getImageData(0, 0, T, T).data, T, 0, 0) || [40, 70, 120];
+    const waterId = KIND_IDS.indexOf('water');
+    for (let ty = 0; ty < g.rows; ty++) for (let tx = 0; tx < g.cols; tx++) {
+      const i = ty * g.cols + tx;
+      let col;
+      if (g.kind[i] === waterId) col = water;
+      else {
+        const wx = tx * T;
+        const ch = px.find((p) => wx >= p.x && wx < p.x + p.w);
+        col = (ch && avgOf(ch.d, ch.w, wx - ch.x, ty * T)) || [60, 60, 60];
+      }
+      const dark = (g.flags[i] & (FL.WALL | FL.FACE | FL.RIM)) ? 0.55 : 1;
+      x.fillStyle = `rgb(${Math.round(col[0] * dark)},${Math.round(col[1] * dark)},${Math.round(col[2] * dark)})`;
+      x.fillRect(tx * s, ty * s, s, s);
+    }
+    // the border forest as a fringe the walk can't enter
+    const f = MAP.FOREST || {};
+    x.fillStyle = 'rgba(18, 48, 24, 0.75)';
+    const band = (x0, y0, w, h) => { if (w > 0 && h > 0) x.fillRect(x0 * s, y0 * s, w * s, h * s); };
+    band(0, 0, g.cols, Math.floor((f.n || 0) / T));
+    band(0, g.rows - Math.floor((f.s || 0) / T), g.cols, Math.floor((f.s || 0) / T));
+    band(0, 0, Math.floor((f.w || 0) / T), g.rows);
+    band(g.cols - Math.floor((f.e || 0) / T), 0, Math.floor((f.e || 0) / T), g.rows);
+    return c;
+  }
+
   // tile lookups for movement
   function tileAt(grid, px, py) {
     const tx = Math.floor(px / T), ty = Math.floor(py / T);
@@ -820,6 +867,6 @@
   window.TILES = {
     T, KINDS, KIND_IDS, CLIFF, STYLE_IDS, FL,
     fill, spill, cliff, slide, stairs, slope, shade, crossing, scenery, heap,
-    bake, tileAt, passable,
+    bake, tileAt, passable, minimap,
   };
 })();

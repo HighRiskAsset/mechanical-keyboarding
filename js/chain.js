@@ -1,4 +1,4 @@
-// The production chain and the map: stations, plots, scenery, milestones.
+// The production chain and the maps: stations, plots, scenery, milestones.
 // Walking IS the menu; this file is the world's data. Global: CHAIN
 //
 // Building ruling (2026-08-11): the chain is AUTHORED — what stations exist
@@ -6,6 +6,11 @@
 // free plot each new station occupies (kits earned at the milestone board).
 // Scenery makes the map uneven: some areas walled off, plots unevenly spread.
 // Bounded strategy — arranging walk routes, never ratio planning.
+//
+// Maps (2026-08-18): the chain is shared, the ground is not. MAPS is a
+// registry of worlds — each one its own terrain, plots, scenery, props, spawn
+// and ore yield — and CHAIN.useMap(id) makes one of them current. Every world
+// keeps its own save (engine.js), so nothing earned on one carries to another.
 (function () {
   'use strict';
 
@@ -16,28 +21,46 @@
   const SET_BUKI = L.UNLOCK_ORDER.slice(6, 14);  // с л в р к м д п
   const SET_VEDI = L.UNLOCK_ORDER.slice(14, 23); // ы у б я ь г з ч й
 
-  // Station defs. x/y = DEFAULT plot (pre-built stations start there; movable
-  // stations resolve through profile.plots). Consumption ratios are
+  // Station defs. x/y are RESOLVED per map: pre-built stations stand on the
+  // map's home plots (the board on its fixed spot); kit stations on whatever
+  // plot the player chose (profile.plots). Consumption ratios are
   // per-correct-letter (fractions accumulate); perLine consumes on line finish.
   // upgradeCost turns a tier-1 bench into an automation (auto-feeds its belt).
   // buildCost marks a kit-built station: its kit is earned at the milestone
   // board, then erected on any free plot the player chooses.
   const STATIONS = [
-    { id: 'board', x: 30, y: 108, tier: 0, kind: 'board', unlockAt: 0 },
-    { id: 'az', x: 96, y: 66, tier: 1, kind: 'bench', mode: 'letters', focus: SET_AZ, out: 'az', unlockAt: 0, upgradeCost: { slogi: 30, az: 90 } },
-    { id: 'slogi', x: 176, y: 66, tier: 2, kind: 'slogi', mode: 'bigrams', out: 'slogi', consume: { az: 0.5 }, recipe: { az: 2 }, buildCost: { az: 60 }, unlockAt: 8 },
-    { id: 'buki', x: 136, y: 150, tier: 1, kind: 'bench', mode: 'letters', focus: SET_BUKI, out: 'buki', unlockAt: 0, upgradeCost: { slova: 18, buki: 90 } },
-    { id: 'slova', x: 256, y: 108, tier: 3, kind: 'slova', mode: 'words', out: 'slova', consume: { az: 0.2, slogi: 0.34, buki: 0.34 }, recipe: { az: 1, slogi: 2, buki: 2 }, buildCost: { slogi: 40, buki: 50 }, unlockAt: 10 },
-    { id: 'vedi', x: 256, y: 190, tier: 1, kind: 'bench', mode: 'letters', focus: SET_VEDI, out: 'vedi', unlockAt: 0, upgradeCost: { stroki: 10, vedi: 90 } },
-    { id: 'stroki', x: 356, y: 130, tier: 4, kind: 'stroki', mode: 'lines', out: 'stroki', consume: { slova: 0.25, vedi: 0.2 }, recipe: { slova: 8, vedi: 6 }, buildCost: { slova: 30, vedi: 40 }, unlockAt: 14 },
-    { id: 'press', x: 446, y: 96, tier: 5, kind: 'press', mode: 'lines', out: 'listy', perLine: { stroki: 1 }, fallbackPerLine: { az: 8 }, recipe: { stroki: 1 }, unlockAt: 0 },
+    { id: 'board', x: 0, y: 0, tier: 0, kind: 'board', unlockAt: 0 },
+    { id: 'az', x: 0, y: 0, tier: 1, kind: 'bench', mode: 'letters', focus: SET_AZ, out: 'az', unlockAt: 0, upgradeCost: { slogi: 30, az: 90 } },
+    { id: 'slogi', x: 0, y: 0, tier: 2, kind: 'slogi', mode: 'bigrams', out: 'slogi', consume: { az: 0.5 }, recipe: { az: 2 }, buildCost: { az: 60 }, unlockAt: 8 },
+    { id: 'buki', x: 0, y: 0, tier: 1, kind: 'bench', mode: 'letters', focus: SET_BUKI, out: 'buki', unlockAt: 0, upgradeCost: { slova: 18, buki: 90 } },
+    { id: 'slova', x: 0, y: 0, tier: 3, kind: 'slova', mode: 'words', out: 'slova', consume: { az: 0.2, slogi: 0.34, buki: 0.34 }, recipe: { az: 1, slogi: 2, buki: 2 }, buildCost: { slogi: 40, buki: 50 }, unlockAt: 10 },
+    { id: 'vedi', x: 0, y: 0, tier: 1, kind: 'bench', mode: 'letters', focus: SET_VEDI, out: 'vedi', unlockAt: 0, upgradeCost: { stroki: 10, vedi: 90 } },
+    { id: 'stroki', x: 0, y: 0, tier: 4, kind: 'stroki', mode: 'lines', out: 'stroki', consume: { slova: 0.25, vedi: 0.2 }, recipe: { slova: 8, vedi: 6 }, buildCost: { slova: 30, vedi: 40 }, unlockAt: 14 },
+    { id: 'press', x: 0, y: 0, tier: 5, kind: 'press', mode: 'lines', out: 'listy', perLine: { stroki: 1 }, fallbackPerLine: { az: 8 }, recipe: { stroki: 1 }, unlockAt: 0 },
   ];
 
-  // Buildable plots. Pre-built stations occupy their defaults; the rest are
-  // the player's to choose. Unevenly spread on purpose — map variance.
-  // p13+ live in the eastern regions (2026-08-18) — reachable once the
-  // region's crossing opens.
-  const PLOTS = [
+  // Solid scenery: shapes the walking routes. Everything stands ON a tile —
+  // sc(kind, tx, ty) names the tile under its base; wide kinds (FOOT_W) span
+  // that many tiles to the east. The sprite is drawn centred on the footprint
+  // with its base on the tile bottom (factory.js); the collision box is the
+  // footprint, inset a hair. Art sizes live in pixels.js / tiles.js.
+  const FOOT_W = { boulder: 2, tarpool: 2 };
+  const sc = (kind, tx, ty) => {
+    const fw = FOOT_W[kind.replace(/\d+$/, '')] || 1;
+    return { kind, tx, ty, fw, box: { x: tx * 16 + 2, y: ty * 16 + 3, w: fw * 16 - 4, h: 12 } };
+  };
+
+  // ======================================================================
+  // THE FRONTIER — the world proper: six biomes laid as a snake, cliffs,
+  // closed crossings, plots scattered where the land allows. Tests the
+  // environments and the geographical progression.
+  // ======================================================================
+
+  // Buildable plots. Pre-built stations occupy their home plots (HOME below);
+  // the rest are the player's to choose. Unevenly spread on purpose — map
+  // variance. p13+ live in the eastern regions (2026-08-18) — reachable once
+  // the region's crossing opens.
+  const FRONTIER_PLOTS = [
     { id: 'p1', x: 96, y: 66 },
     { id: 'p2', x: 176, y: 66 },
     { id: 'p3', x: 136, y: 150 },
@@ -58,17 +81,7 @@
     { id: 'p18', x: 92, y: 354, region: 'peaks' },
   ];
 
-  // Solid scenery: shapes the walking routes. Everything stands ON a tile —
-  // sc(kind, tx, ty) names the tile under its base; wide kinds (FOOT_W) span
-  // that many tiles to the east. The sprite is drawn centred on the footprint
-  // with its base on the tile bottom (factory.js); the collision box is the
-  // footprint, inset a hair. Art sizes live in pixels.js / tiles.js.
-  const FOOT_W = { boulder: 2, tarpool: 2 };
-  const sc = (kind, tx, ty) => {
-    const fw = FOOT_W[kind.replace(/\d+$/, '')] || 1;
-    return { kind, tx, ty, fw, box: { x: tx * 16 + 2, y: ty * 16 + 3, w: fw * 16 - 4, h: 12 } };
-  };
-  const SCENERY = [
+  const FRONTIER_SCENERY = [
     // meadow
     sc('tree', 13, 8), sc('tree2', 19, 7), sc('tree', 29, 10), sc('tree2', 10, 13),
     sc('rock', 9, 5), sc('rock2', 21, 13), sc('rock', 24, 4), sc('tree', 2, 10),
@@ -90,6 +103,19 @@
     sc('boulder', 22, 28), sc('snowpine2', 30, 20),
   ];
 
+  // set dressing — cosmetic, walk-through (drawn by factory.js)
+  const FRONTIER_PROPS = [
+    { kind: 'lamppost', x: 62, y: 78, glow: true },
+    { kind: 'lamppost', x: 230, y: 128, glow: true },
+    { kind: 'lamppost', x: 420, y: 108, glow: true },
+    { kind: 'crate', x: 482, y: 156 },
+    { kind: 'crate2', x: 492, y: 168 },
+    { kind: 'drum', x: 18, y: 150 },
+    { kind: 'bush', x: 186, y: 84 },
+    { kind: 'bush', x: 498, y: 204 },
+    { kind: 'sign', x: 12, y: 126 },
+  ];
+
   // The terrain. REGIONS are biome rects placed anywhere on the map — a biome
   // has a base ground kind, a cliff palette, an elevation (higher ground shows
   // a boulder face where it drops south and a rim on its other edges) and a
@@ -104,7 +130,7 @@
   // (dir 'h' walked E–W, 'v' walked N–S), stairs cut through a face — each
   // opens after the edition (Издание) named in opensAfter. Rects are 16px-grid
   // aligned. tiles.js bakes all of this into a tile grid.
-  const MAP = {
+  const FRONTIER_MAP = {
     FOREST: { n: 48 },     // border forest thickness per side (n/e/s/w); the player's limit
     REGIONS: [
       // north row — high ground (elev 1), a two-row face along its south edge
@@ -201,6 +227,119 @@
     ],
   };
 
+  // ======================================================================
+  // OPEN RANGE — one flat meadow, every node in a row, two ranks of plots,
+  // rich veins (×3 yield), nothing in the way. Tests the mechanics.
+  // ======================================================================
+
+  // Station grid: columns 80px apart (X = 112 + 80k), rows at Y = 66 / 146 /
+  // 226; a worn apron {X-16, Y-18, 64×32} under each. Row A: the three mines
+  // on their nodes + the four later nodes (decorative until their machines
+  // exist, like the frontier's) + the depot at the east end. Rows B and C:
+  // fourteen free plots. The hub sits west, mid-height.
+  const RANGE_PLOTS = [
+    { id: 'p1', x: 112, y: 66 },     // iron mine
+    { id: 'p2', x: 192, y: 66 },     // copper mine
+    { id: 'p3', x: 272, y: 66 },     // quartz quarry
+    { id: 'p4', x: 672, y: 66 },     // depot
+    { id: 'p5', x: 112, y: 146 }, { id: 'p6', x: 192, y: 146 }, { id: 'p7', x: 272, y: 146 }, { id: 'p8', x: 352, y: 146 },
+    { id: 'p9', x: 432, y: 146 }, { id: 'p10', x: 512, y: 146 }, { id: 'p11', x: 592, y: 146 },
+    { id: 'p12', x: 112, y: 226 }, { id: 'p13', x: 192, y: 226 }, { id: 'p14', x: 272, y: 226 }, { id: 'p15', x: 352, y: 226 },
+    { id: 'p16', x: 432, y: 226 }, { id: 'p17', x: 512, y: 226 }, { id: 'p18', x: 592, y: 226 },
+  ];
+
+  // a few trees and stones along the south strip and the corners — colour,
+  // never in a route
+  const RANGE_SCENERY = [
+    sc('tree', 5, 15), sc('tree2', 14, 16), sc('rock', 22, 15), sc('tree', 27, 16),
+    sc('rock2', 33, 15), sc('tree2', 38, 16), sc('tree', 43, 15), sc('rock', 44, 10),
+    sc('tree2', 9, 17), sc('rock2', 40, 12),
+  ];
+
+  const RANGE_PROPS = [
+    { kind: 'lamppost', x: 92, y: 106, glow: true },
+    { kind: 'lamppost', x: 380, y: 106, glow: true },
+    { kind: 'lamppost', x: 636, y: 106, glow: true },
+    { kind: 'crate', x: 706, y: 90 },
+    { kind: 'crate2', x: 716, y: 100 },
+    { kind: 'drum', x: 30, y: 178 },
+    { kind: 'sign', x: 84, y: 166 },
+    { kind: 'bush', x: 330, y: 84 },
+    { kind: 'bush', x: 560, y: 252 },
+  ];
+
+  const RANGE_MAP = {
+    FOREST: { n: 48, e: 32, s: 32, w: 32 },
+    REGIONS: [
+      { id: 'range', x: 0, y: 0, w: 768, h: 336, elev: 0, base: 'grass', cliff: 'tan', treeline: ['tree', 'tree2'] },
+    ],
+    GROUND: [
+      // row A aprons: mines, the four later nodes, the depot pad
+      { kind: 'dirt', x: 96, y: 48, w: 64, h: 32 },
+      { kind: 'dirt', x: 176, y: 48, w: 64, h: 32 },
+      { kind: 'dirt', x: 256, y: 48, w: 64, h: 32 },
+      { kind: 'dirt', x: 336, y: 48, w: 64, h: 32 },
+      { kind: 'dirt', x: 416, y: 48, w: 64, h: 32 },
+      { kind: 'dirt', x: 496, y: 48, w: 64, h: 32 },
+      { kind: 'dirt', x: 576, y: 48, w: 64, h: 32 },
+      { kind: 'pad', x: 656, y: 48, w: 64, h: 32 },
+      // the hub pad, west
+      { kind: 'pad', x: 32, y: 128, w: 48, h: 32 },
+      // the road: hub → depot along the gap under row A, spurs up to each column
+      { kind: 'dirt', x: 80, y: 96, w: 624, h: 16 },
+      { kind: 'dirt', x: 80, y: 112, w: 16, h: 16 },
+      { kind: 'dirt', x: 688, y: 80, w: 16, h: 16 },
+      { kind: 'dirt', x: 128, y: 80, w: 16, h: 16 }, { kind: 'dirt', x: 208, y: 80, w: 16, h: 16 }, { kind: 'dirt', x: 288, y: 80, w: 16, h: 16 },
+      // row B / row C aprons
+      { kind: 'dirt', x: 96, y: 128, w: 64, h: 32 }, { kind: 'dirt', x: 176, y: 128, w: 64, h: 32 }, { kind: 'dirt', x: 256, y: 128, w: 64, h: 32 },
+      { kind: 'dirt', x: 336, y: 128, w: 64, h: 32 }, { kind: 'dirt', x: 416, y: 128, w: 64, h: 32 }, { kind: 'dirt', x: 496, y: 128, w: 64, h: 32 },
+      { kind: 'dirt', x: 576, y: 128, w: 64, h: 32 },
+      { kind: 'dirt', x: 96, y: 208, w: 64, h: 32 }, { kind: 'dirt', x: 176, y: 208, w: 64, h: 32 }, { kind: 'dirt', x: 256, y: 208, w: 64, h: 32 },
+      { kind: 'dirt', x: 336, y: 208, w: 64, h: 32 }, { kind: 'dirt', x: 416, y: 208, w: 64, h: 32 }, { kind: 'dirt', x: 496, y: 208, w: 64, h: 32 },
+      { kind: 'dirt', x: 576, y: 208, w: 64, h: 32 },
+      // a pond with a sand shore in the south-east corner
+      { kind: 'sand', x: 624, y: 240, w: 112, h: 64 },
+      { kind: 'water', x: 640, y: 256, w: 80, h: 32 },
+    ],
+    PLATEAUS: [],
+    WALLS: [],
+    CROSSINGS: [],
+    NODES: [
+      { kind: 'iron', x: 108, y: 54 },
+      { kind: 'copper', x: 188, y: 54 },
+      { kind: 'quartz', x: 268, y: 54 },
+      { kind: 'stone', x: 348, y: 54 },
+      { kind: 'coal', x: 428, y: 54 },
+      { kind: 'oil', x: 508, y: 54 },
+      { kind: 'titan', x: 588, y: 54 },
+    ],
+  };
+
+  // The registry. Per map: world size, the operator's spawn, the yield of its
+  // veins (every material a machine makes is multiplied — the sandbox is
+  // rich, the world proper honest), the hub's fixed spot, which plot each
+  // pre-built station stands on (HOME), where legacy saves' kit stations go
+  // if they predate plot choices (LEGACY), then the ground, plots, scenery
+  // and props. Order = the order the picker shows them.
+  const MAPS = {
+    frontier: {
+      id: 'frontier', W: 1168, H: 496, spawn: { x: 40, y: 90 }, yield: 1,
+      board: { x: 30, y: 108 },
+      HOME: { az: 'p1', buki: 'p3', vedi: 'p5', press: 'p7' },
+      LEGACY: { slogi: 'p2', slova: 'p4', stroki: 'p6' },
+      MAP: FRONTIER_MAP, PLOTS: FRONTIER_PLOTS, SCENERY: FRONTIER_SCENERY, PROPS: FRONTIER_PROPS,
+    },
+    range: {
+      id: 'range', W: 768, H: 336, spawn: { x: 84, y: 154 }, yield: 3,
+      board: { x: 40, y: 146 },
+      HOME: { az: 'p1', buki: 'p2', vedi: 'p3', press: 'p4' },
+      LEGACY: {},
+      MAP: RANGE_MAP, PLOTS: RANGE_PLOTS, SCENERY: RANGE_SCENERY, PROPS: RANGE_PROPS,
+    },
+  };
+  const MAP_IDS = Object.keys(MAPS);
+  const DEFAULT_MAP = 'frontier';
+
   // The milestone ladder: goals paid with hand-crafted production; kit rewards
   // open tier-2+ stations (still curriculum-gated by unlockAt). The final
   // milestone of an era is an ИЗДАНИЕ — it cannot be hand-stocked: it demands
@@ -225,10 +364,32 @@
   const beltKey = (b) => b.from + '>' + b.to;
 
   const PICKUP_CAP = 100; // automated benches refill you to this on approach
-
-  const WORLD_W = 1168; // 73 x 31 tiles of 16px: two rows of three biomes
-  const WORLD_H = 496;
   const TILE = 16;
+
+  // ---- the current map ----
+  // useMap makes one world current: it exposes that map's data on CHAIN
+  // (MAP, PLOTS, SCENERY, PROPS, WORLD_W/H, SPAWN, YIELD…) so factory.js and
+  // app.js read the live world, and it parks the pre-built stations on their
+  // home plots. Nothing here is per-course (invariant 5).
+  let cur = null;
+  function useMap(id) {
+    cur = MAPS[id] || MAPS[DEFAULT_MAP];
+    const C = window.CHAIN;
+    C.MAP_ID = cur.id;
+    C.MAP = cur.MAP;
+    C.PLOTS = cur.PLOTS;
+    C.SCENERY = cur.SCENERY;
+    C.PROPS = cur.PROPS;
+    C.WORLD_W = cur.W;
+    C.WORLD_H = cur.H;
+    C.SPAWN = cur.spawn;
+    C.YIELD = cur.yield || 1;
+    C.HOME = cur.HOME;
+    C.LEGACY = cur.LEGACY || {};
+    resolvePositions({ plots: {} });
+    return cur;
+  }
+  function currentMap() { return cur; }
 
   // a crossing opens once the edition it names has been passed; naming an
   // edition that doesn't exist yet keeps it honestly closed
@@ -239,9 +400,10 @@
   // the biome under a world point (later rects win, like the bake); the first
   // region is home when the point is outside all of them
   function regionAt(px, py) {
+    const MAP = cur.MAP;
     let hit = MAP.REGIONS[0];
     for (const r of MAP.REGIONS) {
-      const y0 = r.y || 0, h = r.h || WORLD_H;
+      const y0 = r.y || 0, h = r.h || cur.H;
       if (px >= r.x && px < r.x + r.w && py >= y0 && py < y0 + h) hit = r;
     }
     return hit;
@@ -254,19 +416,21 @@
     return STATIONS.find((s) => s.id === id);
   }
   function plotById(id) {
-    return PLOTS.find((p) => p.id === id);
+    return cur.PLOTS.find((p) => p.id === id);
   }
-  // stations resolve their coordinates through the player's plot choices
+  // stations resolve their coordinates through the map (hub spot, home plots)
+  // and the player's plot choices
   function resolvePositions(profile) {
     for (const st of STATIONS) {
-      const plotId = profile.plots && profile.plots[st.id];
+      if (st.kind === 'board') { st.x = cur.board.x; st.y = cur.board.y; continue; }
+      const plotId = (profile.plots && profile.plots[st.id]) || cur.HOME[st.id];
       const plot = plotId && plotById(plotId);
       if (plot) { st.x = plot.x; st.y = plot.y; }
     }
   }
   function freePlots(profile) {
-    const taken = new Set(Object.values(profile.plots || {}));
-    return PLOTS.filter((p) => !taken.has(p.id));
+    const taken = new Set([...Object.values(cur.HOME), ...Object.values(profile.plots || {})]);
+    return cur.PLOTS.filter((p) => !taken.has(p.id));
   }
   function affordable(profile, cost) {
     return Object.entries(cost).every(([mat, n]) => (profile.mats[mat] || 0) >= n);
@@ -311,11 +475,15 @@
   }
 
   window.CHAIN = {
-    STATIONS, BELTS, PLOTS, SCENERY, MAP, MILESTONES,
-    WORLD_W, WORLD_H, TILE, PICKUP_CAP, beltKey,
+    STATIONS, BELTS, MILESTONES, MAPS, MAP_IDS, DEFAULT_MAP,
+    TILE, PICKUP_CAP, beltKey,
+    useMap, currentMap,
     available, get, plotById, resolvePositions, freePlots,
     affordable, isBuilt, kitUnlocked, pendingKit, currentMilestone, canDeliver,
     canUpgrade, nextBelt, crossingOpen, regionAt,
     SET_AZ, SET_BUKI, SET_VEDI,
+    // per-map fields (MAP, PLOTS, SCENERY, PROPS, WORLD_W, WORLD_H, SPAWN,
+    // YIELD, HOME, LEGACY, MAP_ID) are set by useMap
   };
+  useMap(DEFAULT_MAP);
 })();
