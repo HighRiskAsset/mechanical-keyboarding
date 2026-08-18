@@ -8,8 +8,8 @@
 // Bounded strategy — arranging walk routes, never ratio planning.
 //
 // Maps (2026-08-18): the chain is shared, the ground is not. MAPS is a
-// registry of worlds — each one its own terrain, plots, scenery, props, spawn
-// and ore yield — and CHAIN.useMap(id) makes one of them current. Every world
+// registry of worlds — each one its own terrain, plots, scenery, props and
+// spawn — and CHAIN.useMap(id) makes one of them current. Every world
 // keeps its own save (engine.js), so nothing earned on one carries to another.
 (function () {
   'use strict';
@@ -228,78 +228,71 @@
   };
 
   // ======================================================================
-  // OPEN RANGE — one flat meadow, every node in a row, two ranks of plots,
-  // rich veins (×3 yield), nothing in the way. Tests the mechanics.
+  // OPEN RANGE — one flat meadow the width of the frontier, every node in a
+  // row by the hub, ranks of plots below, nothing in the way. Tests the
+  // mechanics: plentiful, easy resources = placement, never a rate.
   // ======================================================================
 
-  // Station grid: columns 80px apart (X = 112 + 80k), rows at Y = 66 / 146 /
-  // 226; a worn apron {X-16, Y-18, 64×32} under each. Row A: the three mines
-  // on their nodes + the four later nodes (decorative until their machines
-  // exist, like the frontier's) + the depot at the east end. Rows B and C:
-  // fourteen free plots. The hub sits west, mid-height.
+  // Station grid: 13 columns 80px apart (X = 112 + 80k), rows at Y = 66 /
+  // 146 / 226 / 306; a worn apron {X-16, Y-18, 64×32} under each. Row A: the
+  // three mines on their nodes, the four later nodes (decorative until their
+  // machines exist, like the frontier's), five free plots, the depot at the
+  // east end. Ranks B–D: thirteen free plots each. The hub sits west,
+  // mid-height, and a road runs under row A from hub to depot.
+  const RANGE_COLS = Array.from({ length: 13 }, (_, k) => 112 + 80 * k);
+  const RANGE_ROWS = [146, 226, 306];
   const RANGE_PLOTS = [
-    { id: 'p1', x: 112, y: 66 },     // iron mine
-    { id: 'p2', x: 192, y: 66 },     // copper mine
-    { id: 'p3', x: 272, y: 66 },     // quartz quarry
-    { id: 'p4', x: 672, y: 66 },     // depot
-    { id: 'p5', x: 112, y: 146 }, { id: 'p6', x: 192, y: 146 }, { id: 'p7', x: 272, y: 146 }, { id: 'p8', x: 352, y: 146 },
-    { id: 'p9', x: 432, y: 146 }, { id: 'p10', x: 512, y: 146 }, { id: 'p11', x: 592, y: 146 },
-    { id: 'p12', x: 112, y: 226 }, { id: 'p13', x: 192, y: 226 }, { id: 'p14', x: 272, y: 226 }, { id: 'p15', x: 352, y: 226 },
-    { id: 'p16', x: 432, y: 226 }, { id: 'p17', x: 512, y: 226 }, { id: 'p18', x: 592, y: 226 },
+    { id: 'p1', x: 112, y: 66 },      // iron mine
+    { id: 'p2', x: 192, y: 66 },      // copper mine
+    { id: 'p3', x: 272, y: 66 },      // quartz quarry
+    { id: 'p4', x: 1072, y: 66 },     // depot
   ];
+  for (const x of RANGE_COLS.slice(7, 12)) RANGE_PLOTS.push({ id: 'p' + (RANGE_PLOTS.length + 1), x, y: 66 });
+  for (const y of RANGE_ROWS) for (const x of RANGE_COLS) RANGE_PLOTS.push({ id: 'p' + (RANGE_PLOTS.length + 1), x, y });
+  const apron = (kind, x, y) => ({ kind, x: x - 16, y: y - 18, w: 64, h: 32 });
 
-  // a few trees and stones along the south strip and the corners — colour,
-  // never in a route
+  // trees and stones along the south strip — colour, never in a route
   const RANGE_SCENERY = [
-    sc('tree', 5, 15), sc('tree2', 14, 16), sc('rock', 22, 15), sc('tree', 27, 16),
-    sc('rock2', 33, 15), sc('tree2', 38, 16), sc('tree', 43, 15), sc('rock', 44, 10),
-    sc('tree2', 9, 17), sc('rock2', 40, 12),
+    sc('tree', 5, 20), sc('tree2', 12, 21), sc('rock', 19, 20), sc('tree', 26, 21),
+    sc('rock2', 33, 20), sc('tree2', 40, 21), sc('tree', 47, 20), sc('rock', 54, 21),
+    sc('tree2', 60, 20), sc('rock2', 63, 22), sc('tree', 68, 20),
   ];
 
   const RANGE_PROPS = [
     { kind: 'lamppost', x: 92, y: 106, glow: true },
-    { kind: 'lamppost', x: 380, y: 106, glow: true },
-    { kind: 'lamppost', x: 636, y: 106, glow: true },
-    { kind: 'crate', x: 706, y: 90 },
-    { kind: 'crate2', x: 716, y: 100 },
+    { kind: 'lamppost', x: 372, y: 106, glow: true },
+    { kind: 'lamppost', x: 652, y: 106, glow: true },
+    { kind: 'lamppost', x: 932, y: 106, glow: true },
+    { kind: 'crate', x: 1106, y: 90 },
+    { kind: 'crate2', x: 1116, y: 100 },
     { kind: 'drum', x: 30, y: 178 },
     { kind: 'sign', x: 84, y: 166 },
     { kind: 'bush', x: 330, y: 84 },
-    { kind: 'bush', x: 560, y: 252 },
+    { kind: 'bush', x: 740, y: 340 },
   ];
 
   const RANGE_MAP = {
     FOREST: { n: 48, e: 32, s: 32, w: 32 },
     REGIONS: [
-      { id: 'range', x: 0, y: 0, w: 768, h: 336, elev: 0, base: 'grass', cliff: 'tan', treeline: ['tree', 'tree2'] },
+      { id: 'range', x: 0, y: 0, w: 1168, h: 416, elev: 0, base: 'grass', cliff: 'tan', treeline: ['tree', 'tree2'] },
     ],
     GROUND: [
-      // row A aprons: mines, the four later nodes, the depot pad
-      { kind: 'dirt', x: 96, y: 48, w: 64, h: 32 },
-      { kind: 'dirt', x: 176, y: 48, w: 64, h: 32 },
-      { kind: 'dirt', x: 256, y: 48, w: 64, h: 32 },
-      { kind: 'dirt', x: 336, y: 48, w: 64, h: 32 },
-      { kind: 'dirt', x: 416, y: 48, w: 64, h: 32 },
-      { kind: 'dirt', x: 496, y: 48, w: 64, h: 32 },
-      { kind: 'dirt', x: 576, y: 48, w: 64, h: 32 },
-      { kind: 'pad', x: 656, y: 48, w: 64, h: 32 },
+      // row A aprons: mines, the four later nodes, five plots, the depot pad
+      ...RANGE_COLS.slice(0, 12).map((x) => apron('dirt', x, 66)),
+      apron('pad', 1072, 66),
       // the hub pad, west
       { kind: 'pad', x: 32, y: 128, w: 48, h: 32 },
-      // the road: hub → depot along the gap under row A, spurs up to each column
-      { kind: 'dirt', x: 80, y: 96, w: 624, h: 16 },
+      // the road: hub → depot along the gap under row A, spurs to the hub,
+      // the mines and the depot
+      { kind: 'dirt', x: 80, y: 96, w: 1024, h: 16 },
       { kind: 'dirt', x: 80, y: 112, w: 16, h: 16 },
-      { kind: 'dirt', x: 688, y: 80, w: 16, h: 16 },
       { kind: 'dirt', x: 128, y: 80, w: 16, h: 16 }, { kind: 'dirt', x: 208, y: 80, w: 16, h: 16 }, { kind: 'dirt', x: 288, y: 80, w: 16, h: 16 },
-      // row B / row C aprons
-      { kind: 'dirt', x: 96, y: 128, w: 64, h: 32 }, { kind: 'dirt', x: 176, y: 128, w: 64, h: 32 }, { kind: 'dirt', x: 256, y: 128, w: 64, h: 32 },
-      { kind: 'dirt', x: 336, y: 128, w: 64, h: 32 }, { kind: 'dirt', x: 416, y: 128, w: 64, h: 32 }, { kind: 'dirt', x: 496, y: 128, w: 64, h: 32 },
-      { kind: 'dirt', x: 576, y: 128, w: 64, h: 32 },
-      { kind: 'dirt', x: 96, y: 208, w: 64, h: 32 }, { kind: 'dirt', x: 176, y: 208, w: 64, h: 32 }, { kind: 'dirt', x: 256, y: 208, w: 64, h: 32 },
-      { kind: 'dirt', x: 336, y: 208, w: 64, h: 32 }, { kind: 'dirt', x: 416, y: 208, w: 64, h: 32 }, { kind: 'dirt', x: 496, y: 208, w: 64, h: 32 },
-      { kind: 'dirt', x: 576, y: 208, w: 64, h: 32 },
+      { kind: 'dirt', x: 1088, y: 80, w: 16, h: 16 },
+      // ranks B–D aprons
+      ...RANGE_ROWS.flatMap((y) => RANGE_COLS.map((x) => apron('dirt', x, y))),
       // a pond with a sand shore in the south-east corner
-      { kind: 'sand', x: 624, y: 240, w: 112, h: 64 },
-      { kind: 'water', x: 640, y: 256, w: 80, h: 32 },
+      { kind: 'sand', x: 1024, y: 320, w: 112, h: 64 },
+      { kind: 'water', x: 1040, y: 336, w: 80, h: 32 },
     ],
     PLATEAUS: [],
     WALLS: [],
@@ -315,22 +308,20 @@
     ],
   };
 
-  // The registry. Per map: world size, the operator's spawn, the yield of its
-  // veins (every material a machine makes is multiplied — the sandbox is
-  // rich, the world proper honest), the hub's fixed spot, which plot each
-  // pre-built station stands on (HOME), where legacy saves' kit stations go
-  // if they predate plot choices (LEGACY), then the ground, plots, scenery
-  // and props. Order = the order the picker shows them.
+  // The registry. Per map: world size, the operator's spawn, the hub's fixed
+  // spot, which plot each pre-built station stands on (HOME), where legacy
+  // saves' kit stations go if they predate plot choices (LEGACY), then the
+  // ground, plots, scenery and props. Order = the order the picker shows them.
   const MAPS = {
     frontier: {
-      id: 'frontier', W: 1168, H: 496, spawn: { x: 40, y: 90 }, yield: 1,
+      id: 'frontier', W: 1168, H: 496, spawn: { x: 40, y: 90 },
       board: { x: 30, y: 108 },
       HOME: { az: 'p1', buki: 'p3', vedi: 'p5', press: 'p7' },
       LEGACY: { slogi: 'p2', slova: 'p4', stroki: 'p6' },
       MAP: FRONTIER_MAP, PLOTS: FRONTIER_PLOTS, SCENERY: FRONTIER_SCENERY, PROPS: FRONTIER_PROPS,
     },
     range: {
-      id: 'range', W: 768, H: 336, spawn: { x: 84, y: 154 }, yield: 3,
+      id: 'range', W: 1168, H: 416, spawn: { x: 84, y: 154 },
       board: { x: 40, y: 146 },
       HOME: { az: 'p1', buki: 'p2', vedi: 'p3', press: 'p4' },
       LEGACY: {},
@@ -368,7 +359,7 @@
 
   // ---- the current map ----
   // useMap makes one world current: it exposes that map's data on CHAIN
-  // (MAP, PLOTS, SCENERY, PROPS, WORLD_W/H, SPAWN, YIELD…) so factory.js and
+  // (MAP, PLOTS, SCENERY, PROPS, WORLD_W/H, SPAWN…) so factory.js and
   // app.js read the live world, and it parks the pre-built stations on their
   // home plots. Nothing here is per-course (invariant 5).
   let cur = null;
@@ -383,7 +374,6 @@
     C.WORLD_W = cur.W;
     C.WORLD_H = cur.H;
     C.SPAWN = cur.spawn;
-    C.YIELD = cur.yield || 1;
     C.HOME = cur.HOME;
     C.LEGACY = cur.LEGACY || {};
     resolvePositions({ plots: {} });
@@ -483,7 +473,7 @@
     canUpgrade, nextBelt, crossingOpen, regionAt,
     SET_AZ, SET_BUKI, SET_VEDI,
     // per-map fields (MAP, PLOTS, SCENERY, PROPS, WORLD_W, WORLD_H, SPAWN,
-    // YIELD, HOME, LEGACY, MAP_ID) are set by useMap
+    // HOME, LEGACY, MAP_ID) are set by useMap
   };
   useMap(DEFAULT_MAP);
 })();

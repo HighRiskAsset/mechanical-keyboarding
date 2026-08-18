@@ -100,9 +100,11 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
 - **Maps — one save per world (user ruling 2026-08-18).** `CHAIN.MAPS` is a
   registry of worlds; the chain (stations, recipes, milestones, belts) is
   shared, the ground is not: each map brings its own `MAP` rects, `PLOTS`,
-  `SCENERY`, `PROPS`, world size, spawn, the hub's spot, which plot each
-  pre-built station stands on (`HOME`), and a vein `yield` that multiplies
-  every material a machine makes (costs never scale). `CHAIN.useMap(id)`
+  `SCENERY`, `PROPS`, world size, spawn, the hub's spot, and which plot each
+  pre-built station stands on (`HOME`). A map changes *where* things are,
+  never a rate: yield is not a mechanic (user ruling 2026-08-18 — «plentiful,
+  easy resources» means placement, and a ×N multiplier tried that day was
+  removed). `CHAIN.useMap(id)`
   makes one current; `FACTORY.loadMap()` tears down and re-plants the
   ground; `ENGINE.loadProfile(mapId)` reads the slot `mk.profile.v1.<map>`
   (the pre-maps `mk.profile.v1` is adopted once into the Frontier's slot;
@@ -115,15 +117,18 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   (`TILES.minimap`), the world's promise, its save's progress line, and
   Begin/Continue; the last-played world is focused so Enter resumes at once;
   ← → move, EN/РУ sits on the card. Two worlds today:
-  **The Frontier** (`frontier`, 1168×496, yield ×1) — the six-biome snake
-  below, the game proper: tests the environments and geographical
-  progression. **Open Range** (`range`, 768×336, yield ×3 «rich veins») —
-  one flat meadow ringed by forest: the three mines and the four later nodes
-  in a row along the north with the depot at the east end, the hub west, a
-  worn road under them, fourteen free plots in two ranks, nothing in any
-  route, a pond in the corner for colour: tests the mechanics (build,
-  deliver, automate, belt, edition) without walking or gating. Adding a
-  world = a new entry in `MAPS` + two i18n strings (name, tagline).
+  **The Frontier** (`frontier`, 1168×496) — the six-biome snake below, the
+  game proper: tests the environments and geographical progression. **Open
+  Range** (`range`, 1168×416, the frontier's width) — one flat meadow ringed
+  by forest on a 13-column × 4-row station grid (80px pitch): row A holds
+  the three mines and the four later nodes in a row by the hub, five free
+  plots, and the depot at the east end; ranks B–D hold thirteen free plots
+  each (44 free plots in all, generated in code from the grid); the hub
+  sits west, a worn road runs under row A hub→depot, nothing stands in any
+  route, a pond in the SE corner for colour: tests the mechanics (build,
+  deliver, automate, belt, edition) without walking or gating, with room for
+  the whole 14-machine tree and then some. Adding a world = a new entry in
+  `MAPS` + two i18n strings (name, tagline).
 - **Dynamic viewport**: fills all space the drill + keyboard don't need, at
   the largest integer zoom that keeps ≥300×170 world px visible — bigger
   window means bigger pixels first, then more world. Never letterboxes more

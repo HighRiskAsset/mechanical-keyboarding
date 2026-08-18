@@ -30,7 +30,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File serve.ps1
 then visit http://localhost:8123.
 
 Pick a **world** first — *The Frontier* (six lands, cliffs, closed
-crossings) or *Open Range* (one flat meadow, rich veins, room to build) —
+crossings) or *Open Range* (one flat meadow, every node in reach, room to
+build) —
 each keeps its own save, so nothing mined, built or unlocked carries over.
 Then walk with the **arrow keys**, stand at a machine and **type** to run
 it, **hold Space** to build, upgrade, collect, or deliver. Progress is saved

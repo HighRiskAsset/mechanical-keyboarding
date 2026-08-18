@@ -145,11 +145,8 @@
   }
 
   // ---------- materials ----------
-  // every material a machine makes is scaled by the map's vein yield
-  // (CHAIN.YIELD — 1 on the frontier, rich on the sandbox); costs never are
   function produceMat(mat, n) {
     if (n <= 0) return;
-    n *= CHAIN.YIELD || 1;
     profile.mats[mat] = (profile.mats[mat] || 0) + n;
     producedSinceFloat[mat] = (producedSinceFloat[mat] || 0) + n;
   }
@@ -936,7 +933,6 @@
     const cards = CHAIN.MAP_IDS.map((id) => {
       const peek = E.peekProfile(id);
       const th = mapThumb(id);
-      const yieldNote = (CHAIN.MAPS[id].yield || 1) > 1 ? `<span class="map-tag">${T.t('mapRich', { n: CHAIN.MAPS[id].yield })}</span>` : '';
       const progress = peek && peek.totalChars > 0
         ? `${T.t('mapProgress', { letters: peek.unlockedCount, kits: peek.built, chars: peek.totalChars })}${peek.savedAt ? ` · ${T.t('mapLast', { day: fmtDay(peek.savedAt) })}` : ''}`
         : T.t('mapNew');
@@ -947,7 +943,6 @@
           <span class="map-thumb"><img src="${th.url}" width="${th.w}" height="${th.h}" alt=""></span>
           <b>${T.t('mapNames')[id]}</b>
           <span class="map-tagline">${T.t('mapTaglines')[id]}</span>
-          ${yieldNote}
           <span class="map-progress">${progress}</span>
           <span class="map-go">${go}</span>
         </button>`;
