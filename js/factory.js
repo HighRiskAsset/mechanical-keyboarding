@@ -26,7 +26,10 @@
   let player = null;
   const charTex = { down: [], up: [], side: [], work: [] };
   let facing = 'side', faceSign = 1, walkClock = 0, walkFrame = 0;
-  let workTtl = 0, workClock = 0;
+  // workTtl: the machine's own "just powered" window (drill spins while keys
+  // land). working: the operator's pose — sticky from the first keystroke at
+  // a machine until they walk away or undock, pauses in typing included.
+  let workTtl = 0, workClock = 0, working = false;
   let playerX = 40, playerY = 90;
   const moving = { left: false, right: false, up: false, down: false };
   let dockedId = null;
@@ -290,7 +293,7 @@
 
     // the operator arrives at the map's spawn; the camera follows on the next tick
     playerX = CHAIN.SPAWN.x; playerY = CHAIN.SPAWN.y;
-    facing = 'side'; faceSign = 1; workTtl = 0;
+    facing = 'side'; faceSign = 1; workTtl = 0; working = false;
     for (const k of Object.keys(moving)) moving[k] = false;
     if (player) player.position.set(Math.round(playerX), Math.round(playerY));
     resize();
@@ -525,7 +528,8 @@
     const st = stations[dockedId];
     st.sp.tint = ok ? 0xffe9a0 : 0xff8a70;
     flashes.push({ sp: st.sp, ttl: 6, locked: st.locked });
-    workTtl = 50; // the typesetter leans into the case
+    workTtl = 50;   // the machine runs on this keystroke
+    working = true; // and the operator stays at the controls until they walk away
     if (ok) {
       st.sp.y = 1; st.sqTtl = 4; // 1px cast dip
       const p = new PIXI.Sprite(dotTex);
@@ -611,7 +615,7 @@
       return TILES.passable(grid, fx, fy, tx2, ty2);
     };
     if (vx !== 0 || vy !== 0) {
-      workTtl = 0;
+      workTtl = 0; working = false;   // walking away ends the work pose
       facing = Math.abs(vy) > Math.abs(vx) ? (vy < 0 ? 'up' : 'down') : 'side';
       if (vx !== 0) faceSign = vx > 0 ? 1 : -1;
       const nx = Math.max(LIM.w, Math.min(LIM.e, playerX + vx * dt));
@@ -623,9 +627,9 @@
     } else {
       walkFrame = 0;
     }
-    if (workTtl > 0 && dockedId) {
-      workTtl -= dt;
-      workClock += dt;
+    if (workTtl > 0) workTtl -= dt;
+    if (working && dockedId) {
+      workClock += dt;   // the pose keeps playing through pauses in typing
       player.texture = charTex.work[Math.floor(workClock / 8) % charTex.work.length];
       player.scale.x = 1;
     } else {
@@ -654,7 +658,8 @@
     }
     if (best !== dockedId) {
       dockedId = best;
-      if (!dockedId) workTtl = 0;
+      workTtl = 0; working = false;   // a new dock (or none) starts fresh
+
       for (const s of Object.values(stations)) s.glow.visible = s.def.id === dockedId;
       if (window.FACTORY.onDock) window.FACTORY.onDock(dockedId);
     }
