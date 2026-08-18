@@ -4,6 +4,9 @@
 # Concept-art drop target (serve.ps1 POST /upload)
 assets/inbox/
 
+# Style-reference screenshots for study only (never traced into the repo)
+assets/ref/
+
 # OS / OneDrive noise
 Thumbs.db
 desktop.ini

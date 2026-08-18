@@ -35,6 +35,8 @@
 
   // Buildable plots. Pre-built stations occupy their defaults; the rest are
   // the player's to choose. Unevenly spread on purpose — map variance.
+  // p13+ live in the eastern regions (2026-08-18) — reachable once the
+  // region's crossing opens.
   const PLOTS = [
     { id: 'p1', x: 96, y: 66 },
     { id: 'p2', x: 176, y: 66 },
@@ -43,46 +45,152 @@
     { id: 'p5', x: 256, y: 190 },
     { id: 'p6', x: 356, y: 130 },
     { id: 'p7', x: 446, y: 96 },
-    { id: 'p8', x: 356, y: 66 },
+    { id: 'p8', x: 356, y: 66 },     // on the meadow knoll (stairs at x=352)
     { id: 'p9', x: 60, y: 150 },
     { id: 'p10', x: 446, y: 190 },
     { id: 'p11', x: 176, y: 210 },
     { id: 'p12', x: 316, y: 190 },
+    { id: 'p13', x: 608, y: 82, region: 'quarry' },   // terrace top
+    { id: 'p14', x: 672, y: 210, region: 'quarry' },
+    { id: 'p15', x: 1000, y: 130, region: 'canyon' },
+    { id: 'p16', x: 1380, y: 100, region: 'bog' },
+    { id: 'p17', x: 1700, y: 130, region: 'flats' },
+    { id: 'p18', x: 1900, y: 130, region: 'peaks' },
   ];
 
-  // Solid scenery: shapes the walking routes (box = collision rect).
+  // Solid scenery: shapes the walking routes. Everything stands ON a tile —
+  // sc(kind, tx, ty) names the tile under its base; wide kinds (FOOT_W) span
+  // that many tiles to the east. The sprite is drawn centred on the footprint
+  // with its base on the tile bottom (factory.js); the collision box is the
+  // footprint, inset a hair. Art sizes live in pixels.js / tiles.js.
+  const FOOT_W = { boulder: 2, tarpool: 2 };
+  const sc = (kind, tx, ty) => {
+    const fw = FOOT_W[kind.replace(/\d+$/, '')] || 1;
+    return { kind, tx, ty, fw, box: { x: tx * 16 + 2, y: ty * 16 + 3, w: fw * 16 - 4, h: 12 } };
+  };
   const SCENERY = [
-    { kind: 'tree', x: 204, y: 100, box: { x: 208, y: 122, w: 13, h: 6 } },
-    { kind: 'tree2', x: 298, y: 84, box: { x: 302, y: 106, w: 13, h: 6 } },
-    { kind: 'tree', x: 466, y: 136, box: { x: 470, y: 158, w: 13, h: 6 } },
-    { kind: 'tree2', x: 150, y: 180, box: { x: 154, y: 202, w: 13, h: 6 } },
-    { kind: 'rock', x: 146, y: 84, box: { x: 147, y: 88, w: 14, h: 7 } },
-    { kind: 'rock2', x: 338, y: 198, box: { x: 339, y: 202, w: 14, h: 7 } },
-    { kind: 'rock', x: 390, y: 60, box: { x: 391, y: 64, w: 14, h: 7 } },
+    // meadow
+    sc('tree', 13, 8), sc('tree2', 19, 7), sc('tree', 29, 10), sc('tree2', 10, 13),
+    sc('rock', 9, 5), sc('rock2', 21, 13), sc('rock', 24, 4), sc('tree', 2, 10),
+    // quarry hills
+    sc('boulder', 35, 13), sc('boulder2', 43, 7), sc('spire', 50, 5), sc('rock', 46, 14),
+    sc('tree', 38, 14), sc('boulder', 40, 4),
+    // crystal canyon
+    sc('crystal', 59, 10), sc('crystal2', 68, 8), sc('crystal', 71, 12), sc('deadtree', 58, 7),
+    sc('spire', 70, 7), sc('rock2', 63, 11),
+    // coal bog
+    sc('reeds', 76, 7), sc('reeds2', 82, 12), sc('reeds', 90, 7), sc('reeds3', 78, 14),
+    sc('deadtree', 83, 5), sc('deadtree2', 91, 13), sc('deadtree', 89, 10),
+    // oil flats
+    sc('scrub', 96, 6), sc('scrub2', 101, 13), sc('scrub', 110, 6), sc('boulder2', 109, 13),
+    sc('tarpool', 95, 13), sc('scrub3', 103, 4), sc('boulder', 100, 4),
+    // titanium peaks
+    sc('snowpine', 116, 5), sc('snowpine2', 118, 14), sc('snowpine', 130, 11), sc('boulder2', 122, 14),
+    sc('spire2', 131, 5), sc('snowpine3', 126, 10),
   ];
 
-  // The terrain: dirt work-aprons, water (unwalkable), and the ore nodes the
-  // tier-1 mines sit on. All data — a future map is a new set of rects.
-  // Rects are aligned to the 16x16 tile grid (a tile takes the terrain under
-  // its centre, so unaligned rects render, but aligned ones say what they mean).
+  // The terrain. Regions run west→east, one per tier of the tech tree; each
+  // has its own ground kind and cliff palette. GROUND rects paint over the
+  // region base in order; PLATEAUS are raised ground (elev 1) with a boulder
+  // face on their south edge and stairs where `ramps` says; WALLS are rock
+  // heaps (solid); CROSSINGS are the closed choke points between regions —
+  // each opens after the edition (Издание) named in opensAfter. Rects are
+  // 16px-grid aligned. tiles.js bakes all of this into a tile grid.
   const MAP = {
-    DIRT: [
-      { x: 80, y: 48, w: 64, h: 32 },   // iron mine
-      { x: 160, y: 48, w: 64, h: 32 },  // plot p2
-      { x: 112, y: 128, w: 64, h: 32 }, // copper mine
-      { x: 240, y: 176, w: 64, h: 32 }, // quartz quarry
-      { x: 240, y: 96, w: 64, h: 32 },  // plot p4
-      { x: 336, y: 112, w: 64, h: 32 }, // plot p6
-      { x: 432, y: 80, w: 64, h: 32 },  // depot
-      { x: 16, y: 96, w: 48, h: 32 },   // the hub
+    TREELINE: 48,          // rows above this are the border forest (player's north limit)
+    REGIONS: [
+      { id: 'meadow', x: 0, w: 528, base: 'grass', cliff: 'tan', treeline: ['tree', 'tree2'] },
+      { id: 'quarry', x: 528, w: 320, base: 'rock', cliff: 'tan', treeline: ['spire', 'boulder', 'boulder2'] },
+      { id: 'canyon', x: 848, w: 320, base: 'shale', cliff: 'violet', treeline: ['spire', 'deadtree', 'spire2'] },
+      { id: 'bog', x: 1168, w: 320, base: 'marsh', cliff: 'grey', treeline: ['deadtree', 'deadtree2', 'reeds'] },
+      { id: 'flats', x: 1488, w: 320, base: 'crack', cliff: 'tan', treeline: ['boulder', 'scrub', 'boulder2'] },
+      { id: 'peaks', x: 1808, w: 320, base: 'snow', cliff: 'snow', treeline: ['snowpine', 'snowpine2', 'spire'] },
     ],
-    WATER: [
-      { x: 0, y: 192, w: 96, h: 48 },   // the pond, southwest
+    GROUND: [
+      // — meadow: worn aprons under mines/plots, paved pads under hub + depot,
+      //   a worn road hub→depot with spurs, the pond with a sand shore
+      { kind: 'dirt', x: 80, y: 48, w: 64, h: 32 },    // iron mine
+      { kind: 'dirt', x: 160, y: 48, w: 64, h: 32 },   // p2
+      { kind: 'dirt', x: 112, y: 128, w: 64, h: 32 },  // copper mine
+      { kind: 'dirt', x: 240, y: 176, w: 64, h: 32 },  // quartz quarry
+      { kind: 'dirt', x: 240, y: 96, w: 64, h: 32 },   // p4
+      { kind: 'dirt', x: 336, y: 112, w: 64, h: 32 },  // p6
+      { kind: 'dirt', x: 336, y: 48, w: 64, h: 32 },   // p8 (knoll)
+      { kind: 'pad', x: 432, y: 80, w: 64, h: 32 },    // depot
+      { kind: 'pad', x: 16, y: 96, w: 48, h: 32 },     // the hub
+      { kind: 'dirt', x: 64, y: 112, w: 368, h: 16 },  // the road
+      { kind: 'dirt', x: 96, y: 80, w: 16, h: 32 },    // spur north to the iron mine
+      { kind: 'dirt', x: 256, y: 128, w: 16, h: 48 },  // spur south to the quarry
+      { kind: 'dirt', x: 480, y: 128, w: 48, h: 32 },  // the track east to the gate
+      { kind: 'sand', x: 0, y: 176, w: 112, h: 64 },
+      { kind: 'water', x: 0, y: 192, w: 96, h: 48 },   // the pond, southwest
+      // — quarry hills: grass tufts on stone, a worn floor
+      { kind: 'grass', x: 560, y: 208, w: 64, h: 32 },
+      { kind: 'grass', x: 688, y: 96, w: 48, h: 32 },
+      { kind: 'dirt', x: 544, y: 128, w: 48, h: 32 },  // inside the gate
+      { kind: 'dirt', x: 592, y: 64, w: 64, h: 32 },   // p13 apron (terrace top)
+      { kind: 'dirt', x: 656, y: 192, w: 64, h: 32 },  // p14 apron
+      { kind: 'dirt', x: 736, y: 160, w: 64, h: 32 },  // stone mine apron (terrace interior)
+      // — crystal canyon: the stream with a sand bank, worn floor
+      { kind: 'sand', x: 880, y: 48, w: 16, h: 192 },
+      { kind: 'water', x: 848, y: 48, w: 32, h: 192 },
+      { kind: 'dirt', x: 992, y: 112, w: 64, h: 32 },  // p15 apron
+      { kind: 'dirt', x: 928, y: 176, w: 96, h: 16 },
+      // — coal bog: bog water on the west edge, pools, boardwalk planks
+      { kind: 'water', x: 1168, y: 48, w: 32, h: 192 },
+      { kind: 'water', x: 1232, y: 64, w: 64, h: 32 },
+      { kind: 'water', x: 1344, y: 176, w: 80, h: 48 },
+      { kind: 'water', x: 1408, y: 64, w: 48, h: 32 },
+      { kind: 'board', x: 1200, y: 160, w: 144, h: 16 },
+      { kind: 'board', x: 1344, y: 192, w: 80, h: 16 },
+      { kind: 'dirt', x: 1280, y: 112, w: 64, h: 32 }, // coal seam apron
+      { kind: 'dirt', x: 1360, y: 80, w: 64, h: 32 },  // p16 apron
+      // — oil flats: tar pools, a mesa
+      { kind: 'tar', x: 1552, y: 144, w: 48, h: 32 },
+      { kind: 'tar', x: 1680, y: 64, w: 64, h: 32 },
+      { kind: 'tar', x: 1728, y: 176, w: 48, h: 32 },
+      { kind: 'dirt', x: 1600, y: 112, w: 64, h: 32 }, // oil derrick apron
+      { kind: 'dirt', x: 1680, y: 112, w: 64, h: 32 }, // p17 apron
+      { kind: 'rock', x: 1600, y: 176, w: 96, h: 48 }, // mesa top
+      // — titanium peaks: frost grass, an ice pond
+      { kind: 'frost', x: 1856, y: 96, w: 48, h: 32 },
+      { kind: 'frost', x: 2000, y: 64, w: 64, h: 32 },
+      { kind: 'ice', x: 1904, y: 176, w: 80, h: 48 },
+      { kind: 'dirt', x: 1888, y: 112, w: 64, h: 32 }, // p18 apron
+      { kind: 'rock', x: 2000, y: 48, w: 48, h: 32 },  // titanium seam apron (shelf interior)
+    ],
+    // A plateau's N/E/W ring tiles bake as solid rim (boulder band), so the
+    // walkable top is the rect inset by one tile on those sides; the face sits
+    // on the row(s) below. Author with that inset in mind.
+    PLATEAUS: [
+      { x: 320, y: 48, w: 96, h: 48, face: 1, ramps: [{ x: 352, y: 96, side: 'S' }] },        // meadow knoll (p8)
+      { x: 592, y: 48, w: 96, h: 48, face: 2, ramps: [{ x: 624, y: 96, side: 'S' }] },        // quarry terrace A (p13)
+      { x: 720, y: 128, w: 112, h: 64, face: 1, ramps: [{ x: 768, y: 192, side: 'S' }] },     // quarry terrace B (stone); N/E/W ring is rim
+      { x: 912, y: 48, w: 128, h: 32, face: 1 },                                              // canyon north wall
+      { x: 1600, y: 176, w: 96, h: 48, face: 1, ramps: [{ x: 1600, y: 192, side: 'W' }] },    // flats mesa
+      { x: 1968, y: 48, w: 96, h: 48, face: 2, ramps: [{ x: 2000, y: 96, side: 'S' }] },      // peaks shelf (titanium)
+    ],
+    WALLS: [
+      { x: 528, y: 48, w: 16, h: 80 }, { x: 528, y: 160, w: 16, h: 80 },       // meadow|quarry, gap rows 8–9
+      { x: 912, y: 208, w: 224, h: 16 },                                       // canyon south wall
+      { x: 1488, y: 48, w: 16, h: 32 }, { x: 1488, y: 112, w: 16, h: 128 },    // bog|flats, gap rows 5–6
+      { x: 1808, y: 48, w: 16, h: 80 }, { x: 1808, y: 160, w: 16, h: 80 },     // flats|peaks, gap rows 8–9
+    ],
+    CROSSINGS: [
+      { id: 'x1', kind: 'pass', x: 528, y: 128, w: 16, h: 32, opensAfter: 'ed1', style: 'grey' },  // fallen grey rock in a tan wall
+      { id: 'x2', kind: 'bridge', x: 848, y: 96, w: 32, h: 32, opensAfter: 'ed2' },
+      { id: 'x3', kind: 'boardwalk', x: 1168, y: 160, w: 32, h: 32, opensAfter: 'ed3' },
+      { id: 'x4', kind: 'pass', x: 1488, y: 80, w: 16, h: 32, opensAfter: 'ed4', style: 'grey' },
+      { id: 'x5', kind: 'drift', x: 1808, y: 128, w: 16, h: 32, opensAfter: 'ed5' },
     ],
     NODES: [
       { kind: 'iron', x: 92, y: 54 },
       { kind: 'copper', x: 130, y: 138 },
-      { kind: 'quartz', x: 250, y: 178 },
+      { kind: 'quartz', x: 250, y: 178 },     // moves to the canyon when tier 3 lands
+      { kind: 'stone', x: 752, y: 166 },
+      { kind: 'coal', x: 1296, y: 118 },
+      { kind: 'oil', x: 1616, y: 118 },
+      { kind: 'titan', x: 2016, y: 54 },
     ],
   };
 
@@ -111,8 +219,19 @@
 
   const PICKUP_CAP = 100; // automated benches refill you to this on approach
 
-  const WORLD_W = 528; // 33 x 15 tiles of 16px
+  const WORLD_W = 2128; // 133 x 15 tiles of 16px: meadow 33 + five regions of 20
   const WORLD_H = 240;
+  const TILE = 16;
+
+  // a crossing opens once the edition it names has been passed; naming an
+  // edition that doesn't exist yet keeps it honestly closed
+  function crossingOpen(profile, c) {
+    const i = MILESTONES.findIndex((m) => m.id === c.opensAfter);
+    return i !== -1 && (profile.milestoneIdx || 0) > i;
+  }
+  function regionAt(px) {
+    return MAP.REGIONS.find((r) => px >= r.x && px < r.x + r.w) || MAP.REGIONS[0];
+  }
 
   function available(profile) {
     return STATIONS.filter((s) => profile.unlockedCount >= s.unlockAt);
@@ -179,10 +298,10 @@
 
   window.CHAIN = {
     STATIONS, BELTS, PLOTS, SCENERY, MAP, MILESTONES,
-    WORLD_W, WORLD_H, PICKUP_CAP, beltKey,
+    WORLD_W, WORLD_H, TILE, PICKUP_CAP, beltKey,
     available, get, plotById, resolvePositions, freePlots,
     affordable, isBuilt, kitUnlocked, pendingKit, currentMilestone, canDeliver,
-    canUpgrade, nextBelt,
+    canUpgrade, nextBelt, crossingOpen, regionAt,
     SET_AZ, SET_BUKI, SET_VEDI,
   };
 })();

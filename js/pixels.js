@@ -15,17 +15,41 @@
     orange: '#e8834a', red: '#d84f4f', green: '#6cc46c',
     glow: '#ffd27f',
     brass1: '#c99a35', brass2: '#f2c14e', brass3: '#ffe08a',
-    // the land
+    // the land — legacy keys (props, vignette, old drawers)
     grass1: '#6cbf5a', grass2: '#5fae4f', grass3: '#86d370', grass4: '#549c46',
     dirt1: '#c2955f', dirt2: '#a87f4d', dirt3: '#8f6a3e',
     water1: '#4ba8d8', water2: '#3b8ec4', water3: '#bfe8f5',
     leaf1: '#3f9147', leaf2: '#5cb457', leaf3: '#2f7038',
     trunk: '#7a5638', trunk2: '#5d4128',
     rock1: '#9aa0ab', rock2: '#7c828e', rock3: '#c6ccd6',
+    // terrain kit (tiles.js) — SNES FF3-USA reference, one notch brighter.
+    // 5-bit-ish steps; every ground kind is a 3–4 colour ramp + one outline.
+    tOut: '#0c1a0c',                                    // terrain outline (green-black)
+    gA: '#2c9c3c', gB: '#3cac4c', gC: '#1c7c2c', gD: '#10561c',            // grass
+    dA: '#a07848', dB: '#b88c58', dC: '#80603c', dD: '#584028',            // worn dirt
+    sA: '#d8c488', sB: '#e8d8a0', sC: '#b8a068',                           // sand
+    wA: '#184c60', wB: '#2c7080', wC: '#0c3444', wF: '#a8dce0', wO: '#081c24', // water
+    pA: '#98a080', pB: '#b0b898', pC: '#6c7458', pD: '#484c38',            // paved pad (sage cobble)
+    rA: '#8c8478', rB: '#a49c8c', rC: '#6c6458', rD: '#484038',            // rock floor / scree
+    cA: '#c8a870', cB: '#a08050', cC: '#705838', cD: '#403018', cO: '#181008', // cliff, tan
+    kA: '#b0b0b8', kB: '#888890', kC: '#5c5c68', kD: '#343440',            // cliff, grey stone
+    vA: '#8880a0', vB: '#5c5878', vC: '#3c3854', vD: '#201c30',            // cliff, violet canyon
+    hA: '#6c6480', hB: '#847c98', hC: '#4c4460', hD: '#302c40',            // shale canyon floor
+    mA: '#587040', mB: '#6c8450', mC: '#405030', mD: '#2c4c48', mE: '#8ca060', // marsh
+    bA: '#8c6840', bB: '#a88050', bC: '#5c4028', bD: '#3c2818',            // boards / planks
+    xA: '#b89c68', xB: '#c8b078', xC: '#987c50', xD: '#6c5434',            // cracked earth
+    tA: '#141418', tB: '#2c2840', tC: '#403c58',                           // tar
+    nA: '#e8f0f8', nB: '#c8d8e8', nC: '#a0b8d0',                           // snow
+    iA: '#a0d0e0', iB: '#c0e8f0', iC: '#70a8c0',                           // ice
+    fA: '#6c9c6c', fB: '#d8e8dc', fC: '#4c7c50',                           // frost grass
     // ores
     ironore: '#8b93a3', ironore2: '#5f6674',
     copper: '#d8814e', copper2: '#a85c32',
     quartz: '#e59ae0', quartz2: '#c470c9', quartz3: '#f5c9f2',
+    stoneore: '#a8a49c', stoneore2: '#6c6864',
+    coal: '#303038', coal2: '#181820', coal3: '#585868',
+    oil: '#2c2438', oil2: '#141418', oil3: '#5c4c78',
+    titan: '#c8d0e0', titan2: '#8890a8', titan3: '#f0f4ff',
     // paper goods
     paper: '#f4ecd8', paper2: '#d8cba8',
     // the operator
@@ -154,16 +178,26 @@
     return c;
   }
 
-  // ---------- ore node patch 36x16 ----------
+  // ---------- ore node patch 36x16 — one per mine tier ----------
+  // [main, dark, light, ground] — ground is the stained soil the ore sits in
+  const ORE_LOOK = {
+    iron:   [P.ironore, P.ironore2, P.steel, P.dirt2],
+    copper: [P.copper, P.copper2, P.steel, P.dirt2],
+    stone:  [P.stoneore, P.stoneore2, P.cream2, P.rC],
+    quartz: [P.quartz, P.quartz2, P.quartz3, P.vB],
+    coal:   [P.coal, P.coal2, P.coal3, P.mC],
+    oil:    [P.oil, P.oil2, P.oil3, P.xC],
+    titan:  [P.titan, P.titan2, P.titan3, P.kB],
+  };
   function nodePatch(kind) {
     const [c, x] = canvas(36, 16);
-    // dirt oval
-    for (const [px, py, w, h] of [[4, 4, 28, 8], [8, 2, 20, 12], [2, 6, 32, 5]]) R(x, P.dirt2, px, py, w, h);
-    const main = kind === 'copper' ? P.copper : kind === 'quartz' ? P.quartz : P.ironore;
-    const dk = kind === 'copper' ? P.copper2 : kind === 'quartz' ? P.quartz2 : P.ironore2;
-    const lt = kind === 'quartz' ? P.quartz3 : P.steel;
+    const [main, dk, lt, ground] = ORE_LOOK[kind] || ORE_LOOK.iron;
+    // soil oval, outlined below (SNES ground objects sit in a shadowed dish)
+    for (const [px, py, w, h] of [[4, 5, 28, 8], [8, 3, 20, 12], [2, 7, 32, 5]]) R(x, P.tOut, px, py, w, h);
+    for (const [px, py, w, h] of [[4, 4, 28, 8], [8, 2, 20, 12], [2, 6, 32, 5]]) R(x, ground, px, py, w, h);
     const chunks = [[6, 6], [14, 3], [22, 7], [28, 4], [11, 10], [25, 11]];
     for (const [px, py] of chunks) {
+      R(x, P.tOut, px - 1, py + 3, 6, 1); R(x, P.tOut, px + 4, py, 1, 3);
       R(x, dk, px, py + 1, 4, 3);
       R(x, main, px, py, 4, 3);
       R(x, lt, px + 1, py, 1, 1);
@@ -171,25 +205,31 @@
     return c;
   }
 
-  // ---------- trees, rocks, flowers ----------
+  // ---------- trees, rocks, flowers (SNES town look: lumpy canopy, outline) ----------
   function tree(seed) {
-    const [c, x] = canvas(22, 28);
-    R(x, P.trunk2, 9, 18, 4, 9);
-    R(x, P.trunk, 9, 18, 2, 9);
-    disc(x, P.leaf3, 11, 11, 9);
-    disc(x, P.leaf1, 10, 10, 8);
-    disc(x, P.leaf2, 7, 7, 4);
-    R(x, P.grass3, 5, 5, 1, 1); R(x, P.grass3, 12, 3, 1, 1);
-    if (seed % 2) { R(x, P.leaf2, 15, 12, 3, 2); R(x, P.grass3, 16, 8, 1, 1); }
+    const [c, x] = canvas(24, 30);
+    const blobs = seed % 2
+      ? [[12, 12, 8], [6, 15, 5], [18, 14, 5], [11, 7, 5]]
+      : [[12, 11, 8], [7, 14, 6], [17, 15, 5], [13, 6, 5]];
+    // ground shadow, trunk (outlined), then canopy: outline → dark → mid → light caps
+    for (let dy = -2; dy <= 2; dy++) R(x, P.gD, 6 + Math.abs(dy), 27 + dy, 12 - Math.abs(dy) * 2, 1);
+    R(x, P.tOut, 9, 18, 6, 11); R(x, P.trunk2, 10, 18, 4, 10); R(x, P.trunk, 10, 18, 1, 9);
+    for (const [cx, cy, r] of blobs) disc(x, P.tOut, cx, cy + 1, r + 1);
+    for (const [cx, cy, r] of blobs) disc(x, P.gD, cx, cy + 1, r);
+    for (const [cx, cy, r] of blobs) disc(x, P.leaf3, cx, cy, r - 1);
+    for (const [cx, cy, r] of blobs) disc(x, P.leaf1, cx - 1, cy - 2, Math.max(1, r - 3));
+    for (const [cx, cy, r] of blobs) R(x, P.leaf2, cx - 2, cy - r + 1, 2, 1);
+    R(x, P.leaf2, 9, 4, 1, 1); R(x, P.leaf2, 6, 11, 1, 1);
     return c;
   }
   function rock(seed) {
     const [c, x] = canvas(16, 12);
-    R(x, P.rock2, 2, 4, 12, 7);
-    R(x, P.rock1, 3, 2, 9, 6);
-    R(x, P.rock3, 4, 2, 4, 2);
-    R(x, P.ink, 2, 10, 12, 1);
-    if (seed % 2) R(x, P.rock1, 12, 6, 3, 4);
+    const blobs = seed % 2 ? [[6, 7, 4], [11, 7, 3]] : [[8, 7, 5], [3, 8, 2]];
+    for (const [cx, cy, r] of blobs) disc(x, P.tOut, cx, cy + 1, r + 1);
+    for (const [cx, cy, r] of blobs) disc(x, P.rock2, cx, cy, r);
+    for (const [cx, cy, r] of blobs) disc(x, P.rock1, cx - 1, cy - 1, Math.max(1, r - 1));
+    for (const [cx, cy, r] of blobs) R(x, P.rock3, cx - 1, cy - r + 1, 2, 1);
+    R(x, P.rock2, 4, 10, 8, 1);
     return c;
   }
   function flower(seed) {
@@ -568,8 +608,8 @@
   // little welcome-card scene: the operator by the depot on grass
   function vignette() {
     const [c, x] = canvas(100, 48);
-    for (let ty = 0; ty < 4; ty++) for (let tx = 0; tx < 7; tx++) {
-      x.drawImage(tileGrass((tx * 7 + ty * 13) % 23), tx * 16, ty * 12);
+    for (let ty = 0; ty < 3; ty++) for (let tx = 0; tx < 7; tx++) {
+      x.drawImage(tileGrass((tx * 7 + ty * 13) % 23), tx * TILE, ty * TILE);
     }
     x.drawImage(flower(1), 10, 14); x.drawImage(flower(2), 84, 10);
     x.drawImage(tree(0), 2, 16);
@@ -593,6 +633,8 @@
   window.PIXELS = {
     P,
     TILE,
+    // drawing primitives shared with tiles.js (the terrain kit)
+    util: { canvas, R, disc, dr, tex, cachedTex },
     grassTex: (s) => tex(tileGrass(s)),
     dirtTex: (s) => tex(tileDirt(s)),
     waterTex: (f) => cachedTex('water:' + f, () => tileWater(f)),
@@ -611,10 +653,16 @@
     glowHaloTex: () => cachedTex('halo', glowHalo),
     propTex: (kind) => cachedTex('prop:' + kind, PROP_DRAW[kind]),
     plotTex: () => cachedTex('plot', plotMarker),
-    sceneryTex: (kind) => cachedTex('scenery:' + kind, SCENERY_DRAW[kind]),
+    // scenery: the meadow set lives here; region sets (pine, boulder, reeds…) in tiles.js
+    sceneryTex: (kind) => cachedTex('scenery:' + kind,
+      SCENERY_DRAW[kind] || (() => window.TILES.scenery(kind))),
     boardTex: (hasWork) => cachedTex('board:' + !!hasWork, () => noticeBoard(hasWork)),
     textTex: (str, fg) => cachedTex('t:' + fg + '|' + str, () => textCanvas(str, fg)),
     matIconURL: (kind) => matIcon(kind).toDataURL(),
+    // raw canvases for the dev proof page (dev/tiles.html) — no PIXI needed
+    nodeCanvas: nodePatch,
+    sceneryCanvas: (kind) => SCENERY_DRAW[kind] ? SCENERY_DRAW[kind]() : window.TILES.scenery(kind),
+    machineCanvas: machine, stationCanvas: station, characterCanvas: character,
     matIconTex: (kind) => tex(matIcon(kind)),
     pressTex: (frame) => tex(press(frame)),
     vignetteURL: () => vignette().toDataURL(),

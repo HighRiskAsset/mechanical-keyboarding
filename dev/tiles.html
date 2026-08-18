@@ -1,0 +1,157 @@
+<!doctype html>
+<!-- Terrain-kit proof sheet (dev only, not linked from the game).
+     Bakes small synthetic maps through TILES.bake so what you see is the real
+     autotile output, then POSTs a 3x PNG to serve.ps1's /upload for review.
+     Open: http://localhost:8123/dev/tiles.html  (optionally ?name=proof.png) -->
+<meta charset="utf-8">
+<title>terrain proof</title>
+<style>
+  body { margin: 0; background: #1a1a20; color: #ddd; font: 12px/1.4 monospace; }
+  #out { image-rendering: pixelated; display: block; margin: 8px; }
+  #log { padding: 8px; white-space: pre; }
+</style>
+<div id="log"></div>
+<canvas id="out"></canvas>
+<script src="../js/pixels.js"></script>
+<script src="../js/tiles.js"></script>
+<script>
+(async function () {
+  const T = TILES.T, SCALE = 3;
+  const [W, H] = [512, 720];
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  x.fillStyle = '#26262e'; x.fillRect(0, 0, W, H);
+  const label = (s, px, py) => { x.fillStyle = '#c9c9d4'; x.font = '7px monospace'; x.fillText(s, px, py); };
+
+  // bake a synthetic map and blit it (region base + ground rects + plateaus + walls)
+  function sample(px, py, tw, th, spec) {
+    const MAP = Object.assign({ REGIONS: [{ x: 0, w: tw * T, base: spec.base, cliff: spec.cliff || 'tan' }], GROUND: [], PLATEAUS: [], WALLS: [] }, spec);
+    const g = TILES.bake(MAP, tw * T, th * T);
+    // water beneath
+    for (const w of g.water) x.drawImage(TILES.fill('water', w.seed, 0), px + w.x, py + w.y);
+    for (const ch of g.chunks) x.drawImage(ch.canvas, px + ch.x, py);
+    for (const w of g.walls) x.drawImage(w.canvas, px + w.x, py + w.y);
+    return g;
+  }
+
+  // 1. fills
+  let cy = 10;
+  label('fills (4 seeds)', 4, cy - 2);
+  TILES.KIND_IDS.forEach((k, i) => {
+    for (let s = 0; s < 4; s++) x.drawImage(TILES.fill(k, s * 5 + 1, s % 2), 4 + i * 38 + (s % 2) * T, cy + 2 + Math.floor(s / 2) * T);
+    label(k, 4 + i * 38, cy + 42);
+  });
+  cy += 50;
+
+  // 2. spill pools: over-kind base with a pool of under-kind (all edges + corners)
+  label('edge spills: base kind around a 3x2 pool of the lower kind', 4, cy - 2);
+  const pairs = [
+    ['grass', 'dirt'], ['grass', 'water'], ['grass', 'sand'], ['sand', 'water'],
+    ['grass', 'rock'], ['rock', 'dirt'], ['snow', 'rock'], ['pad', 'grass'],
+    ['board', 'marsh'], ['grass', 'marsh'], ['frost', 'snow'], ['crack', 'tar'],
+  ];
+  pairs.forEach(([over, under], i) => {
+    const px = 4 + (i % 6) * 84, py = cy + 2 + Math.floor(i / 6) * 70;
+    sample(px, py, 5, 4, { base: over, GROUND: [{ kind: under, x: T, y: T, w: 3 * T, h: 2 * T }] });
+    label(over + '>' + under, px, py + 64 + 6);
+  });
+  cy += 150;
+
+  // 3. mixed: grass base, dirt path crossing a sand+water pond, pad plate, rock patch
+  label('mixed meadow sample', 4, cy - 2);
+  sample(4, cy + 2, 14, 6, {
+    base: 'grass',
+    GROUND: [
+      { kind: 'dirt', x: 0, y: 2 * T, w: 14 * T, h: T },
+      { kind: 'sand', x: 6 * T, y: 0, w: 4 * T, h: 6 * T },
+      { kind: 'water', x: 7 * T, y: T, w: 2 * T, h: 4 * T },
+      { kind: 'pad', x: T, y: 4 * T, w: 3 * T, h: 2 * T },
+      { kind: 'rock', x: 11 * T, y: 0, w: 3 * T, h: 2 * T },
+    ],
+  });
+  cy += 6 * T + 12;
+
+  // 4. walls + plateaus
+  label('rock walls (tan / grey)  |  plateau: face 2 w/ stairs + W slope  |  face 1 on rock', 4, cy - 2);
+  sample(4, cy + 2, 8, 5, {
+    base: 'grass',
+    WALLS: [{ x: T, y: T, w: 5 * T, h: T }, { x: T, y: 2 * T, w: T, h: 2 * T }, { x: 5 * T, y: 2 * T, w: T, h: 2 * T }, { x: 3 * T, y: 3 * T, w: T, h: 2 * T }, { x: 7 * T, y: 4 * T, w: T, h: T }],
+  });
+  sample(4 + 8 * T + 6, cy + 2, 6, 5, {
+    base: 'rock', cliff: 'grey',
+    WALLS: [{ x: 0, y: 3 * T, w: 5 * T, h: T }, { x: 4 * T, y: 0, w: T, h: 4 * T }],
+  });
+  sample(4 + 14 * T + 12, cy + 2, 8, 6, {
+    base: 'grass',
+    PLATEAUS: [{ x: T, y: 0, w: 5 * T, h: 2 * T, face: 2, ramps: [{ x: 3 * T, y: 2 * T, side: 'S' }, { x: T, y: T, side: 'W' }] }],
+    GROUND: [{ kind: 'dirt', x: 3 * T, y: 4 * T, w: T, h: 2 * T }],
+  });
+  sample(4 + 22 * T + 18, cy + 2, 8, 6, {
+    base: 'rock', cliff: 'grey',
+    PLATEAUS: [{ x: T, y: T, w: 4 * T, h: 2 * T, face: 1, ramps: [{ x: 4 * T, y: 2 * T, side: 'E' }] }],
+    GROUND: [{ kind: 'grass', x: 2 * T, y: T, w: 2 * T, h: 2 * T }],
+  });
+  cy += 6 * T + 12;
+
+  // 5. crossings
+  label('crossings: bridge open/closed · boardwalk open/closed · rockslide tan/grey/violet · snowdrift', 4, cy - 2);
+  let cx0 = 4;
+  const putX = (spec, over) => {
+    if (!spec) { cx0 += 40; return; }
+    if (over) x.drawImage(over, cx0, cy + 2);
+    x.drawImage(spec.c, cx0, cy + 2 + 4 - spec.dy);
+    cx0 += spec.c.width + 8;
+  };
+  const waterRow = (w) => { const [cc, xx] = PIXELS.util.canvas(w * T, 2 * T + 4); for (let j = 0; j < 2; j++) for (let i = 0; i < w; i++) xx.drawImage(TILES.fill('water', i + j * 3, 0), i * T, 4 + j * T); return cc; };
+  const marshRow = waterRow;
+  putX(TILES.crossing('bridge', 2, 2, true), waterRow(2)); putX(TILES.crossing('bridge', 2, 2, false), waterRow(2));
+  putX(TILES.crossing('boardwalk', 2, 2, true), marshRow(2)); putX(TILES.crossing('boardwalk', 2, 2, false), marshRow(2));
+  putX(TILES.crossing('pass', 1, 2, false, 'tan', 1)); putX(TILES.crossing('pass', 1, 2, false, 'grey', 2)); putX(TILES.crossing('pass', 2, 1, false, 'violet', 3));
+  putX(TILES.crossing('drift', 1, 2, false, 'snow', 4));
+  cy += 48;
+
+  // 6. scenery + ore patches
+  label('scenery: pine snowpine deadtree boulder boulder2 spire crystal scrub reeds tarpool · meadow tree/tree2/rock · ore ×7', 4, cy - 2);
+  cx0 = 4;
+  for (const k of ['pine', 'snowpine', 'deadtree', 'boulder', 'boulder2', 'spire', 'crystal', 'scrub', 'reeds', 'tarpool', 'tree', 'tree2', 'rock', 'rock2']) {
+    const cc = PIXELS.sceneryCanvas(k);
+    for (let i = 0; i < 3; i++) x.drawImage(TILES.fill('grass', i * 4 + 3), cx0 - 2 + i * T, cy + 36 - T);
+    x.drawImage(cc, cx0, cy + 36 - cc.height);
+    cx0 += cc.width + 6;
+  }
+  cy += 44;
+  cx0 = 4;
+  for (const k of ['iron', 'copper', 'stone', 'quartz', 'coal', 'oil', 'titan']) {
+    x.drawImage(TILES.fill('grass', 2), cx0 - 2, cy); x.drawImage(TILES.fill('grass', 3), cx0 + 14, cy); x.drawImage(TILES.fill('grass', 4), cx0 + 30, cy);
+    x.drawImage(PIXELS.nodeCanvas(k), cx0, cy + 2);
+    cx0 += 44;
+  }
+  cy += 26;
+
+  // 7. region ground samples with the machine palette on top (legibility check)
+  label('region grounds under a mine + a smelter + the operator', 4, cy - 2);
+  const regions = [['grass', 'tan'], ['rock', 'grey'], ['dirt', 'violet'], ['marsh', 'grey'], ['crack', 'tan'], ['snow', 'snow']];
+  regions.forEach(([base, cliff], i) => {
+    const px = 4 + i * 84, py = cy + 2;
+    sample(px, py, 5, 4, { base, cliff, GROUND: base === 'rock' ? [{ kind: 'grass', x: 3 * T, y: 2 * T, w: 2 * T, h: 2 * T }] : base === 'marsh' ? [{ kind: 'water', x: 3 * T, y: 0, w: 2 * T, h: 2 * T }] : base === 'crack' ? [{ kind: 'tar', x: 3 * T, y: 2 * T, w: 2 * T, h: 2 * T }] : base === 'snow' ? [{ kind: 'ice', x: 3 * T, y: 0, w: 2 * T, h: 2 * T }] : [] });
+    x.drawImage(PIXELS.machineCanvas(1, 0), px + 4, py + 6);
+    x.drawImage(PIXELS.characterCanvas('side', 0), px + 36, py + 30);
+    label(base, px, py + 64 + 6);
+  });
+  cy += 80;
+
+  // show + upload
+  const out = document.getElementById('out');
+  out.width = W * SCALE; out.height = H * SCALE;
+  const ox = out.getContext('2d'); ox.imageSmoothingEnabled = false;
+  ox.drawImage(c, 0, 0, W * SCALE, H * SCALE);
+  const name = new URLSearchParams(location.search).get('name') || 'proof.png';
+  try {
+    const blob = await (await fetch(out.toDataURL('image/png'))).blob();
+    const res = await fetch('/upload?name=' + encodeURIComponent(name), { method: 'POST', body: blob });
+    document.getElementById('log').textContent = 'uploaded ' + name + ': ' + res.status + ' ' + await res.text();
+  } catch (e) {
+    document.getElementById('log').textContent = 'upload failed: ' + e;
+  }
+})().catch((e) => { document.getElementById('log').textContent = 'ERROR ' + (e.stack || e); });
+</script>

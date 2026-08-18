@@ -191,8 +191,75 @@ course is a later question) · a pylon/"typing is power" visual (never a
 mechanic; dropped as factory-noise).
 
 **Build order:** 0 grid ✔ → 1 autotile ground/shore/cliff/ramp kit applied to
-the meadow → 2 regions east + 4 ore patches + ~6 plots + closed crossings →
-3 landmarks → 4 ambient life → stretch: bundle board + partial-fill milestones.
+the meadow ✔ → 2 regions east + 4 ore patches + ~6 plots + closed crossings ✔
+→ 3 landmarks → 4 ambient life → stretch: bundle board + partial-fill milestones.
+
+### Environment build 1–2 — SHIPPED 2026-08-18
+
+- **`js/tiles.js` — the terrain kit.** Ground kinds (grass, frost, dirt, sand,
+  pad = cobbles, rock, shale, marsh, board, crack, tar, snow, ice, water), each a
+  procedural 16×16 fill in the FF3 idiom (jittered lattice of 2px ticks). Edges
+  autotile by **priority spill**: a higher kind spills a seeded jagged fringe
+  onto its lower neighbour — grass = tufted overhang + green-black outline +
+  hanging blades; sand/snow/dirt/pad = soft; rock/shale/ice = outlined; board =
+  straight seam + shadow. Water under any spill gets a pale foam rim. Cobble
+  pads sit BELOW grass so the grass overhangs them (FF3 paths), low contrast.
+  **The cliff band (user ruling 2026-08-18: FF3 never shows a bare edge)**:
+  every level change is a band of stacked boulders, one tile thick per row,
+  unwalkable — one renderer for plateau **rims** (the N/E/W ring tiles of a
+  plateau bake as solid rim), south **faces** (1–2 rows below the plateau) and
+  free-standing **walls**. Per side: connected → the mass runs straight through;
+  facing the plateau interior → its ground overhangs in dark tufts; open →
+  the round stones themselves make the edge — a scalloped crest of lit
+  boulder caps on top (never a flat line that could read as a surface), a
+  bumpy dark foot below, E = shadow line, plus shade cast on the ground
+  below/east. Stairs cut a face; sideways stairs cut a W/E rim. Band tiles
+  are sprites sorted by their TOP edge (SNES low-priority rule): a band tile
+  beside the operator draws under them, one below draws over — no clipping.
+  Closed crossing heaps and low rock-like scenery (rock, boulder, crystal,
+  spire, scrub, reeds, tarpool) sort the same way; trees sort by their base
+  (you walk under the crown). Scenery is tile-based: `sc(kind, tx, ty)` names
+  the tile under its base (wide kinds span 2), the sprite is drawn centred on
+  that footprint with its base on the tile bottom, and the hitbox IS the
+  footprint. The border forest is two staggered rows on the grid (back row on
+  odd columns, front row on even columns with its trunks on the north limit),
+  so no bare strip reads as walkable; bands end in their scalloped cap
+  against the tree bases (running them up under the trees looked wrong).
+  Cliff palettes: tan, grey, violet, snow (+ drift for snowdrifts).
+  **Crossings**: bridge / boardwalk (open = walk on it) and pass / drift
+  (closed = rockslide or snowdrift heap; open = bare ground). Region scenery:
+  pine, snowpine, deadtree, boulder, spire, crystal, scrub, reeds, tarpool;
+  meadow tree/rock restyled with outline + lumpy canopy. `bake()` turns
+  `CHAIN.MAP` into a tile grid (kind / elev / flags) and ground canvases per
+  512px chunk; `passable()` is the walk rule (solid blocks; elevation change
+  blocks unless one side is a ramp).
+- **`CHAIN.MAP` schema**: `TREELINE`, `REGIONS` (x, w, base kind, cliff
+  palette, treeline kinds), `GROUND` rects (kind), `PLATEAUS` (face height,
+  ramps S/W/E; the walkable top is the rect inset one tile on N/E/W — author
+  with that in mind), `WALLS`, `CROSSINGS` (kind, rect, `opensAfter` edition
+  id, style), `NODES` ×7. `crossingOpen(profile, c)` — a crossing naming an
+  edition that doesn't exist yet is honestly closed.
+- **The world**: 2128×240 (133×15 tiles). Meadow (grass, tan) with the pond
+  + sand shore, worn road hub→depot with spurs, cobble pads under hub/depot,
+  a **knoll** (plot p8) with face + stairs; then a tan rock wall with a gate
+  (x1, opens after Издание I). Quarry hills (rock, tan): two terraces (p13
+  on top, the stone seam on the other), grass tufts on stone. Crystal canyon
+  (shale, violet): the stream with a sand bank, a broken bridge (x2), north
+  wall face, south boulder wall, crystals. Coal bog (marsh, grey): bog water
+  strip with a washed-out boardwalk (x3), pools, plank walks, reeds, dead
+  trees, the coal seam. Oil flats (cracked earth, tan): grey rockslide in a
+  tan wall (x4), tar pools, scrub, a mesa with side stairs, the oil seam.
+  Titanium peaks (snow): a snowdrift (x5), frost patches, an ice pond,
+  snowpines, a shelf with a 2-row snow-capped face + stairs and the titanium
+  seam. Six new plots p13–p18, one per region. Existing stations untouched;
+  the quartz node stays in the meadow until tier 3 lands.
+- **`dev/tiles.html`** — proof sheet: bakes synthetic maps through the real
+  `bake()` and POSTs a 3× PNG to `/upload` for review. Not linked from the game.
+- Verified: no console errors; 17 passability probes (faces, water, walls,
+  stairs up/down, side stairs, lips) behave; bake ≈ 8 ms warm.
+- Known follow-ups (steps 3–5): landmarks per region (waterfall at the
+  stream head, summit), ambient life, tune cobble contrast, HUD rows for the
+  four new materials when their machines exist.
 
 ## THE TECH TREE (v2, 2026-08-11 — 7 tiers × 2 lessons)
 
@@ -317,10 +384,14 @@ Fitts & Posner automaticity = the automation metaphor.
 ## Files
 
 `js/engine.js` learning engine · `js/language-ru.js` RU course data ·
-`js/layout-ru.js` ЙЦУКЕН · `js/chain.js` world/economy data ·
-`js/factory.js` Pixi world · `js/pixels.js` sprite kit · `js/app.js`
-orchestration · `js/audio.js` synth · `js/i18n.js` EN/РУ · `serve.ps1` dev
-server (+ POST /upload for QA frames) · `libs/pixi.min.js` vendored Pixi 8.
+`js/layout-ru.js` ЙЦУКЕН · `js/chain.js` world/economy data (incl. `MAP`) ·
+`js/factory.js` Pixi world · `js/pixels.js` sprite kit + the one palette ·
+`js/tiles.js` terrain kit (fills, autotile spills, walls, faces, crossings,
+region scenery, `bake`) · `js/app.js` orchestration · `js/audio.js` synth ·
+`js/i18n.js` EN/РУ · `serve.ps1` dev server (+ POST /upload for QA frames) ·
+`dev/tiles.html` terrain proof sheet · `libs/pixi.min.js` vendored Pixi 8.
+`assets/inbox/` (upload target) and `assets/ref/` (style references, study
+only) are gitignored.
 
 The `-ru` suffix is the convention, not an afterthought (invariant 5): a new
 course is a new `language-<code>.js` + `layout-<code>.js` pair and nothing
