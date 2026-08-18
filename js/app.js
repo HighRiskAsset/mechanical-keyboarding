@@ -5,6 +5,11 @@
 (function () {
   'use strict';
 
+  // the loading card (index.html) has been on screen since first paint; the
+  // scripts have now arrived — light its second cell
+  const loadingCard = document.getElementById('loading');
+  if (loadingCard) loadingCard.classList.add('s2');
+
   const L = window.LANG_RU;
   const LAYOUT = window.LAYOUT_RU;
   const E = window.ENGINE;
@@ -1225,13 +1230,18 @@
 
   // ---------- boot ----------
   // The world waits for a choice: the picker opens first (last-played world
-  // focused — Enter and you're back), then startMap raises it.
+  // focused — Enter and you're back), then startMap raises it. Until then the
+  // loading card holds the overlay; its third cell lights when the renderer
+  // is up, and the picker (which bakes its minimaps first) replaces it.
   applyI18n();
   buildKeyboard();
   refreshStats();
   refreshSoundBtn();
   FACTORY.init(document.getElementById('factory-mount')).then(() => {
+    if (loadingCard) loadingCard.classList.add('s3');
     clearLine();
-    showMapSelect();
+    // a beat so the lit cell can paint before the (synchronous) minimap bake —
+    // a timeout, not rAF, so a page loading in a background tab still arrives
+    setTimeout(showMapSelect, 30);
   });
 })();

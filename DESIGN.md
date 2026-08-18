@@ -105,6 +105,14 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   rail reads before any text. Language toggle and reset live only here — off
   the main screen. The header keeps sound + stats; the footer keeps passport
   + summary.
+- **Loading card (2026-08-18)**: static markup in `index.html` inside the
+  overlay, on screen from the first paint — before pixi and the game scripts
+  have downloaded — so a slow load reads as busy, never frozen. Wordmark, a
+  three-cell pixel bar (cell 1 lit at paint, 2 when `app.js` runs, 3 when the
+  renderer is up; unlit cells pulse), «Loading… waking the machines / Not
+  frozen — the game starts in a moment», and a reload hint that reveals
+  itself only after 20 s. Language comes from a two-line inline script that
+  reads the saved interface preference. The map picker replaces it.
 - **Maps — one save per world (user ruling 2026-08-18).** `CHAIN.MAPS` is a
   registry of worlds; the chain (stations, recipes, milestones, belts) is
   shared, the ground is not: each map brings its own `MAP` rects, `PLOTS`,

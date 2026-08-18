@@ -326,6 +326,32 @@ body.night { background: #0a141a; }
 body.night .keycap:not(.hint) { background: #0d161c; color: #2b3d46; border-bottom-color: #16232b; }
 body.night .keycap.home::after { background: #23343d; }
 
+/* ---------- loading card: static markup in index.html, on screen from the
+   first paint. Cells light as stages pass (see index.html); the unlit ones
+   pulse so a slow load never looks frozen; the reload hint waits 20 s. ---------- */
+.loading { padding: 8px 0 4px; }
+.load-mark { font-size: 20px; letter-spacing: 4px; color: var(--brass); font-weight: bold; }
+.load-mark span { color: var(--ink-dim); }
+.load-bar { display: flex; gap: 6px; justify-content: center; margin: 24px 0 18px; }
+.load-bar i {
+  width: 22px;
+  height: 10px;
+  background: #2c4a58;
+  animation: load-pulse 1.2s ease-in-out infinite;
+}
+.load-bar i:nth-child(2) { animation-delay: 0.25s; }
+.load-bar i:nth-child(3) { animation-delay: 0.5s; }
+.load-bar i:nth-child(1),
+.loading.s2 .load-bar i:nth-child(2),
+.loading.s3 .load-bar i:nth-child(3) { background: var(--brass); animation: load-glow 1.6s ease-in-out infinite; }
+@keyframes load-pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+@keyframes load-glow { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.35); } }
+.load-text { font-size: 16px; }
+.load-note { color: var(--ink-dim); font-size: 14px; }
+.load-hint { color: var(--ink-dim); font-size: 13px; opacity: 0; animation: load-reveal 0.6s ease 20s forwards; }
+@keyframes load-reveal { to { opacity: 1; } }
+html[lang="ru"] .loading [lang="en"], html:not([lang="ru"]) .loading [lang="ru"] { display: none; }
+
 /* ---------- the map picker: one card per world, each with its own save ---------- */
 .map-cards { display: flex; gap: 14px; justify-content: center; margin: 18px 0 4px; }
 .map-card {

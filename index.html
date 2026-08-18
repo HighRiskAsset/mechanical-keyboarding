@@ -6,6 +6,13 @@
 <title>Mechanical Keyboarding</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="css/style.css">
+<script>
+  // the loading card below is static markup, painted before the game's scripts
+  // arrive; this only picks its language from the saved interface preference
+  try {
+    if ((localStorage.getItem('mk.uilang') || localStorage.getItem('transsib.uilang')) === 'ru') document.documentElement.lang = 'ru';
+  } catch (e) { /* default stands */ }
+</script>
 </head>
 <body>
   <header id="topbar">
@@ -43,9 +50,30 @@
     <button id="btn-summary" class="link-btn" data-i18n="btnSummary"></button>
   </footer>
 
-  <!-- overlays -->
-  <div id="overlay" class="hidden">
-    <div id="overlay-card"></div>
+  <!-- overlays. The overlay opens ON the loading card: it is on screen from
+       the first paint, before pixi and the game scripts have downloaded, so
+       a slow load reads as busy, not frozen. Its three cells light as the
+       page paints → the scripts arrive (app.js) → the world is ready; then
+       the map picker replaces it. -->
+  <div id="overlay">
+    <div id="overlay-card">
+      <div id="loading" class="loading">
+        <div class="load-mark">MECHANICAL <span>KEYBOARDING</span></div>
+        <div class="load-bar"><i></i><i></i><i></i></div>
+        <p class="load-text">
+          <span lang="en">Loading… waking the machines.</span>
+          <span lang="ru">Загрузка… машины просыпаются.</span>
+        </p>
+        <p class="load-note">
+          <span lang="en">Not frozen — the game starts in a moment.</span>
+          <span lang="ru">Не зависло — игра начнётся через мгновение.</span>
+        </p>
+        <p class="load-hint">
+          <span lang="en">Still loading? If nothing changes for a while, reload the page.</span>
+          <span lang="ru">Всё ещё грузится? Если долго ничего не меняется, обновите страницу.</span>
+        </p>
+      </div>
+    </div>
   </div>
 
   <script src="libs/pixi.min.js"></script>
