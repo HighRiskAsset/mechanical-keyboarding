@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mechanical Keyboarding Tech Tree</title>
+<style>
+:root{
+  --bg:#EDF1EF; --card:#FFFFFF; --card2:#F6F8F7; --ink:#17242A; --muted:#5D6C71; --line:#D3DBD7; --line2:#E4EAE7;
+  --accent:#177F7A; --accent-ink:#0E5C58; --accent-bg:#DDF0EE; --gold:#B8871A; --gold-bg:#FBF0D3;
+  --fe:#B4573C; --cu:#D97F27; --st:#7A8BA4; --qz:#8F6FD1; --co:#4A4F58; --oi:#33407A; --tool:#B8871A;
+  --fe-bg:#F8E3DC; --cu-bg:#FBEAD5; --st-bg:#E5EAF1; --qz-bg:#ECE5FA; --co-bg:#E1E3E7; --oi-bg:#E1E4F3; --tool-bg:#FBF0D3;
+  --hand:#F1E7C9; --auto:#B9E3DF; --retool:#F3D2C6;
+  --display:"Bahnschrift","Barlow Condensed","Roboto Condensed","Arial Narrow","Segoe UI",sans-serif;
+  --body:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  --mono:"Cascadia Mono","Consolas","SF Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1719; --card:#182124; --card2:#1D272B; --ink:#E5ECE9; --muted:#9AA9AB; --line:#2B383C; --line2:#233034;
+    --accent:#45BDB5; --accent-ink:#8ADCD6; --accent-bg:#173835; --gold:#E2B23F; --gold-bg:#3A2F12;
+    --fe:#E68A70; --cu:#F0A657; --st:#A9B7CB; --qz:#C3A9F2; --co:#B3B8C2; --oi:#9BA6E6; --tool:#E2B23F;
+    --fe-bg:#3B241D; --cu-bg:#3D2A14; --st-bg:#232C38; --qz-bg:#2C2440; --co-bg:#2A2E34; --oi-bg:#22273F; --tool-bg:#3A2F12;
+    --hand:#3A3421; --auto:#1B4A46; --retool:#4A2A22;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1719; --card:#182124; --card2:#1D272B; --ink:#E5ECE9; --muted:#9AA9AB; --line:#2B383C; --line2:#233034;
+  --accent:#45BDB5; --accent-ink:#8ADCD6; --accent-bg:#173835; --gold:#E2B23F; --gold-bg:#3A2F12;
+  --fe:#E68A70; --cu:#F0A657; --st:#A9B7CB; --qz:#C3A9F2; --co:#B3B8C2; --oi:#9BA6E6; --tool:#E2B23F;
+  --fe-bg:#3B241D; --cu-bg:#3D2A14; --st-bg:#232C38; --qz-bg:#2C2440; --co-bg:#2A2E34; --oi-bg:#22273F; --tool-bg:#3A2F12;
+  --hand:#3A3421; --auto:#1B4A46; --retool:#4A2A22;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 var(--body);-webkit-font-smoothing:antialiased}
+a{color:var(--accent-ink)}
+.wrap{max-width:1180px;margin:0 auto;padding:36px 28px 80px}
+header{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:end;border-bottom:2px solid var(--ink);padding-bottom:20px;margin-bottom:28px}
+.eyebrow{font:600 12px/1 var(--display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+h1{font:700 44px/1 var(--display);letter-spacing:-.01em;margin:0 0 10px;text-wrap:balance}
+.lede{max-width:62ch;margin:0;color:var(--muted);font-size:16px}
+.stats{display:grid;grid-template-columns:repeat(4,auto);gap:10px 26px;font-variant-numeric:tabular-nums}
+.stat b{display:block;font:700 28px/1 var(--display);color:var(--accent-ink)}
+.stat span{font:600 11px/1.3 var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+h2{font:700 26px/1.1 var(--display);margin:44px 0 6px;letter-spacing:-.005em}
+h2 .tag{vertical-align:middle;margin-left:10px}
+h2 + p.sub{margin:0 0 16px;color:var(--muted);max-width:76ch}
+h3{font:700 16px/1.2 var(--display);margin:0 0 6px;letter-spacing:.02em}
+p{max-width:76ch}
+section > p{margin:8px 0}
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-top:14px}
+.rule{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:14px 16px}
+.rule h3{color:var(--accent-ink)}
+.rule p{margin:0;font-size:14px;color:var(--ink)}
+.rule .ex{margin-top:8px;font:12.5px/1.45 var(--mono);color:var(--muted)}
+figure{margin:18px 0 0;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:16px}
+figure svg{display:block;max-width:100%;height:auto;color:var(--ink)}
+figcaption{margin-top:10px;font-size:13.5px;color:var(--muted);max-width:90ch}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:10px;font-size:13px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:-1px;border:1px solid transparent}
+.dot.fe{background:var(--fe)} .dot.cu{background:var(--cu)} .dot.st{background:var(--st)} .dot.qz{background:var(--qz)} .dot.co{background:var(--co)} .dot.oi{background:var(--oi)} .dot.tool{background:var(--tool)}
+.k{stroke-width:1.2}
+.k.fe{fill:var(--fe-bg);stroke:var(--fe)} .k.cu{fill:var(--cu-bg);stroke:var(--cu)} .k.st{fill:var(--st-bg);stroke:var(--st)}
+.k.qz{fill:var(--qz-bg);stroke:var(--qz)} .k.co{fill:var(--co-bg);stroke:var(--co)} .k.oi{fill:var(--oi-bg);stroke:var(--oi)}
+.k.tool{fill:var(--tool-bg);stroke:var(--tool)} .k.inert{fill:none;stroke:var(--line)}
+.kg{font:600 19px var(--mono);fill:var(--ink)} .kg.small{font-size:12px;fill:var(--muted)}
+.kl{font:600 11px var(--display);fill:var(--muted);letter-spacing:.04em}
+.kb{stroke:none} .kb.fe{fill:var(--fe)} .kb.cu{fill:var(--cu)} .kb.st{fill:var(--st)} .kb.qz{fill:var(--qz)} .kb.co{fill:var(--co)} .kb.oi{fill:var(--oi)} .kb.tool{fill:var(--tool)}
+.kbt{font:700 10px var(--mono);fill:#fff}
+.chip{display:inline-flex;align-items:center;gap:.4em;padding:.12em .5em;border-radius:4px;border:1px solid var(--line);background:var(--card2);font:12.5px/1.35 var(--mono);white-space:nowrap;margin:2px 3px 2px 0}
+.chip b{font-weight:700;letter-spacing:.06em}
+.chip small{font:600 10.5px/1 var(--display);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.chip.fe{background:var(--fe-bg);border-color:var(--fe)} .chip.cu{background:var(--cu-bg);border-color:var(--cu)} .chip.st{background:var(--st-bg);border-color:var(--st)}
+.chip.qz{background:var(--qz-bg);border-color:var(--qz)} .chip.co{background:var(--co-bg);border-color:var(--co)} .chip.oi{background:var(--oi-bg);border-color:var(--oi)} .chip.tool{background:var(--tool-bg);border-color:var(--tool)}
+.chip.kit{background:var(--accent-bg);border-color:var(--accent);font-family:var(--display);font-weight:700;font-size:12.5px;letter-spacing:.02em}
+.chip.pre{border-style:dashed}
+.chip.auto{background:var(--auto);border-color:var(--accent)}
+.chip.belt{background:var(--card2);border-color:var(--muted);font-size:12px}
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--card);margin-top:14px}
+table.board{border-collapse:collapse;min-width:1420px;width:100%}
+table.board th,table.board td{vertical-align:top;text-align:left;padding:10px 10px;border-bottom:1px solid var(--line2);border-right:1px solid var(--line2);font-size:13px}
+table.board thead th{position:sticky;top:0;background:var(--card);border-bottom:2px solid var(--ink);z-index:1}
+table.board th:first-child,table.board td:first-child{position:sticky;left:0;background:var(--card2);width:112px;min-width:112px;font:700 12px/1.3 var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);z-index:2}
+table.board thead th:first-child{z-index:3}
+table.board tr:last-child td{border-bottom:none}
+.tier{font:700 15px/1.1 var(--display)}
+.tier small{display:block;font:600 11px/1.3 var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+.rcp{margin:0 0 8px;padding:6px 8px;border-left:3px solid var(--line);background:var(--card2);border-radius:0 4px 4px 0}
+.rcp .io{font:12.5px/1.4 var(--mono)}
+.rcp .io .arrow{color:var(--muted);margin:0 .3em}
+.rcp .out{font-weight:700}
+.rcp .gr{display:inline-block;margin-left:.4em;font:600 10.5px/1 var(--display);letter-spacing:.06em;text-transform:uppercase;color:var(--accent-ink);background:var(--accent-bg);padding:.25em .45em;border-radius:3px;vertical-align:1px}
+.rcp .smp{margin-top:3px;font:12.5px/1.4 var(--mono);color:var(--muted)}
+.rcp.new{border-left-color:var(--accent)}
+.rcp.refresh{border-left-color:var(--gold)}
+.note{font-size:12.5px;color:var(--muted)}
+.exam{font:600 13px/1.4 var(--display)}
+.exam b{font-size:20px;color:var(--accent-ink);font-variant-numeric:tabular-nums}
+.hours{display:flex;gap:3px;margin-top:14px}
+.hours div{background:var(--accent-bg);border:1px solid var(--accent);border-radius:4px;padding:8px 10px;font:600 12px/1.3 var(--display);letter-spacing:.04em;text-transform:uppercase;color:var(--accent-ink);min-width:0}
+.hours div b{display:block;font-size:20px;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:0}
+table.plain{border-collapse:collapse;width:100%;font-size:13.5px;background:var(--card);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+table.plain th{font:700 11.5px/1.3 var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;padding:10px 12px;border-bottom:2px solid var(--ink);background:var(--card2)}
+table.plain td{padding:9px 12px;border-bottom:1px solid var(--line2);vertical-align:top}
+table.plain tr:last-child td{border-bottom:none}
+table.plain td:first-child{font-weight:700;font-family:var(--display);font-size:14px}
+table.plain.events td:first-child{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--muted);white-space:nowrap}
+table.plain.events td:nth-child(2){font-family:var(--display);font-weight:700;font-size:14px;white-space:nowrap}
+.mono{font-family:var(--mono);font-size:12.5px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
+@media (max-width:820px){.two{grid-template-columns:1fr}header{grid-template-columns:1fr}.stats{grid-template-columns:repeat(4,auto)}}
+.eval{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:16px 18px}
+.eval h3{color:var(--accent-ink);margin-bottom:8px}
+.eval ol,.eval ul{margin:0;padding-left:20px}
+.eval li{margin:0 0 9px;font-size:14px}
+.eval li b{font-weight:700}
+.eval.risk h3{color:var(--gold)}
+.callout{margin-top:14px;background:var(--gold-bg);border:1px solid var(--gold);border-radius:6px;padding:12px 16px;font-size:14px}
+.callout b{font-family:var(--display)}
+.callout.teal{background:var(--accent-bg);border-color:var(--accent)}
+.tag{display:inline-block;font:600 10.5px/1 var(--display);letter-spacing:.08em;text-transform:uppercase;padding:.3em .5em;border-radius:3px;background:var(--gold-bg);color:var(--gold);border:1px solid var(--gold)}
+.tag.lock{background:var(--accent-bg);color:var(--accent-ink);border-color:var(--accent)}
+.diff li{margin-bottom:6px}
+.tl{display:grid;grid-template-columns:130px repeat(7,1fr);gap:4px;margin-top:14px;font-size:12.5px}
+.tl .h{font:700 11px/1.3 var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:4px 6px}
+.tl .r{font:700 13px/1.3 var(--display);padding:8px 6px;display:flex;align-items:center;gap:6px}
+.tl .c{border-radius:4px;padding:6px 8px;min-height:44px;font:12px/1.35 var(--mono);display:flex;flex-direction:column;justify-content:center;border:1px solid transparent}
+.tl .hand{background:var(--hand);border-color:var(--gold)}
+.tl .auto{background:var(--auto);border-color:var(--accent)}
+.tl .retool{background:var(--retool);border-color:var(--fe)}
+.tl .none{background:transparent;border:1px dashed var(--line)}
+.tl .c small{display:block;font:600 10px/1.2 var(--display);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.tl-legend{display:flex;gap:16px;margin-top:8px;font-size:12.5px;color:var(--muted)}
+.tl-legend i{display:inline-block;width:14px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:5px;border:1px solid}
+footer{margin-top:48px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <p class="eyebrow">Mechanical Keyboarding · design plan · v3.4 · 18 Aug 2026 · agreed · RU ЙЦУКЕН course</p>
+    <h1>Tech Tree v3</h1>
+    <p class="lede">Six ores, nine kinds of lesson machine, seven tiers. Every lesson is a recipe: what goes into a machine sets its alphabet, the machine sets its grammar. Mines start at two keys and grow by upgrade; automation follows mastery and then runs on its own; belts carry what machines make; and by the end everything you have mastered works without you, while everything new still needs your hands.</p>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>6</b><span>base ores</span></div>
+    <div class="stat"><b>16</b><span>mine Mk events</span></div>
+    <div class="stat"><b>20</b><span>key introductions</span></div>
+    <div class="stat"><b>9</b><span>machine kinds</span></div>
+    <div class="stat"><b>~25</b><span>machines by the finish</span></div>
+    <div class="stat"><b>~40</b><span>belts by the finish</span></div>
+    <div class="stat"><b>~47</b><span>distinct lessons</span></div>
+    <div class="stat"><b>~32 h</b><span>to the finish</span></div>
+  </div>
+</header>
+
+<section>
+  <h2>The rules that generate the tree</h2>
+  <p class="sub">Everything below is derived from these. If a recipe or a tier disagrees with a rule, the recipe is wrong.</p>
+  <div class="rules">
+    <div class="rule"><h3>1 · An ore is a finger. A Mk is a reach. <span class="tag lock">locked</span></h3><p>Iron, copper, stone are the index finger's home, top and bottom rows (the six most frequent letters). Quartz is the middle finger, coal the ring, oil the pinky. An ore's Mk adds the next key-pair on that finger. Pairs are mirror keys — same finger, both hands — sorted by frequency. Mk is per ore, not per mine: every iron mine drills the same keys.</p><div class="ex">Iron Mk1 = а о (F J) · Mk2 = п р (G H)</div></div>
+    <div class="rule"><h3>2 · Alphabet = union of the inputs.</h3><p>A material's letter set is the union of what went into it, computed live from the recipe graph and the current Mk levels. Feed a Smelter iron + copper and it drills syllables over а о е н; iron + stone, over а о и т. Upgrade iron and every downstream lesson widens.</p><div class="ex">bronze @T0 = {а о е н} → @T1 = {а о п р е н}</div></div>
+    <div class="rule"><h3>3 · Grammar = machine kind. Ratio = variance only.</h3><p>Mine → letters. Smelter → syllables. Foundry → clusters. Constructor → words. Molder → endings. Assembler → phrases. Fastener → punctuated sentences. Crane → capitals. Manufacturer → pages. Each grammar has a minimum alphabet. Recipes have quantities; the quantity may <em>tilt</em> sampling (3 iron + 1 coal → iron letters come up more often) but never filters a pool — the word bank stays the full union, the tilt is capped at 3:1, and it switches off entirely when a pool is small.</p><div class="ex">syllables ≥4 (≥1 vowel + 1 consonant) · words ≥8 &amp; ≥25 real words · sentences ≥20</div></div>
+    <div class="rule"><h3>4 · Every deeper recipe carries a flux.</h3><p>From the Molder on, alphabets are the full unlocked set — but every recipe still takes one raw ore or alloy alongside its parts. That flux sets the lesson's focus (its letters, its ending family, its word pool) and ties the deep machines to the old nodes.</p><div class="ex">2 parts + 1 stone → moldings drilling -ть -ить -ом -им</div></div>
+    <div class="rule"><h3>5 · The inputs pick the recipe. Kinds are templates.</h3><p>No dials. A machine makes whatever its inputs can pay for — belted into its buffers, or carried in your bag when you work it by hand. Several instances of a kind exist; a smelter's identity is what you belt into it. Docking shows the machine's recipes as icon rows; by hand the active one is the affordable recipe holding your weakest letters, else the newest — carry only what you want to force it. On its own, a machine makes what its belts bring.</p><div class="ex">▶ marks the active row</div></div>
+    <div class="rule"><h3>6 · Everything is built from your bag, at the place.</h3><p>No Hub, no kits, no contracts. Hold Space at a plot, a node or a machine and its menu opens: arrows choose, hold Space confirms. A plot lists the machines you could build there (greyed when you can't afford them; a machine appears once you've held the materials it costs, so high tiers stay out of sight until you reach them). A mine lists Mk, ⚙, collect, feed, spool. Each row shows curriculum gate (readiness of the letters it waits on) ∧ tier gate (every unlocked letter past the previous tier's bar) ∧ price. Materials pay for placement, never for progress.</p><div class="ex">Mk2 · п р · 80 iron + 30 bronze · ▮▮▮▯ в л</div></div>
+    <div class="rule"><h3>7 · Automation runs on the clock. Skill never does.</h3><p>What you have mastered works without you: automated machines and belts run in real time — while you walk, while you build, while the tab is hidden — so old lessons are truly obsolete. "Idle" production (what accrues while you aren't typing) is <em>bounded</em>: buffers cap at ≈100 and then the machine simply waits, and the current tier's goods are always hand-made — a kind gets ⚙ one tier after it arrives — so waiting can fill the inputs of your next lesson but can never pay for your next purchase. Letters, readiness and tier bars only ever move by typing.</p><div class="ex">smelter job ≈ 3 s · belt 2 tiles/s · buffers 100</div></div>
+  </div>
+</section>
+
+<section>
+  <h2>The keyboard, colored by ore <span class="tag lock">locked 18 Aug 2026</span></h2>
+  <p class="sub">Badge = tier the key is introduced. Number-row keys are punctuation (Fastener Mk2/Mk3). Shift first appears at T3 for one key — comma, the layout's signature hurdle — and generalizes to capitals at T5.</p>
+  <figure>
+    <svg viewBox="0 0 766 272" role="img" aria-label="ЙЦУКЕН keyboard: each letter key colored by its ore (iron/copper/stone = index finger rows; quartz = middle; coal = ring; oil = pinky), with a badge showing the tier it is introduced.">
+      <rect class="k oi" x="8" y="8" width="46" height="46" rx="6"/><text class="kg" x="31" y="38" text-anchor="middle">ё</text><rect class="kb oi" x="38" y="11" width="14" height="13" rx="3"/><text class="kbt" x="45" y="21" text-anchor="middle">5</text>
+      <rect class="k tool" x="58" y="8" width="46" height="46" rx="6"/><text class="kg" x="81" y="38" text-anchor="middle">!</text><text class="kg small" x="64" y="50">1</text><rect class="kb tool" x="88" y="11" width="14" height="13" rx="3"/><text class="kbt" x="95" y="21" text-anchor="middle">4</text>
+      <rect class="k tool" x="108" y="8" width="46" height="46" rx="6"/><text class="kg" x="131" y="38" text-anchor="middle">"</text><text class="kg small" x="114" y="50">2</text><rect class="kb tool" x="138" y="11" width="14" height="13" rx="3"/><text class="kbt" x="145" y="21" text-anchor="middle">5</text>
+      <rect class="k inert" x="158" y="8" width="46" height="46" rx="6"/><text class="kg small" x="181" y="35" text-anchor="middle">3</text>
+      <rect class="k tool" x="208" y="8" width="46" height="46" rx="6"/><text class="kg" x="231" y="38" text-anchor="middle">;</text><text class="kg small" x="214" y="50">4</text><rect class="kb tool" x="238" y="11" width="14" height="13" rx="3"/><text class="kbt" x="245" y="21" text-anchor="middle">5</text>
+      <rect class="k inert" x="258" y="8" width="46" height="46" rx="6"/><text class="kg small" x="281" y="35" text-anchor="middle">5</text>
+      <rect class="k tool" x="308" y="8" width="46" height="46" rx="6"/><text class="kg" x="331" y="38" text-anchor="middle">:</text><text class="kg small" x="314" y="50">6</text><rect class="kb tool" x="338" y="11" width="14" height="13" rx="3"/><text class="kbt" x="345" y="21" text-anchor="middle">5</text>
+      <rect class="k tool" x="358" y="8" width="46" height="46" rx="6"/><text class="kg" x="381" y="38" text-anchor="middle">?</text><text class="kg small" x="364" y="50">7</text><rect class="kb tool" x="388" y="11" width="14" height="13" rx="3"/><text class="kbt" x="395" y="21" text-anchor="middle">4</text>
+      <rect class="k inert" x="408" y="8" width="46" height="46" rx="6"/><text class="kg small" x="431" y="35" text-anchor="middle">8</text>
+      <rect class="k tool" x="458" y="8" width="46" height="46" rx="6"/><text class="kg" x="481" y="38" text-anchor="middle">(</text><text class="kg small" x="464" y="50">9</text><rect class="kb tool" x="488" y="11" width="14" height="13" rx="3"/><text class="kbt" x="495" y="21" text-anchor="middle">5</text>
+      <rect class="k tool" x="508" y="8" width="46" height="46" rx="6"/><text class="kg" x="531" y="38" text-anchor="middle">)</text><text class="kg small" x="514" y="50">0</text><rect class="kb tool" x="538" y="11" width="14" height="13" rx="3"/><text class="kbt" x="545" y="21" text-anchor="middle">5</text>
+      <rect class="k tool" x="558" y="8" width="46" height="46" rx="6"/><text class="kg" x="581" y="38" text-anchor="middle">-</text><rect class="kb tool" x="588" y="11" width="14" height="13" rx="3"/><text class="kbt" x="595" y="21" text-anchor="middle">4</text>
+      <rect class="k inert" x="608" y="8" width="46" height="46" rx="6"/><text class="kg small" x="631" y="35" text-anchor="middle">=</text>
+      <rect class="k inert" x="658" y="8" width="96" height="46" rx="6"/><text class="kl" x="706" y="35" text-anchor="middle">⌫</text>
+      <rect class="k inert" x="8" y="60" width="71" height="46" rx="6"/><text class="kl" x="43" y="87" text-anchor="middle">TAB</text>
+      <rect class="k oi" x="83" y="60" width="46" height="46" rx="6"/><text class="kg" x="106" y="90" text-anchor="middle">й</text><rect class="kb oi" x="113" y="63" width="14" height="13" rx="3"/><text class="kbt" x="120" y="73" text-anchor="middle">3</text>
+      <rect class="k co" x="133" y="60" width="46" height="46" rx="6"/><text class="kg" x="156" y="90" text-anchor="middle">ц</text><rect class="kb co" x="163" y="63" width="14" height="13" rx="3"/><text class="kbt" x="170" y="73" text-anchor="middle">4</text>
+      <rect class="k qz" x="183" y="60" width="46" height="46" rx="6"/><text class="kg" x="206" y="90" text-anchor="middle">у</text><rect class="kb qz" x="213" y="63" width="14" height="13" rx="3"/><text class="kbt" x="220" y="73" text-anchor="middle">3</text>
+      <rect class="k cu" x="233" y="60" width="46" height="46" rx="6"/><text class="kg" x="256" y="90" text-anchor="middle">к</text><rect class="kb cu" x="263" y="63" width="14" height="13" rx="3"/><text class="kbt" x="270" y="73" text-anchor="middle">2</text>
+      <rect class="k cu" x="283" y="60" width="46" height="46" rx="6"/><text class="kg" x="306" y="90" text-anchor="middle">е</text><rect class="kb cu" x="313" y="63" width="14" height="13" rx="3"/><text class="kbt" x="320" y="73" text-anchor="middle">0</text>
+      <rect class="k cu" x="333" y="60" width="46" height="46" rx="6"/><text class="kg" x="356" y="90" text-anchor="middle">н</text><rect class="kb cu" x="363" y="63" width="14" height="13" rx="3"/><text class="kbt" x="370" y="73" text-anchor="middle">0</text>
+      <rect class="k cu" x="383" y="60" width="46" height="46" rx="6"/><text class="kg" x="406" y="90" text-anchor="middle">г</text><rect class="kb cu" x="413" y="63" width="14" height="13" rx="3"/><text class="kbt" x="420" y="73" text-anchor="middle">2</text>
+      <rect class="k qz" x="433" y="60" width="46" height="46" rx="6"/><text class="kg" x="456" y="90" text-anchor="middle">ш</text><rect class="kb qz" x="463" y="63" width="14" height="13" rx="3"/><text class="kbt" x="470" y="73" text-anchor="middle">3</text>
+      <rect class="k co" x="483" y="60" width="46" height="46" rx="6"/><text class="kg" x="506" y="90" text-anchor="middle">щ</text><rect class="kb co" x="513" y="63" width="14" height="13" rx="3"/><text class="kbt" x="520" y="73" text-anchor="middle">4</text>
+      <rect class="k oi" x="533" y="60" width="46" height="46" rx="6"/><text class="kg" x="556" y="90" text-anchor="middle">з</text><rect class="kb oi" x="563" y="63" width="14" height="13" rx="3"/><text class="kbt" x="570" y="73" text-anchor="middle">3</text>
+      <rect class="k oi" x="583" y="60" width="46" height="46" rx="6"/><text class="kg" x="606" y="90" text-anchor="middle">х</text><rect class="kb oi" x="613" y="63" width="14" height="13" rx="3"/><text class="kbt" x="620" y="73" text-anchor="middle">5</text>
+      <rect class="k oi" x="633" y="60" width="46" height="46" rx="6"/><text class="kg" x="656" y="90" text-anchor="middle">ъ</text><rect class="kb oi" x="663" y="63" width="14" height="13" rx="3"/><text class="kbt" x="670" y="73" text-anchor="middle">5</text>
+      <rect class="k inert" x="683" y="60" width="71" height="46" rx="6"/><text class="kg small" x="718" y="87" text-anchor="middle">\</text>
+      <rect class="k inert" x="8" y="112" width="83.5" height="46" rx="6"/><text class="kl" x="49.75" y="139" text-anchor="middle">CAPS</text>
+      <rect class="k oi" x="95.5" y="112" width="46" height="46" rx="6"/><text class="kg" x="118.5" y="142" text-anchor="middle">ф</text><rect class="kb oi" x="125.5" y="115" width="14" height="13" rx="3"/><text class="kbt" x="132.5" y="125" text-anchor="middle">4</text>
+      <rect class="k co" x="145.5" y="112" width="46" height="46" rx="6"/><text class="kg" x="168.5" y="142" text-anchor="middle">ы</text><rect class="kb co" x="175.5" y="115" width="14" height="13" rx="3"/><text class="kbt" x="182.5" y="125" text-anchor="middle">2</text>
+      <rect class="k qz" x="195.5" y="112" width="46" height="46" rx="6"/><text class="kg" x="218.5" y="142" text-anchor="middle">в</text><rect class="kb qz" x="225.5" y="115" width="14" height="13" rx="3"/><text class="kbt" x="232.5" y="125" text-anchor="middle">1</text>
+      <rect class="k fe" x="245.5" y="112" width="46" height="46" rx="6"/><text class="kg" x="268.5" y="142" text-anchor="middle">а</text><rect class="kb fe" x="275.5" y="115" width="14" height="13" rx="3"/><text class="kbt" x="282.5" y="125" text-anchor="middle">0</text>
+      <rect class="k fe" x="295.5" y="112" width="46" height="46" rx="6"/><text class="kg" x="318.5" y="142" text-anchor="middle">п</text><rect class="kb fe" x="325.5" y="115" width="14" height="13" rx="3"/><text class="kbt" x="332.5" y="125" text-anchor="middle">1</text>
+      <rect class="k fe" x="345.5" y="112" width="46" height="46" rx="6"/><text class="kg" x="368.5" y="142" text-anchor="middle">р</text><rect class="kb fe" x="375.5" y="115" width="14" height="13" rx="3"/><text class="kbt" x="382.5" y="125" text-anchor="middle">1</text>
+      <rect class="k fe" x="395.5" y="112" width="46" height="46" rx="6"/><text class="kg" x="418.5" y="142" text-anchor="middle">о</text><rect class="kb fe" x="425.5" y="115" width="14" height="13" rx="3"/><text class="kbt" x="432.5" y="125" text-anchor="middle">0</text>
+      <rect class="k qz" x="445.5" y="112" width="46" height="46" rx="6"/><text class="kg" x="468.5" y="142" text-anchor="middle">л</text><rect class="kb qz" x="475.5" y="115" width="14" height="13" rx="3"/><text class="kbt" x="482.5" y="125" text-anchor="middle">1</text>
+      <rect class="k co" x="495.5" y="112" width="46" height="46" rx="6"/><text class="kg" x="518.5" y="142" text-anchor="middle">д</text><rect class="kb co" x="525.5" y="115" width="14" height="13" rx="3"/><text class="kbt" x="532.5" y="125" text-anchor="middle">2</text>
+      <rect class="k oi" x="545.5" y="112" width="46" height="46" rx="6"/><text class="kg" x="568.5" y="142" text-anchor="middle">ж</text><rect class="kb oi" x="575.5" y="115" width="14" height="13" rx="3"/><text class="kbt" x="582.5" y="125" text-anchor="middle">4</text>
+      <rect class="k oi" x="595.5" y="112" width="46" height="46" rx="6"/><text class="kg" x="618.5" y="142" text-anchor="middle">э</text><rect class="kb oi" x="625.5" y="115" width="14" height="13" rx="3"/><text class="kbt" x="632.5" y="125" text-anchor="middle">5</text>
+      <rect class="k inert" x="645.5" y="112" width="108.5" height="46" rx="6"/><text class="kl" x="699.75" y="139" text-anchor="middle">ENTER</text>
+      <rect class="k tool" x="8" y="164" width="108.5" height="46" rx="6"/><text class="kl" x="52" y="191" text-anchor="middle">SHIFT</text><rect class="kb tool" x="86" y="167" width="26" height="13" rx="3"/><text class="kbt" x="99" y="177" text-anchor="middle">3·5</text>
+      <rect class="k oi" x="120.5" y="164" width="46" height="46" rx="6"/><text class="kg" x="143.5" y="194" text-anchor="middle">я</text><rect class="kb oi" x="150.5" y="167" width="14" height="13" rx="3"/><text class="kbt" x="157.5" y="177" text-anchor="middle">3</text>
+      <rect class="k co" x="170.5" y="164" width="46" height="46" rx="6"/><text class="kg" x="193.5" y="194" text-anchor="middle">ч</text><rect class="kb co" x="200.5" y="167" width="14" height="13" rx="3"/><text class="kbt" x="207.5" y="177" text-anchor="middle">4</text>
+      <rect class="k qz" x="220.5" y="164" width="46" height="46" rx="6"/><text class="kg" x="243.5" y="194" text-anchor="middle">с</text><rect class="kb qz" x="250.5" y="167" width="14" height="13" rx="3"/><text class="kbt" x="257.5" y="177" text-anchor="middle">1</text>
+      <rect class="k st" x="270.5" y="164" width="46" height="46" rx="6"/><text class="kg" x="293.5" y="194" text-anchor="middle">м</text><rect class="kb st" x="300.5" y="167" width="14" height="13" rx="3"/><text class="kbt" x="307.5" y="177" text-anchor="middle">2</text>
+      <rect class="k st" x="320.5" y="164" width="46" height="46" rx="6"/><text class="kg" x="343.5" y="194" text-anchor="middle">и</text><rect class="kb st" x="350.5" y="167" width="14" height="13" rx="3"/><text class="kbt" x="357.5" y="177" text-anchor="middle">0</text>
+      <rect class="k st" x="370.5" y="164" width="46" height="46" rx="6"/><text class="kg" x="393.5" y="194" text-anchor="middle">т</text><rect class="kb st" x="400.5" y="167" width="14" height="13" rx="3"/><text class="kbt" x="407.5" y="177" text-anchor="middle">0</text>
+      <rect class="k st" x="420.5" y="164" width="46" height="46" rx="6"/><text class="kg" x="443.5" y="194" text-anchor="middle">ь</text><rect class="kb st" x="450.5" y="167" width="14" height="13" rx="3"/><text class="kbt" x="457.5" y="177" text-anchor="middle">2</text>
+      <rect class="k qz" x="470.5" y="164" width="46" height="46" rx="6"/><text class="kg" x="493.5" y="194" text-anchor="middle">б</text><rect class="kb qz" x="500.5" y="167" width="14" height="13" rx="3"/><text class="kbt" x="507.5" y="177" text-anchor="middle">1</text>
+      <rect class="k co" x="520.5" y="164" width="46" height="46" rx="6"/><text class="kg" x="543.5" y="194" text-anchor="middle">ю</text><rect class="kb co" x="550.5" y="167" width="14" height="13" rx="3"/><text class="kbt" x="557.5" y="177" text-anchor="middle">4</text>
+      <rect class="k oi" x="570.5" y="164" width="46" height="46" rx="6"/><text class="kg" x="593.5" y="194" text-anchor="middle">.</text><text class="kg small" x="576.5" y="206">, ⇧</text><rect class="kb oi" x="600.5" y="167" width="14" height="13" rx="3"/><text class="kbt" x="607.5" y="177" text-anchor="middle">3</text>
+      <rect class="k tool" x="620.5" y="164" width="133.5" height="46" rx="6"/><text class="kl" x="678" y="191" text-anchor="middle">SHIFT</text><rect class="kb tool" x="723" y="167" width="26" height="13" rx="3"/><text class="kbt" x="736" y="177" text-anchor="middle">3·5</text>
+      <rect class="k inert" x="195.5" y="216" width="308.5" height="46" rx="6"/><text class="kl" x="349.75" y="243" text-anchor="middle">SPACE</text>
+    </svg>
+    <div class="legend">
+      <span><i class="dot fe"></i> iron — index, home row</span>
+      <span><i class="dot cu"></i> copper — index, top row</span>
+      <span><i class="dot st"></i> stone — index, bottom row</span>
+      <span><i class="dot qz"></i> quartz — middle finger</span>
+      <span><i class="dot co"></i> coal — ring finger</span>
+      <span><i class="dot oi"></i> oil — pinky</span>
+      <span><i class="dot tool"></i> Fastener / Crane keys (punctuation, Shift)</span>
+    </div>
+    <figcaption>All six T0 keys are index-finger keys — the player's other fingers simply rest at first. Coverage of running Russian text: T0 47% · T1 71% · T2 86% · T3 95% · T4 99% · T5 100%.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>The factory simulation</h2>
+  <p class="sub">Machines have insides. Belts carry things. Automation runs on the clock; your hands run one station at a time. This is the model everything else sits on — stated once, precisely.</p>
+  <div class="two">
+    <div class="eval">
+      <h3>Machines</h3>
+      <ul>
+        <li><b>Buffers.</b> Every machine has an input buffer per material it accepts and one output buffer. Generous caps (≈100): a full machine pauses, nothing spills, nothing spoils.</li>
+        <li><b>Hand work.</b> Dock and type. Each correct keystroke consumes inputs at the recipe ratio — from the machine's own buffers first, then from your bag — and advances <em>that station only</em>. Output goes to your bag, unless a belt leaves the machine, in which case it rolls onto the belt.</li>
+        <li><b>Automated work.</b> With ⚙, sticky letters and a full input set in its buffers, the machine runs a timed job and emits to the exit belt or its output buffer. It never reaches into your bag, and it never needs you.</li>
+        <li><b>You can still carry.</b> Hold Space at any machine to collect its output buffer, or to feed its input buffers from your bag. Early game is carrying; late game is belts; both always work.</li>
+        <li><b>Instances.</b> Kinds are templates. A second Smelter is a plot purchase; its recipe is whatever arrives. How many the player builds is up to them; the map offers as many nodes and plots as the tree can use (nodes per ore placed farther out each tier, plots opened region by region) — never a scarce resource. A typical full build lands near 13 mines, 12 processors, 40 belts — the number the hour estimates assume.</li>
+      </ul>
+    </div>
+    <div class="eval">
+      <h3>Rates and bounds (placeholders)</h3>
+      <ul>
+        <li><b>Real time, always.</b> Automated machines and belts run whether you type, walk, build or stand still — and while the tab is hidden: on return the game fast-forwards the elapsed time (bounded by buffers), so leaving is never punished and never rewarded beyond full buffers. Working a station by hand advances that station only.</li>
+        <li><b>Belts:</b> 2 tiles/s, one item per tile — a belt's ceiling is 2 items/s. Pipes the same.</li>
+        <li><b>Jobs:</b> mine 2 s/ore · Smelter 3 · Foundry 4 · Constructor 4 · Molder 5 · Assembler 6 · Fastener 6 · Crane 7 · Manufacturer 10. Quick, not immediate.</li>
+        <li><b>Automation is parallel, not fast.</b> A fluent typist out-produces any single automated bench; the factory wins because every automated machine runs at once, forever.</li>
+        <li><b>Idle is bounded.</b> Buffers cap at ~100; heavy modules come only from the hand-worked Manufacturer; the current tier's goods are always hand-made. Leave the game overnight and you return to full <em>inputs</em> for your next lesson — never to a purchase you didn't type for.</li>
+        <li><b>Tuning target:</b> one mine feeds about one consumer's appetite for its ore. The player never computes rates; they see a hungry machine and build another mine.</li>
+        <li><b>Optional feel layer, undecided:</b> the factory runs ×1.5 while you are typing anywhere — the belts pick up your rhythm. Not a separate power station: that would be one more lesson-less machine competing with the lessons.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Mines: when each is opened, when each is upgraded, and what hides behind it</h2>
+  <p class="sub">Every mine event is a priced row at the mine, exactly like ⚙: hold Space to buy. Two gates — the curriculum gate (every unlocked letter at readiness; the row shows a gauge for the letters it waits on) and the previous tier's bar — then the price. Prices are placeholders showing the <em>pattern</em>: the ore's own material (typed by hand, right before its new keys arrive) plus a good from the current tier. Extra mines of an ore are bought at unbuilt nodes and inherit the ore's Mk.</p>
+  <div class="scroll" style="border:none;background:none">
+  <table class="plain events">
+    <thead><tr><th>#</th><th>Event</th><th>Keys</th><th>Curriculum gate</th><th>Price at the mine (pattern)</th><th>What it opens</th></tr></thead>
+    <tbody>
+      <tr><td>T0</td><td><i class="dot fe"></i> Iron Mk1</td><td class="mono">а о</td><td>—</td><td>pre-built</td><td>The first two keys, on the F/J bumps. Iron is the vowel bank — every alloy wants it.</td></tr>
+      <tr><td>T0</td><td><i class="dot cu"></i> Copper Mk1</td><td class="mono">е н</td><td>—</td><td>pre-built</td><td>Bronze (iron+copper) — the first syllables.</td></tr>
+      <tr><td>T0</td><td><i class="dot st"></i> Stone Mk1</td><td class="mono">и т</td><td>—</td><td>pre-built</td><td>Cast iron; the first real words hide inside its syllables (тот, то, от).</td></tr>
+      <tr><td>T1</td><td><i class="dot qz"></i> Quartz node</td><td class="mono">в л</td><td>6 letters past bar 0</td><td>40 bronze + 40 cast iron</td><td>The middle finger. Quartz iron (6 letters). New node placed farther out — walking is the cost.</td></tr>
+      <tr><td>T1</td><td><i class="dot fe"></i> Iron Mk2</td><td class="mono">п р</td><td>в л ready</td><td>80 iron + 30 bronze</td><td>Home-row core complete (в а п р о л). Bronze, cast iron and quartz iron all widen. <b>Iron mines drop off the grid</b> until п р are sticky — the first retool.</td></tr>
+      <tr><td>T1</td><td><i class="dot qz"></i> Quartz Mk2</td><td class="mono">с б</td><td>п р ready</td><td>60 quartz + 40 quartz iron</td><td>Quartz iron reaches 8 letters → Constructor buildable. Quartz bronze reaches 10 → Foundry buildable.</td></tr>
+      <tr><td>T2</td><td><i class="dot co"></i> Coal node</td><td class="mono">ы д</td><td>12 past bar 1</td><td>60 parts + 40 quartz iron</td><td>The ring finger. Steel (3 iron + 1 coal). Alphabet passes 14 → Molder buildable.</td></tr>
+      <tr><td>T2</td><td><i class="dot cu"></i> Copper Mk2</td><td class="mono">к г</td><td>ы д ready</td><td>80 copper + 30 steel</td><td>Copper retools. Bronze widens (ке ки ге ги); the -ник -ение ending family.</td></tr>
+      <tr><td>T2</td><td><i class="dot st"></i> Stone Mk2</td><td class="mono">м ь</td><td>к г ready</td><td>80 stone + 30 steel</td><td>Stone retools. Brass (2 copper + 1 stone) offered at 8 letters; -ть turns nouns into verbs; alphabet passes 16 → Assembler buildable.</td></tr>
+      <tr><td>T3</td><td><i class="dot oi"></i> Oil node</td><td class="mono">я .</td><td>18 past bar 2</td><td>60 modules + 40 steel</td><td>The pinky, and the period. Black iron (iron+oil). Fastener buildable right after (comma lives on the same key).</td></tr>
+      <tr><td>T3</td><td><i class="dot qz"></i> Quartz Mk3</td><td class="mono">у ш</td><td>я . , ready</td><td>60 quartz + 30 black iron</td><td>Quartz retools. Quartz iron and quartz bronze refresh (суп шум шов) — T1 stations, two tiers back.</td></tr>
+      <tr><td>T3</td><td><i class="dot oi"></i> Oil Mk2</td><td class="mono">й з</td><td>у ш ready</td><td>60 oil + 30 black iron</td><td>Oil retools. Black brass offered (12); the -ый -ий -ой adjective endings.</td></tr>
+      <tr><td>T4</td><td><i class="dot co"></i> Coal Mk2</td><td class="mono">ч ю</td><td>24 past bar 3</td><td>60 fastened + 40 steel</td><td>Coal retools. Gunmetal (copper+coal) offered; steel refreshes; Fastener Mk2 (? ! -) buyable at the Fastener.</td></tr>
+      <tr><td>T4</td><td><i class="dot oi"></i> Oil Mk3</td><td class="mono">ф ж</td><td>ч ю ready</td><td>60 oil + 40 gunmetal</td><td>Oil retools. Black iron widens (жар, пожар, факт).</td></tr>
+      <tr><td>T4</td><td><i class="dot co"></i> Coal Mk3</td><td class="mono">ц щ</td><td>ф ж ready</td><td>60 coal + 40 quartz steel</td><td>Coal retools. Quartz steel offered (16); the -ция -щик -чик family.</td></tr>
+      <tr><td>T5</td><td><i class="dot oi"></i> Oil Mk4</td><td class="mono">э х ё ъ</td><td>30 past bar 4</td><td>60 oil + 60 fastened</td><td>Oil retools for the last time. Glass (quartz+oil) and coke iron offered. Once sticky → Crane buildable (Shift); then Fastener Mk3.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="note" style="margin-top:8px">Sixteen mine events plus four key events at machines (comma, ? ! -, : ; " ( ), Shift) = twenty key introductions. Each retool is exactly the "work an older bench out of necessity" moment: one ore, its new pair, until it's sticky — its mines' belts idle meanwhile, which is what pulls you back there.</p>
+</section>
+
+<section>
+  <h2>Automation: one rule, no special cases</h2>
+  <p class="sub">The current game automates tier-1 benches with a material-paid ⚙ gated by sticky letter mastery. v3 keeps that and extends it to every machine with a single rule.</p>
+  <div class="callout teal"><b>A machine runs a recipe by itself, in real time, iff:</b> it has its ⚙ · every letter in that recipe's alphabet is sticky-mastered · its input buffers hold a full set at the recipe ratio. Otherwise that recipe is hand-work. Automated recipes refuse labor; un-automated recipes at the same machine still accept it.</div>
+  <div class="two">
+    <div class="eval">
+      <h3>What falls out of the rule</h3>
+      <ul>
+        <li><b>Retool is not a mechanic.</b> Buy a Mk → the ore's alphabet gains two un-sticky letters → every mine of that ore is hand-work again. Master them → they resume. No fee, no toggle.</li>
+        <li><b>New recipes at an automated machine are still lessons.</b> A Smelter automated for bronze at T1 still hand-drills black iron syllables at T3, because я й з aren't sticky yet.</li>
+        <li><b>Retool doesn't cascade.</b> Downstream keeps its ⚙; it simply starves while the retooled mines' belts idle. Bounded backtracking: one ore, one pair.</li>
+        <li><b>The whole factory ends automated</b> — except the Manufacturer, which is you.</li>
+      </ul>
+    </div>
+    <div class="eval">
+      <h3>When ⚙ becomes purchasable</h3>
+      <ul>
+        <li><b>Mines:</b> as soon as the ore's current keys are sticky; per mine instance. Cost: its ore + the tier's good. Nothing forces it — you automate because it ends the walk.</li>
+        <li><b>Processors:</b> one tier of hand work first — ⚙ appears once the bar that closes the kind's arrival tier is passed. Smelter → T1, Foundry/Constructor → T2, Molder/Assembler → T3, Fastener → T4, Crane → T6, Manufacturer → after the finish (free-play only).</li>
+        <li><b>Rate:</b> seconds per job as in the simulation table; passing tier bars 2 and 4 speeds the factory 20% each time.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="tl" role="table" aria-label="Expected automation timeline per ore and tier">
+    <div class="h"></div><div class="h">T0</div><div class="h">T1</div><div class="h">T2</div><div class="h">T3</div><div class="h">T4</div><div class="h">T5</div><div class="h">T6</div>
+    <div class="r"><i class="dot fe"></i>Iron</div><div class="c hand">а о by hand<small>⚙ expected at end</small></div><div class="c retool">Mk2 п р retool<small>re-sticky → auto</small></div><div class="c auto">auto</div><div class="c auto">auto</div><div class="c auto">auto</div><div class="c auto">auto</div><div class="c auto">auto</div>
+    <div class="r"><i class="dot cu"></i>Copper</div><div class="c hand">е н by hand</div><div class="c auto">⚙ Mk1<small>expected</small></div><div class="c retool">Mk2 к г retool<small>→ auto</small></div><div class="c auto">auto</div><div class="c auto">auto</div><div class="c auto">auto</div><div class="c auto">auto</div>
+    <div class="r"><i class="dot st"></i>Stone</div><div class="c hand">и т by hand</div><div class="c auto">⚙ Mk1<small>expected</small></div><div class="c retool">Mk2 м ь retool<small>→ auto</small></div><div class="c auto">auto</div><div class="c auto">auto</div><div class="c auto">auto</div><div class="c auto">auto</div>
+    <div class="r"><i class="dot qz"></i>Quartz</div><div class="c none"></div><div class="c hand">в л → с б by hand</div><div class="c auto">⚙ Mk2<small>expected</small></div><div class="c retool">Mk3 у ш retool<small>→ auto</small></div><div class="c auto">auto</div><div class="c auto">auto</div><div class="c auto">auto</div>
+    <div class="r"><i class="dot co"></i>Coal</div><div class="c none"></div><div class="c none"></div><div class="c hand">ы д by hand</div><div class="c auto">⚙ Mk1<small>expected</small></div><div class="c retool">Mk2 + Mk3 retools<small>ч ю · ц щ → auto</small></div><div class="c auto">auto</div><div class="c auto">auto</div>
+    <div class="r"><i class="dot oi"></i>Oil</div><div class="c none"></div><div class="c none"></div><div class="c none"></div><div class="c hand">я . → й з by hand</div><div class="c retool">⚙ Mk2 · pipes<small>then Mk3 ф ж retool</small></div><div class="c retool">Mk4 э х ё ъ retool<small>→ auto</small></div><div class="c auto">auto</div>
+    <div class="r">Processors</div><div class="c hand">Smelter by hand</div><div class="c auto">Smelters ⚙<small>bronze, cast iron graduate</small></div><div class="c auto">Foundry · Constructor ⚙</div><div class="c auto">Molder · Assembler ⚙</div><div class="c auto">Fastener ⚙</div><div class="c hand">Crane by hand</div><div class="c auto">Crane ⚙ · Manufacturer = you</div>
+  </div>
+  <div class="tl-legend"><span><i style="background:var(--hand);border-color:var(--gold)"></i>hand work</span><span><i style="background:var(--retool);border-color:var(--fe)"></i>retool: new pair by hand, belts idle</span><span><i style="background:var(--auto);border-color:var(--accent)"></i>on the grid</span></div>
+</section>
+
+<section>
+  <h2>Transport: belts and pipes</h2>
+  <p class="sub">A belt is a conveyor from one machine's outlet to another machine's inlet. Anything the source makes — by your hands or on the grid — rolls onto it. Belts decide whether you walk; buffers decide whether machines wait; neither asks you to plan a layout.</p>
+  <figure>
+    <svg viewBox="0 0 900 230" role="img" aria-label="Spool and socket: hold Space at an iron mine to shoulder a spool; walk to the Smelter; hold Space there; the belt auto-routes along the tile grid around scenery, showing route length and cost.">
+      <defs><marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+      <g stroke="currentColor" opacity=".08">
+        <path d="M0,40H900M0,80H900M0,120H900M0,160H900M0,200H900M60,0V230M120,0V230M180,0V230M240,0V230M300,0V230M360,0V230M420,0V230M480,0V230M540,0V230M600,0V230M660,0V230M720,0V230M780,0V230M840,0V230"/>
+      </g>
+      <rect x="40" y="70" width="140" height="70" rx="6" fill="var(--fe-bg)" stroke="currentColor" stroke-width="1.3"/>
+      <text x="110" y="98" text-anchor="middle" font-family="Bahnschrift,'Arial Narrow',sans-serif" font-size="14" font-weight="700" fill="currentColor">Iron mine</text>
+      <text x="110" y="118" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="11" fill="currentColor" opacity=".8">outlet · hand or ⚙</text>
+      <rect x="720" y="130" width="140" height="70" rx="6" fill="var(--card2)" stroke="currentColor" stroke-width="1.3"/>
+      <text x="790" y="158" text-anchor="middle" font-family="Bahnschrift,'Arial Narrow',sans-serif" font-size="14" font-weight="700" fill="currentColor">Smelter</text>
+      <text x="790" y="178" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="11" fill="currentColor" opacity=".8">inlet · accepts iron</text>
+      <ellipse cx="450" cy="105" rx="46" ry="22" fill="var(--st-bg)" stroke="var(--st)"/>
+      <text x="450" y="109" text-anchor="middle" font-family="'Segoe UI',sans-serif" font-size="11" fill="currentColor" opacity=".8">rock</text>
+      <path d="M180,105 L360,105 L360,165 L560,165 L560,145 L720,145" fill="none" stroke="var(--accent)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
+      <path d="M180,105 L360,105 L360,165 L560,165 L560,145 L720,145" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="6 6" opacity=".7"/>
+      <circle cx="300" cy="60" r="9" fill="var(--gold)" stroke="currentColor"/>
+      <rect x="292" y="70" width="16" height="20" rx="3" fill="var(--accent-bg)" stroke="currentColor"/>
+      <circle cx="312" cy="78" r="7" fill="none" stroke="currentColor" stroke-width="2"/>
+      <text x="300" y="112" text-anchor="middle" font-family="'Cascadia Mono',Consolas,monospace" font-size="10.5" fill="currentColor">spool on back</text>
+      <text x="110" y="52" text-anchor="middle" font-family="'Cascadia Mono',Consolas,monospace" font-size="11" fill="currentColor">① hold Space: take the spool</text>
+      <text x="790" y="118" text-anchor="middle" font-family="'Cascadia Mono',Consolas,monospace" font-size="11" fill="currentColor">② hold Space: socket</text>
+      <text x="460" y="195" text-anchor="middle" font-family="'Cascadia Mono',Consolas,monospace" font-size="11" fill="currentColor">auto-route on free tiles · 27 tiles · costs 35 bronze</text>
+      <line x1="300" y1="92" x2="300" y2="103" stroke="currentColor" marker-end="url(#arr2)"/>
+    </svg>
+    <figcaption>Two holds of the one interact key and a walk in between — walking is the selection, the router does the geometry. While carrying the spool, every valid inlet glows and a ghost route with its cost follows you; a red ghost means no free path — carry by hand, or free a tile. Hold Space at the source again to put the spool back.</figcaption>
+  </figure>
+
+  <div class="two">
+    <div class="eval">
+      <h3>The rules</h3>
+      <ul>
+        <li><b>Unlocked</b> with tier 1 (the T0 bar passed) — "grid power". Any machine can be a source from then on; automation is not required. Pipes arrive with the oil derrick (T3): same rules, different skin, and the only piped resource.</li>
+        <li><b>Built</b> by spool &amp; socket, above, only into a machine that accepts that material. <b>Inlets = the kind's arity</b>: one belt per input slot (Constructor 1, Smelter/Foundry/Molder/Assembler/Fastener/Crane 2, Manufacturer 3). <b>Outlets: mines 1, processors 2</b> — a processor can split its output once (round-robin); a mine feeds one consumer, which is what grows the pyramid. No cap on the number of belts. A belt carries only what its consumer accepts — the outlet filters — so belts never clog.</li>
+        <li><b>Routing and congestion.</b> One belt per tile; the router takes the shortest free path. Choke points are authored into the map — bridges, gaps between rocks — so choosing which lines get the bridge is the same bounded strategy as choosing plots. Belts can be removed for half refund; an <em>overpass</em> arrives at tier 4 to cross an existing line.</li>
+        <li><b>Cost</b>: free for now. Automation and the machines themselves are the material sinks; if the economy later needs another, a distance price in the tier's trade good is the obvious one to add.</li>
+        <li><b>Flow</b>: 2 tiles/s, one item per tile. A belt from a mine that yields every 2 s is a quarter full — plenty; a mine feeding three smelters is not, and that is the cue to build another mine.</li>
+        <li><b>Inspect</b>: docking shows the machine's belts as icon rows (source → this, this → target). Belts are removed and half-refunded when a machine is relocated.</li>
+      </ul>
+    </div>
+    <div class="eval">
+      <h3>The build-out (~40 belts, roughly in order)</h3>
+      <ul>
+        <li><b>T1</b> — iron, copper, stone, quartz → Smelter A · iron #2 → Smelter B (quartz iron) · quartz → Foundry · Smelters → Foundry · Smelters/Foundry → Constructor.</li>
+        <li><b>T2</b> — coal → Smelter B · iron #3 + coal → Smelter C (steel) · Foundry → Constructor #2 · Constructors → Molder · Constructor → Assembler · Smelter → Assembler · iron, stone → Molder (flux).</li>
+        <li><b>T3</b> — oil ⇒ Smelter, Foundry, Fastener, Molder (pipes) · Assembler → Fastener · oil #2 ⇒ Smelter B.</li>
+        <li><b>T4</b> — coal #2 → Fastener, Molder · copper #2 → Molder, Smelter C.</li>
+        <li><b>T5</b> — Fastener → Crane · oil ⇒ Crane.</li>
+        <li><b>T6</b> — Crane, Molder, Constructor → Manufacturer. The last belts are the long hauls across the whole map — the megaproject.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="two">
+    <div class="eval">
+      <h3>Evaluated against the tree</h3>
+      <ul>
+        <li><b>Logistics can't lead the curriculum.</b> A belt only carries what a machine makes; the deep machines only make things once their alphabets exist and their letters are sticky. The network follows mastery by about half a tier.</li>
+        <li><b>Retools pull you back exactly one ore.</b> Its mines leave the grid, their belts idle, downstream starves — you hand-type the new pair, it comes back. Nothing downstream is lost or rebuilt.</li>
+        <li><b>The inverted pyramid is real.</b> Many mines, fewer smelters, one Molder: the belt count and the map both grow at the base, exactly where the letters live.</li>
+        <li><b>Buffers keep it a typing game.</b> Nothing spoils, nothing spills, nothing needs babysitting; every management act is a hold-Space at the place — collect, feed, spool. Congestion is a lever (which lines get the bridge), never a wall (red ghost → carry; overpass later).</li>
+        <li><b>~40 spool-walks over ~32 h</b> — one every 45 minutes, each ~30 s plus a cost you were already producing. Enough to feel like building; not enough to compete with typing.</li>
+      </ul>
+    </div>
+    <div class="eval risk">
+      <h3>Rejected alternatives, and why</h3>
+      <ol>
+        <li><b>Keystroke-tick clock</b> (the factory advances only while you type, anywhere). Keeps the letter of invariant 1 but has a structural flaw: when the frontier machine is waiting on inputs and everything upstream is automated and refuses labor, there is nowhere to type — the factory deadlocks until you go work an old lesson, which is exactly what automation was supposed to end. It also turns every walk and every belt-laying into dead time. Real-time automation with bounded idle fixes both.</li>
+        <li><b>A power station</b> (a machine you type at to speed the whole factory). One more lesson-less station competing with lessons; if the feel is wanted, a global boost while typing anywhere gives it without a building.</li>
+        <li><b>Keystroke-laid belts</b> (type to extend the belt). Charming, but not a lesson — the operator should be typing lessons.</li>
+        <li><b>Manual routing.</b> Invariant: constrained building; the player runs machines, doesn't plan layouts.</li>
+        <li><b>Throughput math</b> (Mk belts, splitters, ratios to balance). Tune so one mine ≈ one consumer instead; the player reads hunger, not numbers.</li>
+        <li><b>Hub contracts for anything.</b> Every price lives where the thing happens. A guidance checklist (what to build next) is later UI, not a mechanic; contracts may return later for variety.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Two clocks: the keyboard is learned before the speed arrives</h2>
+  <p class="sub">Players will know every key before they hold 30–40 WPM. The tree is built so that stops mattering: the letter clock runs out around T5; a second clock takes over.</p>
+  <div class="two">
+    <div class="eval">
+      <h3>The skill clock (T0–T5)</h3>
+      <ul>
+        <li>Pairs unlock on readiness — 30+ clean samples at 25 WPM-equivalent latency, ≥97% — so keys cannot arrive faster than a modest fluency on the previous ones. Twenty introductions × ~50 min ≈ 17 h.</li>
+        <li>Tier bars hold the gates at 12 → 28 WPM-equivalent on every unlocked letter. They cannot be rushed; they are the pace.</li>
+        <li>Every Mk retool and every flux slot is review of an older bench with new material — the "some backtracking, not far, not often" budget, one ore at a time.</li>
+      </ul>
+    </div>
+    <div class="eval">
+      <h3>The volume clock (T5 to the finish, and beyond)</h3>
+      <ul>
+        <li><b>The factory feeds you; you finish it.</b> Once everything is automated and belted, the whole chain runs on its own up to the Manufacturer — and heavy modules exist only because you type pages there. Finishing the game ("launch") needs K heavy modules (K ≈ 200 as a placeholder, tuned so it takes ~6–8 h at ~30 WPM) plus every letter past bar 35.</li>
+        <li><b>What you type there is a content slot, not a mechanic.</b> Pages come from a per-course <span class="mono">pages</span> file: real prose, trivia, easter eggs, the machines talking to you, a plot that turns — written separately from engineering. The engine only cares that pages are graded by length and punctuation density.</li>
+        <li><b>After the finish</b>: free-play with bars raised (50+ WPM), speed runs, hint-free night shifts, and any further pages you write. The factory keeps humming.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>The tier board</h2>
+  <p class="sub">Read a column top to bottom: keys unlocked, what becomes buildable, recipes that appear (teal bar = new lesson; gold bar = old station refreshed or demanded), automations and belts expected, the bar that closes the tier, and the hour budget. Sample content is illustrative; real pools come from the course data files. Prices are placeholders.</p>
+  <div class="scroll">
+  <table class="board">
+    <thead><tr>
+      <th></th>
+      <th><div class="tier">T0 · hand<small>index fingers · 6 keys</small></div></th>
+      <th><div class="tier">T1 · powered<small>home row core · 12 keys</small></div></th>
+      <th><div class="tier">T2 · stone &amp; coal<small>ring finger · 18 keys</small></div></th>
+      <th><div class="tier">T3 · oil<small>pinky · period · 24 keys</small></div></th>
+      <th><div class="tier">T4 · deep<small>rare consonants · 30 keys</small></div></th>
+      <th><div class="tier">T5 · rare tail<small>outer pinky · Shift · 34 keys</small></div></th>
+      <th><div class="tier">T6 · finish<small>consolidation</small></div></th>
+    </tr></thead>
+    <tbody>
+    <tr>
+      <td>Keys<br>(pairs, in order)</td>
+      <td><span class="chip fe"><b>а о</b><small>Fe Mk1</small></span><span class="chip cu"><b>е н</b><small>Cu Mk1</small></span><span class="chip st"><b>и т</b><small>St Mk1</small></span><div class="note">Three mines pre-built. First keys of all: а о on the F/J bumps.</div></td>
+      <td><span class="chip qz"><b>в л</b><small>Qz Mk1 · new node</small></span><span class="chip fe"><b>п р</b><small>Fe Mk2</small></span><span class="chip qz"><b>с б</b><small>Qz Mk2</small></span><div class="note">Middle finger arrives; в а п р о л completes the home-row core.</div></td>
+      <td><span class="chip co"><b>ы д</b><small>Co Mk1 · new node</small></span><span class="chip cu"><b>к г</b><small>Cu Mk2</small></span><span class="chip st"><b>м ь</b><small>St Mk2</small></span><div class="note">Ring finger arrives; index inner columns complete; ь unlocks verbs.</div></td>
+      <td><span class="chip oi"><b>я .</b><small>Oi Mk1 · new node</small></span><span class="chip tool"><b>,</b><small>Fastener Mk1</small></span><span class="chip qz"><b>у ш</b><small>Qz Mk3</small></span><span class="chip oi"><b>й з</b><small>Oi Mk2</small></span><div class="note">Pinky arrives with the period; comma (Shift+/) follows on the same key.</div></td>
+      <td><span class="chip co"><b>ч ю</b><small>Co Mk2</small></span><span class="chip tool"><b>? ! -</b><small>Fastener Mk2</small></span><span class="chip oi"><b>ф ж</b><small>Oi Mk3</small></span><span class="chip co"><b>ц щ</b><small>Co Mk3</small></span><div class="note">No new node — three reaches. Pinky home keys (ф ж) are learned last but were rested on since T0.</div></td>
+      <td><span class="chip oi"><b>э х ё ъ</b><small>Oi Mk4</small></span><span class="chip tool"><b>⇧</b><small>Crane · capitals</small></span><span class="chip tool"><b>: ; " ( )</b><small>Fastener Mk3</small></span><div class="note">Outer pinky. Shift generalizes from one key to all.</div></td>
+      <td><div class="note">Nothing new. All 35 items + Shift + 8 punctuation keys; the tier is transfer to real text.</div></td>
+    </tr>
+    <tr>
+      <td>Buildable<br><span class="note" style="text-transform:none;letter-spacing:0">at plots and nodes</span></td>
+      <td><span class="chip kit pre">3 mines</span><span class="chip kit">Smelter <small>30 of each ore</small></span></td>
+      <td><span class="chip kit">Quartz mine</span><span class="chip kit">Iron mine #2</span><span class="chip kit">Smelter #2</span><span class="chip kit">Constructor <small>40 quartz iron + 40 cast iron</small></span><span class="chip kit">Foundry <small>40 parts + 40 bronze</small></span></td>
+      <td><span class="chip kit">Coal pit</span><span class="chip kit">Iron mine #3</span><span class="chip kit">Smelter #3</span><span class="chip kit">Constructor #2</span><span class="chip kit">Molder <small>60 parts + 30 brass</small></span><span class="chip kit">Assembler <small>60 moldings + 40 parts</small></span></td>
+      <td><span class="chip kit">Oil derrick</span><span class="chip kit">Oil derrick #2</span><span class="chip kit">Foundry #2</span><span class="chip kit">Fastener <small>40 black iron + 40 modules</small></span></td>
+      <td><span class="chip kit">Coal pit #2</span><span class="chip kit">Copper mine #2</span><span class="chip kit">Fastener Mk2 <small>at the Fastener</small></span></td>
+      <td><span class="chip kit">Stone mine #2 · Quartz mine #2</span><span class="chip kit">Crane <small>80 fastened + 40 glass</small></span><span class="chip kit">Fastener Mk3</span></td>
+      <td><span class="chip kit">Manufacturer <small>100 crates + 60 moldings + 60 parts</small></span></td>
+    </tr>
+    <tr>
+      <td>Recipes<br><span class="note" style="text-transform:none;letter-spacing:0">teal = new · gold = refreshed · ratios placeholder</span></td>
+      <td>
+        <div class="rcp new"><div class="io">2<i class="dot fe"></i>+1<i class="dot cu"></i><span class="arrow">→</span><span class="out">bronze</span><span class="gr">syllables · 4</span></div><div class="smp">на но не он ан · он, она, не</div></div>
+        <div class="rcp new"><div class="io">2<i class="dot fe"></i>+1<i class="dot st"></i><span class="arrow">→</span><span class="out">cast iron</span><span class="gr">syllables · 4</span></div><div class="smp">та то ти от ит · тот, то, от</div></div>
+        <div class="note">Copper+stone waits for T2 (as brass, 8 letters instead of 4).</div>
+      </td>
+      <td>
+        <div class="rcp new"><div class="io">2<i class="dot fe"></i>+1<i class="dot qz"></i><span class="arrow">→</span><span class="out">quartz iron</span><span class="gr">syllables · 6→8</span></div><div class="smp">ва во ла ло пра про вал вол лов</div></div>
+        <div class="rcp new"><div class="io">quartz iron<span class="arrow">→</span><span class="out">parts</span><span class="gr">words · 8</span></div><div class="smp">пол вол пар пора лапа слово слава сова роса</div></div>
+        <div class="rcp new"><div class="io">2 bronze+1<i class="dot qz"></i><span class="arrow">→</span><span class="out">quartz bronze</span><span class="gr">clusters · 10</span></div><div class="smp">вл сл пр бр сн сп · слон все лес весна право небо село</div></div>
+        <div class="rcp new"><div class="io">quartz bronze<span class="arrow">→</span><span class="out">parts</span><span class="gr">words · 10</span></div></div>
+        <div class="rcp refresh"><div class="io">bronze <span class="gr">Fe Mk2 adds п р</span></div><div class="smp">па по пра про — same machine, new syllables</div></div>
+      </td>
+      <td>
+        <div class="rcp new"><div class="io">3<i class="dot fe"></i>+1<i class="dot co"></i><span class="arrow">→</span><span class="out">steel</span><span class="gr">syllables · 6</span></div><div class="smp">да до ды ра ры пра дро · да дар род — iron letters 3×</div></div>
+        <div class="rcp new"><div class="io">2<i class="dot cu"></i>+1<i class="dot st"></i><span class="arrow">→</span><span class="out">brass</span><span class="gr">syllables · 8</span></div><div class="smp">не ни те ки ме ми · нет кит тень мне гимн</div></div>
+        <div class="rcp new"><div class="io">2 cast iron+1<i class="dot co"></i><span class="arrow">→</span><span class="out">cast steel</span><span class="gr">clusters · 10</span></div><div class="smp">тр др пт мт · дом дым мода порт торт три</div></div>
+        <div class="rcp new"><div class="io">brass · cast steel<span class="arrow">→</span><span class="out">parts</span><span class="gr">words · 8–10</span></div></div>
+        <div class="rcp new"><div class="io">2 parts+1<i class="dot fe"></i>/<i class="dot cu"></i>/<i class="dot st"></i>/<i class="dot co"></i><span class="arrow">→</span><span class="out">moldings</span><span class="gr">endings · full 18</span></div><div class="smp">St: -ть -ить -ом -им · Fe: по- про- -ор · Cu: -ение -ник -его · Co: -ды до-</div></div>
+        <div class="rcp new"><div class="io">2 parts+1 steel · 2 parts+1 brass<span class="arrow">→</span><span class="out">modules</span><span class="gr">phrases · full 18</span></div><div class="smp">на столе · он не мог · мы были там</div></div>
+        <div class="rcp refresh"><div class="io">brass = both T0 ores at their new Mk2 keys</div><div class="smp">old benches, new letters; steel wants iron — belted by now</div></div>
+      </td>
+      <td>
+        <div class="rcp new"><div class="io">2<i class="dot fe"></i>+1<i class="dot oi"></i><span class="arrow">→</span><span class="out">black iron</span><span class="gr">syllables · 8</span></div><div class="smp">за ря зо рой зай · заря роза зря рай</div></div>
+        <div class="rcp new"><div class="io">2 brass+1<i class="dot oi"></i><span class="arrow">→</span><span class="out">black brass</span><span class="gr">clusters · 12</span></div><div class="smp">зн зм тн · змей зять зенит мять</div></div>
+        <div class="rcp new"><div class="io">black brass<span class="arrow">→</span><span class="out">parts</span><span class="gr">words · 12</span></div></div>
+        <div class="rcp new"><div class="io">2 modules+1<i class="dot oi"></i><span class="arrow">→</span><span class="out">fastened</span><span class="gr">sentences . , · 20+</span></div><div class="smp">мы были дома. она знала, кто там.</div></div>
+        <div class="rcp new"><div class="io">2 parts+1 black iron<span class="arrow">→</span><span class="out">modules</span><span class="gr">phrases w/ я й з</span></div></div>
+        <div class="rcp new"><div class="io">2 parts+1<i class="dot oi"></i><span class="arrow">→</span><span class="out">moldings</span><span class="gr">Oi family</span></div><div class="smp">-ся -ый -ий -ой -яя</div></div>
+        <div class="rcp refresh"><div class="io">quartz iron smelter &amp; constructor <span class="gr">Qz Mk3 adds у ш</span></div><div class="smp">суп шум шов пушок — a T1 station, two tiers back</div></div>
+      </td>
+      <td>
+        <div class="rcp new"><div class="io">2<i class="dot cu"></i>+1<i class="dot co"></i><span class="arrow">→</span><span class="out">gunmetal</span><span class="gr">syllables · 10</span></div><div class="smp">че ню дю кы цы щу · цены чек</div></div>
+        <div class="rcp new"><div class="io">2 steel+1<i class="dot qz"></i><span class="arrow">→</span><span class="out">quartz steel</span><span class="gr">clusters · 16</span></div><div class="smp">сч шч дв бр пл · дача удача чудо луч душ почва</div></div>
+        <div class="rcp new"><div class="io">quartz steel<span class="arrow">→</span><span class="out">parts</span><span class="gr">words · 16</span></div></div>
+        <div class="rcp new"><div class="io">2 modules+1<i class="dot co"></i><span class="arrow">→</span><span class="out">fastened</span><span class="gr">? ! - · full 30</span></div><div class="smp">почему ты молчишь? — не знаю!</div></div>
+        <div class="rcp new"><div class="io">2 parts+1<i class="dot co"></i><span class="arrow">→</span><span class="out">moldings</span><span class="gr">Co family</span></div><div class="smp">-ция -щик -чик -ющ -ущ -ич</div></div>
+        <div class="rcp refresh"><div class="io">steel <span class="gr">Co Mk2/3 adds ч ю ц щ</span></div><div class="smp">чу дю цы — the T2 smelter, refreshed</div></div>
+      </td>
+      <td>
+        <div class="rcp new"><div class="io">2<i class="dot qz"></i>+1<i class="dot oi"></i><span class="arrow">→</span><span class="out">glass</span><span class="gr">syllables · 16</span></div><div class="smp">фу шу ху зя ёж · слух лужа шёл ёж</div></div>
+        <div class="rcp new"><div class="io">2 black iron+1<i class="dot co"></i><span class="arrow">→</span><span class="out">coke iron</span><span class="gr">clusters · 20</span></div><div class="smp">rare-letter words: роща ярче чаща эхо ёж дождя</div></div>
+        <div class="rcp new"><div class="io">2 fastened+1<i class="dot oi"></i><span class="arrow">→</span><span class="out">crates</span><span class="gr">capitals · full</span></div><div class="smp">Москва. Иван и Ольга. — Shift is a pinky key; oil is the pinky ore</div></div>
+        <div class="rcp new"><div class="io">2 modules+1<i class="dot oi"></i><span class="arrow">→</span><span class="out">fastened</span><span class="gr">: ; " ( )</span></div></div>
+        <div class="rcp new"><div class="io">2 parts+1<i class="dot oi"></i><span class="arrow">→</span><span class="out">moldings</span><span class="gr">Oi Mk4 family</span></div><div class="smp">объ- съ- -ёт -ешь</div></div>
+        <div class="rcp refresh"><div class="io">black iron <span class="gr">Oi Mk4 adds э х ё ъ</span></div><div class="smp">эра эхо хор ёж порох — the T3 smelter, refreshed</div></div>
+      </td>
+      <td>
+        <div class="rcp new"><div class="io">2 crates+1 moldings+2 parts<span class="arrow">→</span><span class="out">heavy modules</span><span class="gr">pages · full</span></div><div class="smp">real paragraphs, capitals, full punctuation — the content slot</div></div>
+        <div class="rcp new"><div class="io">heavy modules<span class="arrow">→</span><span class="out">finish counter</span><span class="gr">K to finish</span></div></div>
+        <div class="rcp refresh"><div class="io">everything</div><div class="smp">the three inputs pull from T2 (moldings, parts) and T5 (crates)</div></div>
+      </td>
+    </tr>
+    <tr>
+      <td>Automation ⚙<br><span class="note" style="text-transform:none;letter-spacing:0">expected</span></td>
+      <td><span class="chip auto">iron Mk1</span><div class="note">Expected by end of T0.</div></td>
+      <td><span class="chip auto">copper Mk1</span><span class="chip auto">stone Mk1</span><span class="chip auto">iron Mk2 (re-sticky)</span><span class="chip auto">Smelters</span></td>
+      <td><span class="chip auto">quartz Mk2</span><span class="chip auto">copper · stone Mk2</span><span class="chip auto">Foundry</span><span class="chip auto">Constructors</span></td>
+      <td><span class="chip auto">coal Mk1</span><span class="chip auto">quartz Mk3</span><span class="chip auto">oil Mk2 (pipes)</span><span class="chip auto">Molder</span><span class="chip auto">Assembler</span></td>
+      <td><span class="chip auto">coal Mk3</span><span class="chip auto">oil Mk3</span><span class="chip auto">Fastener</span></td>
+      <td><span class="chip auto">oil Mk4</span><div class="note">Crane stays hand-work this tier.</div></td>
+      <td><span class="chip auto">Crane</span><div class="note">Manufacturer = you, until the finish.</div></td>
+    </tr>
+    <tr>
+      <td>Belts laid<br><span class="note" style="text-transform:none;letter-spacing:0">expected</span></td>
+      <td><div class="note">Carry by hand. Belts unlock with T1.</div></td>
+      <td><span class="chip belt">iron · copper · stone · quartz → Smelter A</span><span class="chip belt">iron #2 → Smelter B</span><span class="chip belt">quartz → Foundry</span><span class="chip belt">Smelters → Foundry · Constructor</span><span class="chip belt">Foundry → Constructor</span></td>
+      <td><span class="chip belt">coal → Smelter B</span><span class="chip belt">iron #3 + coal → Smelter C</span><span class="chip belt">Foundry → Constructor #2</span><span class="chip belt">Constructors → Molder · Assembler</span><span class="chip belt">Smelter → Assembler</span><span class="chip belt">iron · stone → Molder</span></td>
+      <td><span class="chip belt">oil ⇒ Smelter · Foundry · Fastener · Molder</span><span class="chip belt">oil #2 ⇒ Smelter B</span><span class="chip belt">Assembler → Fastener</span></td>
+      <td><span class="chip belt">coal #2 → Fastener · Molder</span><span class="chip belt">copper #2 → Molder · Smelter C</span></td>
+      <td><span class="chip belt">Fastener → Crane</span><span class="chip belt">oil ⇒ Crane</span></td>
+      <td><span class="chip belt">Crane · Molder · Constructor → Manufacturer</span></td>
+    </tr>
+    <tr>
+      <td>Backtrack budget</td>
+      <td class="note">—</td>
+      <td class="note">Foundry price asks for 40 bronze (T0). Iron retool. Reach: 1 tier.</td>
+      <td class="note">Brass needs T0 ores at their new Mk2 keys. Copper and stone retool. Reach: 2.</td>
+      <td class="note">Fastener price wants modules (T2). Quartz retool refreshes T1 stations. Reach: 2.</td>
+      <td class="note">Copper (latest Mk = T2) and steel (T2). Coal and oil retool. Reach: 2. Iron/stone only as belted feedstock.</td>
+      <td class="note">Black iron (T3); Fastener stations feed the Crane. Oil retool. Reach: 2.</td>
+      <td class="note">Manufacturer reaches everything, by design — this is the review.</td>
+    </tr>
+    <tr>
+      <td>Tier bar<br><span class="note" style="text-transform:none;letter-spacing:0">readiness target on every unlocked letter</span></td>
+      <td class="exam"><b>12</b> WPM-eq · 95%</td>
+      <td class="exam"><b>15</b> WPM-eq · 96%</td>
+      <td class="exam"><b>18</b> WPM-eq · 96%</td>
+      <td class="exam"><b>21</b> WPM-eq · 97% · with . ,</td>
+      <td class="exam"><b>24</b> WPM-eq · 97% · hints dimmed from here</td>
+      <td class="exam"><b>28</b> WPM-eq · 97% · hint-free · capitals</td>
+      <td class="exam"><b>35</b> WPM-eq · 97% + K heavy modules → finish</td>
+    </tr>
+    <tr>
+      <td>Hours (est.)</td>
+      <td class="exam"><b>2</b> h</td><td class="exam"><b>4</b> h</td><td class="exam"><b>5</b> h</td><td class="exam"><b>6</b> h</td><td class="exam"><b>6</b> h</td><td class="exam"><b>5</b> h</td><td class="exam"><b>4+</b> h</td>
+    </tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="hours" aria-label="Estimated hours per tier, widths proportional">
+    <div style="flex:2"><b>2 h</b>T0</div><div style="flex:4"><b>4 h</b>T1</div><div style="flex:5"><b>5 h</b>T2</div><div style="flex:6"><b>6 h</b>T3</div><div style="flex:6"><b>6 h</b>T4</div><div style="flex:5"><b>5 h</b>T5</div><div style="flex:4"><b>4+ h</b>T6</div>
+  </div>
+  <p class="note" style="margin-top:8px">≈32 h to the finish. A floor set by the skill gates, not a schedule; prices, bars and K stretch it if it plays short. Unlock cadence: ~25 builds + 16 Mk events + ~20 ⚙ + ~40 belts + 7 tier bars ≈ 110 moments, one every ~17 minutes.</p>
+</section>
+
+<section>
+  <h2>The material ladder is the grammar ladder</h2>
+  <p class="sub">One figure, one claim: each production form maps to one level of motor chunking, and a raw ore or alloy rides along into every deeper recipe as the flux that sets focus.</p>
+  <figure>
+    <svg viewBox="0 0 1184 296" role="img" aria-label="Flow from ore through 2-ore ingot, 3-ore ingot, parts, then moldings and modules, fastened modules, crates, heavy modules to the finish; each arrow labeled with the machine that performs it; a dashed flux bus from ore feeds the deeper machines.">
+      <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+      <g fill="none" stroke="currentColor" stroke-width="1.3">
+        <line x1="128" y1="170" x2="146" y2="170" marker-end="url(#arr)"/>
+        <line x1="258" y1="170" x2="276" y2="170" marker-end="url(#arr)"/>
+        <line x1="388" y1="170" x2="406" y2="170" marker-end="url(#arr)"/>
+        <line x1="518" y1="170" x2="536" y2="170" marker-end="url(#arr)"/>
+        <line x1="648" y1="170" x2="666" y2="170" marker-end="url(#arr)"/>
+        <line x1="778" y1="170" x2="796" y2="170" marker-end="url(#arr)"/>
+        <line x1="908" y1="170" x2="926" y2="170" marker-end="url(#arr)"/>
+        <line x1="1038" y1="170" x2="1056" y2="170" marker-end="url(#arr)"/>
+        <path d="M202,200 C202,236 462,236 462,200" marker-end="url(#arr)"/>
+        <path d="M518,150 C540,150 540,70 536,70" marker-end="url(#arr)"/>
+        <path d="M648,70 L960,70 L960,140" marker-end="url(#arr)"/>
+        <path d="M462,200 L462,262 L992,262 L992,200" marker-end="url(#arr)"/>
+      </g>
+      <g fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="4 4" opacity=".75">
+        <path d="M72,200 L72,282 L1050,282"/>
+        <line x1="592" y1="282" x2="592" y2="200" marker-end="url(#arr)"/>
+        <line x1="722" y1="282" x2="722" y2="200" marker-end="url(#arr)"/>
+        <line x1="852" y1="282" x2="852" y2="200" marker-end="url(#arr)"/>
+        <line x1="612" y1="282" x2="612" y2="100" marker-end="url(#arr)"/>
+      </g>
+      <g stroke="currentColor" stroke-width="1.3">
+        <rect x="16" y="140" width="112" height="60" rx="6" fill="var(--fe-bg)"/>
+        <rect x="146" y="140" width="112" height="60" rx="6" fill="var(--card2)"/>
+        <rect x="276" y="140" width="112" height="60" rx="6" fill="var(--card2)"/>
+        <rect x="406" y="140" width="112" height="60" rx="6" fill="var(--card2)"/>
+        <rect x="536" y="40" width="112" height="60" rx="6" fill="var(--card2)"/>
+        <rect x="536" y="140" width="112" height="60" rx="6" fill="var(--card2)"/>
+        <rect x="666" y="140" width="112" height="60" rx="6" fill="var(--card2)"/>
+        <rect x="796" y="140" width="112" height="60" rx="6" fill="var(--card2)"/>
+        <rect x="926" y="140" width="112" height="60" rx="6" fill="var(--card2)"/>
+        <rect x="1056" y="140" width="112" height="60" rx="6" fill="var(--accent-bg)"/>
+      </g>
+      <g font-family="Bahnschrift, 'Barlow Condensed', 'Arial Narrow', sans-serif" font-size="13" font-weight="700" fill="currentColor" text-anchor="middle">
+        <text x="72" y="164">Ore</text><text x="202" y="164">2-ore ingot</text><text x="332" y="164">3-ore ingot</text><text x="462" y="164">Parts</text>
+        <text x="592" y="64">Moldings</text><text x="592" y="164">Modules</text><text x="722" y="164">Fastened</text><text x="852" y="164">Crates</text><text x="982" y="164">Heavy modules</text><text x="1112" y="164">Finish</text>
+      </g>
+      <g font-family="'Segoe UI', system-ui, sans-serif" font-size="11" fill="currentColor" opacity=".8" text-anchor="middle">
+        <text x="72" y="184">letters</text><text x="202" y="184">syllables</text><text x="332" y="184">clusters</text><text x="462" y="184">words</text>
+        <text x="592" y="84">endings</text><text x="592" y="184">phrases</text><text x="722" y="184">punct. sentences</text><text x="852" y="184">capitals</text><text x="982" y="184">pages</text><text x="1112" y="184">K modules · bar 35</text>
+      </g>
+      <g font-family="'Cascadia Mono', Consolas, monospace" font-size="10.5" fill="currentColor" text-anchor="middle">
+        <text x="72" y="130">Mine</text>
+        <text x="137" y="128">Smelter</text><text x="137" y="140">2 ores</text>
+        <text x="267" y="128">Foundry</text><text x="267" y="140">+ ore</text>
+        <text x="397" y="128">Constructor</text><text x="397" y="140">1 → 1</text>
+        <text x="332" y="248">any ingot → Constructor</text>
+        <text x="527" y="128">Assembler</text><text x="527" y="140">+ ingot</text>
+        <text x="500" y="112">Molder</text><text x="500" y="124">+ ore</text>
+        <text x="657" y="128">Fastener</text><text x="657" y="140">+ ore · adds , ? ! …</text>
+        <text x="787" y="128">Crane</text><text x="787" y="140">+ oil · adds ⇧</text>
+        <text x="917" y="128">Manufacturer</text><text x="917" y="140">3 → 1</text>
+        <text x="1047" y="128">count</text>
+        <text x="800" y="60">moldings →</text>
+        <text x="730" y="256">parts →</text>
+        <text x="300" y="293">flux: an ore or alloy rides into every deeper recipe — sets the focus letters, the ending family, the word pool; ties the deep machines to old nodes</text>
+      </g>
+    </svg>
+    <figcaption>Strict-union alphabets stop at Parts. From Moldings on, the alphabet is the full unlocked set and the flux input becomes the focus weight (as bench focus sets work today) plus a content family. That is why late variety comes from grammar, not from alphabet — and why old mines never fall out of the loop.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Machine kinds</h2>
+  <p class="sub">Nine lesson kinds. Kinds are templates — build as many instances as the factory wants; arity is fixed per kind so the icon row always reads the same way.</p>
+  <div class="scroll" style="border:none;background:none">
+  <table class="plain">
+    <thead><tr><th>Kind</th><th>Arity</th><th>Grammar (drill mode)</th><th>Min alphabet</th><th>First · ⚙ from</th><th>How the input changes the lesson</th></tr></thead>
+    <tbody>
+      <tr><td>Mine</td><td>0 → 1 ore</td><td><span class="mono">letters</span> — Mk1: two positions, hinted then blind; Mk2+: streams over the finger's keys</td><td>2</td><td>T0 · when its keys are sticky</td><td>The ore IS the finger. Mk adds a reach. Several nodes per ore.</td></tr>
+      <tr><td>Smelter</td><td>ore + ore → ingot</td><td><span class="mono">syllables</span> — real high-frequency CV/VC/CVC from the course syllable table, filtered to the alphabet</td><td>4 · ≥1 vowel + 1 consonant</td><td>T0 · T1</td><td>Different pair, different syllable set; the ratio weights the two ores. Iron is the vowel bank (а о = 19% of text), so most alloys include it.</td></tr>
+      <tr><td>Foundry</td><td>ingot + ore → 3-ore ingot</td><td><span class="mono">clusters</span> — consonant clusters (ст пр вл сн) in 2-syllable pseudo-words + real bigrams</td><td>8</td><td>T1 · T2</td><td>Third ore widens the union; the added ore's clusters lead.</td></tr>
+      <tr><td>Constructor</td><td>ingot → parts</td><td><span class="mono">words</span> — real words with glosses, strict union</td><td>8 · pool ≥25 words</td><td>T1 · T2</td><td>One recipe per alloy = one word pool per alloy. Vowel-poor alloys (steel, black iron) skip it until upgrades enrich them.</td></tr>
+      <tr><td>Molder</td><td>parts + ore → moldings</td><td><span class="mono">endings</span> — prefixes/suffixes/inflections in frames</td><td>14 · full set</td><td>T2 · T3</td><td>The flux ore picks the ending family (stone -ть -ить -ом; copper -ение -ник; coal -ция -щик; oil -ся -ый -ой).</td></tr>
+      <tr><td>Assembler</td><td>parts + ingot → modules</td><td><span class="mono">phrases</span> — 2–3-word collocations, then short sentences, no punctuation</td><td>16 · full set</td><td>T2 · T3</td><td>The flux ingot's ores are the focus letters.</td></tr>
+      <tr><td>Fastener</td><td>modules + ore → fastened · adds keys</td><td><span class="mono">punct</span> — sentences with , (Mk1) · ? ! - (Mk2) · : ; " ( ) (Mk3)</td><td>20</td><td>T3 · T4</td><td>Mk levels add punctuation keys, like ores add letters. Comma = Shift+/ is Shift's first appearance.</td></tr>
+      <tr><td>Crane</td><td>fastened + oil → crates · adds ⇧</td><td><span class="mono">capitals</span> — sentence-initial caps and proper names</td><td>30</td><td>T5 · T6</td><td>Oil is the pinky ore; Shift is a pinky key.</td></tr>
+      <tr><td>Manufacturer</td><td>crates + moldings + parts → heavy</td><td><span class="mono">pages</span> — real paragraphs, full complexity; the content slot</td><td>all</td><td>T6 · after the finish</td><td>Reaches every earlier form on purpose. The one station the whole factory exists to feed.</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section>
+  <h2>Does "inputs set the recipe" actually train well?</h2>
+  <p class="sub">Your idea, evaluated against progression and learning. Verdict: yes — with six guard rails, all of which are already in the rules above.</p>
+  <div class="two">
+    <div class="eval">
+      <h3>Where it works</h3>
+      <ul>
+        <li><b>Variety without more kinds.</b> 9 kinds × ~30 curated recipes ≈ 47 lessons, and every Mk upgrade rewrites every downstream lesson. Bronze at T0 has 4 letters; at T1 it has 6. The same smelter is worth walking back to because it changed.</li>
+        <li><b>The walk is the focus dial.</b> Carry coal into the Molder and it teaches coal endings; carry stone and it teaches -ть. Agency without a menu — invariant 2 holds.</li>
+        <li><b>Curriculum honesty is automatic.</b> A material can only union letters the player has unlocked, because Mk levels ARE the unlocks. No recipe can leak a key early.</li>
+        <li><b>Backtracking is a property of the graph.</b> Flux inputs tie deep machines to old nodes; retools pull you to exactly one ore; the ≤2-tier reach falls out of which ores get upgraded when.</li>
+        <li><b>The lesson set is well-rounded.</b> positions → letters → syllables → clusters → words → endings → phrases → punctuated sentences → capitals → pages: ten grammars, each with a minimum alphabet so nothing arrives before it can be meaningful.</li>
+      </ul>
+    </div>
+    <div class="eval risk">
+      <h3>Where it strains — and the guard rail</h3>
+      <ol>
+        <li><b>Ambiguity.</b> A full bag makes three recipes affordable at once. → Rule 5: weakest letters first, then newest; the active row is marked; carrying only what you want overrides. On its own, a machine makes what its belts bring.</li>
+        <li><b>Vowel poverty.</b> Iron holds а о; quartz has no vowel until T3; late ores are consonant-heavy. → Every alloy must hold ≥1 vowel + 1 consonant; late alloys pair a rare ore with iron/copper/stone (belted by then); the Constructor demands a measured pool of ≥25 real words before a recipe is offered.</li>
+        <li><b>Union collapse.</b> From T3 most unions ≈ the full set. → Strict union stops at Parts; deeper grammars use the full set + flux focus. Late variety comes from grammar and content pools, which is exactly the review the design wants.</li>
+        <li><b>Material count.</b> 6 ores + 8 smelter alloys + 5 foundry alloys + 6 generic = 25 ids. → Alloy icons are two/three-tone stacks of their ore colors; the in-canvas HUD goes contextual (what the dock needs), the full bag lives in the side panel.</li>
+        <li><b>Recipes must be authored.</b> If every ore pair were valid, outputs and names would explode. → Curated list; an unknown pair shows a ✗ row.</li>
+        <li><b>Skill/economy drift.</b> Materials could pile up faster than letters are ready, or the reverse. → Mk gates on readiness; tier builds on the previous tier bar; ⚙ on sticky letters; prices tuned so the economy finishes just after the bar. Skill is always the clock.</li>
+      </ol>
+    </div>
+  </div>
+  <div class="callout"><b>Honest caveat:</b> the two T0 alloys are thin (9 syllables each) — that is the tutorial, and the first real words (тот, то, он, она, не) already appear inside them. And a strictly 1-in ore machine at Mk1 does not work here because iron is vowel-only at а о; the "one machine, different ore, different lesson" idea lives at the Constructor (one alloy in → one word pool out) and in every flux slot instead.</div>
+</section>
+
+<section>
+  <h2>What this changes against v2, and what it needs</h2>
+  <div class="two">
+    <div class="eval">
+      <h3>v2 → v3</h3>
+      <ul class="diff">
+        <li>7 mines with fixed 4–5-letter sets → <b>6 ores with Mk1–Mk4</b>, 2 keys per step, several nodes per ore. <span class="tag lock">locked</span></li>
+        <li>Single-letter frequency unlocks → <b>mirror-pair unlocks</b> (same finger, both hands), frequency-sorted. <span class="tag lock">locked</span></li>
+        <li>Fixed per-bench focus sets → <b>alphabet computed from the recipe graph</b> (union of inputs, live); <b>ratio = focus weight</b>.</li>
+        <li>Smelter 1-in → <b>Smelter 2-in</b>; <b>Foundry</b> (clusters) added; <b>Crane</b> (capitals) added; Circuit Fab dropped (rare words = Constructor on late alloys).</li>
+        <li>Punctuation as one machine → <b>Fastener Mk1/2/3</b>; period is mined (Oil Mk1); comma moves to T3. Capitals in at T5; numbers out.</li>
+        <li>Hub contracts + kits → <b>everything built from your bag, at the place</b>: hold Space opens the spot's menu, arrows choose (Mk at the mine, machines at plots, ⚙ at the machine, belts by spool). The Hub goes; a what-to-build-next checklist is later UI; contracts may return later for variety.</li>
+        <li>One global bag → <b>machines have buffers</b>; hand output rolls onto an exit belt if one exists; automated machines eat only from buffers; you can still collect and feed by hand.</li>
+        <li>Fixed BELTS list bought at an automated source → <b>spool &amp; socket</b> from any machine to any accepting inlet, auto-routed, one belt per tile, choke points authored, distance-priced in the tier's trade good; pipes for oil.</li>
+        <li>Per-keystroke autofeed → <b>automation runs in real time</b>: belts, jobs, mines on the clock, bounded by buffers and by the one-tier ⚙ lag. Invariant 1 is amended: <em>skill</em> never advances without typing; <em>mastered production</em> may. Hand work still advances only its own station.</li>
+        <li>Automation only on tier-1 benches → <b>one rule for every machine</b> (⚙ ∧ sticky letters ∧ full buffers); processors get ⚙ one tier after arrival.</li>
+        <li>Depot, ₽ and Издание exams → <b>removed for now</b>. Tier bars are per-tier readiness targets on every unlocked letter (12 → 35 WPM-equivalent), so a tier opens the moment the letters are there — no station, no ceremony. Finishing the game ("launch" is just the word for it) = bar 35 + <b>K heavy modules produced</b> (the volume clock). Décor money and live exams can return later.</li>
+        <li>Fixed belt costs → <b>belts free for now</b>; automation and machines are the material sinks.</li>
+        <li>Save ids: additive only. az/buki/vedi/slogi/slova/stroki keep mapping to iron/copper/stone/…; display names live in i18n as today.</li>
+      </ul>
+    </div>
+    <div class="eval">
+      <h3>Course data this asks for (RU)</h3>
+      <ul class="diff">
+        <li>Pair order + ore map (locked above); syllable table ~150 with frequencies; cluster list ~40.</li>
+        <li>Word list grown to ~1,500 with frequency ranks (restricted-alphabet pools need density); ending families ~60, tagged by ore; phrase list ~200; graded sentence corpus ~300; proper-name list ~50; pages — as many as you want to write.</li>
+        <li>All of it lives in <span class="mono">language-ru.js</span> / <span class="mono">layout-ru.js</span>; the skeleton (kinds, arities, minimum alphabets, recipe graph, automation, belts, rates) is shared. QWERTY note for later: the mirror-pair rule is RU data — F/J = f/j is a poor first pair in English — so the EN course will assign its own pairs to the same six ores.</li>
+      </ul>
+      <h3 style="margin-top:14px">Engine consequences (later, not now)</h3>
+      <ul class="diff">
+        <li>Unlock by pair; ore Mk levels; <span class="mono">alphabet(material)</span> from the graph; recipe resolution; drill modes keys/letters/syllables/clusters/words/endings/phrases/punct/capitals/pages; Shift handling; contextual HUD; machine buffers; real-time scheduler over jobs and belts (paused when the tab is hidden? — decide); belt graph + tile router + spool state + choke tiles; per-recipe automation flags; place menus (arrows + hold Space) replacing milestones; K counter; map growth (more nodes and plots per tier).</li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout teal"><b>Agreed 18 Aug 2026.</b> Real-time automation with bounded idle, running while the tab is hidden; belts free and uncapped (inlets = arity, outlets: mines 1 / processors 2); no Hub, kits, contracts or Depot; ratio = variance only; build menus at plots; nodes and plots as many as the tree needs. Tunables carried into the build plan as placeholders: tier bars 12/15/18/21/24/28/35 WPM-eq, Fastener Mk3 = : ; " ( ), ⚙ one tier after a kind arrives, K ≈ 200, rates and prices as listed. The ×1.5-while-typing feel layer is gravy, off in the foundation. Source of truth from here: DESIGN.md; build order: docs/build-plan.md.</div>
+</section>
+
+<footer>Agreed design, 18 Aug 2026. Mirrored into DESIGN.md (tech tree v3) and docs/build-plan.md; this page lives at docs/tech-tree-v3.html. Alloy names are working names (bronze, cast iron, quartz iron, steel, brass, black iron, gunmetal, glass; quartz bronze, cast steel, black brass, quartz steel, coke iron); internal ids never rename.</footer>
+</div>
+
+</body>
+</html>

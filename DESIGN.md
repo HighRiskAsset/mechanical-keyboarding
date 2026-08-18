@@ -20,25 +20,38 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
 
 ## The five invariants (survived every pivot; never trade away)
 
-1. **Typing is the only power source.** Nothing produces, feeds, or advances
-   without keystrokes. No idle progress, no timers, no time pressure ever.
+1. **Typing is the only source of skill and of new production.** Letters,
+   readiness and tier bars move only by typing; every current-tier good is
+   hand-made; nothing you have not mastered advances without keystrokes. No
+   timers, no time pressure ever. (Amended 2026-08-18 with the v3 tree:
+   *mastered* production — automated machines and belts — runs on the real
+   clock, so old lessons are truly obsolete; that idle is bounded by buffer
+   caps and by the fact that the current tier's goods are never automated,
+   so waiting can fill the inputs of your next lesson but never pay for your
+   next purchase.)
 2. **Stations are lessons.** Each machine wraps a drill mode; its letter set
    lights up on the keyboard when you dock. Walking IS the menu — no scene
-   switches, no instructional text; icons carry all information.
+   switches, no instructional text; icons carry all information. (v3: hold
+   Space at a place opens its icon menu — arrows choose, hold Space confirms
+   — the same one interact key, still no text.)
 3. **Materials are the motor-chunking hierarchy**, displayed as frontier
-   resources: iron ore / copper ore / quartz (tier-1 letter groups, mined at
-   nodes) → ingots (bigrams, Smelter) → parts (clean words, Constructor) →
-   modules (sentences, Assembler) → cargo + ₽ at the Freight Depot. Machines
-   take 1–4 inputs, usually 1 output; tier-1 = 1 material per letter.
+   resources (v3 ladder): six ores = six fingers (letters, mined at nodes) →
+   2-ore ingots (syllables, Smelter) → 3-ore ingots (clusters, Foundry) →
+   parts (words, Constructor) → moldings (endings, Molder) / modules
+   (phrases, Assembler) → fastened modules (punctuated sentences, Fastener)
+   → crates (capitals, Crane) → heavy modules (pages, Manufacturer) → the
+   finish. Machines take 1–3 inputs with ratios, 1 output.
    IMPORTANT: internal save ids keep the legacy Slavic names
    (az/buki/vedi/slogi/slova/stroki/listy) — display names live in i18n
    matNames/stationNames, looks in pixels.js matIcon. Renames never touch ids.
-4. **Automation is earned two ways, honestly.** The *curriculum* unlocks by
-   measured skill only (accuracy-gated frequency-ordered letters; readiness;
-   sticky automaticity). The *economy* (erect kits, upgrade machines to
-   automations, lay belts) is bought with materials — and buys paint and
-   convenience, never skill progress. An automated machine refuses labor:
-   hold Space at it to draw a full load of 100 (the graduation reward).
+4. **Automation is earned honestly, and there is one rule for it.** The
+   *curriculum* unlocks by measured skill only (readiness per key-pair; sticky
+   automaticity; per-tier bars). The *economy* (mines, Mk upgrades, machines,
+   ⚙) is bought from the bag at the place it happens and buys placement and
+   convenience, never skill progress. A machine runs a recipe by itself iff it
+   has its ⚙, every letter of that recipe's alphabet is sticky-mastered, and
+   its input buffers hold a full set; automated recipes refuse labor, and
+   un-automated recipes at the same machine still accept it.
 5. **Language and layout are data, never assumptions.** This is not a Russian
    product with other languages bolted on later. Everything language-specific
    (letter frequencies, unlock order, phonotactics, word lists, glosses) lives
@@ -154,7 +167,11 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   the player picks WHICH free dashed plot each earned kit occupies. Solid
   scenery (columns, stock mountains, scrap heaps) makes routes uneven — map
   variance, bounded strategy, never ratio planning. Data-driven (PLOTS +
-  SCENERY in chain.js) so it carries to any future map.
+  SCENERY in chain.js) so it carries to any future map. (Superseded in
+  direction 2026-08-18 by v3 rule 6: the player chooses which machine
+  occupies each plot from a build menu, paid from the bag; kits and the Hub
+  go. Implemented behaviour is still the kit flow until the build plan's
+  phase 2 lands.)
 - **Milestone board («Контора») & Издания v1**: a notice board station shows
   the current commission as an icon row (goal → reward); Enter delivers
   materials; rewards are KITS for tier-2+ stations (still curriculum-gated by
@@ -327,91 +344,347 @@ the meadow ✔ → 2 regions east + 4 ore patches + ~6 plots + closed crossings 
   stream head, summit), ambient life, tune cobble contrast, HUD rows for the
   four new materials when their machines exist.
 
-## THE TECH TREE (v2, 2026-08-11 — 7 tiers × 2 lessons)
+## THE TECH TREE (v3, agreed 2026-08-18 — six ores, nine machine kinds, seven tiers)
 
-**14 lesson machines: 7 mines + 7 processors, one pair per tier.** The Hub
-and Depot are meta, NOT lessons. Only the Tier 0 pair is pre-built; every
-later machine is a kit — earned via Hub contract, paid in materials.
-Mines are fixed on their ore nodes; processors go on chosen plots.
+Supersedes v2 (2026-08-11) in full. The visual twin of this section is
+`docs/tech-tree-v3.html` (the review page it was agreed on); the build order
+is `docs/build-plan.md`. Everything below is the design; what is *built* today
+is still v2 (see "What v3 removes" at the end).
 
-**Pacing principle — the tiers are time-locked by SKILL, not content.**
-Each tier ends in an Издание benchmark with a rising measured bar (WPM at
-97% accuracy on the full unlocked set, live at the Depot). Skill bars can't
-be rushed: readiness needs 30+ clean samples per letter, automation demands
-sticky mastery, and ~40 h of practice ≈ 40 WPM. Target playthrough:
-**≈30–40 hours ≈ 6–10 weeks at the 15–30 min/day soft-stop pace** —
-roughly one tier a week. Materials can't be rushed either (typing is the
-only source), but skill is the real clock; contract sizes are tuned so the
-economy never finishes before the skill bar does.
+**One sentence:** every lesson is a recipe — what goes into a machine sets its
+alphabet, the machine kind sets its grammar; mines start at two keys and grow
+by upgrade; automation follows mastery and then runs on its own; belts carry
+what machines make; by the end everything mastered works without you while
+everything new still needs your hands.
 
-**Review is structural, not a separate lesson type**: (a) every processor
-drills the FULL unlocked set (words/sentences revisit everything); (b) the
-weakness-boosted generator over-samples shaky letters everywhere; (c) tier
-contracts demand big batches from EARLIER mines — go back and type them, or
-earn their automation (which itself requires sticky letter mastery);
-(d) each Издание is a review exam over everything learned so far.
+**Targets:** ~32 h to the finish (a floor set by skill gates, not a schedule);
+20 key introductions; ~47 distinct lessons; ~110 unlock moments (one every
+~17 min); a typical full build ≈ 13 mines, 12 processors, 40 belts.
 
-### The tiers — Russian ЙЦУКЕН course
+### The seven rules that generate the tree
 
-The 7×2 tier STRUCTURE, the material ladder, and the Издание-benchmark pacing
-are shared by every course. The letter sets and WPM bars below are the Russian
-curriculum specifically; an English QWERTY course reuses the same skeleton with
-its own frequency-ordered letters, its own word lists, and its own bars.
+If a recipe or a tier disagrees with a rule, the recipe is wrong.
 
-| Tier / era | Mine (letters mode) | Processor (skill mode) | Издание bar (tunable) |
-|---|---|---|---|
-| **0 · hand** (pre-built) | Iron Mine — о е а и н т (1–6) | Smelter — bigrams (2 iron → ingots) | 12 WPM · 95% · 3 clean lines |
-| **1 · powered** | Copper Mine — с л в р (7–10) | Constructor — words (ingots + copper → parts) | 15 WPM · 96% |
-| **2 · stone** | Stone Quarry — к м д п (11–14) | Assembler — sentences (parts + stone → modules) | 18 WPM · 96% |
-| **3 · crystal** | Quartz Mine — ы у б я ь (15–19) | Molder — suffix chunks -ться -ого (quartz + stone → moldings) | 21 WPM · 97% |
-| **4 · coal** | Coal Pit — г з ч й (20–23) | Fastener Plant — punctuated lines «.» «,» (24–25; copper + ingots → screws) | 24 WPM · 97%, dimmed hints |
-| **5 · oil** | Oil Derrick — ж х ш ю ё (26–30) | Circuit Fab — rare-letter words (oil + copper → circuits) | 28 WPM · 97%, hint-free (night runs return here) |
-| **6 · titanium** | Titanium Mine — ц э щ ф ъ (31–35) | Manufacturer — real-text pages (modules + screws + moldings + circuits → heavy modules) | 35 WPM · 97% · one flawless page (course finale TBD — decided later) |
+1. **An ore is a finger. A Mk is a reach.** *(LOCKED 2026-08-18.)* Iron,
+   copper, stone are the index finger's home, top and bottom rows (the six
+   most frequent letters); quartz is the middle finger, coal the ring, oil the
+   pinky. An ore's Mk adds the next key-pair on that finger. Pairs are mirror
+   keys — same finger, both hands — sorted by frequency. Mk is per ore, not
+   per mine: every iron mine drills the same keys. This is course data; the
+   EN course will assign its own pairs to the same six ores (F/J = f/j is a
+   poor first pair in English).
+2. **Alphabet = union of the inputs.** A material's letter set is the union of
+   what went into it, computed live from the recipe graph and the current Mk
+   levels. Feed a Smelter iron + copper → syllables over а о е н; iron + stone
+   → over а о и т. Upgrade iron and every downstream lesson widens (bronze
+   @T0 = {а о е н}, @T1 = {а о п р е н}). Strict union stops at parts; from
+   moldings on, the alphabet is the full unlocked set and inputs set the
+   *focus* (weight and content family) instead.
+3. **Grammar = machine kind. Ratio = variance only.** Mine → letters (Mk1:
+   two positions, hinted then blind; Mk2+: streams). Smelter → syllables.
+   Foundry → clusters. Constructor → words. Molder → endings. Assembler →
+   phrases. Fastener → punctuated sentences. Crane → capitals. Manufacturer →
+   pages. Each grammar has a minimum alphabet (syllables ≥4 with ≥1 vowel + 1
+   consonant · clusters ≥8 · words ≥8 and a measured pool ≥25 real words ·
+   endings ≥14 · phrases ≥16 · punct ≥20 · capitals ≥30) and a recipe is only
+   offered once its union clears it. Recipes have quantities; a quantity may
+   *tilt* sampling (3 iron + 1 coal → iron letters come up more often; capped
+   3:1) but never filters a pool — the word bank stays the full union and the
+   tilt switches off when a pool is small.
+4. **Every deeper recipe carries a flux.** From the Molder on, every recipe
+   takes one raw ore or alloy alongside its parts. The flux sets the lesson's
+   focus (its letters, its ending family, its word pool) and ties the deep
+   machines to old nodes.
+5. **The inputs pick the recipe. Kinds are templates.** No dials. A machine
+   makes whatever its inputs can pay for — belted into its buffers, or carried
+   in the bag when worked by hand. Several instances of a kind exist; a
+   smelter's identity is what is belted into it. Docking shows the machine's
+   recipes as icon rows; by hand the active one is the affordable recipe
+   holding the player's weakest letters, else the newest — carrying only what
+   you want forces it; on its own a machine makes what its belts bring.
+   Unknown pairs show a ✗ row; recipes are authored, never emergent.
+6. **Everything is built from the bag, at the place.** No Hub, no kits, no
+   contracts, no Depot. Hold Space at a plot, a node or a machine and its icon
+   menu opens: arrows choose, hold Space confirms. A plot lists the machines
+   you could build there (greyed when unaffordable; a machine appears once you
+   have held the materials it costs, so high tiers stay out of sight until
+   reached). A mine lists Mk, ⚙, collect, feed, spool. Each row shows
+   curriculum gate (readiness of the letters it waits on) ∧ tier gate (every
+   unlocked letter past the previous tier's bar) ∧ price. Materials pay for
+   placement, never for progress.
+7. **Automation runs on the clock. Skill never does.** What is mastered works
+   without you: automated machines and belts run in real time — while you
+   walk, build, or have the tab hidden (fast-forward on return). Idle
+   production is bounded: buffers cap (~100) and then the machine waits, and
+   the current tier's goods are always hand-made (a kind gets ⚙ one tier after
+   it arrives), so waiting fills the inputs of your next lesson and never pays
+   for your next purchase. Letters, readiness and tier bars move only by
+   typing.
 
-Letter positions are UNLOCK_ORDER indices; a mine's kit gates on its first
-letter being unlocked (curriculum) AND the previous tier's Издание (economy).
-Both gates must pass — skill first, always.
+### RU course — pairs, ores, tiers (LOCKED)
 
-- Every layout nominates its own signature hurdle, which earns its own machine.
-  In ЙЦУКЕН that is comma = Shift+Slash; QWERTY's will differ and must be
-  chosen from that layout's own data, not inherited from this table.
-- Suffix chunks adapt to unlocked letters (engine picks available frames).
-- Tier 5+ benchmarks are hint-free: the night-run mechanic returns as exam
-  conditions rather than an opt-in block.
-- Finishing a course unlocks endless free-play and speed runs with raised bars
-  (50+ WPM). Starting a DIFFERENT course (EN QWERTY, phonetic ЯВЕРТЫ) is a
-  first-class playthrough with its own progress and its own tier ladder — not
-  a replay skin of the Russian one. A playthrough is weeks, not an evening.
+Sixteen mine events (key-pairs) + four key events at machines = twenty key
+introductions. Coverage of running Russian text: T0 47% · T1 71% · T2 86% ·
+T3 95% · T4 99% · T5 100%. All six T0 keys are index-finger keys.
 
-### Materials ladder
+| # | Tier | Event | Keys | Curriculum gate | Price at the place (pattern) | Opens |
+|---|---|---|---|---|---|---|
+| 1 | T0 | Iron Mk1 | а о (F J) | — | pre-built | first two keys, the F/J bumps; iron is the vowel bank |
+| 2 | T0 | Copper Mk1 | е н (T Y) | — | pre-built | bronze (2 iron + 1 copper) |
+| 3 | T0 | Stone Mk1 | и т (B N) | — | pre-built | cast iron (2 iron + 1 stone); first real words (тот, то, от) |
+| 4 | T1 | Quartz node | в л (D K) | 6 letters past bar 0 | 40 bronze + 40 cast iron | middle finger; quartz iron |
+| 5 | T1 | Iron Mk2 | п р (G H) | в л ready | 80 iron + 30 bronze | home-row core; bronze/cast iron/quartz iron widen; iron retools |
+| 6 | T1 | Quartz Mk2 | с б (C ,) | п р ready | 60 quartz + 40 quartz iron | quartz iron → 8 → Constructor; quartz bronze → 10 → Foundry |
+| 7 | T2 | Coal node | ы д (S L) | 12 past bar 1 | 60 parts + 40 quartz iron | ring finger; steel; alphabet ≥14 → Molder |
+| 8 | T2 | Copper Mk2 | к г (R U) | ы д ready | 80 copper + 30 steel | copper retools; -ник -ение family |
+| 9 | T2 | Stone Mk2 | м ь (V M) | к г ready | 80 stone + 30 steel | stone retools; brass; -ть verbs; ≥16 → Assembler |
+| 10 | T3 | Oil node | я . (Z /) | 18 past bar 2 | 60 modules + 40 steel | pinky and the period; black iron; Fastener Mk1 (comma = Shift+/) right after |
+| 11 | T3 | Quartz Mk3 | у ш (E I) | я . , ready | 60 quartz + 30 black iron | quartz retools; T1 stations refresh (суп шум шов) |
+| 12 | T3 | Oil Mk2 | й з (Q P) | у ш ready | 60 oil + 30 black iron | oil retools; black brass; -ый -ий -ой |
+| 13 | T4 | Coal Mk2 | ч ю (X .) | 24 past bar 3 | 60 fastened + 40 steel | coal retools; gunmetal; Fastener Mk2 (? ! -) |
+| 14 | T4 | Oil Mk3 | ф ж (A ;) | ч ю ready | 60 oil + 40 gunmetal | oil retools; black iron widens |
+| 15 | T4 | Coal Mk3 | ц щ (W O) | ф ж ready | 60 coal + 40 quartz steel | coal retools; quartz steel; -ция -щик |
+| 16 | T5 | Oil Mk4 | э х ё ъ (' [ ` ]) | 30 past bar 4 | 60 oil + 60 fastened | glass, coke iron; then Crane (Shift), then Fastener Mk3 (: ; " ( )) |
 
-iron → copper → stone → quartz → coal → oil → titanium (mines);
-ingots → parts → modules → moldings → screws → circuits → heavy modules
-(processors). Depot ships handbills (iron) early, modules mid, heavy
-modules late; accuracy³ pay everywhere. ₽ buys décor, never progress.
+Key events at machines: comma (Fastener Mk1, T3 — Shift's first appearance,
+the layout's signature hurdle) · ? ! - (Fastener Mk2, T4) · Shift as
+capitals (Crane, T5) · : ; " ( ) (Fastener Mk3, T5). Numbers stay out (a
+bonus tier later). Prices are placeholders showing the pattern: the ore's own
+material, typed by hand right before its new keys arrive, plus a good from the
+current tier. Extra mines of an ore are bought at unbuilt nodes and inherit
+the ore's Mk.
 
-### Build notes (constraints discovered in planning)
+### Machine kinds
 
-- Existing saves: az=iron, buki=copper (splits into copper+stone — stone is
-  a NEW id), vedi=quartz (splits into quartz+coal). Additive ids only:
-  stone, coal, oil, titan, mold, screw, circ, heavy. Display names/icons
-  live in i18n + pixels; internal ids never rename.
-- Current Copper Mine (8 letters) and Quartz Quarry (9) each split into two
-  4–5 letter mines — smaller focused lessons, more stations, longer tree.
-- HUD grows 8 → 16 rows: progressive reveal — a material appears in the
-  HUD the first time the player produces one.
-- Map needs 4 more ore nodes placed farther out each tier (walking distance
-  IS the cost of late resources) and ~6 more plots; widen WORLD_W or open
-  an eastern region when Tier 2+ lands.
-- New drill modes in engine.js: 'punct', 'chunks', 'rarewords', 'page';
-  benchmark mode needs a WPM meter on the live run.
-- Издание WPM bars live in chain.js MILESTONES; tune against real play data
-  so each tier ≈ 4–6 hours of daily-session practice.
+Nine lesson kinds. Kinds are templates — build as many instances as the
+factory wants; arity is fixed per kind so the icon row always reads the same.
+
+| Kind | Arity (inlets) | Grammar | Min alphabet | First · ⚙ from | How the input changes the lesson |
+|---|---|---|---|---|---|
+| Mine | 0 → ore | letters | 2 | T0 · when its keys are sticky | the ore IS the finger; Mk adds a reach; several nodes per ore |
+| Smelter | ore + ore → 2-ore ingot | syllables (course syllable table, filtered) | 4, ≥1V+1C | T0 · T1 | different pair, different syllable set; ratio tilts |
+| Foundry | ingot + ore → 3-ore ingot | clusters (ст пр вл сн in 2-syllable pseudo-words + real bigrams) | 8 | T1 · T2 | third ore widens the union |
+| Constructor | ingot → parts | words (real, glossed, strict union) | 8 & pool ≥25 | T1 · T2 | one alloy = one word pool; vowel-poor alloys skip it until enriched |
+| Molder | parts + ore → moldings | endings (prefixes/suffixes/inflections in frames) | 14, full set | T2 · T3 | flux ore picks the family (stone -ть -ить -ом; copper -ение -ник; coal -ция -щик; oil -ся -ый -ой) |
+| Assembler | parts + ingot → modules | phrases (collocations → short sentences, no punct.) | 16, full set | T2 · T3 | flux ingot's ores are the focus |
+| Fastener | modules + ore → fastened · adds keys | punct (, Mk1 · ? ! - Mk2 · : ; " ( ) Mk3) | 20 | T3 · T4 | Mk levels add keys like ores add letters |
+| Crane | fastened + oil → crates · adds ⇧ | capitals (sentence-initial, names) | 30 | T5 · T6 | oil is the pinky ore; Shift is a pinky key |
+| Manufacturer | crates + moldings + parts → heavy modules | pages (real paragraphs; the content slot) | all | T6 · after the finish | reaches every earlier form; the one station the factory exists to feed |
+
+Alloy working names (ids are ore-pairs; display names live in i18n): bronze
+(fe+cu), cast iron (fe+st), quartz iron (fe+qz), steel (3 fe+co), brass
+(2 cu+st), black iron (fe+oi), gunmetal (cu+co), glass (qz+oi); three-ore:
+quartz bronze, cast steel, black brass, quartz steel, coke iron.
+
+### Recipes by tier (ratios placeholder; teal = new, gold = refreshed on the page)
+
+- **T0** — bronze, cast iron (syllables, 4). Copper+stone waits for T2 as
+  brass at 8 letters. Two thin alloys are the tutorial; the first real words
+  already appear inside them.
+- **T1** — quartz iron (syll. 6→8) · quartz iron → parts (words 8) · quartz
+  bronze (clusters 10) · quartz bronze → parts · bronze refreshes (Fe Mk2).
+- **T2** — steel (syll. 6) · brass (syll. 8) · cast steel (clusters 10) ·
+  brass, cast steel → parts · 2 parts + ore → moldings (families by ore) ·
+  2 parts + steel/brass → modules (phrases) · brass = both T0 ores at their
+  new Mk2 keys.
+- **T3** — black iron (syll. 8) · black brass (clusters 12) → parts · 2 modules
+  + oil → fastened (. ,) · 2 parts + black iron → modules · Oi ending family ·
+  quartz iron/quartz bronze refresh (Qz Mk3).
+- **T4** — gunmetal (syll. 10) · quartz steel (clusters 16) → parts · fastened
+  with ? ! - · Co ending family · steel refreshes (Co Mk2/3).
+- **T5** — glass (syll. 16) · coke iron (clusters 20; rare-letter words) ·
+  2 fastened + oil → crates (capitals) · fastened with : ; " ( ) · Oi Mk4
+  family · black iron refreshes.
+- **T6** — 2 crates + 1 moldings + 2 parts → heavy modules (pages); heavy
+  modules count toward the finish.
+
+Vowel poverty is real: iron holds а о (19% of text), quartz has no vowel until
+T3, late ores are consonant-heavy. Every alloy must hold ≥1 vowel + 1
+consonant; late alloys pair a rare ore with iron/copper/stone; the Constructor
+demands a measured pool of ≥25 real words before a recipe is offered.
+
+### The factory simulation
+
+- **Buffers.** Every machine has an input buffer per material it accepts and
+  one output buffer, cap ≈100. A full machine pauses; nothing spills, nothing
+  spoils, nothing needs babysitting.
+- **Hand work.** Dock and type. Each correct keystroke consumes inputs at the
+  recipe ratio — from the machine's own buffers first, then from the bag — and
+  advances that station only. Output goes to the bag, unless a belt leaves the
+  machine, in which case it rolls onto the belt.
+- **Automated work.** With ⚙, sticky letters and a full input set in its
+  buffers, the machine runs a timed job and emits to the exit belt or its
+  output buffer. It never reaches into the bag and never needs you.
+- **You can still carry.** Hold Space at any machine to collect its output
+  buffer or to feed its input buffers from the bag. Early game is carrying;
+  late game is belts; both always work.
+- **Rates (placeholders):** mine 2 s/ore · Smelter 3 · Foundry 4 ·
+  Constructor 4 · Molder 5 · Assembler 6 · Fastener 6 · Crane 7 ·
+  Manufacturer 10; belts 2 tiles/s, one item per tile. Passing bars 2 and 4
+  speeds the factory 20% each. Automation is parallel, not fast: a fluent
+  typist out-produces any single automated bench; the factory wins because
+  every automated machine runs at once, forever.
+- **Tuning target:** one mine ≈ one consumer's appetite for its ore. The
+  player never computes rates; they see a hungry machine and build another
+  mine.
+- **Instances.** Kinds are templates. How many the player builds is theirs;
+  the map offers as many nodes and plots as the tree can use (nodes per ore
+  farther out each tier, plots opened region by region) — never scarce.
+
+### Automation
+
+- **The rule** (invariant 4): a machine runs a recipe by itself, in real time,
+  iff it has its ⚙ · every letter of that recipe's alphabet is sticky-mastered ·
+  its input buffers hold a full set at the recipe ratio. Otherwise that recipe
+  is hand-work. Automated recipes refuse labor; un-automated recipes at the
+  same machine still accept it.
+- What falls out: **retool is not a mechanic** (buy a Mk → the ore's alphabet
+  gains two un-sticky letters → every mine of that ore is hand-work again →
+  master them → they resume; its belts idle meanwhile, which is what pulls you
+  back — one ore, one pair, downstream keeps its ⚙ and simply starves);
+  **new recipes at an automated machine are still lessons**; the whole factory
+  ends automated except the Manufacturer, which is you.
+- **When ⚙ is purchasable:** mines — as soon as the ore's current keys are
+  sticky, per mine instance (cost: its ore + the tier's good; nothing forces
+  it — you automate because it ends the walk). Processors — one tier of hand
+  work first: ⚙ appears once the bar that closes the kind's arrival tier is
+  passed (Smelter → T1, Foundry/Constructor → T2, Molder/Assembler → T3,
+  Fastener → T4, Crane → T6, Manufacturer → after the finish).
+
+### Transport — belts and pipes
+
+- A belt is a conveyor from one machine's outlet to another machine's inlet.
+  Anything the source makes — by hand or by itself — rolls onto it. Belts
+  decide whether you walk; buffers decide whether machines wait; neither asks
+  for a layout.
+- **Unlocked** with tier 1 (the T0 bar passed). Any machine can be a source;
+  automation is not required. Pipes arrive with the oil derrick (T3): same
+  rules, different skin, the only piped resource. **Free** for now; automation
+  and machines are the material sinks (a distance price in the tier's trade
+  good is the obvious sink to add if ever needed).
+- **Built by spool & socket:** hold Space at the source (spool on the back);
+  walk; hold Space at a machine that accepts that material → the belt
+  auto-routes on free tiles. Every valid inlet glows while carrying; a ghost
+  route follows; a red ghost means no free path (carry by hand, or free a
+  tile); hold Space at the source again to put the spool back.
+- **Inlets = the kind's arity** (one belt per input slot: Constructor 1;
+  Smelter/Foundry/Molder/Assembler/Fastener/Crane 2; Manufacturer 3).
+  **Outlets: mines 1, processors 2** — a processor can split its output once
+  (round-robin); a mine feeds one consumer, which is what grows the pyramid.
+  No cap on the number of belts. A belt carries only what its consumer accepts
+  (the outlet filters), so belts never clog.
+- **Routing and congestion:** one belt per tile; the router takes the shortest
+  free path. Choke points are authored into the map (bridges, gaps between
+  rocks) — choosing which lines get the bridge is the same bounded strategy as
+  choosing plots. Belts can be removed for half refund; an *overpass* arrives
+  at tier 4 to cross an existing line. Docking shows a machine's belts as icon
+  rows; belts are removed (refunded) when a machine is relocated.
+- **Build-out (~40 belts, roughly):** T1 iron/copper/stone/quartz → Smelter A,
+  iron #2 → Smelter B, quartz → Foundry, Smelters → Foundry/Constructor,
+  Foundry → Constructor · T2 coal → Smelter B, iron #3 + coal → Smelter C,
+  Foundry → Constructor #2, Constructors → Molder/Assembler, Smelter →
+  Assembler, iron/stone → Molder · T3 oil ⇒ Smelter/Foundry/Fastener/Molder,
+  Assembler → Fastener · T4 coal #2 → Fastener/Molder, copper #2 →
+  Molder/Smelter C · T5 Fastener → Crane, oil ⇒ Crane · T6 Crane, Molder,
+  Constructor → Manufacturer.
+- Rejected: keystroke-tick clock (deadlocks when the frontier is starved and
+  upstream refuses labor; makes walking and belt-laying dead time), a power
+  station (a lesson-less machine competing with lessons), keystroke-laid
+  belts, manual routing, throughput math (Mk belts, splitters), Hub contracts
+  for anything.
+
+### Tier bars, pacing, and the two clocks
+
+Tier bars replace the Издание exams: a per-tier readiness target that every
+unlocked letter must pass before the next tier's first purchase opens — no
+station, no ceremony. Bars (WPM-equivalent latency target · accuracy):
+T0→1 12·95% · T1→2 15·96% · T2→3 18·96% · T3→4 21·97% (with . ,) · T4→5
+24·97% (hints dimmed from here) · T5→6 28·97% (hint-free, capitals) · finish
+35·97% + K heavy modules produced (K ≈ 200 placeholder, tuned to ~6–8 h at
+~30 WPM). Estimated hours: T0 2 · T1 4 · T2 5 · T3 6 · T4 6 · T5 5 · T6 4+ ≈
+32 h — a floor set by the skill gates; prices, bars and K stretch it if it
+plays short.
+
+- **The skill clock (T0–T5):** pairs unlock on readiness (30+ clean samples at
+  the tier's latency target, ≥ its accuracy) so keys cannot arrive faster than
+  a modest fluency on the previous ones; every Mk retool and every flux slot is
+  review of an older bench with new material — one ore at a time.
+- **The volume clock (T5 to the finish, and beyond):** players know every key
+  before they hold 30–40 WPM. Once everything is automated and belted, the
+  whole chain runs on its own up to the Manufacturer, and heavy modules exist
+  only because you type pages there. What you type there is a content slot,
+  not a mechanic — a per-course `pages` file: real prose, trivia, easter eggs,
+  the machines talking, a plot that turns; the engine only cares that pages
+  are graded by length and punctuation density. After the finish: free-play
+  with raised bars (50+ WPM), speed runs, hint-free night shifts, more pages.
+  "Launch" is just the word for finishing.
+
+### Backtracking budget
+
+Backtracking is a property of the graph, not a rule to enforce. Retools pull
+you back exactly one ore; flux slots tie deep machines to old nodes; a hand-
+drilled input is at most two tiers behind (measured by that ore's latest Mk),
+and older ores appear only as belted feedstock. Per tier: T1 the Foundry price
+asks for bronze (T0), iron retools · T2 brass needs both T0 ores at their new
+Mk2 keys, copper and stone retool · T3 the Fastener price wants modules (T2),
+the quartz retool refreshes T1 stations · T4 copper and steel (T2), coal and
+oil retool · T5 black iron (T3), oil retools · T6 the Manufacturer reaches
+everything, by design.
+
+### Map consequences (re-basing the environment plan to v3)
+
+The environment plan's region↔tier mapping "follows the tech tree draft and
+moves with it"; v3 moves it. Six ores, no titanium; new ores at T1 (quartz),
+T2 (coal), T3 (oil) only; T4–T6 bring no new ore but need more nodes (the
+pyramid) and plots. Proposed re-basing of The Frontier's snake, keeping its
+geography and seams: **Meadow** = T0–T1 (iron, copper, **stone — a stone node
+must be added to the meadow**, quartz, iron #2); **Quarry hills** open at T1
+(extra nodes and plots; the existing stone seam becomes stone #2); **Crystal
+canyon + the stairs + Coal bog** open by T2 (the coal seam is the T2 node;
+quartz #2 in the canyon); **Oil flats** open at T3 (oil seam); **Titanium
+peaks** open at T4 as the finish site with extra nodes (the titanium seam
+becomes a late iron/coal/oil node or a landmark). Crossings' `opensAfter` names
+a tier bar instead of an edition. Nodes per ore across the map ≈ iron 3,
+copper 2, stone 2, quartz 2, coal 2, oil 2; plots as many as the tree can use.
+Open Range needs the same node set on its row A. Choke points (bridges, gaps)
+stay authored — they are the belt-congestion feature.
+
+### Course data this asks for (RU)
+
+Pair order + ore map (above; locked) · syllable table ~150 with frequencies ·
+cluster list ~40 · word list grown to ~1,500 with frequency ranks (restricted-
+alphabet pools need density) · ending families ~60, tagged by ore · phrase
+list ~200 · graded sentence corpus ~300 · proper-name list ~50 · pages, as
+many as the user writes. All in `language-ru.js` / `layout-ru.js` (Shift rules
+for capitals and the number-row punctuation); the skeleton — kinds, arities,
+minimum alphabets, recipe graph, automation, belts, rates — is shared.
+
+### What v3 removes from the current build (once the build plan lands)
+
+Hub / milestone board / contracts / kits · Depot, ₽ and the press · Издания as
+events (bars replace them; crossings open on bars) · single-letter unlock order
+(pairs) · fixed per-bench focus sets (alphabet from the graph) · fixed BELTS
+list, `upgradeCost`/`buildCost` on stations (place menus, ⚙, spool) · the
+"collect 100 on approach" pickup (output buffers) · per-keystroke autofeed
+(real-time simulation). Save ids stay additive: az/buki/vedi/slogi/slova/
+stroki keep mapping to iron/copper/stone/…; a v2 profile migrates into the v3
+model (see the build plan). Décor money, live exams, a guidance checklist and
+"contracts for variety" may return later — none is a core mechanic.
+
+### Tunables (placeholders, all in data)
+
+Bars 12/15/18/21/24/28/35 WPM-eq at 95–97% · K ≈ 200 · rates and buffer caps
+above · prices per the pattern above · minimum alphabets · outlet counts (1/2)
+· overpass at tier 4 · ⚙ lag one tier · ratio tilt cap 3:1 · hint dimming
+from T4, hint-free from T5 · the ×1.5-while-typing feel layer (off; gravy).
 
 ## Next epoch candidates (pick with the user)
 
-- **Phase II per the tech tree** (recommended next): Fastener Plant + Coal
-  Pit + Molder, the powered-era contract ladder, Издание II.
+- **Build the v3 tree — the core gameplay foundation** (agreed 2026-08-18;
+  this comes first, executed fully and well; everything else is gravy). The
+  phased order, acceptance criteria and data checks live in
+  `docs/build-plan.md`: curriculum core → build-from-bag → the simulation →
+  tiers 2–3 → tiers 4–6 → content and tuning.
 - **English QWERTY course** (committed scope, not optional): `language-en.js`
   + `layout-en.js`, an EN frequency-ordered unlock order and word list, and a
   course picker so progress is tracked per course. The settings menu already
@@ -457,7 +730,10 @@ RU course data · `js/layout-ru.js` ЙЦУКЕН · `js/chain.js` chain/economy 
 region scenery, `bake`, `minimap`) · `js/app.js` orchestration + the map
 picker · `js/audio.js` synth ·
 `js/i18n.js` EN/РУ · `serve.ps1` dev server (+ POST /upload for QA frames) ·
-`dev/tiles.html` terrain proof sheet · `libs/pixi.min.js` vendored Pixi 8.
+`dev/tiles.html` terrain proof sheet · `libs/pixi.min.js` vendored Pixi 8 ·
+`docs/tech-tree-v3.html` the agreed tech-tree page (keyboard-by-ore, tier
+board, material ladder, simulation, transport) · `docs/build-plan.md` the
+phased build order for v3.
 `assets/inbox/` (upload target) and `assets/ref/` (style references, study
 only) are gitignored.
 
