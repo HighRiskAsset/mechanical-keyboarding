@@ -64,10 +64,39 @@ jobs:
       # None of these carries a secret into the output, and none retries a bad
       # password — a host's brute-force guard should never see this coming.
 
-      - name: Probe 1 - the hostname resolves
+      - name: Probe 1a - the FTP_HOST secret is present
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
-        run: getent hosts "$FTP_HOST"
+        run: |
+          if [ -z "${FTP_HOST:-}" ]; then
+            echo "FTP_HOST came through empty. Either the secret was never saved,"
+            echo "or its name is not an exact match — it must be FTP_HOST, caps."
+            exit 1
+          fi
+          echo "FTP_HOST is set: ${#FTP_HOST} characters."
+
+      - name: Probe 1b - FTP_HOST is a bare hostname
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+        run: |
+          # The commonest way this field goes wrong is pasting what hPanel shows
+          # on screen rather than the host part of it.
+          case "$FTP_HOST" in
+            *://*) echo "It carries a scheme (ftp://...). Use the bare host."; exit 1 ;;
+            */*)   echo "It carries a slash. Use the bare host, with no path."; exit 1 ;;
+            *\ *)  echo "It contains a space."; exit 1 ;;
+          esac
+          echo "Shape looks like a bare hostname."
+
+      - name: Probe 1c - the hostname resolves
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+        run: |
+          getent hosts "$FTP_HOST" && exit 0
+          echo "A plausible hostname, but DNS has no record for it."
+          echo "hPanel -> Files -> FTP Accounts shows the FTP hostname; if the"
+          echo "domain does not point at Hostinger yet, use the server IP there."
+          exit 1
 
       - name: Probe 2 - port 21 accepts a connection
         env:
