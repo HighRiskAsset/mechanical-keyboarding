@@ -329,36 +329,9 @@ body.night { background: #0a141a; }
 body.night .keycap:not(.hint) { background: #0d161c; color: #2b3d46; border-bottom-color: #16232b; }
 body.night .keycap.home::after { background: #23343d; }
 
-/* ---------- loading card: static markup in index.html, on screen from the
-   first paint. Cells light as stages pass (see index.html); the unlit ones
-   pulse so a slow load never looks frozen. ---------- */
-.loading { padding: 8px 0 4px; }
-.load-mark { font-size: 20px; letter-spacing: 4px; color: var(--brass); font-weight: bold; }
-.load-mark span { color: var(--ink-dim); }
-.load-bar { display: flex; gap: 6px; justify-content: center; margin: 24px 0 18px; }
-.load-bar i {
-  width: 22px;
-  height: 10px;
-  background: #14262f;
-  animation: load-pulse 1.1s ease-in-out infinite;
-}
-.load-bar i:nth-child(2) { animation-delay: 0.18s; }
-.load-bar i:nth-child(3) { animation-delay: 0.36s; }
-.load-bar i:nth-child(1),
-.loading.s2 .load-bar i:nth-child(2),
-.loading.s3 .load-bar i:nth-child(3) { background: var(--brass); animation: load-glow 1.1s ease-in-out infinite; }
-/* both pulses swing far enough to read across the room: dark → lit, plus a
-   height kick, so the card is obviously alive on a slow load. */
-@keyframes load-pulse {
-  0%, 100% { background: #14262f; transform: scaleY(0.6); opacity: 0.7; }
-  50% { background: #5f93a8; transform: scaleY(1); opacity: 1; }
-}
-@keyframes load-glow {
-  0%, 100% { background: var(--brass-dim); transform: scaleY(0.6); box-shadow: none; }
-  50% { background: #ffd77a; transform: scaleY(1); box-shadow: 0 0 10px rgba(255, 215, 122, 0.55); }
-}
-.load-text { font-size: 16px; }
-html[lang="ru"] .loading [lang="en"], html:not([lang="ru"]) .loading [lang="ru"] { display: none; }
+/* ---------- loading card: markup AND styling both live in index.html, inlined
+   in the head so the card paints and pulses on the first frame, before this
+   file has even downloaded. Edit it there, not here. ---------- */
 
 /* ---------- the map picker: one card per world, each with its own save ---------- */
 .map-cards { display: flex; gap: 14px; justify-content: center; margin: 18px 0 4px; }

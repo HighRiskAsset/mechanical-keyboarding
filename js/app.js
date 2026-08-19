@@ -1261,13 +1261,18 @@
   }
 
   // ---------- boot ----------
-  applyI18n();
-  buildKeyboard();
-  refreshStats();
-  refreshSoundBtn();
-  FACTORY.init(document.getElementById('factory-mount')).then(() => {
-    if (loadingCard) loadingCard.classList.add('s3');
-    clearLine();
-    setTimeout(showMapSelect, 30);
-  });
+  // the heavy work waits two frames: the first callback lands before a paint,
+  // the second after it, so the loading card is on screen with its pulse
+  // running on the compositor before the world build takes the main thread.
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    applyI18n();
+    buildKeyboard();
+    refreshStats();
+    refreshSoundBtn();
+    FACTORY.init(document.getElementById('factory-mount')).then(() => {
+      if (loadingCard) loadingCard.classList.add('s3');
+      clearLine();
+      setTimeout(showMapSelect, 30);
+    });
+  }));
 })();
