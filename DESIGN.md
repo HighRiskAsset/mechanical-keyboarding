@@ -34,8 +34,8 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
 2. **Stations are lessons.** Each machine wraps a drill mode; its letter set
    lights up on the keyboard when you dock. Walking IS the menu — no scene
    switches, no instructional text; icons carry all information. (v3: hold
-   Space at a place opens its icon menu — arrows choose, hold Space confirms
-   — the same one interact key, still no text.)
+   Space at a place opens its icon menu — arrows choose, a tap of Space
+   confirms — the same one interact key, still no text.)
 3. **Materials are the motor-chunking hierarchy**, displayed as frontier
    resources (v3 ladder): six ores = six fingers (letters, mined at nodes) →
    2-ore ingots (syllables, Smelter) → 3-ore ingots (clusters, Foundry) →
@@ -80,21 +80,32 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   space that isn't the next character costs nothing — never an error);
   **holding for 0.5 s** (a pixel charge bar fills over the operator) opens
   the place's icon menu — a plot lists the machines it could hold, an ore
-  vein its mine, a mine its next Mk / automation / collect, a processor its
-  recipes, a closed crossing its repair — arrows choose, a second hold
-  confirms, an early release or Escape closes. Glow turns green when a row
+  vein its mine, a mine its next Mk / automation / collect, a processor the
+  recipes it is *not* running (the one it runs stands under the machine
+  itself), its ⚙ and its removal, a closed crossing its repair — arrows
+  choose, a tap of Space confirms, Escape closes. Glow turns green when a row
   is affordable. Everything is paid from the bag; no Hub, kits, contracts or
   Depot remain (v3, 2026-08-19, build-plan phases 1–2).
 - **All game UI is pixels in-canvas**: the inventory HUD (icons + bitmap
   numbers, top-right of the canvas), requirement rows, charge bar. Only the
   page header and the keyboard visualizer are DOM. (The drill text line stays
   DOM for now — it's the reading surface.)
-- **Recipes and consumption (v3):** the recipe rows above a processor show
-  every recipe it offers, the chosen one bright — chosen at the machine's
-  hold-Space menu (default: the first offered), remembered per machine; a
-  unit of output is paid for at its first keystroke and emitted at its
-  `perUnit`-th; an unpayable choice runs dry with ✗ (typing still trains).
-  Mines yield one ore per correct letter.
+- **Recipes and consumption (v3):** a processor wears **one** row — the
+  recipe it is running (2026-08-20; it used to show the whole list, which
+  crowded the machine). The others are chosen at the machine's hold-Space
+  menu, which offers every recipe it does *not* currently run, affordable or
+  not; the choice is remembered per machine and the default is the first
+  offered. A unit of output is paid for at its first keystroke and emitted at
+  its `perUnit`-th; an unpayable choice runs dry with ✗ (typing still
+  trains). Mines yield one ore per correct letter.
+- **Taking a machine down (2026-08-20):** the last row of every machine's
+  menu. Its price comes back at the price of the newest one of its kind — so
+  down-and-up again is even — with everything in its buffers, and its belts
+  come up with it (goods riding them roll back into the machine each one
+  runs from). A vein's opening price is never refunded: that bought keys, and
+  the keys stay. The last mine standing on an ore cannot be taken down: a new
+  one is paid for in that same ore, so it could put the vein out of reach for
+  good. The highlight never opens on the removal row.
 - **The factory simulation (phase 3, 2026-08-19, `js/sim.js`):** every
   machine has an input buffer per material and an output buffer (cap
   `TUNING.BUFFER_CAP` = 100); a worked machine takes inputs from its own
@@ -548,11 +559,14 @@ If a recipe or a tier disagrees with a rule, the recipe is wrong.
 6. **Everything is built from the bag, at the place — and nothing is locked
    behind a tier number.** No Hub, no kits, no contracts, no Depot. Hold
    Space at a plot, a node, a machine or a closed crossing and its icon menu
-   opens: arrows choose, hold Space confirms, a tap or Escape closes. A plot
+   opens: arrows choose, a tap of Space confirms, Escape closes. A plot
    lists the machines you could build there (greyed when unaffordable; a
    machine appears once you have held the materials it costs); a vein lists
    its mine; a mine lists its next Mk, automation, collect (later feed and
-   spool); a closed pass or bridge lists its repair. Tiers organise the
+   spool); a processor lists every other recipe it could run, affordable or
+   not, its ⚙ and its removal; a closed pass or bridge lists its repair. A
+   machine wears only the recipe it is running now; the choices live behind
+   the hold (2026-08-20). Tiers organise the
    design and pace it — they are never a check: order comes only from the
    letter ladder (the next key-pair is always the next one) and pacing from
    prices that ask for later materials plus the readiness bar. Each row shows

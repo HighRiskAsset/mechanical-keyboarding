@@ -12,9 +12,13 @@
   --ok: #7fb98a;
   --err: #d4685e;
   --hint: #e8c877;
-  /* left hand cool, right hand warm — the split is readable at a glance */
-  --finger-l5: #5d86b0; --finger-l4: #5f9d9a; --finger-l3: #6da06b; --finger-l2: #93a35c;
-  --finger-r2: #c09a63; --finger-r3: #bd8672; --finger-r4: #b57a8c; --finger-r5: #a8756a;
+  /* The band under a keycap names the ore that unlocked the letter, so the
+     six mine colours (ORE_TONE, pixels.js) reappear here — lifted a few
+     steps, because 3px of coal or oil at their true tone is black on a dark
+     cap. --band-free is for the keys no mine sells: space and Shift. */
+  --ore-az: #8fb0d6; --ore-buki: #d8814e; --ore-stone: #b8ab8e;
+  --ore-vedi: #e59ae0; --ore-coal: #7f8494; --ore-oil: #8b6fc4;
+  --band-free: #4f6f7a;
   --hand-l-bg: #12242e; --hand-r-bg: #1c2527;
 }
 
@@ -171,14 +175,17 @@ body.night #factory-mount canvas { filter: brightness(0.45) saturate(0.8); }
   font-size: 16px;
   font-family: Arial, sans-serif;
   color: var(--ink);
-  border-bottom: 3px solid transparent;
+  /* set per key by refreshKeyboard: the ore's colour once unlocked, nothing
+     before. A locked cap is otherwise a normal cap — the band is the tell. */
+  border-bottom: 3px solid var(--ore, transparent);
 }
 .keycap.hand-l { background: var(--hand-l-bg); }
 .keycap.hand-r { background: var(--hand-r-bg); }
+/* Tab, Enter, the digits: scenery, not game content. No band — a band means
+   an ore bought this key, and no ore ever buys these. */
 .keycap.inert {
   background: #0f1a20;
   color: #31454e;
-  border-bottom-color: #17262d;
   font-size: 13px;
 }
 .cap-shift {
@@ -188,14 +195,6 @@ body.night #factory-mount canvas { filter: brightness(0.45) saturate(0.8); }
   font-size: 10px;
   color: var(--ink-dim);
 }
-.keycap.finger-l5 { border-bottom-color: var(--finger-l5); }
-.keycap.finger-l4 { border-bottom-color: var(--finger-l4); }
-.keycap.finger-l3 { border-bottom-color: var(--finger-l3); }
-.keycap.finger-l2 { border-bottom-color: var(--finger-l2); }
-.keycap.finger-r2 { border-bottom-color: var(--finger-r2); }
-.keycap.finger-r3 { border-bottom-color: var(--finger-r3); }
-.keycap.finger-r4 { border-bottom-color: var(--finger-r4); }
-.keycap.finger-r5 { border-bottom-color: var(--finger-r5); }
 .keycap.home::after {
   content: '';
   position: absolute;
@@ -205,12 +204,13 @@ body.night #factory-mount canvas { filter: brightness(0.45) saturate(0.8); }
   border-radius: 1px;
   background: #3d545e;
 }
-.keycap.locked { color: #34474f; background: #101d23; border-bottom-color: #1a2b33; }
-.keycap.locked .cap-shift { color: #34474f; }
+/* .locked carries no styling of its own: an unreached letter is printed on
+   its cap as plainly as any other, it simply has no ore band under it. The
+   class stays because the unlock card and the tests read it. */
 .keycap.hint {
   color: #1a1508;
-  background: rgba(232, 200, 119, calc(0.12 + 0.88 * var(--hint-strength, 1)));
-  box-shadow: 0 0 calc(18px * var(--hint-strength, 1)) rgba(232, 200, 119, calc(0.7 * var(--hint-strength, 1)));
+  background: rgba(232, 200, 119, 1);
+  box-shadow: 0 0 18px rgba(232, 200, 119, 0.7);
 }
 /* lesson lights: the docked bench's letters glow steadily on the keyboard */
 .keycap.lesson {

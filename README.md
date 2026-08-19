@@ -35,9 +35,10 @@ build) —
 each keeps its own save, so nothing mined, built or unlocked carries over.
 Then walk with the **arrow keys**, stand at a machine and **type** to run
 it, **hold Space** to open the menu of the place you stand at — build a
-machine on a plot, open an ore vein, give a mine new keys, automate it,
-feed or empty it (arrows choose, a second hold confirms, a tap closes; a
-caption under the map says what the chosen row does). **Belts**: take a
+machine on a plot, open an ore vein, give a mine new keys, give a machine a
+different recipe, automate it, feed or empty it, take it down again (arrows
+choose, a tap of Space confirms, Escape closes; a caption under the map says
+what the chosen row does). **Belts**: take a
 machine's spool from its menu (the → row), walk to a machine that uses what
 it makes — a green bar under a machine means it can take the belt, red
 means it can't — and hold Space there to lay it (a green chevron bounces

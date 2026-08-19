@@ -431,13 +431,16 @@
     const h = win * 16 + 6;
     const cx = st.def.x + 13;
     let px = Math.round(cx - w / 2);
-    // above the machine's own rows when it has any, else above the machine
+    // above the machine's own rows when it has any, else above the machine —
+    // and always inside the window the player is looking at: a tall panel
+    // near the world's top edge drops below the place rather than off-screen
     let base = st.def.y - 50;
     if (infoBox && infoBox.dockId === dockId) base = Math.min(base, infoBox.top - 6);
+    const vx = Math.round(camX), vy = Math.round(camY);
+    px = Math.max(vx + 2, Math.min(vx + viewW - w - 2, px));
     let py = base - h;
-    px = Math.max(2, Math.min(CHAIN.WORLD_W - w - 2, px));
-    if (py < 4) py = st.def.y + 8;
-    py = Math.max(2, Math.min(CHAIN.WORLD_H - h - 2, py));
+    if (py < vy + 2) py = st.def.y + 8;
+    py = Math.max(vy + 2, Math.min(vy + viewH - h - 2, py));
     const panel = new PIXI.Graphics()
       .rect(0, 0, w, h).fill({ color: 0x17161a, alpha: 0.9 })
       .rect(0, 0, w, 1).fill(0xc9a24a).rect(0, h - 1, w, 1).fill(0xc9a24a);

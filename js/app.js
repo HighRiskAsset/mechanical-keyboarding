@@ -1,7 +1,7 @@
 // UI + world orchestration: one persistent overworld, no scene switching.
 // Walk with arrows; dock at a place by standing near it; type to work a
-// machine; hold Space to open the place's menu (arrows choose, hold Space
-// confirms, a tap or Escape closes). Tech tree v3: everything is bought from
+// machine; hold Space to open the place's menu (arrows choose, a tap of
+// Space confirms, Escape closes). Tech tree v3: everything is bought from
 // the bag at the place — mines and Mk at ore nodes, machines at plots, ⚙ at
 // the machine. The one screen before the world is the map picker.
 (function () {
@@ -75,7 +75,6 @@
         cap.className = 'keycap';
         cap.dataset.code = key.code;
         const finger = LAYOUT.FINGER[key.code];
-        if (finger) cap.classList.add('finger-' + finger);
         if (!isSpace) cap.classList.add(finger ? (finger[0] === 'l' ? 'hand-l' : 'hand-r') : (isRight ? 'hand-r' : 'hand-l'));
         if (LAYOUT.HOME_CODES.has(key.code)) cap.classList.add('home');
         if (key.inert) cap.classList.add('inert');
@@ -95,19 +94,16 @@
   }
 
   // ---------- hints: recall first, rescue on hesitation ----------
+  // One delay for every key, at every level of practice. A hint that arrives
+  // quickly for an unfamiliar letter teaches the eye to drop to the board
+  // before the hand has tried, which is the habit this game exists to break,
+  // so the board stays dark long enough that recall is always the cheaper
+  // move and the picture is a rescue rather than a reading surface.
+  const HINT_DELAY = 2000;
   let hintTimer = null;
   function clearHint() {
     if (hintTimer) { clearTimeout(hintTimer); hintTimer = null; }
-    for (const cap of Object.values(keycapEls)) {
-      cap.classList.remove('hint');
-      cap.style.removeProperty('--hint-strength');
-    }
-  }
-  function hintDelayFor(ch) {
-    if (ch === ' ') return 900;
-    const s = profile.letters[ch];
-    if (!s || s.n < 10) return 150;
-    return 500 + 1700 * Math.min(1, E.readiness(profile, ch));
+    for (const cap of Object.values(keycapEls)) cap.classList.remove('hint');
   }
   function applyHint() {
     const expected = lineText[pos];
@@ -115,31 +111,44 @@
     const code = expected === ' ' ? 'Space' : LAYOUT.CHAR_TO_CODE[expected];
     const cap = keycapEls[code];
     if (!cap) return;
-    const strength = expected === ' ' ? 0.2 : Math.max(0.35, 1 - Math.min(1, E.readiness(profile, expected)));
     cap.classList.add('hint');
-    cap.style.setProperty('--hint-strength', strength.toFixed(2));
     if (LAYOUT.NEEDS_SHIFT.has(expected)) {
+      // the far shift: the hand that is not reaching for the letter
       const shiftCode = LAYOUT.FINGER[code]?.[0] === 'r' ? 'ShiftLeft' : 'ShiftRight';
-      const shiftCap = keycapEls[shiftCode];
-      if (shiftCap) {
-        shiftCap.classList.add('hint');
-        shiftCap.style.setProperty('--hint-strength', strength.toFixed(2));
-      }
+      keycapEls[shiftCode]?.classList.add('hint');
     }
   }
   function scheduleHint() {
     clearHint();
-    const expected = lineText[pos];
-    if (expected === undefined) return;
-    hintTimer = setTimeout(applyHint, hintDelayFor(expected));
+    if (lineText[pos] === undefined) return;
+    hintTimer = setTimeout(applyHint, HINT_DELAY);
+  }
+
+  // ---------- what the board is showing you ----------
+  // Locked and unlocked caps are printed alike; the band under the key is the
+  // whole tell, and its colour is the ore that unlocked the letter. So buying
+  // a mine's Mk lights that mine's colour across the board, and the keyboard
+  // reads as the economy rather than as a finger chart.
+  function bandFor(ch) {
+    const ore = ch === undefined ? null : L.ORE_OF[ch];
+    return ore ? `var(--ore-${ore})` : 'var(--band-free)';
+  }
+  function paintBand(cap, ch, unlocked) {
+    cap.classList.toggle('locked', !unlocked);
+    cap.style.setProperty('--ore', unlocked ? bandFor(ch) : 'transparent');
   }
   function refreshKeyboard() {
     const unlockedSet = new Set(E.unlockedLetters(profile));
+    // Shift belongs to no ore. It lights when the course has handed out
+    // something that needs it — in ЙЦУКЕН that is the comma, at the Fastener.
+    const shiftReady = [...LAYOUT.NEEDS_SHIFT].some((c) => unlockedSet.has(c));
     for (const [code, cap] of Object.entries(keycapEls)) {
       if (cap.classList.contains('inert')) continue;
+      const isShift = code === 'ShiftLeft' || code === 'ShiftRight';
       const ch = LAYOUT.CODE_TO_CHAR[code];
-      if (ch === undefined || ch === ' ') continue;
-      cap.classList.toggle('locked', !unlockedSet.has(ch));
+      if (!isShift && ch === undefined) continue;
+      if (isShift) paintBand(cap, undefined, shiftReady);
+      else paintBand(cap, ch, ch === ' ' || unlockedSet.has(ch));
     }
     scheduleHint();
   }
@@ -348,13 +357,17 @@
         rows.push({ pre: '⚙', items: price, enabled: canPay(price), priced: true, caption: T.t('capAuto'), action: { type: 'auto', m, price } });
       }
       beltRows(m, rows);
+      removeRow(m, rows);
     } else if (d.kind === 'machine') {
-      // a processor's menu: its recipes (choose what this machine makes),
-      // automation, then the belt rows
+      // a processor's menu: everything the machine can be told to do. The
+      // recipe it runs stands under the machine itself, so the menu offers
+      // the others — all of them, affordable or not — then automation, the
+      // belt rows, and taking it down again.
       const m = d.m;
-      for (const r of CHAIN.offerableRecipes(m.kind, profile).slice(0, 4)) {
-        const active = recipe === r;
-        rows.push({ items: r.in, out: r.out, ok: active ? true : undefined, enabled: true, caption: T.t('capRecipe', { out: matName(r.out), inputs: Object.entries(r.in).map(([mat, k]) => `${k} ${matName(mat)}`).join(' + ') }), action: { type: 'recipe', m, r } });
+      const active = SIM.recipeOf(profile, m);
+      for (const r of CHAIN.offerableRecipes(m.kind, profile)) {
+        if (r === active) continue;
+        rows.push({ items: r.in, out: r.out, ok: SIM.canTake(profile, m, r.in) ? undefined : false, enabled: true, caption: T.t('capRecipe', { out: matName(r.out), inputs: Object.entries(r.in).map(([mat, k]) => `${k} ${matName(mat)}`).join(' + ') }), action: { type: 'recipe', m, r } });
       }
       // keys bought at this kind of machine (the Fastener's punctuation):
       // the next rung of the ladder when it stands here
@@ -372,8 +385,29 @@
         if (price) rows.push({ pre: '⚙', items: price, enabled: canPay(price), priced: true, caption: T.t('capAuto'), action: { type: 'auto', m, price } });
       }
       beltRows(m, rows);
+      removeRow(m, rows);
     }
     return rows;
+  }
+  // the last row on every machine: take it down. What it cost comes back —
+  // at the price of the newest one of its kind, so down-and-up again is even
+  // — along with everything standing inside it. A vein's opening price is
+  // never refunded: that bought keys, and the keys stay.
+  function removeRefund(m) {
+    if (m.kind === 'mine') return CHAIN.priceExtraMine(m.ore) || {};
+    return CHAIN.priceMachine(m.kind, CHAIN.machinesOfKind(profile, m.kind).length) || {};
+  }
+  function removeRow(m, rows) {
+    if (spool) return;
+    const back = removeRefund(m);
+    const row = { pre: '✗', kind: m.kind, ore: m.kind === 'mine' ? m.ore : undefined, items: back };
+    // the last mine on an ore stays: a new one is paid for in that same ore,
+    // so taking it down could leave the vein out of reach for good
+    if (m.kind === 'mine' && CHAIN.machinesOfOre(profile, m.ore).length <= 1) {
+      rows.push({ ...row, ok: false, enabled: false, caption: T.t('capRemoveLast', { name: machineName(m) }), action: null });
+      return;
+    }
+    rows.push({ ...row, enabled: true, caption: T.t('capRemove', { name: machineName(m) }), action: { type: 'remove-machine', m, back } });
   }
   // the rows every machine shares (phase 3): socket / put the spool back /
   // take the spool, feed, collect, and one row per belt to remove it
@@ -501,7 +535,11 @@
   function openMenu() {
     const rows = menuRowsFor(dock);
     if (!rows.length) return false;
-    let sel = rows.findIndex((r) => r.enabled !== false);
+    // the highlight opens on the first row you could act on — but never on
+    // the removal, which a stray tap would otherwise take down
+    const open = (r) => r.enabled !== false && !(r.action && r.action.type === 'remove-machine');
+    let sel = rows.findIndex(open);
+    if (sel < 0) sel = rows.findIndex((r) => r.enabled !== false);
     if (sel < 0) sel = 0;
     menu = { rows, sel };
     FACTORY.showMenu(dock.id, rows, sel);
@@ -623,6 +661,24 @@
     } else if (act.type === 'unbelt') {
       SIM.removeBelt(profile, act.id);
       afterPurchase();
+    } else if (act.type === 'remove-machine') {
+      const m = act.m;
+      const i = profile.machines.indexOf(m);
+      if (i < 0) return;
+      // its belts come up first (goods riding them roll back into the
+      // machine each one comes from), then the machine's own insides and
+      // its price go into the bag
+      for (const b of [...SIM.beltsTo(profile, m), ...SIM.beltsFrom(profile, m)]) SIM.removeBelt(profile, b.id);
+      SIM.ensureMachine(m);
+      const back = {};
+      for (const o of [act.back, m.buf.in, m.buf.out]) {
+        for (const [mat, n] of Object.entries(o || {})) if (n > 0) back[mat] = (back[mat] || 0) + n;
+      }
+      profile.machines.splice(i, 1);
+      for (const [mat, n] of Object.entries(back)) { profile.bag[mat] = (profile.bag[mat] || 0) + n; profile.seen[mat] = true; }
+      const total = Object.values(back).reduce((a, b) => a + b, 0);
+      if (total && dock) FACTORY.floatText(`+${total}`, dock.id, 0x7fb98a);
+      afterPurchase();
     }
   }
   function afterPurchase() {
@@ -656,16 +712,16 @@
     refreshMarks();
     refreshCaption();
   }
-  // info rows above the docked machine: its recipes, the chosen one bright
-  // (with ✗ while the bag can't pay for it)
+  // info rows above the docked machine: the one recipe it is running now
+  // (with ✗ while the bag can't pay for it). Every other choice — the other
+  // recipes, the spool, ⚙, taking it down — waits in the menu behind the hold.
   function refreshInfo() {
     if (!dock || dock.kind !== 'machine') { FACTORY.clearInfo(); return; }
     const m = dock.m;
     const rows = [];
     if (m.kind !== 'mine') {
-      const offered = CHAIN.offerableRecipes(m.kind, profile).slice(0, 3);
-      if (!offered.length) rows.push({ pre: '✗', enabled: false });
-      for (const r of offered) rows.push({ items: r.in, out: r.out, enabled: r === recipe, ok: r === recipe && !SIM.canTake(profile, m, r.in) && !unitPaid ? false : undefined });
+      if (!recipe) rows.push({ pre: '✗', enabled: false });
+      else rows.push({ items: recipe.in, out: recipe.out, enabled: true, ok: !SIM.canTake(profile, m, recipe.in) && !unitPaid ? false : undefined });
     }
     // what is inside the machine: inputs waiting, outputs made
     SIM.ensureMachine(m);
@@ -771,11 +827,11 @@
   // ONE interact key, two things at once. On press: if the drill's next
   // character is a space, it is typed right then (never on release, and a
   // held space that isn't the next character costs nothing). Holding for half
-  // a second (a charge bar fills above the operator) opens the place's menu,
-  // or confirms the highlighted row when a menu is open. Releasing early with
-  // a menu open closes it.
+  // a second (a charge bar fills above the operator) opens the place's menu.
+  // Once it is open the hold is over: arrows choose and a tap of Space
+  // confirms the highlighted row; Escape closes it.
   const HOLD_MS = 500;
-  let spaceState = null;   // {done}
+  let spaceDown = false;   // Space is held right now
   let chargeTimer = null;
 
   function cancelCharge() {
@@ -783,15 +839,16 @@
     FACTORY.setCharge(null);
   }
   function startSpace() {
-    if (spaceState) return;
-    spaceState = { done: false };
+    if (spaceDown) return;
+    spaceDown = true;
+    // a menu is open: the tap confirms the highlighted row, nothing else
+    if (menu) { confirmMenu(); refreshStatus(); return; }
     // the typed space, at once — only when it is the next character
-    if (!menu && canTypeHere() && lineText[pos] === ' ') handleTyped(' ');
+    if (canTypeHere() && lineText[pos] === ' ') handleTyped(' ');
     // what the hold will do: lay the belt here / drop the spool (carrying),
-    // confirm the row (menu open), open the menu (a place with rows)
+    // open the menu (a place with rows)
     let verb = null;
-    if (spool && !menu) verb = socketHere() ? 'socket' : 'drop';
-    else if (menu) verb = 'confirm';
+    if (spool) verb = socketHere() ? 'socket' : 'drop';
     else if (menuRowsFor(dock).length > 0) verb = 'open';
     if (!verb) return;
     const color = verb === 'socket' ? 0x6cc46c : verb === 'drop' ? 0xd84f4f : 0xf2c14e;
@@ -802,21 +859,17 @@
       FACTORY.setCharge(Math.min(1, p), color);
       if (p >= 1) {
         cancelCharge();
-        if (spaceState) spaceState.done = true;
         if (verb === 'socket') { const act = socketHere(); if (act) performAction(act); else dropSpool(); }
         else if (verb === 'drop') dropSpool();
-        else if (verb === 'confirm') confirmMenu();
         else openMenu();
         refreshStatus();
       }
     }, 33);
   }
   function endSpace() {
-    if (!spaceState) return;
-    const wasCharging = !!chargeTimer;
+    if (!spaceDown) return;
     cancelCharge();
-    if (wasCharging && !spaceState.done && menu) { closeMenu(); refreshStatus(); }
-    spaceState = null;
+    spaceDown = false;
   }
 
   // headless inspection (dev/play.html and the harnesses): read-only state
@@ -1098,8 +1151,16 @@
       ${retooled ? `<p class="muted">${T.t('unlockRetool')}</p>` : ''}
       <button id="ov-continue" class="btn-primary">${T.t('unlockGo')}</button>
     `);
-    const caps = keys.map((k) => keycapEls[LAYOUT.CHAR_TO_CODE[k]]).filter(Boolean);
-    for (const cap of caps) { cap.classList.remove('locked'); cap.classList.add('unlock-glow'); }
+    // paint the new ore band under the glow, so when the glow drops away the
+    // key is already wearing the colour of the mine that paid for it
+    const caps = [];
+    for (const k of keys) {
+      const cap = keycapEls[LAYOUT.CHAR_TO_CODE[k]];
+      if (!cap) continue;
+      paintBand(cap, k, true);
+      cap.classList.add('unlock-glow');
+      caps.push(cap);
+    }
     $('ov-continue').onclick = () => {
       for (const cap of caps) cap.classList.remove('unlock-glow');
       hideOverlay();
@@ -1315,7 +1376,7 @@
     for (const k of Object.keys(invPrev)) delete invPrev[k];
     for (const k of Object.keys(countTimers)) clearInterval(countTimers[k]);
     hudKeysShown = [];
-    cancelCharge(); spaceState = null;
+    cancelCharge(); spaceDown = false;
 
     spool = null; spoolRoute = null; FACTORY.setSpool(false);
     SIM.catchUp(profile, Date.now());
@@ -1521,10 +1582,7 @@
   }
 
   // ---------- boot ----------
-  // the heavy work waits two frames: the first callback lands before a paint,
-  // the second after it, so the loading card is on screen with its pulse
-  // running on the compositor before the world build takes the main thread.
-  requestAnimationFrame(() => requestAnimationFrame(() => {
+  function boot() {
     applyI18n();
     buildKeyboard();
     refreshStats();
@@ -1534,5 +1592,18 @@
       clearLine();
       setTimeout(showMapSelect, 30);
     });
-  }));
+  }
+  // The heavy work waits two frames: the first callback lands before a paint,
+  // the second after it, so the loading card is on screen with its pulse
+  // running on the compositor before the world build takes the main thread.
+  // A hidden tab is handed no frames at all, so that wait would never end —
+  // there is nothing on screen to protect there, so boot goes ahead at once,
+  // and a timer covers the tab that is hidden after the wait has begun.
+  let booted = false;
+  const startBoot = () => { if (booted) return; booted = true; boot(); };
+  if (document.hidden) startBoot();
+  else {
+    requestAnimationFrame(() => requestAnimationFrame(startBoot));
+    setTimeout(startBoot, 400);
+  }
 })();
