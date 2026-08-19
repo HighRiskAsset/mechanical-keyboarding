@@ -288,12 +288,28 @@
       R(x, P.brass1, px + 1, py + 1, 3, 3); R(x, P.brass2, px + 1, py + 1, 2, 1);
       R(x, P.steam, px + 2, py + 2, 1, 1);
     },
-    firebox(x, px, py, w, h) {                     // sooted mouth, fire banked at the grate
+    firebox(x, px, py, w, h, heat) {               // sooted mouth, fire banked at the grate
       R(x, P.ironO, px - 1, py - 1, w + 2, h + 2);
       R(x, P.soot, px, py, w, h);
       R(x, P.orange, px + 1, py + h - 3, w - 2, 2);
       R(x, P.glow, px + 2, py + h - 2, w - 4, 1);
+      // driven, the fire licks up the mouth — never past the lintel
+      const g = Math.max(0, Math.min(heat || 0, h - 3));
+      if (g) {
+        R(x, P.orange, px + 2, py + h - 3 - g, w - 4, g);
+        if (g > 1) R(x, P.glow, px + 3, py + h - 3, Math.max(1, w - 6), 1);
+      }
       R(x, P.brass1, px - 1, py + h, w + 2, 1);    // the sill under the door
+    },
+    lamp(x, px, py, lit) {                         // 3x3 signal lamp: iron bezel, brass hood,
+      const n = Math.max(0, Math.min(3, lit | 0)); // a bead that is dark, breathing, or lit
+      if (n >= 2) {
+        x.fillStyle = n >= 3 ? 'rgba(255,226,138,0.30)' : 'rgba(255,226,138,0.14)';
+        x.fillRect(px - 1, py - 1, 5, 5);
+      }
+      R(x, P.ironO, px, py, 3, 3);
+      R(x, P.brass1, px, py, 3, 1);
+      R(x, [P.iron3, P.brass1, P.orange, P.glow][n], px + 1, py + 1, 1, 1);
     },
     flue(x, px, py, h) {                           // chimney: iron tube, brass collar, flared lip
       R(x, P.ironO, px - 1, py + 2, 6, h - 2);
@@ -320,6 +336,9 @@
         else { R(x, P.brass1, cx - r + 1, cy, r * 2 - 1, 1); R(x, P.brass1, cx, cy - r + 1, 1, r * 2 - 1); }
       } else if (r === 3) {                        // four dark ports read as spokes turning
         for (const [dx, dy] of ((f || 0) % 2 ? [[-1, -1], [1, -1], [-1, 1], [1, 1]] : [[0, -2], [0, 2], [-2, 0], [2, 0]])) R(x, P.iron3, cx + dx, cy + dy, 1, 1);
+      } else if (r === 2) {                        // a line-shaft pulley: one port swings round
+        const [dx, dy] = [[0, -1], [1, 0], [0, 1], [-1, 0]][((f || 0) % 4 + 4) % 4];
+        R(x, P.iron3, cx + dx, cy + dy, 1, 1);
       }
       R(x, P.iron3, cx, cy, 1, 1); R(x, P.brass2, cx, cy - 1, 1, 1);
     },
@@ -334,17 +353,42 @@
     },
   };
 
-  // ---------- mining rigs, 26x36, 4 frames ----------
+  // ---------- how a machine moves: the three states (DESIGN.md, 2026-08-20) ----------
+  // Every machine on the map is in exactly one of these, read off the world:
+  //   'still' — not automated, nobody working it: nothing moves, the lamp dark
+  //   'idle'  — automated with nothing to process: the pose holds, the lamp breathes
+  //   'work'  — worked by hand, or automated and processing: everything moves
+  // The gap between 'idle' and 'work' is what the player reads, so 'idle'
+  // touches one small bead and 'work' drives the big parts.
+  const WORK_FRAMES = 4;                  // the work beat
+  const IDLE_FRAMES = 6;                  // the idle breath, on a slower clock
+  // the bead's ramp across that breath. It never reaches 0: a powered machine
+  // must not pass, even for one frame, for a machine nobody automated.
+  const IDLE_LAMP = [1, 2, 3, 3, 2, 1];
+  // the dials a machine drawer reads: the beat pose, whether the big parts run,
+  // how hard the fire is driven, and how bright the signal lamp burns
+  function beat(mode, frame) {
+    const n = frame | 0;
+    if (mode === 'work') {
+      const f = ((n % WORK_FRAMES) + WORK_FRAMES) % WORK_FRAMES;
+      return { f, run: true, heat: [2, 3, 2, 1][f], lamp: 3 };
+    }
+    const i = ((n % IDLE_FRAMES) + IDLE_FRAMES) % IDLE_FRAMES;
+    return { f: 0, run: false, heat: 0, lamp: mode === 'idle' ? IDLE_LAMP[i] : 0 };
+  }
+
+  // ---------- mining rigs, 26x36 ----------
   // Three hand-me-down machines, each a step up in ambition: a timber
   // prospector rig, a riveted steam extractor, a beam-engine works. Read the
   // silhouette first — derrick, boiler, walking beam — then the brass.
-  function machine(tier, frame) {
+  function machine(tier, frame, mode) {
     const [c, x] = canvas(26, 36);
+    const b = beat(mode === undefined ? 'work' : mode, frame);
     R(x, P.ironO, 2, 34, 22, 2); R(x, P.iron3, 5, 33, 16, 1);      // planted shadow
     if (tier === 1) {
       // Prospector rig: a timber derrick splayed over a little upright
       // boiler, hand-built, the drill rod bobbing on every beat.
-      const bob = [0, 1, 2, 1][frame];
+      const bob = b.run ? [0, 1, 2, 1][b.f] : 0;   // the rod only bobs when the rig is driven
       for (const [lx, ly] of [[14, 11], [13, 17], [11, 23], [9, 29], [16, 11], [17, 17], [19, 23], [21, 29]]) {
         R(x, P.ironO, lx - 1, ly, 4, 6); R(x, P.trunk2, lx, ly, 2, 6); R(x, P.trunk, lx, ly, 1, 6);
       }
@@ -357,9 +401,10 @@
       M.plate(x, 2, 16, 7, 15);
       M.gauge(x, 3, 17);
       M.band(x, 2, 22, 7);
-      M.firebox(x, 3, 25, 5, 4);
+      M.firebox(x, 3, 25, 5, 4, b.heat);
       M.flue(x, 3, 7, 10);
-      M.puff(x, 4, 6, frame);
+      M.puff(x, 4, 6, b.f);
+      M.lamp(x, 20, 8, b.lamp);
       R(x, P.dirt3, 5, 31, 4, 2); R(x, P.ironore, 19, 31, 3, 2);
     } else if (tier === 2) {
       // Steam extractor: a riveted boiler-house with an oxblood door, twin
@@ -371,16 +416,17 @@
       R(x, P.ironO, 8, 19, 9, 7); R(x, P.enamD, 9, 20, 7, 5); R(x, P.enam, 9, 20, 7, 3); R(x, P.enamL, 9, 20, 7, 1);
       R(x, P.brass1, 10, 22, 5, 1);
       M.gauge(x, 3, 20); M.gauge(x, 18, 20);
-      M.firebox(x, 8, 26, 8, 4);
-      M.wheel(x, 20, 26, 3, frame);
+      M.firebox(x, 8, 26, 8, 4, b.heat);
+      M.wheel(x, 20, 26, 3, b.f);
       M.flue(x, 15, 5, 9);
-      M.puff(x, 16, 4, frame);
+      M.puff(x, 16, 4, b.f);
+      M.lamp(x, 21, 8, b.lamp);
       R(x, P.ironO, 6, 8, 4, 6); R(x, P.brass1, 7, 9, 2, 5); R(x, P.brass2, 7, 9, 1, 5);
       M.pipeV(x, 2, 18, 13);
     } else {
       // Beam-engine works: the walking beam rocks on its post, the flywheel
       // turns, the firebox roars. The frontier's real machine.
-      const tilt = [0, 1, 0, -1][frame];
+      const tilt = b.run ? [0, 1, 0, -1][b.f] : 0;   // the beam only rocks under steam
       M.plate(x, 2, 15, 22, 16);
       R(x, P.ironO, 0, 12, 26, 4); R(x, P.iron, 1, 13, 24, 2); R(x, P.ironL, 1, 13, 24, 1);
       M.rivets(x, 3, 22, 20, 5);
@@ -390,12 +436,13 @@
       R(x, P.brass1, 12, 8, 2, 2); R(x, P.brass2, 12, 8, 1, 1);
       R(x, P.ironO, 4, 10 + tilt, 3, 9); R(x, P.iron, 5, 10 + tilt, 1, 8);
       R(x, P.ironO, 19, 10 - tilt, 3, 7); R(x, P.iron, 20, 10 - tilt, 1, 6);
-      M.wheel(x, 6, 25, 5, frame);
+      M.wheel(x, 6, 25, 5, b.f);
       R(x, P.ironO, 12, 17, 10, 7); R(x, P.enamD, 13, 18, 8, 5); R(x, P.enam, 13, 18, 8, 3); R(x, P.enamL, 13, 18, 8, 1);
       M.gauge(x, 13, 18); R(x, P.brass1, 19, 19, 2, 3); R(x, P.brass2, 19, 19, 1, 3);
-      M.firebox(x, 13, 26, 8, 4);
+      M.firebox(x, 13, 26, 8, 4, b.heat);
       M.flue(x, 20, 3, 10);
-      M.puff(x, 21, 2, frame);
+      M.puff(x, 21, 2, b.f);
+      M.lamp(x, 22, 16, b.lamp);
     }
     return c;
   }
@@ -404,8 +451,9 @@
   // Works buildings in the same idiom: a blast furnace, a crucible foundry,
   // a belt-driven machine shop, an assembly hall. Same kit, heavier iron —
   // each one gets a chimney on the roof, one fire, and one thing that moves.
-  function station(kind) {
+  function station(kind, frame, mode) {
     const [c, x] = canvas(30, 30);
+    const b = beat(mode === undefined ? 'work' : mode, frame);
     R(x, P.ironO, 1, 28, 28, 2);
     if (kind === 'bigrams') {
       // SMELTER: a blast furnace that tapers as it climbs, charged from the
@@ -416,12 +464,20 @@
       M.band(x, 8, 14, 11); M.band(x, 6, 20, 15);
       M.rivets(x, 7, 24, 13, 4);
       R(x, P.ironO, 8, 4, 11, 5); R(x, P.iron2, 9, 5, 9, 4); R(x, P.iron, 9, 5, 9, 1);
-      R(x, P.soot, 11, 5, 5, 2); R(x, P.ironore, 12, 5, 3, 1);   // ore in the hopper
-      M.firebox(x, 8, 22, 8, 5);
-      M.flue(x, 23, 4, 11); M.puff(x, 24, 3, 0);
+      const chg = b.run ? [0, 1, 2, 1][b.f] : 0;                 // the charge settles as it burns
+      R(x, P.soot, 11, 5, 5, 3); R(x, P.ironore, 12, 5 + chg, 3, 1);   // ore in the hopper
+      // the skip hoist: a bucket of ore rides the stack rail while it is charged
+      const skip = b.run ? [0, 3, 6, 3][b.f] : 0;
+      R(x, P.iron3, 4, 5, 1, 11);
+      R(x, P.ironO, 2, 12 - skip, 5, 4); R(x, P.iron2, 3, 13 - skip, 3, 2); R(x, P.ironore, 3, 13 - skip, 3, 1);
+      M.firebox(x, 8, 22, 8, 5, b.heat);
+      M.flue(x, 23, 4, 11); M.puff(x, 24, 3, b.f);
       R(x, P.ironO, 20, 14, 7, 8); R(x, P.iron2, 21, 15, 5, 6); R(x, P.iron, 21, 15, 5, 1); M.gauge(x, 21, 16);
-      R(x, P.brass1, 16, 25, 6, 1); R(x, P.glow, 16, 25, 4, 1);  // the tap runner
+      // the tap runner: it only flows while the furnace is being charged
+      R(x, P.brass1, 16, 25, 6, 1);
+      if (b.run) { R(x, P.orange, 16, 25, 6, 1); R(x, P.glow, 16, 25, 2 + b.f, 1); }
       R(x, P.ironO, 21, 24, 7, 5); R(x, P.iron2, 22, 25, 5, 3); R(x, P.orange, 22, 25, 5, 1); R(x, P.glow, 23, 25, 3, 1);
+      M.lamp(x, 17, 21, b.lamp);
       M.pipeV(x, 2, 16, 12);
     } else if (kind === 'foundry') {
       // FOUNDRY: a crucible house — twin flues over the fire, and a ladle on
@@ -429,32 +485,38 @@
       M.plate(x, 2, 13, 26, 15);
       R(x, P.ironO, 0, 10, 30, 4); R(x, P.iron, 1, 11, 28, 2); R(x, P.ironL, 1, 11, 28, 1);
       M.rivets(x, 3, 14, 24, 4);
-      M.flue(x, 6, 2, 9); M.puff(x, 7, 1, 0);
+      M.flue(x, 6, 2, 9); M.puff(x, 7, 1, b.f);
       M.flue(x, 20, 4, 7);
       M.gauge(x, 4, 16); M.gauge(x, 10, 16);
-      M.firebox(x, 4, 22, 9, 5);
-      R(x, P.ironO, 16, 16, 9, 8); R(x, P.iron2, 17, 17, 7, 6); R(x, P.iron, 17, 17, 7, 2);
-      M.band(x, 17, 19, 7);
-      R(x, P.orange, 17, 16, 7, 1); R(x, P.glow, 19, 16, 3, 1);
+      M.firebox(x, 4, 22, 9, 5, b.heat);
+      // the ladle tips on its trunnions as it pours, and rights itself between
+      const tip = b.run ? [0, 1, 2, 1][b.f] : 0;
+      R(x, P.ironO, 16, 16 + tip, 9, 8); R(x, P.iron2, 17, 17 + tip, 7, 6); R(x, P.iron, 17, 17 + tip, 7, 2);
+      M.band(x, 17, 19 + tip, 7);
+      R(x, P.orange, 17, 16 + tip, 7, 1); R(x, P.glow, 19, 16 + tip, 3, 1);
       R(x, P.brass1, 15, 18, 1, 4); R(x, P.brass1, 25, 18, 1, 4);
-      R(x, P.orange, 20, 24, 1, 2); R(x, P.glow, 20, 24, 1, 1);
+      if (b.run) { R(x, P.orange, 20, 24 - tip, 1, 2 + tip); R(x, P.glow, 20, 24 - tip, 1, 1 + tip); }
       R(x, P.ironO, 17, 25, 8, 4); R(x, P.iron2, 18, 26, 6, 2); R(x, P.orange, 18, 26, 6, 1); R(x, P.glow, 19, 26, 4, 1);
+      M.lamp(x, 16, 22, b.lamp);
     } else if (kind === 'words') {
       // CONSTRUCTOR: a machine shop under a timber truss — a line shaft on
       // brass pulleys, leather belting down to the press, dies at the bench.
       M.plate(x, 2, 14, 26, 14);
       R(x, P.ironO, 0, 6, 30, 5); R(x, P.trunk2, 1, 7, 28, 3); R(x, P.trunk, 1, 7, 28, 1);
       R(x, P.ironO, 3, 11, 24, 2); R(x, P.iron, 4, 11, 22, 1);
-      M.wheel(x, 7, 12, 2, 0); M.wheel(x, 15, 12, 2, 1); M.wheel(x, 22, 12, 2, 0);
+      // the line shaft drives everything here: pulleys, belting, then the ram
+      M.wheel(x, 7, 12, 2, b.f); M.wheel(x, 15, 12, 2, b.f + 1); M.wheel(x, 22, 12, 2, b.f + 2);
       R(x, P.trunk2, 7, 14, 1, 6); R(x, P.trunk2, 15, 14, 1, 4); R(x, P.trunk2, 22, 14, 1, 5);
       M.band(x, 3, 17, 24);
       M.rivets(x, 4, 25, 22, 5);
+      const ram = b.run ? [0, 1, 2, 1][b.f] : 0;
       R(x, P.ironO, 4, 20, 9, 8); R(x, P.iron3, 5, 21, 7, 6);
-      R(x, P.iron2, 6, 22, 5, 3); R(x, P.steel, 6, 22, 5, 1); R(x, P.brass1, 6, 26, 5, 1);
+      R(x, P.iron2, 6, 22 + ram, 5, 3); R(x, P.steel, 6, 22 + ram, 5, 1); R(x, P.brass1, 6, 26, 5, 1);
       R(x, P.ironO, 14, 20, 8, 5); R(x, P.enamD, 15, 21, 6, 3); R(x, P.enam, 15, 21, 6, 2); R(x, P.enamL, 15, 21, 6, 1);
       M.gauge(x, 23, 20);
-      M.firebox(x, 15, 26, 6, 2);
-      M.flue(x, 24, 1, 7); M.puff(x, 25, 0, 0);
+      M.firebox(x, 15, 26, 6, 2, b.heat);
+      M.lamp(x, 24, 14, b.lamp);
+      M.flue(x, 24, 1, 7); M.puff(x, 25, 0, b.f);
     } else if (kind === 'molder') {
       // MOLDER: a screw press — a tall frame, the big handwheel on the screw
       // over the die box, trays of fresh mouldings cooling on the bench, a
@@ -463,16 +525,18 @@
       R(x, P.ironO, 6, 2, 4, 14); R(x, P.iron2, 7, 3, 2, 13); R(x, P.iron, 7, 3, 1, 13);      // left upright
       R(x, P.ironO, 20, 2, 4, 14); R(x, P.iron2, 21, 3, 2, 13); R(x, P.iron, 21, 3, 1, 13);   // right upright
       R(x, P.ironO, 5, 1, 20, 3); R(x, P.iron, 6, 2, 18, 1); R(x, P.ironL, 6, 2, 18, 1);      // crown
-      M.wheel(x, 15, 6, 4, 1);                                                              // the handwheel
-      R(x, P.ironO, 14, 9, 3, 5); R(x, P.steel, 15, 10, 1, 4);                                // the screw
-      R(x, P.ironO, 10, 13, 11, 4); R(x, P.iron2, 11, 14, 9, 2); R(x, P.brass1, 11, 14, 9, 1); // die box
+      M.wheel(x, 15, 6, 4, b.f);                                                            // the handwheel
+      const screw = b.run ? [0, 1, 2, 1][b.f] : 0;                                          // it drives the die down
+      R(x, P.ironO, 14, 9, 3, 5); R(x, P.steel, 15, 10, 1, 4 + screw);                        // the screw
+      R(x, P.ironO, 10, 13 + screw, 11, 4); R(x, P.iron2, 11, 14 + screw, 9, 2); R(x, P.brass1, 11, 14 + screw, 9, 1); // die box
       M.band(x, 4, 19, 22);
       M.rivets(x, 5, 25, 20, 4);
       R(x, P.ironO, 4, 22, 8, 4); R(x, P.enamD, 5, 23, 6, 2); R(x, P.enam, 5, 23, 6, 1);     // tray of mouldings
       R(x, P.brass2, 6, 23, 1, 1); R(x, P.brass2, 8, 23, 1, 1);
       M.gauge(x, 22, 21);
-      M.firebox(x, 13, 23, 6, 3);
-      M.flue(x, 25, 6, 10); M.puff(x, 26, 5, 0);
+      M.firebox(x, 13, 23, 6, 3, b.heat);
+      M.lamp(x, 23, 16, b.lamp);
+      M.flue(x, 25, 6, 10); M.puff(x, 26, 5, b.f);
     } else if (kind === 'fastener') {
       // FASTENER: a riveting machine — a C-frame with the hammer arm raised
       // over the anvil, a rack of bolts and rivets on the side, a bin of
@@ -480,16 +544,24 @@
       M.plate(x, 2, 15, 26, 13);
       R(x, P.ironO, 4, 3, 6, 13); R(x, P.iron2, 5, 4, 4, 12); R(x, P.iron, 5, 4, 2, 12);     // the C-frame post
       R(x, P.ironO, 4, 3, 16, 4); R(x, P.iron2, 5, 4, 14, 2); R(x, P.ironL, 5, 4, 14, 1);    // top arm
-      R(x, P.ironO, 17, 6, 4, 7); R(x, P.steel, 18, 7, 2, 5); R(x, P.iron3, 18, 12, 2, 1);   // the hammer ram
+      const fall = b.run ? [0, 1, 3, 1][b.f] : 0;                                            // the ram's stroke
+      M.wheel(x, 7, 10, 3, b.f);                                                             // the drive pulley
+      R(x, P.iron3, 10, 9 + fall, 8, 1); R(x, P.iron2, 10, 10 + fall, 8, 1);                 // the rod to the ram
+      R(x, P.ironO, 17, 6, 4, 7 + fall); R(x, P.steel, 18, 7 + fall, 2, 5); R(x, P.iron3, 18, 12 + fall, 2, 1); // hammer ram
       R(x, P.ironO, 15, 13, 8, 3); R(x, P.brass1, 16, 14, 6, 1);                             // anvil
+      if (fall === 3) {                                                                      // the blow lands
+        R(x, P.glow, 17, 13, 4, 1); R(x, P.brass3, 18, 12, 2, 1);
+        R(x, P.orange, 15, 12, 1, 1); R(x, P.glow, 22, 11, 1, 1); R(x, P.brass3, 14, 14, 1, 1);
+      }
       R(x, P.ironO, 22, 3, 6, 12); R(x, P.iron2, 23, 4, 4, 10);                               // the rack
       for (let i = 0; i < 4; i++) { R(x, P.steel, 24, 5 + i * 2, 2, 1); R(x, P.brass2, 24, 5 + i * 2, 1, 1); }
       M.band(x, 3, 18, 24);
       M.rivets(x, 4, 24, 22, 4);
       R(x, P.ironO, 4, 21, 9, 5); R(x, P.iron3, 5, 22, 7, 3); R(x, P.brass1, 6, 23, 1, 1); R(x, P.steel, 9, 23, 1, 1); // bin
       M.gauge(x, 16, 20);
-      M.firebox(x, 21, 22, 5, 3);
-      M.flue(x, 12, 1, 8); M.puff(x, 13, 0, 0);
+      M.firebox(x, 21, 22, 5, 3, b.heat);
+      M.lamp(x, 24, 16, b.lamp);
+      M.flue(x, 12, 1, 8); M.puff(x, 13, 0, b.f);
     } else {
       // ASSEMBLER: the big hall — a gantry over the floor, a heavy flywheel,
       // a bank of dials on oxblood, and the firebox that drives it all.
@@ -498,15 +570,17 @@
       R(x, P.ironO, 1, 3, 18, 3); R(x, P.iron2, 2, 4, 16, 2); R(x, P.ironL, 2, 4, 16, 1);
       R(x, P.ironO, 2, 6, 4, 5); R(x, P.iron2, 3, 6, 2, 5);
       R(x, P.ironO, 14, 6, 4, 5); R(x, P.iron2, 15, 6, 2, 5);
-      R(x, P.iron3, 10, 6, 1, 4); R(x, P.ironO, 8, 10, 5, 3); R(x, P.trunk, 9, 11, 3, 1);
+      const trav = b.run ? [0, 1, 2, 1][b.f] : 0;                                  // the hoist travels the gantry
+      R(x, P.iron3, 10 + trav, 6, 1, 4); R(x, P.ironO, 8 + trav, 10, 5, 3); R(x, P.trunk, 9 + trav, 11, 3, 1);
       M.band(x, 2, 16, 26);
       M.rivets(x, 3, 25, 24, 5);
-      M.wheel(x, 7, 22, 5, 0);
+      M.wheel(x, 7, 22, 5, b.f);
       R(x, P.ironO, 14, 19, 13, 5); R(x, P.enamD, 15, 20, 11, 3); R(x, P.enam, 15, 20, 11, 2); R(x, P.enamL, 15, 20, 11, 1);
       M.gauge(x, 16, 19); M.gauge(x, 22, 19);
-      M.firebox(x, 15, 25, 10, 3);
+      M.firebox(x, 15, 25, 10, 3, b.heat);
+      M.lamp(x, 3, 13, b.lamp);
       M.pipeH(x, 1, 24, 5);
-      M.flue(x, 23, 1, 10); M.puff(x, 24, 0, 0);
+      M.flue(x, 23, 1, 10); M.puff(x, 24, 0, b.f);
     }
     return c;
   }
@@ -514,8 +588,9 @@
   // ---------- freight depot 44x36, 4 frames (crane hook cycles) ----------
   // A timber loading stage with an iron crane and a steam donkey engine
   // chuffing away beside the crates.
-  function press(frame) {
+  function press(frame, mode) {
     const [c, x] = canvas(44, 36);
+    const b = beat(mode === undefined ? 'work' : mode, frame);
     R(x, P.ironO, 1, 28, 42, 8);
     R(x, P.bC, 2, 29, 40, 6);
     for (let px = 2; px < 42; px += 5) R(x, P.bA, px, 29, 4, 1);
@@ -532,19 +607,24 @@
     // crane: iron mast, brass sheave, a hook that rises and falls
     R(x, P.ironO, 32, 3, 5, 26); R(x, P.iron2, 33, 4, 3, 25); R(x, P.iron, 33, 4, 1, 25);
     R(x, P.ironO, 19, 5, 15, 4); R(x, P.iron2, 20, 6, 13, 2); R(x, P.ironL, 20, 6, 13, 1);
-    M.wheel(x, 22, 7, 2, frame);
-    const hy = [14, 17, 20, 17][frame];
+    M.wheel(x, 22, 7, 2, b.f);
+    const hy = b.run ? [14, 17, 20, 17][b.f] : 14;   // the hook parks at the sheave when idle
     R(x, P.iron3, 22, 9, 1, hy - 9);
     R(x, P.ironO, 18, hy, 9, 6); R(x, P.trunk, 19, hy + 1, 7, 4); R(x, P.brass1, 19, hy + 3, 7, 1);
     // steam donkey engine beside the mast
     M.plate(x, 37, 19, 6, 9);
     M.band(x, 37, 22, 6);
-    M.firebox(x, 38, 25, 4, 3);
-    M.flue(x, 38, 9, 10); M.puff(x, 39, 8, frame);
+    M.firebox(x, 38, 25, 4, 3, b.heat);
+    M.flue(x, 38, 9, 10); M.puff(x, 39, 8, b.f);
     M.gauge(x, 28, 20);
-    // signal lantern on the mast
+    // signal lantern on the mast: it winks green under way, else it is the
+    // machine's state bead — breathing amber while it waits, dark when it is off
+    if (!b.run && b.lamp >= 2) {
+      x.fillStyle = b.lamp >= 3 ? 'rgba(255,226,138,0.30)' : 'rgba(255,226,138,0.14)';
+      x.fillRect(28, 9, 5, 8);
+    }
     R(x, P.ironO, 28, 9, 5, 8); R(x, P.brass1, 29, 10, 3, 6); R(x, P.brass2, 29, 10, 1, 6);
-    R(x, frame % 2 ? P.green : P.red, 30, 12, 1, 2);
+    R(x, b.run ? (b.f % 2 ? P.green : P.glow) : [P.iron3, P.brass1, P.orange, P.glow][b.lamp], 30, 11, 2, 4);
     return c;
   }
 
@@ -1167,8 +1247,12 @@
     shoreTex: () => cachedTex('shore', tileShore),
     nodeTex: (kind) => cachedTex('node:' + kind, () => nodePatch(kind)),
     flowerTex: (s) => cachedTex('flower:' + (s % 4), () => flower(s)),
-    machineTex: (tier, frame) => tex(machine(tier, frame)),
-    stationTex: (kind) => tex(station(kind)),
+    // machines take a mode: 'still' | 'idle' | 'work' (DESIGN.md, 2026-08-20).
+    // factory.js caches one band of these per (look, mode) and picks the mode
+    // each tick; nothing here knows what the machine is doing.
+    WORK_FRAMES, IDLE_FRAMES,
+    machineTex: (tier, frame, mode) => tex(machine(tier, frame, mode)),
+    stationTex: (kind, frame, mode) => tex(station(kind, frame, mode)),
     characterTex: (dir, frame) => cachedTex('ch:' + dir + frame, () => character(dir, frame)),
     characterWorkTex: (frame) => cachedTex('chw:' + frame, () => characterWork(frame)),
     beltTex: (frame) => tex(belt(frame)),
@@ -1209,7 +1293,7 @@
     itemDotCanvas: itemDot, itemRingCanvas: itemRing,
     propCanvas: (kind) => PROP_DRAW[kind](), kindIconCanvas: kindIcon, matIconCanvas: matIcon,
     matIconTex: (kind) => cachedTex('mat:' + kind, () => matIcon(kind)),
-    pressTex: (frame) => tex(press(frame)),
+    pressTex: (frame, mode) => tex(press(frame, mode)),
     vignetteURL: () => vignette().toDataURL(),
   };
 })();

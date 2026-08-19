@@ -364,10 +364,58 @@ furnace — the shape must read at 1× against grass before any brass goes on. T
 machines are the dark, warm, heavy thing in a bright frame.
 
 All of it is one shared parts kit in `js/pixels.js` — `M.plate`, `M.rivets`,
-`M.band`, `M.vband`, `M.gauge`, `M.firebox`, `M.flue`, `M.pipeH/pipeV`,
-`M.wheel` (spokes turn per frame), `M.puff` (steam rises and thins). **Any new
-machine, belt, prop or build-menu icon goes through that kit**, so the whole
-frontier reads as one workshop. Proof sheet: `dev/machines.html`.
+`M.band`, `M.vband`, `M.gauge`, `M.firebox` (fire flares with the heat it is
+given), `M.flue`, `M.pipeH/pipeV`, `M.wheel` (spokes turn per frame), `M.puff`
+(steam rises and thins), `M.lamp` (a signal bead: dark, or breathing, or lit).
+**Any new machine, belt, prop or build-menu icon goes through that kit**, so the
+whole frontier reads as one workshop. Proof sheet: `dev/machines.html`.
+
+### Machine animation — the three states (ruling 2026-08-20)
+
+**A general visual rule for every machine on the map**, present and future:
+mining rigs, works buildings, the freight depot, anything added later. A
+machine is always in exactly one of three states, and the state is *read off
+the world* — never authored per machine, never a property in the save.
+
+- **still** — not automated, and nobody is working it. **Nothing moves.** The
+  pose holds: the wheel stopped, the steam a wisp sitting over the flue, the
+  fire banked at the grate, the signal lamp dark. A machine standing by itself
+  on the frontier is a still picture.
+- **work** — the machine is running. Either the operator is docked at it and
+  the **worker's working animation is playing**, or it is automated and the sim
+  has a job in hand. **Everything moves**, and it is meant to be seen from
+  across the screen: flywheels and pulleys turn, the walking beam rocks, the
+  ram falls on the anvil, the screw presses, the crane hoist travels, the flue
+  puffs, the firebox flares, the lamp burns steady.
+- **idle** — automated, but with nothing to process: starved of inputs, or its
+  output buffer full. **Only the lamps breathe.** The machine holds the still
+  pose — wheel stopped, fire banked, steam a wisp — while a signal lamp fades
+  up and down on a slow count. It reads "powered, waiting", and must never be
+  mistaken at a glance for a machine that is working.
+
+The binding rules:
+
+1. A **non-automated** machine is only ever `still` or `work`, and its `work`
+   runs on **exactly the same condition as the operator's own work animation** —
+   the two start together and stop together, so the hand and the machine are
+   never in disagreement. Hands move ⇒ the machine moves.
+2. An **automated** machine is **never `still`**: something is always playing on
+   it. That is how ⚙ reads from across the map without stopping to look at the
+   state dot.
+3. **The gap between `idle` and `work` carries the information.** `idle` is one
+   small pulsing element on an otherwise frozen sprite; `work` moves the big
+   parts. If the two can't be told apart at 1× from ten tiles away, the work
+   animation is not doing enough — fix the work animation, never by making idle
+   busier.
+4. New machine art is **not finished** until all three states exist. The proof
+   sheet shows every machine in all three.
+
+Frames and clocks: `work` is the 4-frame beat (one frame every 9 ticks); `idle`
+is a 6-frame breath on a slower count (one frame every 12 ticks), so the two
+never read as the same animation slowed down. In code, `PIXELS.machineTex(look,
+frame, mode)` and `PIXELS.stationTex(kind, frame, mode)` take the mode;
+`js/factory.js` caches one texture band per (look, state) and picks the state
+each tick.
 
 **Grid & data.** 16×16 square tiles (`PIXELS.TILE`), world 33×15. Ground is
 authored as kinded, grid-aligned rects in chain.js `MAP`, baked to a tile grid
@@ -891,14 +939,15 @@ keyboard marks that label the switches ·
 `js/chain.js` chain/economy data
 + the `MAPS` registry (Frontier, Open Range) · `js/factory.js` Pixi world
 (`loadMap` per world) · `js/pixels.js` sprite kit + the one palette, incl. the
-steampunk machinery parts kit `M` ·
+steampunk machinery parts kit `M` and the three machine animation states ·
 `js/tiles.js` terrain kit (fills, autotile spills, walls, faces, crossings,
 region scenery, `bake`, `minimap`) · `js/app.js` orchestration + the map
 picker · `js/audio.js` synth ·
 `js/i18n.js` EN/РУ · `serve.ps1` dev server (+ POST /upload for QA frames) ·
 `js/sim.js` the factory simulation (buffers, jobs, belts, the clock) ·
 `dev/tiles.html` terrain proof sheet · `dev/machines.html` machinery proof
-sheet (rigs, works, belts, pipes, props, icons on real terrain) ·
+sheet (rigs, works, belts, pipes, props, icons on real terrain, and every
+machine in its three animation states) ·
 `dev/verify.html` data checks ·
 `dev/sim.html` simulation harness · `dev/play.html` the game headless (rAF
 shim) · `libs/pixi.min.js` vendored Pixi 8 ·

@@ -25,7 +25,7 @@
   let playerX = 40, playerY = 90;
   const moving = { left: false, right: false, up: false, down: false };
   let dockedId = null;
-  let frameClock = 0, frameIdx = 0;
+  let frameClock = 0;
   let dotTex = null;
   const particles = [], floats = [], flashes = [], sparks = [];
   const petals = [];
@@ -33,7 +33,7 @@
   let waterTexes = [];
   let grid = null;
   let crossSprites = [], openRects = [], closedRects = [];
-  const machineTexCache = {};
+  const machineTexCache = {};          // 'look:state' → one texture per frame of that band
   // phase 3: belts on the map, items riding them, the spool, the ghost route
   let simProfile = null;               // the save whose belts/items we draw (set by buildWorld)
   let beltViews = {};                  // belt id → {c, items:[sprite], pipe, b}
@@ -48,9 +48,35 @@
   const HUD_W = 46, HUD_ROW = 14;
   let chargeVal = null, chargeG = null;
 
-  function texFor(tier) {
-    if (!machineTexCache[tier]) machineTexCache[tier] = [0, 1, 2, 3].map((f) => PIXELS.machineTex(tier, f));
-    return machineTexCache[tier];
+  // ---------- how a machine looks: the three states (DESIGN.md, 2026-08-20) ----------
+  // 'still' — not automated, nobody working it: nothing moves.
+  // 'idle'  — automated with nothing to process: the pose holds, the lamp breathes.
+  // 'work'  — worked by hand, or automated and processing: everything moves.
+  // The state is read off the world each tick, never stored in the save. A
+  // band is the texture per frame of one (look, state); the art is in pixels.js.
+  const WORK_BEAT = 9, IDLE_BEAT = 12;   // ticks per frame of the beat / the breath
+  const STATION_LOOK = { smelter: 'bigrams', foundry: 'foundry', constructor: 'words', molder: 'molder', fastener: 'fastener' };
+  // an automated mine is a different machine to look at, not a different state
+  const lookOf = (kind, auto) => kind === 'mine' ? (auto ? 3 : 1) : (STATION_LOOK[kind] || 'lines');
+  function band(look, mode) {
+    const k = look + ':' + mode;
+    if (!machineTexCache[k]) {
+      const n = mode === 'work' ? PIXELS.WORK_FRAMES : mode === 'idle' ? PIXELS.IDLE_FRAMES : 1;
+      const draw = typeof look === 'number'
+        ? (f) => PIXELS.machineTex(look, f, mode)
+        : (f) => PIXELS.stationTex(look, f, mode);
+      machineTexCache[k] = Array.from({ length: n }, (_, f) => draw(f));
+    }
+    return machineTexCache[k];
+  }
+  // the state a machine is in right now. Rule 1: a hand-worked machine runs on
+  // exactly the condition the operator's own work animation runs on, so the
+  // hands and the machine are never in disagreement. Rule 2: an automated
+  // machine is never 'still' — it always has something playing.
+  function modeOf(s) {
+    if (working && s.def.id === dockedId) return 'work';
+    if (!s.auto) return 'still';
+    return s.simState === 'run' ? 'work' : 'idle';
   }
   const cssColor = (c) => typeof c === 'number' ? '#' + c.toString(16).padStart(6, '0') : c;
 
@@ -463,14 +489,10 @@
     labelsC.addChild(menuC);
   }
 
+  // the pose a machine is built in: automated ones start on the idle breath,
+  // the rest stand still. The ticker takes over from the next frame.
   function stationSpriteTex(m) {
-    if (m.kind === 'mine') return texFor(m.autoLive ? 3 : 1)[0];
-    if (m.kind === 'smelter') return PIXELS.stationTex('bigrams');
-    if (m.kind === 'foundry') return PIXELS.stationTex('foundry');
-    if (m.kind === 'constructor') return PIXELS.stationTex('words');
-    if (m.kind === 'molder') return PIXELS.stationTex('molder');
-    if (m.kind === 'fastener') return PIXELS.stationTex('fastener');
-    return PIXELS.stationTex('lines');
+    return band(lookOf(m.kind, m.autoLive), m.autoLive ? 'idle' : 'still')[0];
   }
 
   // Build the world from the save: machines on plots and nodes, free plots,
@@ -544,7 +566,10 @@
       root.zIndex = pos.y;
       cameraC.addChild(root);
       const id = 'm:' + m.id;
-      stations[id] = { def: { id, x: pos.x, y: pos.y, kind: m.kind, m }, root, sp, glow, mark, built: true, auto: live, sqTtl: 0 };
+      stations[id] = {
+        def: { id, x: pos.x, y: pos.y, kind: m.kind, m }, root, sp, glow, mark, built: true, auto: live, sqTtl: 0,
+        simState: live && window.SIM ? SIM.state(profile, m) : 'off',
+      };
       if (live) {
         const d = new PIXI.Sprite(PIXELS.stateDotTex('run'));
         d.position.set(pos.x + 24, pos.y - 40);
@@ -1147,22 +1172,29 @@
           sp.core.tint = PIXELS.matTint(it.mat);
         });
       }
+      // the sim's own answer for each machine, read on a slow beat: it drives
+      // both the state dot and whether the machine's art is working or waiting
       if (frameClock % 20 === 0 && window.SIM) {
-        for (const [id, d] of Object.entries(stateDots)) {
-          const st = stations[id];
-          if (!st) continue;
-          d.texture = PIXELS.stateDotTex(SIM.state(simProfile, st.def.m));
+        for (const s of Object.values(stations)) {
+          if (!s.def.m) continue;
+          s.simState = s.auto ? SIM.state(simProfile, s.def.m) : 'off';
+          const d = stateDots[s.def.id];
+          if (d) d.texture = PIXELS.stateDotTex(s.simState);
         }
       }
     }
 
     frameClock++;
-    if (frameClock % 9 === 0) {
-      frameIdx = (frameIdx + 1) % 4;
+    // every machine on the map, in its state, on the right clock: the work
+    // beat is quick, the idle breath slow, so the two never read alike
+    {
+      const wf = Math.floor(frameClock / WORK_BEAT) % PIXELS.WORK_FRAMES;
+      const idf = Math.floor(frameClock / IDLE_BEAT) % PIXELS.IDLE_FRAMES;
       for (const s of Object.values(stations)) {
-        if (s.def.kind !== 'mine') continue;
-        if (s.auto) s.sp.texture = texFor(3)[frameIdx];
-        else s.sp.texture = texFor(1)[(s.def.id === dockedId && workTtl > 0) ? frameIdx : 0];
+        if (!s.def.m) continue;
+        const mode = modeOf(s);
+        const t = band(lookOf(s.def.kind, s.auto), mode)[mode === 'work' ? wf : mode === 'idle' ? idf : 0];
+        if (s.sp.texture !== t) s.sp.texture = t;
       }
     }
     for (const s of Object.values(stations)) {

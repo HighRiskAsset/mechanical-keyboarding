@@ -341,7 +341,9 @@ appearance.
   (see DESIGN.md → ENVIRONMENT PLAN → *Machinery style*), built from the
   shared parts kit `M` in pixels.js — mines per ore and Mk look, Foundry,
   Molder, Fastener, Crane, Manufacturer; alloy icons as ore-colour stacks,
-  belt items, pipes, spool, menus; the Hub/Depot art retired. Check each new
+  belt items, pipes, spool, menus; the Hub/Depot art retired. Every machine
+  sprite ships all **three animation states** — still / idle / work (DESIGN.md
+  → *Machine animation*); it is not finished without them. Check each new
   sprite on `dev/machines.html` before it lands.
 - Sound: menu tick, spool/socket, belt clatter, retool cue on the ladder.
 - Content: the `PAGES` file organised for the user to write into (graded slots
