@@ -251,6 +251,29 @@ things across the map. This is the phase that makes automation mean something.
 
 ### Phase 4 — Tiers 2 and 3
 
+**Status (2026-08-20): built.** The Molder, Assembler and Fastener are
+live (`KINDS.ready`), each with its grammar in the engine: `endings`
+(affix families by flux ore — real words carrying the affix, pseudo-stems
+when thin), `phrases` (`LANG_RU.PHRASES`, 202, no marks) and `punct`
+(`LANG_RU.SENTENCES`, 278, with the marks they carry — a sentence fits
+when its letters *and* marks are unlocked); full-set kinds take the whole
+unlocked alphabet and the flux sets the focus (`CHAIN.recipeFocus`: the
+flux's letters tilt sampling, an ore flux names the ending family). The
+Fastener's keys are bought at the Fastener (`PAIRS` events with `at`;
+`PRICES.at`, `priceAt`, `kindMk`; the menu row "MK1 ," with its caption;
+the unlock card says ⇧ Shift + right pinky); comma is typed as Shift+/
+and the hint lights Shift. Words 771 → 1040; syllables for ы д к г м ь я
+у ш й з; ending families widened; Molder and Fastener sprites in the
+steampunk kit. Maps: the Frontier gets iron #2 (meadow), copper #2
+(quarry), quartz #2 (canyon), coal #2 (bog), oil #2 (flats), iron #3
+(peaks) on the outer regions' first plots, plus eleven new plots out there
+(p19–p29), every one checked clear and reachable; Open Range row A carries
+the whole pyramid. `dev/verify.html` grew seven checks (pools per ladder
+stage, stray characters, placement/reachability) — 20 green. Not yet: the
+T2 acceptance "brass only after both T0 ores are at Mk2" is a consequence
+of the union rule and holds; hint dimming is phase 5; art for the
+Assembler stays the shared hall sprite.
+
 **Goal.** Coal and oil; the Foundry, Molder, Assembler and Fastener Mk1;
 pipes; endings, phrases and punctuated sentences; comma as Shift's first
 appearance.

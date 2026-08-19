@@ -424,9 +424,84 @@
     return pick() + pick() + pick();
   }
 
+  // ---- the Molder's grammar: ending families in frames ----
+  // A family (keyed by the flux ore) lists affixes in the course's notation:
+  // a leading dash marks a suffix (carried anywhere after the first letter),
+  // a trailing dash a prefix. Items are real words
+  // of the alphabet that carry one of the family's affixes; when that pool
+  // is thin, a pseudo-stem wears the affix instead.
+  function affixOf(a) {
+    if (a.endsWith('-') && !a.startsWith('-')) return { kind: 'prefix', s: a.slice(0, -1) };
+    return { kind: 'suffix', s: a.replace(/^-/, '').replace(/-$/, '') };
+  }
+  function familyAffixes(alpha, family) {
+    const set = new Set(alpha);
+    return (L.ENDINGS[family] || []).map(affixOf).filter((x) => [...x.s].every((c) => set.has(c)));
+  }
+  const carries = (w, x) => (x.kind === 'prefix' ? w.startsWith(x.s) && w.length > x.s.length : w.indexOf(x.s, 1) >= 0);
+  function endingPool(alpha, family) {
+    const affixes = familyAffixes(alpha, family);
+    if (!affixes.length) return [];
+    return realWordPool(alpha).filter(([w]) => affixes.some((x) => carries(w, x)));
+  }
+  function endingItem(p, alpha, tilt, family) {
+    const affixes = familyAffixes(alpha, family);
+    if (!affixes.length) return pseudoWord(p, alpha, tilt);
+    const x = affixes[Math.floor(Math.random() * affixes.length)];
+    const vowels = alpha.filter(isVowel), cons = alpha.filter(isCons);
+    if (!vowels.length || !cons.length) return pseudoWord(p, alpha, tilt);
+    const v = () => weightedPick(vowels, (c) => letterWeight(p, c, tilt));
+    const c = () => weightedPick(cons, (k) => letterWeight(p, k, tilt));
+    // a 1–2 syllable stem; the join never doubles a letter
+    let stem = c() + v();
+    if (Math.random() < 0.5) stem += c() + v();
+    if (x.kind === 'prefix') {
+      if (stem[0] === x.s[x.s.length - 1]) stem = c() + stem.slice(1);
+      return x.s + stem;
+    }
+    if (isVowel(x.s[0])) stem = stem.replace(/[^]$/, '');   // suffix opens with a vowel: stem closes on a consonant
+    else if (Math.random() < 0.4) stem += c();
+    if (stem[stem.length - 1] === x.s[0]) stem = stem.slice(0, -1);
+    return stem + x.s;
+  }
+
+  // ---- phrases (the Assembler) and sentences (the Fastener) ----
+  // Both lists are [text, gloss]; a text fits when every letter is in the
+  // alphabet and, for sentences, every mark it carries is unlocked too.
+  const textLetters = (s) => [...s].filter((c) => c !== ' ');
+  function phrasePool(alpha) {
+    const set = new Set(alpha);
+    return (L.PHRASES || []).filter(([s]) => textLetters(s).every((c) => set.has(c)));
+  }
+  function sentencePool(alpha) {
+    const set = new Set(alpha);
+    return (L.SENTENCES || []).filter(([s]) => textLetters(s).every((c) => set.has(c)));
+  }
+  // a phrase or sentence as drill entries: one per word, trailing marks on
+  // the word as `punct`, the gloss on the last word
+  function textEntries(text, gloss) {
+    const out = [];
+    for (const tok of text.split(' ')) {
+      if (!tok) continue;
+      const m = tok.match(/^(.*?)([.,?!:;"()-]*)$/u);
+      const core = m ? m[1] : tok, marks = m ? m[2] : '';
+      if (!core) { if (out.length) out[out.length - 1].punct = (out[out.length - 1].punct || '') + marks; continue; }
+      out.push({ text: core, gloss: null, punct: marks || undefined });
+    }
+    if (out.length) out[out.length - 1].gloss = gloss || null;
+    return out;
+  }
+  function textWeight(p, text, tilt) {
+    let sum = 0, k = 0;
+    for (const c of text) { if (c === ' ') continue; sum += letterWeight(p, c, tilt); k++; }
+    return k ? sum / k + 0.2 : 0.2;
+  }
+
   // Generate one drill line: array of {text, gloss|null, punct?}.
-  // opts: {mode, alphabet, tilt, count}. mode: 'keys' | 'letters' |
-  // 'syllables' | 'clusters' | 'words' | 'lines' (legacy full mix).
+  // opts: {mode, alphabet, tilt, count, family}. mode: 'keys' | 'letters' |
+  // 'syllables' | 'clusters' | 'words' | 'endings' | 'phrases' | 'punct' |
+  // 'lines' (legacy full mix). family: the ending family (an ore id) for
+  // the endings mode.
   function generateLine(p, opts) {
     opts = opts || {};
     const mode = opts.mode || 'lines';
@@ -436,21 +511,47 @@
     // ratio tilt is variance only: off when the pool is small (words) — and
     // never a filter (the pool above is the full union)
     const tilt = (mode === 'words' && pool.length < C().TUNING.RATIO_MIN_POOL) ? null : capTilt(opts.tilt);
-    const wordCount = opts.count || (mode === 'keys' ? 9 : mode === 'syllables' ? 8 : 7);
+    const wordCount = opts.count || (mode === 'keys' ? 9 : mode === 'syllables' ? 8 : mode === 'phrases' ? 8 : mode === 'punct' ? 10 : 7);
+    // phrases and sentences: whole texts from the course lists, filled out
+    // with real words when the pool is thin
+    if (mode === 'phrases' || mode === 'punct') {
+      const texts = mode === 'phrases' ? phrasePool(alpha) : sentencePool(alpha);
+      const out = [];
+      let lastText = null, guard = 0;
+      while (out.length < wordCount && guard++ < 12) {
+        if (texts.length >= 3 && Math.random() < (texts.length >= 10 ? 0.9 : 0.6)) {
+          let cand = weightedPick(texts, ([s]) => textWeight(p, s, tilt));
+          for (let tries = 0; tries < 4 && cand[0] === lastText; tries++) cand = weightedPick(texts, ([s]) => textWeight(p, s, tilt));
+          lastText = cand[0];
+          out.push(...textEntries(cand[0], cand[1]));
+        } else if (pool.length) {
+          const cand = weightedPick(pool, (e) => realWordWeight(p, e, tilt));
+          out.push({ text: cand[0], gloss: cand[1], set: cand[2] });
+        } else {
+          out.push({ text: pseudoWord(p, letters, tilt), gloss: null });
+        }
+      }
+      // sentences end in a mark; a fill-in run of words gets the period
+      if (mode === 'punct' && out.length && !out[out.length - 1].punct && alpha.includes('.')) out[out.length - 1].punct = '.';
+      return out;
+    }
+    const famPool = mode === 'endings' ? endingPool(letters, opts.family) : null;
     let pReal = pool.length >= 40 ? 0.6 : pool.length >= 15 ? 0.45 : pool.length >= 5 ? 0.3 : 0.1;
     if (mode === 'keys') pReal = 0;
     if (mode === 'letters') pReal = Math.min(pReal, 0.15);
     if (mode === 'syllables') pReal = pool.length >= 5 ? 0.12 : 0;
     if (mode === 'clusters') pReal = pool.length >= 10 ? 0.3 : 0.1;
     if (mode === 'words') pReal = pool.length >= 5 ? 0.95 : pReal;
+    if (mode === 'endings') pReal = famPool.length >= 8 ? 0.7 : famPool.length >= 3 ? 0.45 : 0;
     const sylPool = mode === 'syllables' ? syllablePool(letters) : null;
     const words = [];
     let lastText = null;
     for (let i = 0; i < wordCount; i++) {
       let entry = null;
-      if (pool.length > 0 && Math.random() < pReal) {
+      const src = mode === 'endings' ? famPool : pool;
+      if (src.length > 0 && Math.random() < pReal) {
         for (let tries = 0; tries < 4; tries++) {
-          const cand = weightedPick(pool, (e) => realWordWeight(p, e, tilt));
+          const cand = weightedPick(src, (e) => realWordWeight(p, e, tilt));
           if (cand[0] !== lastText) { entry = { text: cand[0], gloss: cand[1], set: cand[2] }; break; }
         }
       }
@@ -459,6 +560,7 @@
         if (mode === 'keys') text = keysItem(p, letters, tilt);
         else if (mode === 'syllables') text = syllableItem(p, letters, tilt, sylPool);
         else if (mode === 'clusters') text = clusterItem(p, letters, tilt);
+        else if (mode === 'endings') text = endingItem(p, letters, tilt, opts.family);
         else text = pseudoWord(p, letters, tilt);
         for (let t = 0; t < 3 && text === lastText; t++) text = mode === 'keys' ? keysItem(p, letters, tilt) : pseudoWord(p, letters, tilt);
         entry = { text, gloss: null };
@@ -496,6 +598,6 @@
     loadProfile, saveProfile, resetProfile, peekProfile, adoptProfile, getLastMap, setLastMap,
     unlockedLetters, nextPair, readiness, unlockNextPair, trainable,
     recordHit, recordMiss,
-    generateLine, realWordPool,
+    generateLine, realWordPool, endingPool, phrasePool, sentencePool,
   };
 })();

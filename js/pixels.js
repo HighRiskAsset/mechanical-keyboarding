@@ -452,6 +452,41 @@
       M.gauge(x, 23, 20);
       M.firebox(x, 15, 26, 6, 2);
       M.flue(x, 24, 1, 7); M.puff(x, 25, 0, 0);
+    } else if (kind === 'molder') {
+      // MOLDER: a screw press — a tall frame, the big handwheel on the screw
+      // over the die box, trays of fresh mouldings cooling on the bench, a
+      // small firebox keeping the dies warm.
+      M.plate(x, 3, 16, 24, 12);
+      R(x, P.ironO, 6, 2, 4, 14); R(x, P.iron2, 7, 3, 2, 13); R(x, P.iron, 7, 3, 1, 13);      // left upright
+      R(x, P.ironO, 20, 2, 4, 14); R(x, P.iron2, 21, 3, 2, 13); R(x, P.iron, 21, 3, 1, 13);   // right upright
+      R(x, P.ironO, 5, 1, 20, 3); R(x, P.iron, 6, 2, 18, 1); R(x, P.ironL, 6, 2, 18, 1);      // crown
+      M.wheel(x, 15, 6, 4, 1);                                                              // the handwheel
+      R(x, P.ironO, 14, 9, 3, 5); R(x, P.steel, 15, 10, 1, 4);                                // the screw
+      R(x, P.ironO, 10, 13, 11, 4); R(x, P.iron2, 11, 14, 9, 2); R(x, P.brass1, 11, 14, 9, 1); // die box
+      M.band(x, 4, 19, 22);
+      M.rivets(x, 5, 25, 20, 4);
+      R(x, P.ironO, 4, 22, 8, 4); R(x, P.enamD, 5, 23, 6, 2); R(x, P.enam, 5, 23, 6, 1);     // tray of mouldings
+      R(x, P.brass2, 6, 23, 1, 1); R(x, P.brass2, 8, 23, 1, 1);
+      M.gauge(x, 22, 21);
+      M.firebox(x, 13, 23, 6, 3);
+      M.flue(x, 25, 6, 10); M.puff(x, 26, 5, 0);
+    } else if (kind === 'fastener') {
+      // FASTENER: a riveting machine — a C-frame with the hammer arm raised
+      // over the anvil, a rack of bolts and rivets on the side, a bin of
+      // fastened work at the foot.
+      M.plate(x, 2, 15, 26, 13);
+      R(x, P.ironO, 4, 3, 6, 13); R(x, P.iron2, 5, 4, 4, 12); R(x, P.iron, 5, 4, 2, 12);     // the C-frame post
+      R(x, P.ironO, 4, 3, 16, 4); R(x, P.iron2, 5, 4, 14, 2); R(x, P.ironL, 5, 4, 14, 1);    // top arm
+      R(x, P.ironO, 17, 6, 4, 7); R(x, P.steel, 18, 7, 2, 5); R(x, P.iron3, 18, 12, 2, 1);   // the hammer ram
+      R(x, P.ironO, 15, 13, 8, 3); R(x, P.brass1, 16, 14, 6, 1);                             // anvil
+      R(x, P.ironO, 22, 3, 6, 12); R(x, P.iron2, 23, 4, 4, 10);                               // the rack
+      for (let i = 0; i < 4; i++) { R(x, P.steel, 24, 5 + i * 2, 2, 1); R(x, P.brass2, 24, 5 + i * 2, 1, 1); }
+      M.band(x, 3, 18, 24);
+      M.rivets(x, 4, 24, 22, 4);
+      R(x, P.ironO, 4, 21, 9, 5); R(x, P.iron3, 5, 22, 7, 3); R(x, P.brass1, 6, 23, 1, 1); R(x, P.steel, 9, 23, 1, 1); // bin
+      M.gauge(x, 16, 20);
+      M.firebox(x, 21, 22, 5, 3);
+      M.flue(x, 12, 1, 8); M.puff(x, 13, 0, 0);
     } else {
       // ASSEMBLER: the big hall — a gantry over the floor, a heavy flywheel,
       // a bank of dials on oxblood, and the firebox that drives it all.

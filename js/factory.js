@@ -432,6 +432,8 @@
     if (m.kind === 'smelter') return PIXELS.stationTex('bigrams');
     if (m.kind === 'foundry') return PIXELS.stationTex('foundry');
     if (m.kind === 'constructor') return PIXELS.stationTex('words');
+    if (m.kind === 'molder') return PIXELS.stationTex('molder');
+    if (m.kind === 'fastener') return PIXELS.stationTex('fastener');
     return PIXELS.stationTex('lines');
   }
 

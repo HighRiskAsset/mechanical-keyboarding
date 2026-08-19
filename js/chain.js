@@ -53,9 +53,9 @@
     smelter:      { id: 'smelter',      arity: 2, grammar: 'syllables', minAlpha: 4,  perUnit: 4,  autoFrom: 1,  tier: 0, ready: true, needsVC: true },
     foundry:      { id: 'foundry',      arity: 2, grammar: 'clusters',  minAlpha: 8,  perUnit: 5,  autoFrom: 2,  tier: 1, ready: true },
     constructor:  { id: 'constructor',  arity: 1, grammar: 'words',     minAlpha: 8,  perUnit: 6,  autoFrom: 2,  tier: 1, ready: true, minWords: 25 },
-    molder:       { id: 'molder',       arity: 2, grammar: 'endings',   minAlpha: 14, perUnit: 6,  autoFrom: 3,  tier: 2, ready: false, full: true },
-    assembler:    { id: 'assembler',    arity: 2, grammar: 'phrases',   minAlpha: 16, perUnit: 8,  autoFrom: 3,  tier: 2, ready: false, full: true },
-    fastener:     { id: 'fastener',     arity: 2, grammar: 'punct',     minAlpha: 20, perUnit: 8,  autoFrom: 4,  tier: 3, ready: false, full: true },
+    molder:       { id: 'molder',       arity: 2, grammar: 'endings',   minAlpha: 14, perUnit: 6,  autoFrom: 3,  tier: 2, ready: true,  full: true },
+    assembler:    { id: 'assembler',    arity: 2, grammar: 'phrases',   minAlpha: 16, perUnit: 8,  autoFrom: 3,  tier: 2, ready: true,  full: true },
+    fastener:     { id: 'fastener',     arity: 2, grammar: 'punct',     minAlpha: 20, perUnit: 8,  autoFrom: 4,  tier: 3, ready: true,  full: true },
     crane:        { id: 'crane',        arity: 2, grammar: 'capitals',  minAlpha: 30, perUnit: 8,  autoFrom: 6,  tier: 5, ready: false, full: true },
     manufacturer: { id: 'manufacturer', arity: 3, grammar: 'pages',     minAlpha: 33, perUnit: 12, autoFrom: 99, tier: 6, ready: false, full: true },
   };
@@ -179,6 +179,11 @@
       coal: { 2: { fast: 60, steel: 40 }, 3: { coal: 60, qzsteel: 40 } },
       oil: { 2: { oil: 60, blackiron: 30 }, 3: { oil: 60, gunmetal: 40 }, 4: { oil: 60, fast: 60 } },
     },
+    // Mk levels on a machine kind (the Fastener: punctuation keys) — its own
+    // output, typed by hand right before the keys arrive, plus a tier good
+    at: {
+      fastener: { 1: { fast: 40, blackiron: 30 }, 2: { fast: 60, gunmetal: 40 }, 3: { fast: 60, glass: 40 } },
+    },
     // first instance of a kind at a plot — each asks for a material of the
     // tier the kind belongs to, which is the only pacing there is
     machine: {
@@ -226,6 +231,19 @@
   }
   function priceMk(ore, level) {
     return paced((PRICES.mk[ore] && PRICES.mk[ore][level]) || null);
+  }
+  // a machine kind's Mk (the Fastener's punctuation): the next pair's price
+  function priceAt(kind, level) {
+    return paced((PRICES.at[kind] && PRICES.at[kind][level]) || null);
+  }
+  // the Mk a machine kind stands at (pairs bought at it, in order)
+  function kindMk(profile, kind) {
+    let mk = 0;
+    for (let i = 0; i < profile.pairsUnlocked && i < L.PAIRS.length; i++) {
+      const p = L.PAIRS[i];
+      if (p.at === kind) mk = Math.max(mk, p.mk);
+    }
+    return mk;
   }
   function priceMachine(kind, nth) {
     const base = PRICES.machine[kind];
@@ -298,6 +316,25 @@
       for (const ch of alphabetOf(mat, profile)) w[ch] = Math.max(w[ch] || 0, n);
     }
     return w;
+  }
+  // the focus of a full-set recipe (Molder and up): the flux — the one input
+  // that is an ore or an ingot — sets the letters to lean on and, for an
+  // ore, the ending family. Parts and deeper forms carry no focus.
+  function recipeFocus(r, profile) {
+    const letters = new Set();
+    const ores = [];
+    let family = null;
+    for (const mat of Object.keys(r.in)) {
+      const m = MATS[mat];
+      if (!m) continue;
+      if (m.form === 'ore') { ores.push(mat); if (!family) family = mat; }
+      else if (m.ores && m.ores.length) ores.push(...m.ores);
+      else continue;
+      for (const ch of alphabetOf(mat, profile)) letters.add(ch);
+    }
+    const tilt = {};
+    for (const ch of letters) tilt[ch] = 2;
+    return { letters: [...letters], ores: [...new Set(ores)], family, tilt };
   }
   const isVowel = (ch) => L.VOWELS.has(ch);
   const isLetter = (ch) => !L.PUNCT.has(ch) && /\p{L}/u.test(ch);
@@ -396,17 +433,30 @@
     { id: 'p5', x: 256, y: 190 },      // (quartz node — filtered)
     { id: 'p6', x: 356, y: 130 },
     { id: 'p7', x: 446, y: 96 },
-    { id: 'p8', x: 356, y: 66 },       // on the meadow knoll (stairs at x=352)
+    { id: 'p8', x: 340, y: 66 },       // on the meadow knoll (stairs at x=352)
     { id: 'p9', x: 60, y: 150 },       // (stone mine — filtered)
     { id: 'p10', x: 446, y: 190 },
-    { id: 'p11', x: 176, y: 210 },
+    { id: 'p11', x: 190, y: 210 },
     { id: 'p12', x: 316, y: 190 },
     { id: 'p13', x: 608, y: 82, region: 'quarry' },   // terrace top
-    { id: 'p14', x: 672, y: 210, region: 'quarry' },
-    { id: 'p15', x: 1000, y: 130, region: 'canyon' },
-    { id: 'p16', x: 1044, y: 324, region: 'bog' },
-    { id: 'p17', x: 740, y: 354, region: 'flats' },
-    { id: 'p18', x: 92, y: 354, region: 'peaks' },
+    { id: 'p14', x: 672, y: 210, region: 'quarry' },  // (copper #2 — filtered)
+    { id: 'p15', x: 1000, y: 130, region: 'canyon' }, // (quartz #2 — filtered)
+    { id: 'p16', x: 1044, y: 324, region: 'bog' },    // (coal #2 — filtered)
+    { id: 'p17', x: 740, y: 354, region: 'flats' },   // (oil #2 — filtered)
+    { id: 'p18', x: 92, y: 354, region: 'peaks' },    // (iron #3 — filtered)
+    // phase 4: the outer regions get plots of their own (the pyramid needs
+    // them once the T2–T3 nodes take the first ones)
+    { id: 'p19', x: 580, y: 200, region: 'quarry' },
+    { id: 'p20', x: 776, y: 226, region: 'quarry' },
+    { id: 'p21', x: 900, y: 196, region: 'canyon' },
+    { id: 'p22', x: 1100, y: 196, region: 'canyon' },
+    { id: 'p23', x: 930, y: 440, region: 'bog' },
+    { id: 'p24', x: 1110, y: 420, region: 'bog' },
+    { id: 'p25', x: 580, y: 360, region: 'flats' },
+    { id: 'p26', x: 800, y: 300, region: 'flats' },
+    { id: 'p27', x: 420, y: 300, region: 'peaks' },
+    { id: 'p28', x: 200, y: 440, region: 'peaks' },
+    { id: 'p29', x: 360, y: 440, region: 'peaks' },
   ];
 
   const FRONTIER_SCENERY = [
@@ -545,6 +595,14 @@
       { kind: 'coal', x: 976, y: 342 },
       { kind: 'oil', x: 656, y: 342 },
       { kind: 'titan', x: 208, y: 326 },       // no ore in v3 — a landmark for now
+      // phase 4: the pyramid — iron 3, copper 2, quartz 2, coal 2, oil 2
+      // (each on a plot of its region, which becomes the node's)
+      { kind: 'iron', x: 312, y: 178 },        // iron #2, meadow (p12)
+      { kind: 'copper', x: 668, y: 198 },      // copper #2, quarry hills (p14)
+      { kind: 'quartz', x: 996, y: 118 },      // quartz #2, canyon (p15)
+      { kind: 'coal', x: 1040, y: 312 },       // coal #2, bog (p16)
+      { kind: 'oil', x: 736, y: 342 },         // oil #2, flats (p17)
+      { kind: 'iron', x: 88, y: 342 },         // iron #3, peaks (p18)
     ],
   };
 
@@ -606,6 +664,13 @@
       { kind: 'coal', x: 428, y: 54 },
       { kind: 'oil', x: 508, y: 54 },
       { kind: 'iron', x: 588, y: 54 },
+      // phase 4: the rest of the pyramid along row A
+      { kind: 'copper', x: 668, y: 54 },
+      { kind: 'stone', x: 748, y: 54 },
+      { kind: 'quartz', x: 828, y: 54 },
+      { kind: 'coal', x: 908, y: 54 },
+      { kind: 'oil', x: 988, y: 54 },
+      { kind: 'iron', x: 1068, y: 54 },
     ],
   };
 
@@ -679,9 +744,9 @@
     TILE, ORES, ORE_IDS, ORE_BY_NODE, ORE_GOOD, KINDS, KIND_IDS, MATS, MAT_IDS, INGOT_IDS, RECIPES, BARS, TIER_GOOD, TUNING, PRICES,
     MAPS, MAP_IDS, DEFAULT_MAP,
     oreLetters, oreMaxMk, recipesFor, recipeFor, matTier,
-    priceNode, priceExtraMine, priceMk, priceMachine, priceAuto, priceCrossing, scaleCost, closedCrossings,
+    priceNode, priceExtraMine, priceMk, priceAt, kindMk, priceMachine, priceAuto, priceCrossing, scaleCost, closedCrossings,
     oreMk, unlockedKeys, currentTier, nextPair, targetBar,
-    alphabetOf, recipeAlphabet, recipeTilt, wordPool, offerable, offerableRecipes, matExists, oreOpen, affordable,
+    alphabetOf, recipeAlphabet, recipeTilt, recipeFocus, wordPool, offerable, offerableRecipes, matExists, oreOpen, affordable,
     machinePos, machinesOfKind, machinesOfOre, nodeBuilt, freePlots, unbuiltNodes, buildableKinds, starterNodes,
     useMap, currentMap, plotById, crossingOpen, regionAt,
     // per-map fields (MAP, PLOTS, SCENERY, PROPS, WORLD_W, WORLD_H, SPAWN, LEGACY, MAP_ID) are set by useMap

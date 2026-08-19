@@ -24,6 +24,8 @@
 <script src="../js/courses.js"></script>
 <script src="../js/chain.js"></script>
 <script src="../js/engine.js"></script>
+<script src="../js/pixels.js"></script>
+<script src="../js/tiles.js"></script>
 <script>
 (async () => {
   const L = window.LANG_RU, LAY = window.LAYOUT_RU, C = window.CHAIN, E = window.ENGINE;
@@ -162,6 +164,73 @@
   let barsOk = true;
   for (let i = 1; i < C.BARS.length; i++) if (C.BARS[i].wpm < C.BARS[i - 1].wpm || C.BARS[i].acc < C.BARS[i - 1].acc) barsOk = false;
   line(barsOk, 'tier bars ascend');
+
+  // ---- phase 4: the T2–T3 grammars' pools, and the map ----
+  const ladder = [];
+  { let a = []; for (const p of L.PAIRS) { a = a.concat(p.keys); ladder.push(a.slice()); } }
+  const lettersOf = (a) => a.filter((c) => !L.PUNCT.has(c));
+  // 14. every phrase and sentence is typeable with the course's keys
+  const allKeys = new Set(L.PAIRS.flatMap((p) => p.keys));
+  const strayChars = [];
+  for (const [s] of [...(L.PHRASES || []), ...(L.SENTENCES || [])]) for (const c of s) if (c !== ' ' && !allKeys.has(c)) strayChars.push(`${s} — ${c}`);
+  line(!strayChars.length, `phrases (${(L.PHRASES || []).length}) and sentences (${(L.SENTENCES || []).length}) use only the course's keys`, strayChars.slice(0, 10).join('<br>'));
+  // 15. the Assembler has phrases when it opens (16 keys), the Fastener sentences (20–21)
+  const at = (n) => ladder.find((a) => a.length >= n) || ladder[ladder.length - 1];
+  const ph16 = E.phrasePool(at(16)).length, se20 = E.sentencePool(at(20)).length, se21 = E.sentencePool(at(21)).length;
+  line(ph16 >= 30, `phrase pool at 16 keys ≥ 30 (${ph16})`);
+  line(se20 >= 60 && se21 >= 100, `sentence pool at 20 keys ≥ 60 (${se20}), at 21 ≥ 100 (${se21})`);
+  // 16. every ending family has an affix the Molder can use at 14 keys, and a real pool by 18
+  const famBad = [];
+  for (const ore of Object.keys(L.ENDINGS)) {
+    const a14 = lettersOf(at(14)), a18 = lettersOf(at(18));
+    const aff14 = L.ENDINGS[ore].some((x) => [...x.replace(/-/g, '')].every((c) => a14.includes(c)));
+    const pool18 = E.endingPool(a18, ore).length;
+    if (!aff14 && ore !== 'oil') famBad.push(`${ore}: no affix at 14 keys`);
+    if (pool18 < 5 && ore !== 'oil') famBad.push(`${ore}: ${pool18} words at 18 keys`);
+  }
+  line(!famBad.length, 'ending families: an affix by 14 keys, words by 18 (oil family waits for its ore)', famBad.join('<br>'));
+  // 17. word list size
+  line(L.WORDS.length >= 1000, `word list ≥ 1000 (${L.WORDS.length})`);
+  // 18. every plot and node stands on clear ground and is reachable from the spawn (crossings counted open)
+  const placeBad = [];
+  for (const mapId of C.MAP_IDS) {
+    C.useMap(mapId);
+    const map = C.MAPS[mapId];
+    const W = map.W, H = map.H;
+    const grid = TILES.bake(C.MAP, W, H);
+    const spots = [...C.PLOTS.map((p) => ({ id: p.id, x: p.x, y: p.y })), ...C.MAP.NODES.filter((nd) => C.ORE_BY_NODE[nd.kind]).map((nd, i) => ({ id: nd.kind + '#' + i, x: nd.x + 4, y: nd.y + 12 }))];
+    const cross = C.MAP.CROSSINGS.map((cr) => ({ x: cr.x, y: cr.y, w: cr.w, h: cr.h }));
+    const inRect = (r, x, y) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
+    const solidAt = (x, y) => { const tl = TILES.tileAt(grid, x, y); return tl === null || !!(grid.flags[tl] & TILES.FL.SOLID); };
+    const wallAt = (x, y) => (C.MAP.WALLS || []).some((r) => inRect(r, x, y));
+    const sceneryAt = (x, y) => C.SCENERY.some((sc) => { const b = sc.box; return x > b.x - 3 && x < b.x + b.w + 3 && y > b.y - 3 && y < b.y + b.h + 3; });
+    const step = 4, sp = [Math.round(map.spawn.x / step) * step, Math.round(map.spawn.y / step) * step];
+    const key = (x, y) => (x / step) + ',' + (y / step);
+    const seenT = new Set([key(...sp)]); const q = [sp]; let guard = 0;
+    while (q.length && guard++ < 400000) {
+      const [x, y] = q.shift();
+      for (const [dx, dy] of [[step, 0], [-step, 0], [0, step], [0, -step]]) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+        const k = key(nx, ny); if (seenT.has(k)) continue;
+        const ok = cross.some((r) => inRect(r, nx, ny)) || (!wallAt(nx, ny) && !sceneryAt(nx, ny) && TILES.passable(grid, x, y, nx, ny));
+        if (!ok) continue;
+        seenT.add(k); q.push([nx, ny]);
+      }
+    }
+    const near = (x, y) => { for (let dx = -8; dx <= 8; dx += 4) for (let dy = -8; dy <= 8; dy += 4) if (seenT.has(key(Math.round((x + dx) / step) * step, Math.round((y + dy) / step) * step))) return true; return false; };
+    for (const s of spots) {
+      const issues = new Set();
+      for (let px = s.x - 2; px <= s.x + 28; px += 6) for (let py = s.y - 12; py <= s.y + 1; py += 6) { if (solidAt(px, py)) issues.add('solid'); if (wallAt(px, py)) issues.add('wall'); if (sceneryAt(px, py)) issues.add('scenery'); }
+      if (solidAt(s.x + 13, s.y + 6)) issues.add('dock on solid');
+      if (!near(s.x + 13, s.y + 6)) issues.add('unreachable');
+      if (issues.size) placeBad.push(`${mapId} ${s.id} @${s.x},${s.y}: ${[...issues].join(' ')}`);
+    }
+  }
+  C.useMap(C.DEFAULT_MAP);
+  // p13 stands on the quarry terrace top — its footprint touches the terrace edge by design
+  const placeReal = placeBad.filter((s) => !s.startsWith('frontier p13 '));
+  line(!placeReal.length, 'every plot and ore node stands on clear, reachable ground', placeReal.join('<br>'));
 
   document.getElementById('sum').textContent = `${pass} passed · ${fail} failed · ${warn} to look at`;
 })();

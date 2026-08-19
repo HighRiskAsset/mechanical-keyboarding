@@ -120,6 +120,22 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   over automated machines: green running, red starved, gold full. Harness:
   `dev/sim.html`; the whole game runs headless in `dev/play.html` (a rAF
   shim) for automated checks.
+- **Tiers 2–3 (phase 4, 2026-08-20):** the Molder, Assembler and Fastener
+  run. Molder → *endings*: the flux ore names the family
+  (`LANG_RU.ENDINGS`, affixes in the course's dash notation), items are
+  real words carrying one of its affixes, pseudo-stems wear the affix when
+  the pool is thin. Assembler → *phrases* from `LANG_RU.PHRASES` (no
+  marks). Fastener → *punct*: `LANG_RU.SENTENCES` with the marks they
+  carry; a sentence fits once its letters and its marks are unlocked, the
+  list is written across the whole ladder so ~70 fit at the period, ~120
+  once the comma arrives. Full-set kinds drill the whole unlocked alphabet;
+  the flux (the one ore/ingot input) sets the focus — its letters tilt
+  sampling (`CHAIN.recipeFocus`). The Fastener's Mk levels are bought at a
+  Fastener like an ore's at a mine (`PAIRS` events with `at:`,
+  `PRICES.at`): "MK1 ," with a price, the unlock card names ⇧ Shift + the
+  finger; the comma is typed as Shift+/ and the hint lights Shift. Maps
+  carry the pyramid (iron 3, copper 2, stone 2, quartz 2, coal 2, oil 2)
+  and the outer regions have their own plots.
 - **Discoverability (2026-08-19):** the in-canvas menus are icons only (the
   bitmap font has no letters), so a **caption** (`#place-caption`, DOM text,
   EN/RU) sits at the bottom of the map: while a menu is open it says what

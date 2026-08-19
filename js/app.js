@@ -270,7 +270,12 @@
     }
     if (!recipe) return null;
     const kind = CHAIN.KINDS[m.kind];
-    return { mode: kind.grammar, alphabet: CHAIN.recipeAlphabet(recipe, profile), tilt: kind.full ? null : CHAIN.recipeTilt(recipe, profile) };
+    if (kind.full) {
+      // Molder and up: the whole unlocked set; the flux sets the focus
+      const focus = CHAIN.recipeFocus(recipe, profile);
+      return { mode: kind.grammar, alphabet: CHAIN.recipeAlphabet(recipe, profile), tilt: focus.tilt, family: focus.family };
+    }
+    return { mode: kind.grammar, alphabet: CHAIN.recipeAlphabet(recipe, profile), tilt: CHAIN.recipeTilt(recipe, profile) };
   }
   const canTypeHere = () => !!(dock && dock.kind === 'machine' && !autoLive(dock.m) && (dock.m.kind === 'mine' || recipe));
 
@@ -350,6 +355,17 @@
       for (const r of CHAIN.offerableRecipes(m.kind, profile).slice(0, 4)) {
         const active = recipe === r;
         rows.push({ items: r.in, out: r.out, ok: active ? true : undefined, enabled: true, caption: T.t('capRecipe', { out: matName(r.out), inputs: Object.entries(r.in).map(([mat, k]) => `${k} ${matName(mat)}`).join(' + ') }), action: { type: 'recipe', m, r } });
+      }
+      // keys bought at this kind of machine (the Fastener's punctuation):
+      // the next rung of the ladder when it stands here
+      const np = CHAIN.nextPair(profile);
+      if (np && np.at === m.kind) {
+        const price = CHAIN.priceAt(m.kind, np.mk) || {};
+        rows.push({ pre: 'MK' + np.mk, items: price, enabled: canPay(price), priced: true, caption: T.t('capMkAt', { level: np.mk, name: kindName(m.kind), keys: pairKeys(np) }), action: { type: 'mk-at', kind: m.kind, level: np.mk, price } });
+      } else {
+        const mk = CHAIN.kindMk(profile, m.kind);
+        const later = L.PAIRS.find((q) => q.at === m.kind && q.mk === mk + 1);
+        if (later) rows.push({ pre: 'MK' + (mk + 1), items: CHAIN.priceAt(m.kind, mk + 1) || {}, ok: false, enabled: false, caption: T.t('capMkLater', { level: mk + 1 }), action: null });
       }
       if (!m.auto) {
         const price = CHAIN.priceAuto(m);
@@ -543,6 +559,14 @@
       for (const m of CHAIN.machinesOfOre(profile, act.ore)) m.auto = false;
       afterPurchase();
       if (pair) { pendingUnlock = pair; showUnlockCard(pair, retooled); }
+    } else if (act.type === 'mk-at') {
+      if (!canPay(act.price)) return;
+      const np = CHAIN.nextPair(profile);
+      if (!np || np.at !== act.kind || np.mk !== act.level) return;
+      spend(act.price);
+      const pair = E.unlockNextPair(profile);
+      afterPurchase();
+      if (pair) { pendingUnlock = pair; showUnlockCard(pair, false); }
     } else if (act.type === 'auto') {
       if (!canPay(act.price)) return;
       spend(act.price);
