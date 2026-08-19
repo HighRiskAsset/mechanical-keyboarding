@@ -90,7 +90,14 @@ jobs:
           cat ~/.ssh/deploy_key.pub
 
       - name: Probe 2 - the SSH port accepts a connection
-        run: timeout 15 bash -c "exec 3<>/dev/tcp/$SSH_HOST/$SSH_PORT && head -c 60 <&3"
+        run: |
+          set -eu
+          # Connect and stop there. An earlier version read the banner with
+          # head -c 60, which blocks: the greeting is 19 bytes and the rest
+          # never comes, so a reachable port timed out and read as unreachable.
+          timeout 15 bash -c "exec 3<>/dev/tcp/$SSH_HOST/$SSH_PORT" \
+            || { echo "cannot reach $SSH_HOST on port $SSH_PORT"; exit 1; }
+          echo "port $SSH_PORT is reachable"
 
       - name: Probe 3 - the host key matches the pin
         run: |
