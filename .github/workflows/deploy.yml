@@ -1,20 +1,21 @@
-# Publishes the game to Hostinger on every push to main.
+# Publishes the game to Hostinger on every push to main, over SFTP.
 #
-# One-time setup, all on github.com (nothing here needs a local install):
+# One-time setup, all on github.com:
 #
-#   Settings -> Secrets and variables -> Actions -> "Secrets" tab -> New secret
-#     FTP_HOST      ftp.yourdomain.com   (hPanel -> Files -> FTP Accounts, "FTP hostname")
-#     FTP_USER      u123456789.yourdomain.com
-#     FTP_PASSWORD  the FTP account password
+#   Settings -> Secrets and variables -> Actions -> "Secrets" tab
+#     SSH_USER         the Hostinger SSH username, e.g. u123456789
+#                      (hPanel -> Advanced -> SSH Access)
+#     SSH_PRIVATE_KEY  the whole private key file, BEGIN and END lines included
 #
-#   ...same page -> "Variables" tab -> New variable
-#     FTP_REMOTE_DIR  where the site lives on the host, e.g.
-#                       public_html            -> yourdomain.com
-#                       public_html/keyboard   -> yourdomain.com/keyboard
-#                       domains/demo.yourdomain.com/public_html -> a subdomain
+#   ...same page -> "Variables" tab
+#     REMOTE_DIR       where the site lives, relative to the SSH landing dir,
+#                      e.g. domains/mechanical-keyboarding.digitalis.tech/public_html
 #
-# Deploys are additive: files are uploaded and overwritten, never deleted. See
-# the note on --delete at the bottom before turning pruning on.
+# The matching public key goes in hPanel -> Advanced -> SSH Access -> Add key.
+#
+# Not FTP. The FTP service on this host presents a certificate for *.hstgr.io
+# only, so it cannot be verified against this domain — the choice was to stop
+# checking the server's identity or to stop using FTP, and this is the latter.
 
 name: Deploy demo
 
@@ -29,11 +30,15 @@ concurrency:
   group: deploy-hostinger
   cancel-in-progress: true
 
+env:
+  SSH_HOST: mechanical-keyboarding.digitalis.tech
+  SSH_PORT: '65002'
+
 jobs:
   deploy:
-    # Dormant until the FTP settings exist, so the workflow can land on main
-    # without failing every push until you have added them.
-    if: vars.FTP_REMOTE_DIR != ''
+    # Dormant until REMOTE_DIR exists, so the workflow can sit on main without
+    # reddening every push while the settings are still being filled in.
+    if: vars.REMOTE_DIR != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -56,105 +61,90 @@ jobs:
       - name: Install lftp
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
 
-      # The connection is probed one layer at a time, each in its own step, on
-      # purpose: a build log on this repo is readable only with admin rights,
-      # but step names and their pass/fail are public. So the first step that
-      # goes red names the fault, with nobody needing to open a log.
-      #
-      # None of these carries a secret into the output, and none retries a bad
-      # password — a host's brute-force guard should never see this coming.
+      # Each question the deploy depends on gets its own step. A build log here
+      # is readable only with admin rights, but step names and their pass/fail
+      # are public, so the first step that goes red names the fault by itself.
 
-      - name: Probe 1a - the FTP_HOST secret is present
+      - name: Probe 1 - the deploy key arrived intact
         env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
-          if [ -z "${FTP_HOST:-}" ]; then
-            echo "FTP_HOST came through empty. Either the secret was never saved,"
-            echo "or its name is not an exact match — it must be FTP_HOST, caps."
+          set -eu
+          if [ -z "${SSH_PRIVATE_KEY:-}" ]; then
+            echo "SSH_PRIVATE_KEY is empty: never saved, or the name is not an"
+            echo "exact match. It must be SSH_PRIVATE_KEY, in caps."
             exit 1
           fi
-          echo "FTP_HOST is set: ${#FTP_HOST} characters."
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          # printf, not echo: the key is only valid with its trailing newline,
+          # and pasting into a web form is exactly where that gets lost.
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # Deriving the public half proves the private key parses. A key mangled
+          # in transit fails here, plainly, rather than as "permission denied"
+          # three steps later where it reads like the wrong key.
+          ssh-keygen -y -f ~/.ssh/deploy_key > ~/.ssh/deploy_key.pub \
+            || { echo "The key did not parse. Copy the file whole, from the"; \
+                 echo "BEGIN line to the END line, and keep the line breaks."; exit 1; }
+          echo "Key parses. Public half:"
+          cat ~/.ssh/deploy_key.pub
 
-      - name: Probe 1b - FTP_HOST is a bare hostname
-        env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-        run: |
-          # The commonest way this field goes wrong is pasting what hPanel shows
-          # on screen rather than the host part of it.
-          case "$FTP_HOST" in
-            *://*) echo "It carries a scheme (ftp://...). Use the bare host."; exit 1 ;;
-            */*)   echo "It carries a slash. Use the bare host, with no path."; exit 1 ;;
-            *\ *)  echo "It contains a space."; exit 1 ;;
-          esac
-          echo "Shape looks like a bare hostname."
+      - name: Probe 2 - the SSH port accepts a connection
+        run: timeout 15 bash -c "exec 3<>/dev/tcp/$SSH_HOST/$SSH_PORT && head -c 60 <&3"
 
-      - name: Probe 1c - the hostname resolves
-        env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-        run: |
-          getent hosts "$FTP_HOST" && exit 0
-          echo "A plausible hostname, but DNS has no record for it."
-          echo "hPanel -> Files -> FTP Accounts shows the FTP hostname; if the"
-          echo "domain does not point at Hostinger yet, use the server IP there."
-          exit 1
-
-      - name: Probe 2 - port 21 accepts a connection
-        env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-        run: timeout 15 bash -c "exec 3<>/dev/tcp/$FTP_HOST/21 && head -c 120 <&3"
-
-      - name: Probe 3 - FTPS handshake, certificate valid for this host
-        env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
+      - name: Probe 3 - the host key matches the pin
         run: |
           set -eu
-          out=$(timeout 20 openssl s_client -connect "$FTP_HOST:21" -starttls ftp -brief </dev/null 2>&1 || true)
-          echo "$out"
-          echo "$out" | grep -q "Verification: OK" \
-            || { echo "^ the certificate is not trusted for this hostname"; exit 1; }
+          # Pinned from the server on 2026-08-20. If Hostinger moves the account
+          # to another machine this step goes red, which is correct: a deploy
+          # that re-pins whatever answers the port is not pinned at all.
+          # Re-pin with: ssh-keyscan -p 65002 -t ed25519 <host>
+          PIN='AAAAC3NzaC1lZDI1NTE5AAAAIEBHZ2ZU+Yu9F0YBxaZwkWLM5WNIEiAvzv8zBrxpiA1R'
+          {
+            echo "[$SSH_HOST]:$SSH_PORT ssh-ed25519 $PIN"
+            echo "[195.179.237.172]:$SSH_PORT ssh-ed25519 $PIN"
+          } > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          live=$(ssh-keyscan -p "$SSH_PORT" -t ed25519 "$SSH_HOST" 2>/dev/null | awk '{print $3}' | head -1)
+          [ -n "$live" ] || { echo "The server offered no ed25519 host key."; exit 1; }
+          [ "$live" = "$PIN" ] || {
+            echo "HOST KEY MISMATCH — the server is not the one this was pinned to."
+            echo "Expected: $PIN"
+            echo "Offered:  $live"
+            echo "If Hostinger migrated the account this is expected; re-pin above."
+            echo "If not, do not deploy: something is answering in its place."
+            exit 1
+          }
+          echo "Host key matches the pin."
 
-      - name: Probe 4 - the credentials log in
+      - name: Probe 4 - the key authenticates and REMOTE_DIR exists
         env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-          FTP_USER: ${{ secrets.FTP_USER }}
-          LFTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          REMOTE_DIR: ${{ vars.REMOTE_DIR }}
         run: |
           set -eu
-          # pwd prints the landing directory, which is what FTP_REMOTE_DIR is
-          # relative to; cls proves the session can actually read the account.
+          # Batch sftp rather than a shell command: it works even where the
+          # account is confined to the SFTP subsystem with no shell of its own.
+          printf 'cd %s\npwd\nls -1\n' "$REMOTE_DIR" | sftp -b - \
+            -i $HOME/.ssh/deploy_key -P "$SSH_PORT" \
+            -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts \
+            -o BatchMode=yes -o ConnectTimeout=20 \
+            "$SSH_USER@$SSH_HOST"
+
+      - name: Upload over SFTP
+        env:
+          SSH_USER: ${{ secrets.SSH_USER }}
+          REMOTE_DIR: ${{ vars.REMOTE_DIR }}
+        run: |
+          set -eu
           lftp -c "
-            set ftp:ssl-force true;
-            set ssl:verify-certificate true;
-            set net:max-retries 1;
-            set net:timeout 20;
-            open -u '$FTP_USER' --env-password '$FTP_HOST';
-            pwd;
-            cls -1;
-          "
-
-      - name: Upload over FTPS
-        env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-          FTP_USER: ${{ secrets.FTP_USER }}
-          LFTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-          FTP_DIR: ${{ vars.FTP_REMOTE_DIR }}
-        run: |
-          set -eu
-          : "${FTP_DIR:?set the FTP_REMOTE_DIR variable}"
-          # --env-password keeps the password out of the process list and out of
-          # any shell expansion, so a password with quotes or $ in it is safe.
-          # Deliberately no `debug`: this log is public, and the levels that
-          # trace the control conversation also carry the PASS command.
-          lftp -c "
-            set ftp:ssl-force true;
-            set ftp:ssl-protect-data true;
-            set ssl:verify-certificate true;
+            set sftp:connect-program 'ssh -a -x -i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o BatchMode=yes';
             set net:max-retries 2;
             set net:timeout 20;
-            open -u '$FTP_USER' --env-password '$FTP_HOST';
-            mirror --reverse --verbose --parallel=4 --no-perms _site '$FTP_DIR';
+            open -u '$SSH_USER,' sftp://$SSH_HOST:$SSH_PORT;
+            mirror --reverse --verbose --parallel=4 --no-perms _site '$REMOTE_DIR';
           "
 
-# Adding --delete to the mirror line prunes remote files that are no longer in
-# _site. Leave it off until a deploy has proved FTP_REMOTE_DIR points where you
-# think it does: aimed one level too high, --delete would empty public_html.
+# Adding --delete to the mirror line prunes remote files no longer in _site.
+# Leave it off until a deploy has proved REMOTE_DIR points where you think it
+# does: aimed one level too high, --delete would empty the account.
