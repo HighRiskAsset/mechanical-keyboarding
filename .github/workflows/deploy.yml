@@ -58,9 +58,6 @@ jobs:
           find _site -type f | sort
           du -sh _site
 
-      - name: Install lftp
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
-
       # Each question the deploy depends on gets its own step. A build log here
       # is readable only with admin rights, but step names and their pass/fail
       # are public, so the first step that goes red names the fault by itself.
@@ -144,14 +141,32 @@ jobs:
           REMOTE_DIR: ${{ vars.REMOTE_DIR }}
         run: |
           set -eu
-          lftp -c "
-            set sftp:connect-program 'ssh -a -x -i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o BatchMode=yes';
-            set net:max-retries 2;
-            set net:timeout 20;
-            open -u '$SSH_USER,' sftp://$SSH_HOST:$SSH_PORT;
-            mirror --reverse --verbose --parallel=4 --no-perms _site '$REMOTE_DIR';
-          "
+          # A generated batch script, not a sync tool. openssh-client is already
+          # on the runner, while installing lftp spent 17 seconds of a 29 second
+          # deploy to do work that twenty-one puts over one already-open
+          # connection finish in three.
+          #
+          # mkdir lines carry a leading '-' so an existing directory is not an
+          # error. put lines are bare, so a failed upload still stops the run.
+          B="$RUNNER_TEMP/deploy.sftp"
+          {
+            echo "cd $REMOTE_DIR"
+            (cd _site && find . -mindepth 1 -type d -printf '%P\n' | sort) |
+              while read -r d; do echo "-mkdir $d"; done
+            (cd _site && find . -type f -printf '%P\n' | sort) |
+              while read -r f; do echo "put _site/$f $f"; done
+          } > "$B"
+          echo "--- batch ---"
+          cat "$B"
+          sftp -b "$B" \
+            -i $HOME/.ssh/deploy_key -P "$SSH_PORT" \
+            -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts \
+            -o BatchMode=yes -o ConnectTimeout=20 \
+            "$SSH_USER@$SSH_HOST"
+          echo "uploaded $(grep -c '^put ' "$B") files"
 
-# Adding --delete to the mirror line prunes remote files no longer in _site.
-# Leave it off until a deploy has proved REMOTE_DIR points where you think it
-# does: aimed one level too high, --delete would empty the account.
+# The batch uploads and overwrites; it never removes. A file dropped from the
+# site outlives the deploy that dropped it, until someone deletes it by hand.
+# Pruning would mean generating rm lines against a remote listing, and that is
+# worth the care rather than the convenience: this account also carries five
+# other domains, and a REMOTE_DIR aimed one level too high would reach them.
