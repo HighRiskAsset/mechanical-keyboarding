@@ -408,12 +408,32 @@
       const open = CHAIN.crossingOpen(profile, cr);
       (open ? openRects : closedRects).push({ x: cr.x, y: cr.y, w: cr.w, h: cr.h });
       const art = TILES.crossing(cr.kind, cr.w / PIXELS.TILE, cr.h / PIXELS.TILE, open, cr.style, cr.x, cr.dir);
-      if (!art) continue;
-      const sp = new PIXI.Sprite(PIXELS.util.tex(art.c));
-      sp.position.set(cr.x - (art.dx || 0), cr.y - (art.dy || 0));
-      sp.zIndex = open ? -900 : cr.y;
-      cameraC.addChild(sp);
-      crossSprites.push(sp);
+      if (art) {
+        const sp = new PIXI.Sprite(PIXELS.util.tex(art.c));
+        sp.position.set(cr.x - (art.dx || 0), cr.y - (art.dy || 0));
+        sp.zIndex = open ? -900 : cr.y;
+        cameraC.addChild(sp);
+        crossSprites.push(sp);
+      }
+      // a closed crossing is a place: dock beside it, hold Space to repair
+      if (!open) {
+        const root = new PIXI.Container();
+        const glow = new PIXI.Graphics().rect(0, 0, cr.w, 2).fill(0xc9a24a);
+        glow.visible = false;
+        root.addChild(glow);
+        root.position.set(cr.x, cr.y + cr.h + 1);
+        root.zIndex = -650;
+        cameraC.addChild(root);
+        // the work spot: centred on the crossing, a step out on the near side
+        const horizontal = cr.kind === 'stairs' || cr.dir === 'v';
+        const wx = horizontal ? cr.x + cr.w / 2 - 13 : cr.x - 24;
+        const wy = horizontal ? cr.y - 14 : cr.y + cr.h / 2 - 6;
+        stations['cross:' + cr.id] = {
+          def: { id: 'cross:' + cr.id, x: wx, y: wy, kind: 'crossing', crossing: cr },
+          root, sp: glow, glow, built: false, auto: false, sqTtl: 0,
+          glowRect: { x: 0, y: 0, w: cr.w, h: 2 },
+        };
+      }
     }
 
     // machines

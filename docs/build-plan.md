@@ -144,8 +144,16 @@ kind; ⚙ on mines with the one rule (letters sticky → refuses labor →
 collect 100); Hub / kits / contracts / Depot / ₽ / editions removed;
 crossings open on tier bars; profile v2 + v1 migration + save-file version 2
 (v1 files import); the stone node added to The Frontier's meadow; the
-Ctrl+Alt+M debug bag. Not yet: ⚙ on processors (phase 3, needs buffers),
-belts (phase 3 — the old BELTS list and autofeed are gone).
+Ctrl+Alt+M debug bag. Not yet: automation on processors (phase 3, needs
+buffers), belts (phase 3 — the old BELTS list and autofeed are gone).
+**Corrections after the first play (2026-08-19):** no tier-number locks
+anywhere — recipes are offered when their inputs exist and their alphabet
+clears the minimum, machines when their price materials have been held,
+closed crossings are repaired at the place for a price (`PRICES.crossing`);
+the space key types at once on press when a space is next and charges the
+menu when held (a held space that isn't next is never an error); a
+processor's recipe is chosen at its own menu and remembered per machine
+(no auto-switching; ✗ when unpayable).
 
 **Goal.** Kits, the Hub, contracts and the Depot go. Every purchase is a
 priced row at the place: Mk at a mine, a mine at a node, a machine at a plot,

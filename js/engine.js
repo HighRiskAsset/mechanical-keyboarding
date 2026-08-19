@@ -72,8 +72,9 @@
       automated: {},     // letter → true; sticky automaticity
       bag: {},           // material id → count
       seen: {},          // material id → true once held (progressive reveal)
-      machines: sm.machines, // {id, kind, ore?, node?|plot?, auto}
+      machines: sm.machines, // {id, kind, ore?, node?|plot?, auto, recipe?}
       nextMachineId: sm.nextId,
+      crossings: {},     // crossing id → true once repaired (bought at the place)
       heavy: 0,          // heavy modules toward the finish
     };
   }
@@ -99,6 +100,8 @@
     q.unlockLog = Array.isArray(p.unlockLog) ? p.unlockLog : [];
     q.collected = p.collected || {};
     q.automated = p.automated || {};
+    // a v1 save past its first edition had the first crossing open
+    if ((p.milestoneIdx || 0) >= 4) q.crossings.x1 = true;
     // the bag
     for (const [k, v] of Object.entries(p.mats || {})) if (V1_MATS[k] && v > 0) q.bag[V1_MATS[k]] = v;
     for (const k of Object.keys(q.bag)) q.seen[k] = true;
@@ -136,6 +139,7 @@
     if (!p.automated) p.automated = {};
     if (!p.bag) p.bag = {};
     if (!p.seen) p.seen = {};
+    if (!p.crossings) p.crossings = {};
     for (const [k, v] of Object.entries(p.bag)) if (v > 0) p.seen[k] = true;
     if (!Array.isArray(p.machines) || !p.machines.length) {
       const sm = starterMachines();

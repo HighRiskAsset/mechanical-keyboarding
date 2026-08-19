@@ -243,23 +243,19 @@
   // ---------- automation: the one rule (mines in this build) ----------
   const autoLive = (m) => !!(m && m.auto && m.kind === 'mine' && E.oreSticky(profile, m.ore));
 
-  // ---------- recipes: the inputs pick the recipe ----------
+  // ---------- recipes: the player chooses at the machine's menu ----------
+  // A machine remembers its chosen recipe (m.recipe = output id). Until one
+  // is chosen, the first recipe it offers (the authored order) is the
+  // default. No silent switching: an unaffordable choice runs dry and shows ✗.
   function pickRecipe(m) {
     if (!m || m.kind === 'mine') return null;
     const offered = CHAIN.offerableRecipes(m.kind, profile);
     if (!offered.length) return null;
-    const affordable = offered.filter((r) => canPay(r.in));
-    const pool = affordable.length ? affordable : offered;
-    // weakest letters first (the recipe whose alphabet holds the shakiest
-    // key), then the newest
-    let best = null, bestScore = 1e9;
-    pool.forEach((r, i) => {
-      const alpha = CHAIN.recipeAlphabet(r, profile).filter(E.trainable);
-      const minR = alpha.length ? Math.min(...alpha.map((ch) => E.readiness(profile, ch))) : 1;
-      const score = minR - i * 0.001; // ties → later (newer) recipe
-      if (score < bestScore) { bestScore = score; best = r; }
-    });
-    return best;
+    const chosen = m.recipe ? offered.find((r) => r.out === m.recipe && JSON.stringify(r.in) === m.recipeIn) : null;
+    if (chosen) return chosen;
+    const r = offered[0];
+    m.recipe = r.out; m.recipeIn = JSON.stringify(r.in);
+    return r;
   }
   function lessonFor() {
     if (!dock || dock.kind !== 'machine') return null;
@@ -283,13 +279,8 @@
     if (!recipe) return;
     const kind = CHAIN.KINDS[m.kind];
     if (!unitPaid) {
-      if (canPay(recipe.in)) { spend(recipe.in); unitPaid = true; dryNow = false; }
-      else {
-        // starved: try another recipe the bag can pay for, else run dry
-        const alt = pickRecipe(m);
-        if (alt && alt !== recipe && canPay(alt.in)) { recipe = alt; spend(recipe.in); unitPaid = true; dryNow = false; }
-        else { dryNow = true; return; }
-      }
+      if (canPay(recipe.in)) { spend(recipe.in); unitPaid = true; if (dryNow) { dryNow = false; refreshInfo(); } }
+      else { if (!dryNow) { dryNow = true; refreshInfo(); } return; }   // starved: runs dry, still trains
     }
     unitAcc++;
     if (unitAcc >= kind.perUnit) {
@@ -302,16 +293,18 @@
   function menuRowsFor(d) {
     if (!d) return [];
     const rows = [];
-    const tier = CHAIN.currentTier(profile);
     if (d.kind === 'plot') {
       for (const k of CHAIN.buildableKinds(profile)) {
         const price = CHAIN.priceMachine(k, CHAIN.machinesOfKind(profile, k).length + 1);
         rows.push({ kind: k, items: price, enabled: canPay(price), action: { type: 'build-machine', kind: k, plot: d.plot.id, price } });
       }
+    } else if (d.kind === 'crossing') {
+      const price = CHAIN.priceCrossing(d.crossing) || {};
+      rows.push({ pre: '→', items: price, enabled: canPay(price), action: { type: 'repair', id: d.crossing.id, price } });
     } else if (d.kind === 'node') {
       const ore = d.node.ore;
       if (CHAIN.oreOpen(profile, ore)) {
-        const price = CHAIN.priceExtraMine(ore, tier);
+        const price = CHAIN.priceExtraMine(ore);
         rows.push({ kind: 'mine', ore, items: price, enabled: canPay(price), action: { type: 'build-mine', ore, node: d.node.index, price } });
       } else {
         const np = CHAIN.nextPair(profile);
@@ -337,12 +330,19 @@
         }
       }
       if (!m.auto) {
-        const price = CHAIN.priceAuto(m, tier);
-        const sticky = E.oreSticky(profile, ore);
-        rows.push({ pre: '⚙', items: price, ok: sticky ? undefined : false, enabled: sticky && canPay(price), action: { type: 'auto', m, price } });
+        const price = CHAIN.priceAuto(m);
+        const mastered = E.oreSticky(profile, ore);
+        rows.push({ pre: '⚙', items: price, ok: mastered ? undefined : false, enabled: mastered && canPay(price), action: { type: 'auto', m, price } });
       } else if (autoLive(m)) {
         const cap = CHAIN.TUNING.PICKUP_CAP;
         rows.push({ pre: '↓', ore, enabled: (profile.bag[ore] || 0) < cap, action: { type: 'collect', m } });
+      }
+    } else if (d.kind === 'machine') {
+      // a processor's menu: its recipes — choose what this machine makes
+      const m = d.m;
+      for (const r of CHAIN.offerableRecipes(m.kind, profile)) {
+        const active = recipe === r;
+        rows.push({ items: r.in, out: r.out, ok: active ? true : undefined, enabled: true, action: { type: 'recipe', m, r } });
       }
     }
     return rows;
@@ -408,6 +408,20 @@
       act.m.auto = true;
       afterPurchase();
       showBenchAutoCard(act.m);
+    } else if (act.type === 'recipe') {
+      act.m.recipe = act.r.out; act.m.recipeIn = JSON.stringify(act.r.in);
+      recipe = act.r;
+      unitAcc = 0; unitPaid = false; dryNow = false;
+      E.saveProfile(profile);
+      newLine();
+      refreshStatus();
+      A.click();
+    } else if (act.type === 'repair') {
+      if (!canPay(act.price)) return;
+      spend(act.price);
+      profile.crossings[act.id] = true;
+      afterPurchase();
+      A.fanfare();
     } else if (act.type === 'collect') {
       const m = act.m, cap = CHAIN.TUNING.PICKUP_CAP;
       const have = profile.bag[m.ore] || 0;
@@ -443,12 +457,13 @@
     FACTORY.setDockGlow(any ? 0x7fb98a : 0xc9a24a);
     refreshInfo();
   }
-  // info rows above the docked machine: its recipes (active bright)
+  // info rows above the docked machine: its recipes, the chosen one bright
+  // (with ✗ while the bag can't pay for it)
   function refreshInfo() {
     if (!dock || dock.kind !== 'machine' || dock.m.kind === 'mine') { FACTORY.clearInfo(); return; }
     const offered = CHAIN.offerableRecipes(dock.m.kind, profile).slice(0, 4);
     if (!offered.length) { FACTORY.showInfo(dock.id, [{ pre: '✗', enabled: false }]); return; }
-    FACTORY.showInfo(dock.id, offered.map((r) => ({ items: r.in, out: r.out, enabled: r === recipe })));
+    FACTORY.showInfo(dock.id, offered.map((r) => ({ items: r.in, out: r.out, enabled: r === recipe, ok: r === recipe && !canPay(r.in) && !unitPaid ? false : undefined })));
   }
 
   // ---------- line rendering ----------
@@ -543,12 +558,14 @@
   }
 
   // ---------- input ----------
-  // ONE interact key: hold Space for half a second (a charge bar fills above
-  // the operator). With no menu open the hold opens the place's menu; with a
-  // menu open it confirms the highlighted row. A tap is a typed space at a
-  // machine, or closes an open menu.
+  // ONE interact key, two things at once. On press: if the drill's next
+  // character is a space, it is typed right then (never on release, and a
+  // held space that isn't the next character costs nothing). Holding for half
+  // a second (a charge bar fills above the operator) opens the place's menu,
+  // or confirms the highlighted row when a menu is open. Releasing early with
+  // a menu open closes it.
   const HOLD_MS = 500;
-  let spaceState = null;   // {done, typedEmitted}
+  let spaceState = null;   // {done}
   let chargeTimer = null;
 
   function cancelCharge() {
@@ -557,13 +574,11 @@
   }
   function startSpace() {
     if (spaceState) return;
-    spaceState = { done: false, typedEmitted: false };
+    spaceState = { done: false };
+    // the typed space, at once — only when it is the next character
+    if (!menu && canTypeHere() && lineText[pos] === ' ') handleTyped(' ');
     const canOpen = !menu && menuRowsFor(dock).length > 0;
-    if (!menu && !canOpen) {
-      if (canTypeHere()) handleTyped(' ');
-      spaceState.typedEmitted = true;
-      return;
-    }
+    if (!menu && !canOpen) return;
     const start = performance.now();
     FACTORY.setCharge(0);
     chargeTimer = setInterval(() => {
@@ -581,16 +596,13 @@
     if (!spaceState) return;
     const wasCharging = !!chargeTimer;
     cancelCharge();
-    if (wasCharging && !spaceState.done) {
-      if (menu) { closeMenu(); refreshStatus(); }
-      else if (!spaceState.typedEmitted && canTypeHere()) handleTyped(' ');
-    }
+    if (wasCharging && !spaceState.done && menu) { closeMenu(); refreshStatus(); }
     spaceState = null;
   }
 
   // debug: Ctrl+Alt+M — 100 of every material that exists for this save
+  // (ores you've opened, and anything a ready machine could make from them)
   function debugMaterials() {
-    const tier = CHAIN.currentTier(profile);
     let n = 0;
     for (const mat of CHAIN.MAT_IDS) {
       const spec = CHAIN.MATS[mat];
@@ -598,7 +610,7 @@
       if (spec.form === 'ore') exists = CHAIN.oreOpen(profile, mat);
       else {
         const r = CHAIN.recipeFor(mat);
-        exists = !!(r && CHAIN.KINDS[r.kind].ready && r.tier <= tier && CHAIN.matExists(profile, mat));
+        exists = !!(r && CHAIN.KINDS[r.kind].ready && CHAIN.matExists(profile, mat));
       }
       if (!exists) continue;
       profile.bag[mat] = (profile.bag[mat] || 0) + 100;
@@ -770,6 +782,9 @@
     } else if (id && id.startsWith('node:')) {
       const node = CHAIN.unbuiltNodes(profile).find((n) => 'node:' + n.index === id);
       if (node) dock = { id, kind: 'node', node };
+    } else if (id && id.startsWith('cross:')) {
+      const crossing = CHAIN.closedCrossings(profile).find((c) => 'cross:' + c.id === id);
+      if (crossing) dock = { id, kind: 'crossing', crossing };
     }
     recipe = dock && dock.kind === 'machine' ? pickRecipe(dock.m) : null;
     unitAcc = 0; unitPaid = false; dryNow = false;

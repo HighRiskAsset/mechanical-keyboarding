@@ -45,13 +45,15 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
    (az/buki/vedi/slogi/slova/stroki/listy) — display names live in i18n
    matNames/stationNames, looks in pixels.js matIcon. Renames never touch ids.
 4. **Automation is earned honestly, and there is one rule for it.** The
-   *curriculum* unlocks by measured skill only (readiness per key-pair; sticky
-   automaticity; per-tier bars). The *economy* (mines, Mk upgrades, machines,
-   ⚙) is bought from the bag at the place it happens and buys placement and
-   convenience, never skill progress. A machine runs a recipe by itself iff it
-   has its ⚙, every letter of that recipe's alphabet is sticky-mastered, and
-   its input buffers hold a full set; automated recipes refuse labor, and
-   un-automated recipes at the same machine still accept it.
+   *curriculum* unlocks by measured skill only (readiness per key-pair;
+   mastered letters — "sticky" automaticity in the code, flagged for good
+   after 30+ samples past the bar; per-tier bars). The *economy* (mines, Mk
+   upgrades, machines, automation) is bought from the bag at the place it
+   happens and buys placement and convenience, never skill progress. A
+   machine runs a recipe by itself iff it has its automation upgrade, every
+   letter of that recipe's alphabet is mastered, and its input buffers hold
+   a full set; automated recipes refuse labor, and un-automated recipes at
+   the same machine still accept it.
 5. **Language and layout are data, never assumptions.** This is not a Russian
    product with other languages bolted on later. Everything language-specific
    (letter frequencies, unlock order, phonotactics, word lists, glosses) lives
@@ -65,24 +67,27 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
 
 - 2D walkable hall (arrows, collision on built machines; ghosts walk-through),
   ~90% of the plan visible at once (430×230 logical @2×, canvas 860×460).
-- Docking by proximity. ONE interact key: **hold Space for 0.5s** — a pixel
-  charge bar fills over the operator; release early and nothing fires (a tap
-  is just a typed space). **v3 (2026-08-19, build-plan phases 1–2):** the hold
-  opens the place's icon menu — a plot lists the machines it could hold, an
-  ore vein its mine, a mine its next Mk / ⚙ / collect — arrows choose, a
-  second hold confirms, a tap or Escape closes. Glow turns green when a row
+- Docking by proximity. ONE interact key, two jobs at once: on **press**,
+  if the drill's next character is a space it is typed right then (a held
+  space that isn't the next character costs nothing — never an error);
+  **holding for 0.5 s** (a pixel charge bar fills over the operator) opens
+  the place's icon menu — a plot lists the machines it could hold, an ore
+  vein its mine, a mine its next Mk / automation / collect, a processor its
+  recipes, a closed crossing its repair — arrows choose, a second hold
+  confirms, an early release or Escape closes. Glow turns green when a row
   is affordable. Everything is paid from the bag; no Hub, kits, contracts or
-  Depot remain.
+  Depot remain (v3, 2026-08-19, build-plan phases 1–2).
 - **All game UI is pixels in-canvas**: the inventory HUD (icons + bitmap
   numbers, top-right of the canvas), requirement rows, charge bar. Only the
   page header and the keyboard visualizer are DOM. (The drill text line stays
   DOM for now — it's the reading surface.)
-- **Recipes and consumption (v3):** a processor makes whatever its inputs
-  can pay for — the recipe rows above it show every recipe it offers, the
-  active one bright (weakest letters first, then newest); a unit of output
-  is paid for at its first keystroke and emitted at its `perUnit`-th; a
-  starved unit runs dry (typing still trains). Mines yield one ore per
-  correct letter. Belts and machine buffers arrive with phase 3.
+- **Recipes and consumption (v3):** the recipe rows above a processor show
+  every recipe it offers, the chosen one bright — chosen at the machine's
+  hold-Space menu (default: the first offered), remembered per machine; a
+  unit of output is paid for at its first keystroke and emitted at its
+  `perUnit`-th; an unpayable choice runs dry with ✗ (typing still trains).
+  Mines yield one ore per correct letter. Belts and machine buffers arrive
+  with phase 3.
 - Learning engine: hesitation-gated hints (recall first), stop-on-error,
   per-letter EW latency/error stats; **v3 curriculum:** letters unlock in
   mirror key-pairs per ore Mk (`LANG_RU.PAIRS`), a pair is bought at the
@@ -90,8 +95,9 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   the recipe graph (`CHAIN.alphabetOf`); drill grammars keys / letters /
   syllables / clusters / words; word passport with glosses.
 - Three T0 mines (iron а о, copper е н, stone и т) stand from the start;
-  the ⚙ on a mine needs its letters sticky and refuses labor afterwards
-  (hold Space → collect 100). Profile v2 with a v1 migration; save files
+  automation on a mine needs its letters mastered ("sticky" in the code:
+  30+ samples past the tier bar, flagged for good) and the mine refuses labor
+  afterwards (hold Space → collect 100). Profile v2 with a v1 migration; save files
   version 2 (v1 files import and migrate). Debug: Ctrl+Alt+M gives 100 of
   every material that exists for the save. `dev/verify.html` runs the data
   checks.
@@ -188,9 +194,10 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   phase 2 lands.)
 - ~~Milestone board («Контора») & Издания v1~~ — removed 2026-08-19 with the
   v3 build (phases 1–2): no Hub, contracts, kits, Depot, ₽ or edition
-  station; crossings open on tier bars (`opensAfter: <tier>`); the old
-  BELTS list and per-keystroke autofeed are gone until phase 3 brings belts
-  and machine buffers back properly.
+  station; closed crossings are repaired at the place for a price in the
+  goods of the regions behind you (`PRICES.crossing`) — nothing is locked
+  behind a tier number; the old BELTS list and per-keystroke autofeed are
+  gone until phase 3 brings belts and machine buffers back properly.
 
 ## The outdoor pivot — SHIPPED 2026-08-11
 
@@ -407,23 +414,29 @@ If a recipe or a tier disagrees with a rule, the recipe is wrong.
    takes one raw ore or alloy alongside its parts. The flux sets the lesson's
    focus (its letters, its ending family, its word pool) and ties the deep
    machines to old nodes.
-5. **The inputs pick the recipe. Kinds are templates.** No dials. A machine
-   makes whatever its inputs can pay for — belted into its buffers, or carried
-   in the bag when worked by hand. Several instances of a kind exist; a
-   smelter's identity is what is belted into it. Docking shows the machine's
-   recipes as icon rows; by hand the active one is the affordable recipe
-   holding the player's weakest letters, else the newest — carrying only what
-   you want forces it; on its own a machine makes what its belts bring.
-   Unknown pairs show a ✗ row; recipes are authored, never emergent.
-6. **Everything is built from the bag, at the place.** No Hub, no kits, no
-   contracts, no Depot. Hold Space at a plot, a node or a machine and its icon
-   menu opens: arrows choose, hold Space confirms. A plot lists the machines
-   you could build there (greyed when unaffordable; a machine appears once you
-   have held the materials it costs, so high tiers stay out of sight until
-   reached). A mine lists Mk, ⚙, collect, feed, spool. Each row shows
-   curriculum gate (readiness of the letters it waits on) ∧ tier gate (every
-   unlocked letter past the previous tier's bar) ∧ price. Materials pay for
-   placement, never for progress.
+5. **You choose the recipe at the machine. Kinds are templates.** (Amended
+   2026-08-19: choosing beats guessing when a machine offers several recipes.)
+   A machine's hold-Space menu lists every recipe it offers; arrows pick, a
+   second hold confirms; the choice sticks to that machine and shows bright
+   in the rows above it. No silent switching: if the bag can't pay for the
+   chosen recipe the machine runs dry and its row shows ✗ — feed the bag or
+   choose another. Several instances of a kind exist. On its own (phase 3) a
+   machine makes its chosen recipe from what its belts bring. Recipes are
+   authored, never emergent.
+6. **Everything is built from the bag, at the place — and nothing is locked
+   behind a tier number.** No Hub, no kits, no contracts, no Depot. Hold
+   Space at a plot, a node, a machine or a closed crossing and its icon menu
+   opens: arrows choose, hold Space confirms, a tap or Escape closes. A plot
+   lists the machines you could build there (greyed when unaffordable; a
+   machine appears once you have held the materials it costs); a vein lists
+   its mine; a mine lists its next Mk, automation, collect (later feed and
+   spool); a closed pass or bridge lists its repair. Tiers organise the
+   design and pace it — they are never a check: order comes only from the
+   letter ladder (the next key-pair is always the next one) and pacing from
+   prices that ask for later materials plus the readiness bar. Each row shows
+   its curriculum gate (readiness of the letters it waits on, at the bar of
+   the tier the pair belongs to) ∧ price. Materials pay for placement, never
+   for progress.
 7. **Automation runs on the clock. Skill never does.** What is mastered works
    without you: automated machines and belts run in real time — while you
    walk, build, or have the tab hidden (fast-forward on return). Idle
@@ -655,8 +668,9 @@ must be added to the meadow**, quartz, iron #2); **Quarry hills** open at T1
 canyon + the stairs + Coal bog** open by T2 (the coal seam is the T2 node;
 quartz #2 in the canyon); **Oil flats** open at T3 (oil seam); **Titanium
 peaks** open at T4 as the finish site with extra nodes (the titanium seam
-becomes a late iron/coal/oil node or a landmark). Crossings' `opensAfter` names
-a tier bar instead of an edition. Nodes per ore across the map ≈ iron 3,
+becomes a late iron/coal/oil node or a landmark). Crossings are repaired at
+the place for a price in the goods of the regions behind you (2026-08-19:
+no tier locks anywhere — pacing is prices and the readiness bar). Nodes per ore across the map ≈ iron 3,
 copper 2, stone 2, quartz 2, coal 2, oil 2; plots as many as the tree can use.
 Open Range needs the same node set on its row A. Choke points (bridges, gaps)
 stay authored — they are the belt-congestion feature.

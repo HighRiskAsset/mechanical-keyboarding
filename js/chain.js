@@ -137,8 +137,11 @@
     { wpm: 12, acc: 0.95 }, { wpm: 15, acc: 0.96 }, { wpm: 18, acc: 0.96 }, { wpm: 21, acc: 0.97 },
     { wpm: 24, acc: 0.97 }, { wpm: 28, acc: 0.97 }, { wpm: 35, acc: 0.97 },
   ];
-  // the trade good of each tier — the "current-tier good" prices lean on
+  // the trade good of each tier (documentation of pacing; nothing is locked
+  // behind a tier number — prices ask for later materials, that is all)
   const TIER_GOOD = ['slogi', 'slova', 'stroki', 'fast', 'fast', 'crate', 'heavy'];
+  // each ore's own alloy — the good its extra mines and automation cost in
+  const ORE_GOOD = { az: 'slogi', buki: 'slogi', stone: 'castiron', vedi: 'qziron', coal: 'steel', oil: 'blackiron' };
 
   const TUNING = {
     PICKUP_CAP: 100,       // an automated mine refills your bag to this on collect
@@ -166,16 +169,26 @@
       coal: { 2: { fast: 60, steel: 40 }, 3: { coal: 60, qzsteel: 40 } },
       oil: { 2: { oil: 60, blackiron: 30 }, 3: { oil: 60, gunmetal: 40 }, 4: { oil: 60, fast: 60 } },
     },
-    // first instance of a kind at a plot
+    // first instance of a kind at a plot — each asks for a material of the
+    // tier the kind belongs to, which is the only pacing there is
     machine: {
       smelter: { az: 30, buki: 30, stone: 30 },
       foundry: { slova: 40, slogi: 40 },
       constructor: { qziron: 40, castiron: 40 },
-      molder: { slova: 60, brass: 30 },
+      molder: { slova: 60, steel: 30 },
       assembler: { mold: 60, slova: 40 },
       fastener: { blackiron: 40, stroki: 40 },
       crane: { fast: 80, glass: 40 },
       manufacturer: { crate: 100, mold: 60, slova: 60 },
+    },
+    // repairing a closed crossing (The Frontier): paid in the goods of the
+    // regions behind you
+    crossing: {
+      x1: { slogi: 30, castiron: 30 },
+      x2: { slova: 40, qzbronze: 20 },
+      x3: { slova: 40, brass: 20 },
+      x4: { caststeel: 30, slova: 40 },
+      x5: { blackiron: 40, slova: 60 },
     },
   };
   const scaleCost = (cost, k) => {
@@ -183,9 +196,9 @@
     for (const [m, n] of Object.entries(cost)) out[m] = Math.max(1, Math.round(n * k));
     return out;
   };
-  // an extra mine of an already-open ore: its ore + the tier's good
-  function priceExtraMine(ore, tier) {
-    return { [ore]: 60, [TIER_GOOD[Math.min(tier, TIER_GOOD.length - 1)]]: 20 };
+  // an extra mine of an already-open ore: its ore + its own alloy
+  function priceExtraMine(ore) {
+    return { [ore]: 60, [ORE_GOOD[ore]]: 20 };
   }
   function priceMk(ore, level) {
     return (PRICES.mk[ore] && PRICES.mk[ore][level]) || null;
@@ -195,11 +208,12 @@
     if (!base) return null;
     return scaleCost(base, 1 + TUNING.MACHINE_PRICE_STEP * Math.max(0, nth - 1));
   }
-  // ⚙ on a mine: its ore + the tier's good (processors: phase 3)
-  function priceAuto(m, tier) {
-    if (m.kind === 'mine') return { [m.ore]: 80, [TIER_GOOD[Math.min(tier, TIER_GOOD.length - 1)]]: 20 };
+  // automation on a mine: its ore + its own alloy (processors: phase 3)
+  function priceAuto(m) {
+    if (m.kind === 'mine') return { [m.ore]: 80, [ORE_GOOD[m.ore]]: 20 };
     return null;
   }
+  const priceCrossing = (c) => PRICES.crossing[c.id] || null;
 
   // ---- the curriculum position, from the save ----
   // pairsUnlocked counts L.PAIRS unlocked in order; ore Mk levels derive.
@@ -277,12 +291,12 @@
     const set = new Set(alpha);
     return L.WORDS.filter(([w]) => [...w].every((c) => set.has(c)));
   }
-  // is a recipe offered now: kind ready, tier reached, inputs exist,
-  // alphabet clears the minimum (and V+C / word-pool rules)
+  // is a recipe offered now: kind ready, inputs exist, alphabet clears the
+  // minimum (and V+C / word-pool rules). Nothing is locked behind a tier
+  // number — the recipe's tier is documentation of when it tends to arrive.
   function offerable(r, profile) {
     const kind = KINDS[r.kind];
     if (!kind.ready) return false;
-    if (r.tier > currentTier(profile)) return false;
     for (const mat of Object.keys(r.in)) if (!matExists(profile, mat)) return false;
     const alpha = recipeAlphabet(r, profile);
     const letters = alpha.filter(isLetter);
@@ -321,13 +335,13 @@
     });
     return out;
   }
-  // machine kinds a plot could hold now: ready, tier reached, and the player
-  // has held every material the price asks for (progressive reveal)
+  // machine kinds a plot could hold now: ready, and the player has held
+  // every material the price asks for (progressive reveal — the price is
+  // the only pacing)
   function buildableKinds(profile) {
-    const tier = currentTier(profile);
     return KIND_IDS.filter((k) => {
       const kind = KINDS[k];
-      if (k === 'mine' || !kind.ready || kind.tier > tier) return false;
+      if (k === 'mine' || !kind.ready) return false;
       const price = priceMachine(k, machinesOfKind(profile, k).length + 1);
       return price && Object.keys(price).every((mat) => profile.seen[mat]);
     });
@@ -488,12 +502,14 @@
       { x: 848, y: 272, w: 16, h: 32 }, { x: 848, y: 336, w: 16, h: 160 },     // flats|bog, gap rows 19–20
       { x: 528, y: 272, w: 16, h: 80 }, { x: 528, y: 384, w: 16, h: 112 },     // peaks|flats, gap rows 22–23
     ],
+    // closed crossings are repaired at the place — hold Space, pay in the
+    // goods of the regions behind you (PRICES.crossing). No tier locks.
     CROSSINGS: [
-      { id: 'x1', kind: 'pass', x: 528, y: 128, w: 16, h: 32, opensAfter: 1, style: 'grey' },    // meadow → quarry hills, at T1
-      { id: 'x2', kind: 'bridge', x: 848, y: 96, w: 32, h: 32, opensAfter: 2, dir: 'h' },        // over the canyon stream, T2
-      { id: 'x3', kind: 'stairs', x: 960, y: 240, w: 32, h: 32, opensAfter: 2, style: 'violet' }, // down into the bog, T2
-      { id: 'x4', kind: 'pass', x: 848, y: 304, w: 16, h: 32, opensAfter: 3, style: 'grey' },    // bog → flats, T3
-      { id: 'x5', kind: 'drift', x: 528, y: 352, w: 16, h: 32, opensAfter: 4 },                  // flats → peaks, T4
+      { id: 'x1', kind: 'pass', x: 528, y: 128, w: 16, h: 32, style: 'grey' },    // meadow → quarry hills
+      { id: 'x2', kind: 'bridge', x: 848, y: 96, w: 32, h: 32, dir: 'h' },        // over the canyon stream
+      { id: 'x3', kind: 'stairs', x: 960, y: 240, w: 32, h: 32, style: 'violet' }, // down into the bog
+      { id: 'x4', kind: 'pass', x: 848, y: 304, w: 16, h: 32, style: 'grey' },    // bog → flats
+      { id: 'x5', kind: 'drift', x: 528, y: 352, w: 16, h: 32 },                  // flats → peaks
     ],
     NODES: [
       { kind: 'iron', x: 92, y: 54 },
@@ -617,10 +633,12 @@
   }
   function plotById(id) { return cur.PLOTS.find((p) => p.id === id); }
 
-  // a crossing opens once the tier bar it names is passed
+  // a crossing is open once the player has paid to repair it (hold Space at
+  // the closed pass / bridge / stairs; the price is that region's goods)
   function crossingOpen(profile, c) {
-    return currentTier(profile) >= (typeof c.opensAfter === 'number' ? c.opensAfter : 99);
+    return !!(profile.crossings && profile.crossings[c.id]);
   }
+  const closedCrossings = (profile) => (cur.MAP.CROSSINGS || []).filter((c) => !crossingOpen(profile, c));
   // the biome under a world point (later rects win, like the bake)
   function regionAt(px, py) {
     const MAP = cur.MAP;
@@ -633,10 +651,10 @@
   }
 
   window.CHAIN = {
-    TILE, ORES, ORE_IDS, ORE_BY_NODE, KINDS, KIND_IDS, MATS, MAT_IDS, INGOT_IDS, RECIPES, BARS, TIER_GOOD, TUNING, PRICES,
+    TILE, ORES, ORE_IDS, ORE_BY_NODE, ORE_GOOD, KINDS, KIND_IDS, MATS, MAT_IDS, INGOT_IDS, RECIPES, BARS, TIER_GOOD, TUNING, PRICES,
     MAPS, MAP_IDS, DEFAULT_MAP,
     oreLetters, oreMaxMk, recipesFor, recipeFor, matTier,
-    priceExtraMine, priceMk, priceMachine, priceAuto, scaleCost,
+    priceExtraMine, priceMk, priceMachine, priceAuto, priceCrossing, scaleCost, closedCrossings,
     oreMk, unlockedKeys, currentTier, nextPair, gateBar,
     alphabetOf, recipeAlphabet, recipeTilt, wordPool, offerable, offerableRecipes, matExists, oreOpen, affordable,
     machinePos, machinesOfKind, machinesOfOre, nodeBuilt, freePlots, unbuiltNodes, buildableKinds, starterNodes,
