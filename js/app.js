@@ -53,6 +53,7 @@
   const $ = (id) => document.getElementById(id);
   const lineDisplay = $('line-display');
   const glossLine = $('gloss-line');
+  const captionEl = $('place-caption');
   const keyboardEl = $('keyboard');
   const overlay = $('overlay');
   const overlayCard = $('overlay-card');
@@ -306,23 +307,23 @@
     if (d.kind === 'plot') {
       for (const k of CHAIN.buildableKinds(profile)) {
         const price = CHAIN.priceMachine(k, CHAIN.machinesOfKind(profile, k).length + 1);
-        rows.push({ kind: k, items: price, enabled: canPay(price), action: { type: 'build-machine', kind: k, plot: d.plot.id, price } });
+        rows.push({ kind: k, items: price, enabled: canPay(price), priced: true, caption: T.t('capBuild', { kind: kindName(k) }), action: { type: 'build-machine', kind: k, plot: d.plot.id, price } });
       }
     } else if (d.kind === 'crossing') {
       const price = CHAIN.priceCrossing(d.crossing) || {};
-      rows.push({ pre: '→', items: price, enabled: canPay(price), action: { type: 'repair', id: d.crossing.id, price } });
+      rows.push({ pre: '→', items: price, enabled: canPay(price), priced: true, caption: T.t('capRepair'), action: { type: 'repair', id: d.crossing.id, price } });
     } else if (d.kind === 'node') {
       const ore = d.node.ore;
       if (CHAIN.oreOpen(profile, ore)) {
         const price = CHAIN.priceExtraMine(ore);
-        rows.push({ kind: 'mine', ore, items: price, enabled: canPay(price), action: { type: 'build-mine', ore, node: d.node.index, price } });
+        rows.push({ kind: 'mine', ore, items: price, enabled: canPay(price), priced: true, caption: T.t('capBuildMineMore', { name: mineName(ore) }), action: { type: 'build-mine', ore, node: d.node.index, price } });
       } else {
         const np = CHAIN.nextPair(profile);
         const price = CHAIN.priceNode(ore) || {};
         if (np && np.ore === ore && np.mk === 1) {
-          rows.push({ kind: 'mine', ore, items: price, enabled: canPay(price), action: { type: 'build-mine', ore, node: d.node.index, price, unlock: true } });
+          rows.push({ kind: 'mine', ore, items: price, enabled: canPay(price), priced: true, caption: T.t('capBuildMine', { name: mineName(ore), keys: pairKeys(np) }), action: { type: 'build-mine', ore, node: d.node.index, price, unlock: true } });
         } else {
-          rows.push({ kind: 'mine', ore, items: price, ok: false, enabled: false, action: null });
+          rows.push({ kind: 'mine', ore, items: price, ok: false, enabled: false, caption: T.t('capVeinLater', { name: mineName(ore) }), action: null });
         }
       }
     } else if (d.kind === 'machine' && d.m.kind === 'mine') {
@@ -332,14 +333,14 @@
       if (mk < CHAIN.oreMaxMk(ore)) {
         const price = CHAIN.priceMk(ore, mk + 1) || {};
         if (np && np.ore === ore && np.mk === mk + 1) {
-          rows.push({ pre: 'MK' + (mk + 1), items: price, enabled: canPay(price), action: { type: 'mk', ore, level: mk + 1, price } });
+          rows.push({ pre: 'MK' + (mk + 1), items: price, enabled: canPay(price), priced: true, caption: T.t('capMk', { level: mk + 1, name: mineName(ore), keys: pairKeys(np) }), action: { type: 'mk', ore, level: mk + 1, price } });
         } else {
-          rows.push({ pre: 'MK' + (mk + 1), items: price, ok: false, enabled: false, action: null });
+          rows.push({ pre: 'MK' + (mk + 1), items: price, ok: false, enabled: false, caption: T.t('capMkLater', { level: mk + 1 }), action: null });
         }
       }
       if (!m.auto) {
         const price = CHAIN.priceAuto(m);
-        rows.push({ pre: '⚙', items: price, enabled: canPay(price), action: { type: 'auto', m, price } });
+        rows.push({ pre: '⚙', items: price, enabled: canPay(price), priced: true, caption: T.t('capAuto'), action: { type: 'auto', m, price } });
       }
       beltRows(m, rows);
     } else if (d.kind === 'machine') {
@@ -348,11 +349,11 @@
       const m = d.m;
       for (const r of CHAIN.offerableRecipes(m.kind, profile).slice(0, 4)) {
         const active = recipe === r;
-        rows.push({ items: r.in, out: r.out, ok: active ? true : undefined, enabled: true, action: { type: 'recipe', m, r } });
+        rows.push({ items: r.in, out: r.out, ok: active ? true : undefined, enabled: true, caption: T.t('capRecipe', { out: matName(r.out), inputs: Object.entries(r.in).map(([mat, k]) => `${k} ${matName(mat)}`).join(' + ') }), action: { type: 'recipe', m, r } });
       }
       if (!m.auto) {
         const price = CHAIN.priceAuto(m);
-        if (price) rows.push({ pre: '⚙', items: price, enabled: canPay(price), action: { type: 'auto', m, price } });
+        if (price) rows.push({ pre: '⚙', items: price, enabled: canPay(price), priced: true, caption: T.t('capAuto'), action: { type: 'auto', m, price } });
       }
       beltRows(m, rows);
     }
@@ -364,26 +365,28 @@
     const mid = 'm:' + m.id;
     if (spool) {
       if (spool.from === m.id) {
-        rows.unshift({ pre: '✗→', enabled: true, action: { type: 'putback' } });
+        rows.unshift({ pre: '✗→', enabled: true, caption: T.t('capPutback'), action: { type: 'putback' } });
       } else {
         const from = SIM.machineById(profile, spool.from);
-        const link = from ? SIM.canLink(profile, from, m) : { ok: false };
+        const link = from ? SIM.canLink(profile, from, m) : { ok: false, why: 'same' };
+        if (m.kind === 'mine' && !link.ok) link.why = 'mine';
         const ok = link.ok && !!spoolRoute;
-        rows.unshift({ pre: '→', kind: from ? from.kind : undefined, ore: from && from.kind === 'mine' ? from.ore : undefined, ok: ok ? true : false, enabled: ok, action: ok ? { type: 'socket', from, to: m, path: spoolRoute } : null });
+        const caption = ok ? T.t('capSocket', { n: spoolRoute.length, from: machineName(from) }) : T.t('capNoBelt', { why: beltWhy(link.ok ? 'path' : link.why, from) });
+        rows.unshift({ pre: '→', kind: from ? from.kind : undefined, ore: from && from.kind === 'mine' ? from.ore : undefined, ok: ok ? true : false, enabled: ok, caption, action: ok ? { type: 'socket', from, to: m, path: spoolRoute } : null });
       }
     }
     // feed and collect come before the spool: the everyday rows first
-    if (m.auto && m.kind !== 'mine') rows.push({ pre: '→', items: recipeInputsIcons(m), enabled: SIM.canFeed(profile, m), action: { type: 'feed', m } });
-    if (SIM.hasOutput(m)) rows.push({ pre: '↓', items: nonZero(m.buf.out), enabled: true, action: { type: 'collect', m } });
+    if (m.auto && m.kind !== 'mine') rows.push({ pre: '→', items: recipeInputsIcons(m), enabled: SIM.canFeed(profile, m), caption: T.t('capFeed'), action: { type: 'feed', m } });
+    if (SIM.hasOutput(m)) rows.push({ pre: '↓', items: nonZero(m.buf.out), enabled: true, caption: T.t('capCollect'), action: { type: 'collect', m } });
     if (!spool && SIM.beltsFrom(profile, m).length < SIM.outletsOf(m) && (m.kind === 'mine' || SIM.produces(profile, m).length)) {
-      rows.push({ pre: '→', enabled: true, action: { type: 'spool', m } });
+      rows.push({ pre: '→', enabled: true, caption: T.t('capSpool', { mats: matList(SIM.produces(profile, m)) }), action: { type: 'spool', m } });
     }
     // belts in and out of this machine: one row each, ✗ removes it
     let k = 0;
     for (const b of [...SIM.beltsTo(profile, m), ...SIM.beltsFrom(profile, m)]) {
       if (k++ >= 3) break;
       const other = SIM.machineById(profile, b.to === m.id ? b.from : b.to);
-      rows.push({ pre: b.to === m.id ? '✗→' : '✗←', kind: other ? other.kind : undefined, ore: other && other.kind === 'mine' ? other.ore : undefined, enabled: true, action: { type: 'unbelt', id: b.id } });
+      rows.push({ pre: b.to === m.id ? '✗→' : '✗←', kind: other ? other.kind : undefined, ore: other && other.kind === 'mine' ? other.ore : undefined, enabled: true, caption: T.t('capUnbelt', { dir: b.to === m.id ? 'in' : 'out', other: machineName(other) }), action: { type: 'unbelt', id: b.id } });
     }
     void mid;
   }
@@ -395,6 +398,82 @@
     for (const mat of Object.keys(r.in)) out[mat] = profile.bag[mat] || 0;
     return out;
   }
+  // ---------- names and the caption under the map ----------
+  const kindName = (k) => (T.t('kindNames') || {})[k] || k;
+  const mineName = (ore) => (T.t('oreMineNames') || {})[ore] || ore;
+  const matName = (mat) => (T.t('matNames') || {})[mat] || mat;
+  const matList = (mats) => (mats || []).map(matName).join(' / ');
+  const machineName = (m) => (m ? (m.kind === 'mine' ? mineName(m.ore) : kindName(m.kind)) : '?');
+  const pairKeys = (pair) => (pair && pair.keys ? pair.keys.map((c) => c.toUpperCase()).join(' ') : '');
+  function beltWhy(why, from) {
+    const table = T.t('beltWhy') || {};
+    const v = table[why] || table.path;
+    return typeof v === 'function' ? v({ mats: matList(from ? SIM.produces(profile, from) : []) }) : v;
+  }
+  function placeName(d) {
+    if (!d) return '';
+    if (d.kind === 'machine') return machineName(d.m) + (d.m.auto ? ' · ' + T.t('capAutomated') : '');
+    if (d.kind === 'plot') return T.t('capPlot');
+    if (d.kind === 'node') return (T.t('veinNames') || {})[d.node.ore] || d.node.ore;
+    if (d.kind === 'crossing') return T.t('capCrossing');
+    return '';
+  }
+  // the caption: the chosen row's meaning while a menu is open; the place
+  // and the prompt while docked; the spool's errand while carrying
+  function setCaption(text, cls) {
+    if (!captionEl) return;
+    if (!text) { captionEl.classList.add('hidden'); captionEl.textContent = ''; return; }
+    captionEl.textContent = text;
+    captionEl.className = cls || '';
+  }
+  let captionFlash = null;
+  function flashCaption(text) {
+    if (captionFlash) clearTimeout(captionFlash);
+    setCaption(text, 'ok');
+    captionFlash = setTimeout(() => { captionFlash = null; refreshCaption(); }, 1600);
+  }
+  function refreshCaption() {
+    if (captionFlash) return;
+    if (!profile) { setCaption(''); return; }
+    if (menu) {
+      const row = menu.rows[menu.sel] || {};
+      let text = row.caption || '';
+      let cls = '';
+      if (row.enabled === false) { cls = 'dim'; if (row.priced) text += T.t('capUnaffordable'); }
+      else if (row.action && row.action.type === 'socket') cls = 'ok';
+      if (row.ok === false && row.action === null && spool) cls = 'no';
+      setCaption(text, cls);
+      return;
+    }
+    if (spool && dock && dock.kind === 'machine' && dock.m.id !== spool.from) {
+      const from = SIM.machineById(profile, spool.from);
+      const link = from ? SIM.canLink(profile, from, dock.m) : { ok: false, why: 'same' };
+      if (dock.m.kind === 'mine' && !link.ok) link.why = 'mine';
+      if (link.ok && spoolRoute) setCaption(T.t('capSocket', { n: spoolRoute.length, from: machineName(from) }), 'ok');
+      else setCaption(T.t('capNoBelt', { why: beltWhy(link.ok ? 'path' : link.why, from) }), 'no');
+      return;
+    }
+    if (spool) {
+      const from = SIM.machineById(profile, spool.from);
+      setCaption(T.t('capCarrying', { from: machineName(from), mats: matList(from ? SIM.produces(profile, from) : []) }), '');
+      return;
+    }
+    if (dock && menuRowsFor(dock).length) { setCaption(T.t('capHold', { place: placeName(dock) }), 'dim'); return; }
+    setCaption('');
+  }
+  // while carrying the spool: a green bar under every machine the belt may
+  // end at, red under the rest
+  function refreshMarks() {
+    if (!profile || !spool) { FACTORY.markStations(null); return; }
+    const from = SIM.machineById(profile, spool.from);
+    const marks = {};
+    for (const m of profile.machines) {
+      if (!from || m.id === from.id) continue;
+      marks['m:' + m.id] = SIM.canLink(profile, from, m).ok ? 'ok' : 'no';
+    }
+    FACTORY.markStations(marks);
+  }
+
   function openMenu() {
     const rows = menuRowsFor(dock);
     if (!rows.length) return false;
@@ -402,18 +481,21 @@
     if (sel < 0) sel = 0;
     menu = { rows, sel };
     FACTORY.showMenu(dock.id, rows, sel);
+    refreshCaption();
     A.click();
     return true;
   }
   function closeMenu() {
     menu = null;
     FACTORY.clearMenu();
+    refreshCaption();
   }
   function moveMenu(dir) {
     if (!menu) return;
     const n = menu.rows.length;
     menu.sel = (menu.sel + dir + n) % n;
     FACTORY.showMenu(dock.id, menu.rows, menu.sel);
+    refreshCaption();
     A.click();
   }
   function confirmMenu() {
@@ -496,7 +578,7 @@
     } else if (act.type === 'spool') {
       spool = { from: act.m.id };
       spoolRoute = null;
-      FACTORY.setSpool(true);
+      FACTORY.setSpool(true, CHAIN.machinePos(act.m));
       A.click();
       refreshStatus();
     } else if (act.type === 'putback') {
@@ -535,6 +617,8 @@
     const any = rows.some((r) => r.enabled !== false);
     FACTORY.setDockGlow(any ? 0x7fb98a : 0xc9a24a);
     refreshInfo();
+    refreshMarks();
+    refreshCaption();
   }
   // info rows above the docked machine: its recipes, the chosen one bright
   // (with ✗ while the bag can't pay for it)
@@ -690,6 +774,15 @@
     spaceState = null;
   }
 
+  // headless inspection (dev/play.html and the harnesses): read-only state
+  window.MK_DEBUG = {
+    state: () => ({
+      dock: dock ? dock.id : null,
+      menu: menu ? { sel: menu.sel, rows: menu.rows.map((r) => (r.action ? r.action.type : 'none') + (r.enabled === false ? '(off)' : '')) } : null,
+      spool, spoolRoute: spoolRoute ? spoolRoute.length : null,
+    }),
+  };
+
   // debug: Ctrl+Alt+M — 100 of every material that exists for this save
   // (ores you've opened, and anything a ready machine could make from them)
   function debugMaterials() {
@@ -711,13 +804,14 @@
     refreshInventory();
     refreshStatus();
     if (dock) FACTORY.floatText(`+100×${n}`, dock.id, 0x7fb98a);
+    flashCaption(T.t('capCheat', { n }));
     A.fanfare();
   }
 
   window.addEventListener('keydown', (e) => {
     const overlayOpen = !overlay.classList.contains('hidden');
     const ARROWS = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
-    if (e.ctrlKey && e.altKey && e.code === 'KeyM' && !overlayOpen && profile) {
+    if (((e.ctrlKey && e.altKey && e.code === 'KeyM') || (e.ctrlKey && e.shiftKey && e.code === 'KeyQ')) && !overlayOpen && profile) {
       e.preventDefault();
       debugMaterials();
       return;

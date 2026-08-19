@@ -339,16 +339,25 @@
     if (!st) return;
     const cx = st.def.x + 13;
     let y = st.def.y - 46 - (rows.length - 1) * 16;
-    for (const row of rows) {
-      const c = rowContainer(row);
+    // no room above (a place near the world's top edge): the rows stand
+    // beside the place instead, right of it — or left near the east edge —
+    // so the ground below (a belt route, say) stays visible
+    const side = y < 2;
+    if (side) y = Math.max(2, st.def.y - 40);
+    const built = rows.map((row) => rowContainer(row));
+    const widest = Math.max(...built.map((c) => c._w));
+    const rightOK = st.def.x + 40 + widest + 6 <= CHAIN.WORLD_W;
+    built.forEach((c, i) => {
+      const row = rows[i];
       const back = new PIXI.Graphics().rect(-3, -2, c._w + 6, 16).fill({ color: 0x17161a, alpha: 0.7 });
       c.addChildAt(back, 0);
-      c.position.set(Math.round(cx - c._w / 2), y);
+      if (!side) c.position.set(Math.round(cx - c._w / 2), y);
+      else c.position.set(rightOK ? st.def.x + 40 : st.def.x - 12 - c._w, y);
       c.alpha = row.enabled === false ? 0.5 : 1;
       labelsC.addChild(c);
       infoRows.push(c);
       y += 16;
-    }
+    });
   }
   // the place menu: a panel of rows with a highlighted selection
   let menuC = null;
@@ -458,11 +467,16 @@
       const glow = new PIXI.Graphics().rect(0, 36, 26, 2).fill(0xc9a24a);
       glow.visible = false;
       root.addChild(glow);
+      // the belt mark: green = a belt from the carried spool can end here,
+      // red = it cannot (shown only while carrying)
+      const mark = new PIXI.Graphics().rect(-2, 39, 30, 2).fill(0x6cc46c);
+      mark.visible = false;
+      root.addChild(mark);
       root.position.set(pos.x, pos.y - 36);
       root.zIndex = pos.y;
       cameraC.addChild(root);
       const id = 'm:' + m.id;
-      stations[id] = { def: { id, x: pos.x, y: pos.y, kind: m.kind, m }, root, sp, glow, built: true, auto: live, sqTtl: 0 };
+      stations[id] = { def: { id, x: pos.x, y: pos.y, kind: m.kind, m }, root, sp, glow, mark, built: true, auto: live, sqTtl: 0 };
       if (live) {
         const d = new PIXI.Sprite(PIXELS.stateDotTex('run'));
         d.position.set(pos.x + 24, pos.y - 40);
@@ -648,11 +662,47 @@
     clearGhost();
     ghostG = new PIXI.Graphics();
     ghostG.zIndex = -499;
-    const col = ok ? 0x6cc46c : 0xd84f4f;
-    for (const [tx, ty] of path || []) ghostG.rect(tx * T16 + 2, ty * T16 + 2, 12, 12).fill({ color: col, alpha: 0.45 });
+    // gold reads on grass and dirt alike; red for no route
+    const col = ok ? 0xf2c14e : 0xd84f4f;
+    for (const [tx, ty] of path || []) {
+      ghostG.rect(tx * T16 + 1, ty * T16 + 1, 14, 14).fill({ color: 0x17161a, alpha: 0.55 });
+      ghostG.rect(tx * T16 + 3, ty * T16 + 3, 10, 10).fill({ color: col, alpha: 0.75 });
+    }
     cameraC.addChild(ghostG);
   }
-  function setSpool(on) { spoolOn = !!on; if (!on) clearGhost(); }
+  // carrying: `from` is the source machine's world position (the tether
+  // line runs from there to the operator)
+  function setSpool(on, from) {
+    spoolOn = !!on; spoolFrom = on && from ? { x: from.x + 13, y: from.y + 2 } : null;
+    if (!on) { clearGhost(); markStations(null); if (tetherG) tetherG.clear(); }
+  }
+  // belt marks under machines: {dockId: 'ok'|'no'} or null to clear
+  function markStations(marks) {
+    for (const st of Object.values(stations)) {
+      if (!st.mark) continue;
+      const v = marks ? marks[st.def.id] : null;
+      st.mark.visible = !!v;
+      if (v) st.mark.clear().rect(-2, 39, 30, 2).fill(v === 'ok' ? 0x6cc46c : 0xd84f4f);
+    }
+  }
+  let spoolFrom = null, tetherG = null, tetherPhase = 0;
+  function drawTether(dt) {
+    if (!spoolOn || !spoolFrom) { if (tetherG) tetherG.clear(); return; }
+    if (!tetherG) { tetherG = new PIXI.Graphics(); tetherG.zIndex = 5400; cameraC.addChild(tetherG); }
+    tetherPhase = (tetherPhase + dt * 0.25) % 6;
+    tetherG.clear();
+    const x0 = spoolFrom.x, y0 = spoolFrom.y, x1 = Math.round(playerX), y1 = Math.round(playerY) - 10;
+    const len = Math.hypot(x1 - x0, y1 - y0);
+    if (len < 2) return;
+    // a dotted cord: one dot every 6 px, crawling toward the operator
+    const ux = (x1 - x0) / len, uy = (y1 - y0) / len;
+    for (let d = tetherPhase; d < len; d += 6) {
+      const bx = Math.round(x0 + ux * d), by = Math.round(y0 + uy * d);
+      tetherG.rect(bx - 1, by - 1, 4, 4).fill({ color: 0x17161a, alpha: 0.8 });
+      tetherG.rect(bx, by, 2, 2).fill({ color: 0xfff4dc, alpha: 0.95 });
+    }
+    tetherG.zIndex = Math.max(y0, y1) + 0.25;
+  }
 
   function setMove(which, down) { moving[which] = down; }
 
@@ -796,6 +846,7 @@
       spoolSp.position.set(Math.round(playerX) - 9, Math.round(playerY) - 18);
       spoolSp.zIndex = playerY + 0.5;
     } else if (spoolSp) spoolSp.visible = false;
+    drawTether(dt);
     // belts roll; items ride
     if (simProfile) {
       if (frameClock % 6 === 0) {
@@ -915,7 +966,7 @@
     init, loadMap, buildWorld, setMove, castLetter, floatText, stamp, getDocked, posOf,
     playerPos: () => ({ x: playerX, y: playerY }),
     screenPos, setDockGlow, showInfo, clearInfo, showMenu, clearMenu, setAutoLook,
-    routeBelt, showGhost, clearGhost, setSpool,
+    routeBelt, showGhost, clearGhost, setSpool, markStations,
     setInvValue, invScreenPos, setHudKeys, setCharge,
     onDock: null,
   };

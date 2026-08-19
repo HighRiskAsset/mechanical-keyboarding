@@ -144,7 +144,7 @@ kind; ⚙ on mines with the one rule (letters sticky → refuses labor →
 collect 100); Hub / kits / contracts / Depot / ₽ / editions removed;
 crossings open on tier bars; profile v2 + v1 migration + save-file version 2
 (v1 files import); the stone node added to The Frontier's meadow; the
-Ctrl+Alt+M debug bag. Not yet: automation on processors (phase 3, needs
+Ctrl+Alt+M / Ctrl+Shift+Q debug bag. Not yet: automation on processors (phase 3, needs
 buffers), belts (phase 3 — the old BELTS list and autofeed are gone).
 **Corrections after the first play (2026-08-19):** no tier-number locks
 anywhere — recipes are offered when their inputs exist and their alphabet

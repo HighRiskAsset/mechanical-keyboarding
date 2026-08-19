@@ -87,6 +87,19 @@ body.night #factory-mount canvas { filter: brightness(0.45) saturate(0.8); }
 }
 #factory { position: relative; flex: 1; min-width: 0; display: flex; }
 /* integer pixel upscale: JS sizes the canvas; the mount letterboxes the rest */
+/* the caption under the map: what the place is, what the chosen menu row does */
+#place-caption {
+  position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%);
+  max-width: 94%; padding: 4px 12px; box-sizing: border-box;
+  background: rgba(23, 22, 26, 0.88); border: 1px solid #3a4a52; border-radius: 6px;
+  color: var(--ink); font-size: 13px; line-height: 1.35; text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none;
+}
+#place-caption.hidden { display: none; }
+#place-caption.ok { border-color: var(--ok); }
+#place-caption.no { border-color: var(--err); }
+#place-caption.dim { color: var(--ink-dim); }
+#place-caption b { color: var(--brass); }
 #factory-mount {
   flex: 1;
   min-width: 0;

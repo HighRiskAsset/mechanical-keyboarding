@@ -120,6 +120,21 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   over automated machines: green running, red starved, gold full. Harness:
   `dev/sim.html`; the whole game runs headless in `dev/play.html` (a rAF
   shim) for automated checks.
+- **Discoverability (2026-08-19):** the in-canvas menus are icons only (the
+  bitmap font has no letters), so a **caption** (`#place-caption`, DOM text,
+  EN/RU) sits at the bottom of the map: while a menu is open it says what
+  the chosen row does ("Take the belt spool — carry it to a machine that
+  uses copper ore", "Lay the belt here — 3 tiles from the Copper mine", "No
+  belt here — it doesn't use stone", "Mk2: Iron mines reach the keys …",
+  "Automate — …", prices append "not affordable yet"); docked without a
+  menu it names the place and says "hold Space for the menu"; while
+  carrying a spool it states the errand. While carrying, every machine
+  shows a **bar**: green = a belt from this spool may end here (free
+  inlet, takes what the source makes), red = not; a beaded **cord** runs
+  from the source machine to the operator; the route preview is gold (red
+  = no free path). Info rows that would run off the world's top edge stand
+  beside the place instead. Debug: **Ctrl+Alt+M** or **Ctrl+Shift+Q** give
+  100 of every material that exists for the save (a caption confirms).
 - Learning engine: hesitation-gated hints (recall first), stop-on-error,
   per-letter EW latency/error stats; **v3 curriculum:** letters unlock in
   mirror key-pairs per ore Mk (`LANG_RU.PAIRS`), a pair is bought at the
@@ -133,7 +148,7 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   ore retools its mines (automation off until bought again). Every price is
   the base table × `TUNING.PACE` — the one pacing knob. Profile v2 with a v1
   migration; save files version 2 (v1 files import and migrate). Debug:
-  Ctrl+Alt+M gives 100 of every material that exists for the save.
+  Ctrl+Alt+M (or Ctrl+Shift+Q) gives 100 of every material that exists for the save.
   `dev/verify.html` runs the data checks.
 - **One pixel grid, no exceptions**: integer device-pixel upscale with
   letterboxing (roundPixels, whole-pixel camera and sprite positions), bitmap
