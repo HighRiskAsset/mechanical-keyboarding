@@ -122,7 +122,35 @@
     if (!t) return null;
     return t.getGlobalPosition();
   }
-  function setCharge(p) { chargeVal = p; }
+  // the hold-to-interact bar over the operator; its color says what the hold
+  // will do (gold = menu, green = lay the belt here, red = drop the spool)
+  let chargeColor = 0xf2c14e;
+  function setCharge(p, color) { chargeVal = p; chargeColor = color || 0xf2c14e; }
+  // the socket marker: a bouncing green chevron over the machine a carried
+  // belt may end at (the place the operator stands)
+  let socketTargetId = null, socketG = null;
+  function setSocketTarget(dockId) {
+    socketTargetId = dockId || null;
+    if (!socketTargetId && socketG) socketG.visible = false;
+  }
+  function drawSocketMarker() {
+    const st = socketTargetId ? stations[socketTargetId] : null;
+    if (!st) { if (socketG) socketG.visible = false; return; }
+    if (!socketG) {
+      socketG = new PIXI.Graphics();
+      // a chevron pointing down: 3 rows, ink outline then green
+      const rows = [[0, 0, 11, 2], [2, 2, 7, 2], [4, 4, 3, 2]];
+      for (const [x, y, w, h] of rows) socketG.rect(x - 1, y - 1, w + 2, h + 2).fill(0x17161a);
+      for (const [x, y, w, h] of rows) socketG.rect(x, y, w, h).fill(0x6cc46c);
+      socketG.zIndex = 6100;
+      cameraC.addChild(socketG);
+    }
+    socketG.visible = true;
+    const bounce = Math.round(Math.abs(Math.sin(frameClock * 0.12)) * 3);
+    socketG.position.set(st.def.x + 13 - 5, st.def.y - 32 - bounce);
+    // the route preview pulses with it
+    if (ghostG) ghostG.alpha = 0.7 + 0.3 * Math.abs(Math.sin(frameClock * 0.12));
+  }
 
   function addGlow(wx, wy, base) {
     const g = new PIXI.Sprite(PIXELS.glowHaloTex());
@@ -904,8 +932,9 @@
       const bx = Math.round(playerX) - 8, by = Math.round(playerY) - 30;
       chargeG.clear()
         .rect(bx, by, 16, 4).fill(0x221d29)
-        .rect(bx + 1, by + 1, Math.round(14 * Math.min(1, chargeVal)), 2).fill(0xf2c14e);
+        .rect(bx + 1, by + 1, Math.round(14 * Math.min(1, chargeVal)), 2).fill(chargeColor);
     }
+    drawSocketMarker();
 
     for (const a of ambient) {
       a.sp.alpha = a.base * (0.75 + 0.25 * Math.sin(frameClock * 0.05 + a.phase));
@@ -968,7 +997,7 @@
     init, loadMap, buildWorld, setMove, castLetter, floatText, stamp, getDocked, posOf,
     playerPos: () => ({ x: playerX, y: playerY }),
     screenPos, setDockGlow, showInfo, clearInfo, showMenu, clearMenu, setAutoLook,
-    routeBelt, showGhost, clearGhost, setSpool, markStations,
+    routeBelt, showGhost, clearGhost, setSpool, markStations, setSocketTarget,
     setInvValue, invScreenPos, setHudKeys, setCharge,
     onDock: null,
   };

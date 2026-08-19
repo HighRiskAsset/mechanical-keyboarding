@@ -132,9 +132,17 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   shows a **bar**: green = a belt from this spool may end here (free
   inlet, takes what the source makes), red = not; a beaded **cord** runs
   from the source machine to the operator; the route preview is gold (red
-  = no free path). Info rows that would run off the world's top edge stand
-  beside the place instead. Debug: **Ctrl+Alt+M** or **Ctrl+Shift+Q** give
-  100 of every material that exists for the save (a caption confirms).
+  = no free path). **Carrying is modal** (2026-08-19): there is no menu
+  while the spool is on your back — at a machine that can take the belt a
+  green chevron bounces over it, its dock glow is green, the caption reads
+  "Hold Space: lay the belt here — N tiles from X", and the hold lays the
+  belt at once (the charge bar fills green); anywhere else — no machine,
+  the source, a machine that can't take it (red glow, caption says why) —
+  the same hold **drops the spool** (charge bar red, caption "Spool
+  dropped — no belt laid"), so aborting is one hold wherever you stand.
+  Info rows that would run off the world's top edge stand beside the place
+  instead. Debug: **Ctrl+Alt+M** or **Ctrl+Shift+Q** give 100 of every
+  material that exists for the save (a caption confirms).
 - Learning engine: hesitation-gated hints (recall first), stop-on-error,
   per-letter EW latency/error stats; **v3 curriculum:** letters unlock in
   mirror key-pairs per ore Mk (`LANG_RU.PAIRS`), a pair is bought at the

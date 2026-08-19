@@ -40,7 +40,9 @@ feed or empty it (arrows choose, a second hold confirms, a tap closes; a
 caption under the map says what the chosen row does). **Belts**: take a
 machine's spool from its menu (the → row), walk to a machine that uses what
 it makes — a green bar under a machine means it can take the belt, red
-means it can't — and hold Space there to lay it; the route finds itself.
+means it can't — and hold Space there to lay it (a green chevron bounces
+over the machine when you're in the right spot); the route finds itself.
+Hold Space anywhere else while carrying to drop the spool.
 Everything is paid from what you have mined and made. Progress is saved in
 your browser (localStorage), one slot per world; switch worlds from ⚙.
 

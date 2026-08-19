@@ -363,18 +363,8 @@
   // take the spool, feed, collect, and one row per belt to remove it
   function beltRows(m, rows) {
     const mid = 'm:' + m.id;
-    if (spool) {
-      if (spool.from === m.id) {
-        rows.unshift({ pre: '✗→', enabled: true, caption: T.t('capPutback'), action: { type: 'putback' } });
-      } else {
-        const from = SIM.machineById(profile, spool.from);
-        const link = from ? SIM.canLink(profile, from, m) : { ok: false, why: 'same' };
-        if (m.kind === 'mine' && !link.ok) link.why = 'mine';
-        const ok = link.ok && !!spoolRoute;
-        const caption = ok ? T.t('capSocket', { n: spoolRoute.length, from: machineName(from) }) : T.t('capNoBelt', { why: beltWhy(link.ok ? 'path' : link.why, from) });
-        rows.unshift({ pre: '→', kind: from ? from.kind : undefined, ore: from && from.kind === 'mine' ? from.ore : undefined, ok: ok ? true : false, enabled: ok, caption, action: ok ? { type: 'socket', from, to: m, path: spoolRoute } : null });
-      }
-    }
+    // (while carrying a spool there is no menu: the hold lays the belt here
+    // or drops the spool — see startSpace)
     // feed and collect come before the spool: the everyday rows first
     if (m.auto && m.kind !== 'mine') rows.push({ pre: '→', items: recipeInputsIcons(m), enabled: SIM.canFeed(profile, m), caption: T.t('capFeed'), action: { type: 'feed', m } });
     if (SIM.hasOutput(m)) rows.push({ pre: '↓', items: nonZero(m.buf.out), enabled: true, caption: T.t('capCollect'), action: { type: 'collect', m } });
@@ -472,6 +462,24 @@
       marks['m:' + m.id] = SIM.canLink(profile, from, m).ok ? 'ok' : 'no';
     }
     FACTORY.markStations(marks);
+  }
+
+  // carrying a spool: can the belt end at the place the operator stands?
+  function socketHere() {
+    if (!spool || !dock || dock.kind !== 'machine' || dock.m.id === spool.from) return null;
+    const from = SIM.machineById(profile, spool.from);
+    if (!from || !SIM.canLink(profile, from, dock.m).ok || !spoolRoute) return null;
+    return { type: 'socket', from, to: dock.m, path: spoolRoute };
+  }
+  // the hold away from any socket: the spool goes back where it came from
+  function dropSpool() {
+    if (!spool) return;
+    spool = null; spoolRoute = null;
+    FACTORY.setSpool(false);
+    FACTORY.setSocketTarget(null);
+    A.thud();
+    flashCaption(T.t('capDropped'));
+    refreshStatus();
   }
 
   function openMenu() {
@@ -581,16 +589,12 @@
       FACTORY.setSpool(true, CHAIN.machinePos(act.m));
       A.click();
       refreshStatus();
-    } else if (act.type === 'putback') {
-      spool = null; spoolRoute = null;
-      FACTORY.setSpool(false);
-      A.click();
-      refreshStatus();
     } else if (act.type === 'socket') {
       if (!act.path || !act.from || !act.to) return;
       SIM.addBelt(profile, act.from, act.to, act.path);
       spool = null; spoolRoute = null;
       FACTORY.setSpool(false);
+      FACTORY.setSocketTarget(null);
       afterPurchase();
     } else if (act.type === 'unbelt') {
       SIM.removeBelt(profile, act.id);
@@ -615,7 +619,15 @@
     if (!profile) return;
     const rows = menu ? menu.rows : menuRowsFor(dock);
     const any = rows.some((r) => r.enabled !== false);
-    FACTORY.setDockGlow(any ? 0x7fb98a : 0xc9a24a);
+    if (spool && dock) {
+      // carrying: the place is a socket (green) or not (red) — nothing else
+      const here = socketHere();
+      FACTORY.setDockGlow(here ? 0x6cc46c : 0xd84f4f);
+      FACTORY.setSocketTarget(here ? dock.id : null);
+    } else {
+      FACTORY.setDockGlow(any ? 0x7fb98a : 0xc9a24a);
+      FACTORY.setSocketTarget(null);
+    }
     refreshInfo();
     refreshMarks();
     refreshCaption();
@@ -751,17 +763,26 @@
     spaceState = { done: false };
     // the typed space, at once — only when it is the next character
     if (!menu && canTypeHere() && lineText[pos] === ' ') handleTyped(' ');
-    const canOpen = !menu && menuRowsFor(dock).length > 0;
-    if (!menu && !canOpen) return;
+    // what the hold will do: lay the belt here / drop the spool (carrying),
+    // confirm the row (menu open), open the menu (a place with rows)
+    let verb = null;
+    if (spool && !menu) verb = socketHere() ? 'socket' : 'drop';
+    else if (menu) verb = 'confirm';
+    else if (menuRowsFor(dock).length > 0) verb = 'open';
+    if (!verb) return;
+    const color = verb === 'socket' ? 0x6cc46c : verb === 'drop' ? 0xd84f4f : 0xf2c14e;
     const start = performance.now();
-    FACTORY.setCharge(0);
+    FACTORY.setCharge(0, color);
     chargeTimer = setInterval(() => {
       const p = (performance.now() - start) / HOLD_MS;
-      FACTORY.setCharge(Math.min(1, p));
+      FACTORY.setCharge(Math.min(1, p), color);
       if (p >= 1) {
         cancelCharge();
         if (spaceState) spaceState.done = true;
-        if (menu) confirmMenu(); else openMenu();
+        if (verb === 'socket') { const act = socketHere(); if (act) performAction(act); else dropSpool(); }
+        else if (verb === 'drop') dropSpool();
+        else if (verb === 'confirm') confirmMenu();
+        else openMenu();
         refreshStatus();
       }
     }, 33);
