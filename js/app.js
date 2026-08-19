@@ -1031,8 +1031,10 @@
   // ---------- the clock (phase 3) ----------
   // Automated machines and belts run in real time; the live tick advances
   // them by the real elapsed time, a return from a hidden tab or a reload
-  // fast-forwards (bounded by buffers). Hands never touch this.
-  let simTimer = null, simSaveAcc = 0, beltFloatAcc = 0;
+  // fast-forwards (bounded by buffers). Hands never touch this. It runs off
+  // the animation frame rather than a timer so goods on a belt move once per
+  // drawn frame — on a timer they advanced in visible jumps between frames.
+  let simRaf = null, simSaveAcc = 0, beltFloatAcc = 0;
   function simTick() {
     if (!profile) return;
     const dt = SIM.tick(profile, Date.now());
@@ -1049,11 +1051,16 @@
     }
   }
   function startClock() {
-    if (simTimer) clearInterval(simTimer);
-    simTimer = setInterval(simTick, 120);
+    if (simRaf) cancelAnimationFrame(simRaf);
+    const spin = () => { simTick(); simRaf = requestAnimationFrame(spin); };
+    simRaf = requestAnimationFrame(spin);
   }
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && profile) { SIM.catchUp(profile, Date.now()); refreshInventory(); if (dock) refreshInfo(); }
+    if (!profile) return;
+    // frames stop while the tab is hidden: bank the save now, catch the
+    // clock up on the way back
+    if (document.hidden) { E.saveProfile(profile); return; }
+    SIM.catchUp(profile, Date.now()); refreshInventory(); if (dock) refreshInfo();
   });
 
   // ---------- overlays ----------

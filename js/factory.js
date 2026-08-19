@@ -40,7 +40,7 @@
   let spoolSp = null, spoolOn = false;
   let ghostG = null;
   let stateDots = {};                  // machine dock id → sprite (automated machines)
-  let beltFrame = 0;
+  let beltFrame = -1, beltScroll = 0;   // the band's walk, in world pixels
   // in-canvas pixel HUD (the bag) + the hold-to-interact charge bar
   let uiC = null, hudPanel = null;
   let hudRows = {}, hudKeys = [];
@@ -358,15 +358,18 @@
   }
   // a stack of info rows above a place (dimmed = not affordable/active)
   let infoRows = [];
-  function clearInfo() {
+  let infoBox = null;              // {dockId, top} — where the stack starts, so the menu can sit above it
+  function wipeInfo() {
     for (const r of infoRows) { if (r.parent) r.parent.removeChild(r); r.destroy({ children: true }); }
     infoRows = [];
+    infoBox = null;
   }
+  function clearInfo() { wipeInfo(); drawMenu(); }
   function showInfo(dockId, rows) {
-    clearInfo();
-    if (!ready || !dockId || !rows || !rows.length) return;
+    wipeInfo();
+    if (!ready || !dockId || !rows || !rows.length) { drawMenu(); return; }
     const st = stations[dockId];
-    if (!st) return;
+    if (!st) { drawMenu(); return; }
     const cx = st.def.x + 13;
     let y = st.def.y - 46 - (rows.length - 1) * 16;
     // no room above (a place near the world's top edge): the rows stand
@@ -374,6 +377,7 @@
     // so the ground below (a belt route, say) stays visible
     const side = y < 2;
     if (side) y = Math.max(2, st.def.y - 40);
+    if (!side) infoBox = { dockId, top: y };
     const built = rows.map((row) => rowContainer(row));
     const widest = Math.max(...built.map((c) => c._w));
     const rightOK = st.def.x + 40 + widest + 6 <= CHAIN.WORLD_W;
@@ -388,41 +392,69 @@
       infoRows.push(c);
       y += 16;
     });
+    drawMenu();
   }
-  // the place menu: a panel of rows with a highlighted selection
-  let menuC = null;
+  // the place menu: a panel of rows with a highlighted selection, standing
+  // above whatever the place already shows about itself. A long list (a
+  // Constructor's recipes) scrolls in a window around the selection.
+  const MENU_WINDOW = 7;
+  let menuC = null, menuState = null;
   function clearMenu() {
+    menuState = null;
+    wipeMenu();
+  }
+  function wipeMenu() {
     if (!menuC) return;
     if (menuC.parent) menuC.parent.removeChild(menuC);
     menuC.destroy({ children: true });
     menuC = null;
   }
   function showMenu(dockId, rows, sel) {
-    clearMenu();
-    if (!ready || !dockId || !rows || !rows.length) return;
+    menuState = (dockId && rows && rows.length) ? { dockId, rows, sel } : null;
+    drawMenu();
+  }
+  function drawMenu() {
+    wipeMenu();
+    if (!ready || !menuState) return;
+    const { dockId, rows, sel } = menuState;
     const st = stations[dockId];
     if (!st) return;
+    // the window of rows on show: the whole list when it fits, else a slice
+    // that keeps the selection in the middle
+    const n = rows.length;
+    const win = Math.min(MENU_WINDOW, n);
+    const top = n > win ? Math.max(0, Math.min(n - win, sel - Math.floor(win / 2))) : 0;
+    const shown = rows.slice(top, top + win);
     menuC = new PIXI.Container();
-    const built = rows.map((r) => rowContainer(r));
-    const w = Math.max(...built.map((c) => c._w)) + 10;
-    const h = rows.length * 16 + 6;
+    const built = shown.map((r) => rowContainer(r));
+    const w = Math.max(...built.map((c) => c._w)) + (n > win ? 16 : 10);
+    const h = win * 16 + 6;
     const cx = st.def.x + 13;
-    let px = Math.round(cx - w / 2), py = st.def.y - 50 - h;
+    let px = Math.round(cx - w / 2);
+    // above the machine's own rows when it has any, else above the machine
+    let base = st.def.y - 50;
+    if (infoBox && infoBox.dockId === dockId) base = Math.min(base, infoBox.top - 6);
+    let py = base - h;
     px = Math.max(2, Math.min(CHAIN.WORLD_W - w - 2, px));
     if (py < 4) py = st.def.y + 8;
+    py = Math.max(2, Math.min(CHAIN.WORLD_H - h - 2, py));
     const panel = new PIXI.Graphics()
       .rect(0, 0, w, h).fill({ color: 0x17161a, alpha: 0.9 })
       .rect(0, 0, w, 1).fill(0xc9a24a).rect(0, h - 1, w, 1).fill(0xc9a24a);
     menuC.addChild(panel);
     built.forEach((c, i) => {
-      if (i === sel) {
-        const hl = new PIXI.Graphics().rect(2, 3 + i * 16, w - 4, 14).fill({ color: 0xf2c14e, alpha: rows[i].enabled === false ? 0.18 : 0.35 });
+      const row = shown[i];
+      if (i + top === sel) {
+        const hl = new PIXI.Graphics().rect(2, 3 + i * 16, w - 4, 14).fill({ color: 0xf2c14e, alpha: row.enabled === false ? 0.18 : 0.35 });
         menuC.addChild(hl);
       }
       c.position.set(5, 4 + i * 16);
-      c.alpha = rows[i].enabled === false ? 0.5 : 1;
+      c.alpha = row.enabled === false ? 0.5 : 1;
       menuC.addChild(c);
     });
+    // more rows above / below the window: a small brass arrow says so
+    if (top > 0) menuC.addChild(new PIXI.Graphics().poly([w - 9, 8, w - 3, 8, w - 6, 4]).fill(0xc9a24a));
+    if (top + win < n) menuC.addChild(new PIXI.Graphics().poly([w - 9, h - 8, w - 3, h - 8, w - 6, h - 4]).fill(0xc9a24a));
     menuC.position.set(px, py);
     labelsC.addChild(menuC);
   }
@@ -626,6 +658,9 @@
   // shortest belt path from one machine to another over free tiles, or null.
   // Breadth-first from every free tile around the source to the first free
   // tile around the target; machines, scenery, solids and other belts block.
+  // Of the shortest routes it takes one with the fewest corners: the walk
+  // back over the distance field holds its heading for as long as the field
+  // allows, so an open field gives a long straight and one turn, not stairs.
   function routeBelt(from, to, profile) {
     if (!grid) return null;
     const blocked = new Set();
@@ -634,55 +669,117 @@
     const starts = ringTiles(from, profile, blocked, beltTiles);
     const goals = new Set(ringTiles(to, profile, blocked, beltTiles).map(([x, y]) => key(x, y)));
     if (!starts.length || !goals.size) return null;
-    const prev = new Map();
+    const STEPS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    const dist = new Map();
     const q = [];
-    for (const s of starts) { const k = key(s[0], s[1]); prev.set(k, null); q.push(s); }
-    let found = null, guard = 0;
-    while (q.length && guard++ < 20000) {
-      const [x, y] = q.shift();
+    for (const s of starts) { const k = key(s[0], s[1]); if (dist.has(k)) continue; dist.set(k, 0); q.push(s); }
+    let found = null, guard = 0, head = 0;
+    while (head < q.length && guard++ < 20000) {
+      const [x, y] = q[head++];
       if (goals.has(key(x, y))) { found = [x, y]; break; }
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const d = dist.get(key(x, y));
+      for (const [dx, dy] of STEPS) {
         const nx = x + dx, ny = y + dy, k = key(nx, ny);
-        if (prev.has(k)) continue;
+        if (dist.has(k)) continue;
         if (!beltFree(profile, nx, ny, blocked, beltTiles)) continue;
         if (!beltStep(x, y, nx, ny)) continue;
-        prev.set(k, [x, y]);
+        dist.set(k, d + 1);
         q.push([nx, ny]);
       }
     }
     if (!found) return null;
     const path = [];
-    let cur = found;
-    while (cur) { path.push(cur); cur = prev.get(key(cur[0], cur[1])); }
+    let cur = found, hx = 0, hy = 0;
+    for (let n = 0; n <= guard; n++) {
+      path.push(cur);
+      const d = dist.get(key(cur[0], cur[1]));
+      if (!d) break;
+      let step = null;
+      for (const [dx, dy] of [[hx, hy], ...STEPS]) {
+        if (!dx && !dy) continue;
+        const nx = cur[0] + dx, ny = cur[1] + dy;
+        if (dist.get(key(nx, ny)) !== d - 1) continue;
+        if (!beltStep(cur[0], cur[1], nx, ny)) continue;
+        step = [nx, ny, dx, dy];
+        break;
+      }
+      if (!step) break;
+      cur = [step[0], step[1]]; hx = step[2]; hy = step[3];
+    }
     path.reverse();
     return path;
   }
+  // ---------- the shape of a belt tile ----------
+  // Which sides of a tile the run joins tells the art what to draw and the
+  // goods where to turn. A tile at either end of the run joins its one
+  // neighbour and carries straight on through the other side.
+  const SIDE = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0] };
+  const OPP = { n: 's', s: 'n', e: 'w', w: 'e' };
+  const SHAPE_OF = {
+    we: 'h', ew: 'h', ns: 'v', sn: 'v',
+    ne: 'ne', en: 'ne', nw: 'nw', wn: 'nw', se: 'se', es: 'se', sw: 'sw', ws: 'sw',
+  };
+  const SHAPE_HEAD = { h: 'w', v: 'n', ne: 'n', nw: 'n', se: 's', sw: 's' };  // the side the art runs from
+  const sideTo = (a, b) => (b[0] > a[0] ? 'e' : b[0] < a[0] ? 'w' : b[1] > a[1] ? 's' : 'n');
+
   function drawBelts(profile) {
     for (const b of profile.belts || []) {
       const from = profile.machines.find((m) => m.id === b.from);
       const pipe = !!(from && from.kind === 'mine' && from.ore === 'oil');
+      const n = b.path.length;
+      if (n < 2) continue;
       const c = new PIXI.Container();
       c.zIndex = -500;
-      for (let i = 0; i < b.path.length; i++) {
+      const geo = [];
+      for (let i = 0; i < n; i++) {
         const [tx, ty] = b.path[i];
-        const nb = b.path[i + 1] || b.path[i - 1] || b.path[i];
-        const dir = nb[1] !== ty ? 'v' : 'h';
-        const sp = new PIXI.Sprite(PIXELS.beltTileTex(0, dir, pipe));
+        const inS = i > 0 ? sideTo(b.path[i], b.path[i - 1]) : null;
+        const outS = i < n - 1 ? sideTo(b.path[i], b.path[i + 1]) : null;
+        const a = inS || OPP[outS], z = outS || OPP[inS];
+        const shape = SHAPE_OF[a + z];
+        const sp = new PIXI.Sprite(PIXELS.beltTileTex(Math.max(0, beltFrame), shape, SHAPE_HEAD[shape] !== a, pipe));
         sp.position.set(tx * T16, ty * T16);
-        sp._dir = dir;
+        sp._shape = shape; sp._rev = SHAPE_HEAD[shape] !== a;
         c.addChild(sp);
+        // a drum where the run meets the machine at either end
+        if (i === 0 || i === n - 1) {
+          const cap = new PIXI.Sprite(PIXELS.beltEndTex(Math.max(0, beltFrame), i === 0 ? a : z, pipe));
+          cap.position.set(tx * T16, ty * T16);
+          cap._end = i === 0 ? a : z;
+          c.addChild(cap);
+        }
+        geo.push(tileGeo(tx, ty, SIDE[a], SIDE[z]));
       }
+      // the goods ride inside the run's own container, so clearing the world
+      // takes them with it
+      const itemsC = new PIXI.Container();
+      c.addChild(itemsC);
       cameraC.addChild(c);
-      beltViews[b.id] = { c, items: [], pipe, b, tiles: b.path.length };
+      beltViews[b.id] = { c, itemsC, items: [], pipe, b, geo };
     }
   }
-  // world position of a fractional path index
-  function pathPos(path, pos) {
-    const i = Math.max(0, Math.min(path.length - 1, Math.floor(pos)));
-    const j = Math.min(path.length - 1, i + 1);
-    const f = Math.max(0, Math.min(1, pos - i));
-    const [ax, ay] = path[i], [bx, by] = path[j];
-    return [Math.round((ax + (bx - ax) * f) * T16 + 6), Math.round((ay + (by - ay) * f) * T16 + 6)];
+  // how the band crosses one tile: straight through its centre, or a quarter
+  // turn of radius 8 about the corner the two sides share
+  function tileGeo(tx, ty, av, zv) {
+    const cx = tx * T16 + 8, cy = ty * T16 + 8;
+    if (av[0] + zv[0] === 0 && av[1] + zv[1] === 0) return { cx, cy, ax: zv[0], ay: zv[1] };
+    const px = tx * T16 + (av[0] + zv[0] > 0 ? T16 : 0);
+    const py = ty * T16 + (av[1] + zv[1] > 0 ? T16 : 0);
+    const a0 = Math.atan2(cy + av[1] * 8 - py, cx + av[0] * 8 - px);
+    let sweep = Math.atan2(cy + zv[1] * 8 - py, cx + zv[0] * 8 - px) - a0;
+    if (sweep > Math.PI) sweep -= 2 * Math.PI; else if (sweep < -Math.PI) sweep += 2 * Math.PI;
+    return { cx, cy, turn: true, px, py, a0, sweep };
+  }
+  // world position of a fractional path index: a tile is crossed from the
+  // middle of one edge to the middle of the next, so the goods stay on the
+  // band round a corner instead of cutting it
+  function pathPos(geo, pos) {
+    const i = Math.max(0, Math.min(geo.length - 1, Math.round(pos)));
+    const g = geo[i];
+    const t = Math.max(-0.5, Math.min(0.5, pos - i));
+    if (!g.turn) return [g.cx + g.ax * t * T16, g.cy + g.ay * t * T16];
+    const a = g.a0 + (t + 0.5) * g.sweep;
+    return [g.px + Math.cos(a) * 8, g.py + Math.sin(a) * 8];
   }
   function clearGhost() {
     if (!ghostG) return;
@@ -879,27 +976,40 @@
       spoolSp.zIndex = playerY + 0.5;
     } else if (spoolSp) spoolSp.visible = false;
     drawTether(dt);
-    // belts roll; items ride
+    // belts roll; items ride. The band walks at exactly the speed the goods
+    // do, so the two never disagree, and a slat crosses one world pixel per
+    // frame of the tile art rather than jumping a whole slat at a time.
     if (simProfile) {
-      if (frameClock % 6 === 0) {
-        beltFrame = (beltFrame + 1) % 4;
-        for (const v of Object.values(beltViews)) for (const sp of v.c.children) sp.texture = PIXELS.beltTileTex(beltFrame, sp._dir, v.pipe);
+      beltScroll = (beltScroll + CHAIN.TUNING.BELT_SPEED * T16 * (dt / 60)) % PIXELS.BELT_PITCH;
+      const bf = Math.floor(beltScroll);
+      if (bf !== beltFrame) {
+        beltFrame = bf;
+        for (const v of Object.values(beltViews)) {
+          for (const sp of v.c.children) {
+            if (sp._end) sp.texture = PIXELS.beltEndTex(bf, sp._end, v.pipe);
+            else if (sp._shape) sp.texture = PIXELS.beltTileTex(bf, sp._shape, sp._rev, v.pipe);
+          }
+        }
       }
       for (const b of simProfile.belts || []) {
         const v = beltViews[b.id];
         if (!v) continue;
         while (v.items.length < b.items.length) {
-          const sp = new PIXI.Sprite(PIXELS.itemDotTex());
-          sp.zIndex = -450;
-          cameraC.addChild(sp);
-          v.items.push(sp);
+          // a tinted core under an ink ring: the ring keeps its own colour,
+          // so a dark material still reads against the dark band
+          const g = new PIXI.Container();
+          const core = new PIXI.Sprite(PIXELS.itemDotTex());
+          g.addChild(core);
+          g.addChild(new PIXI.Sprite(PIXELS.itemRingTex()));
+          v.itemsC.addChild(g);
+          v.items.push({ g, core });
         }
-        while (v.items.length > b.items.length) { const sp = v.items.pop(); cameraC.removeChild(sp); sp.destroy(); }
+        while (v.items.length > b.items.length) { const it = v.items.pop(); v.itemsC.removeChild(it.g); it.g.destroy({ children: true }); }
         b.items.forEach((it, i) => {
           const sp = v.items[i];
-          const [px, py] = pathPos(b.path, it.pos);
-          sp.position.set(px, py);
-          sp.tint = PIXELS.matTint(it.mat);
+          const [px, py] = pathPos(v.geo, it.pos);
+          sp.g.position.set(Math.round(px) - 3, Math.round(py) - 3);
+          sp.core.tint = PIXELS.matTint(it.mat);
         });
       }
       if (frameClock % 20 === 0 && window.SIM) {

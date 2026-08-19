@@ -18,6 +18,9 @@
     steel: '#c2c8d4',                                   // rivet heads, polished rod
     enam: '#8c3f42', enamD: '#571f2c', enamL: '#bd6157', // oxblood enamel panel
     soot: '#171420', steam: '#e4e0da',                   // firebox mouth / steam + gauge face
+    // belting: a dark band on purpose — brass, copper and coal riding it
+    // all have to read at a glance against it
+    beltS: '#0e0d16', beltD: '#1b1928', beltE: '#272437', beltM: '#37324b', beltL: '#4f4a6a',
     teal: '#4f8f7c', teal2: '#2f5c54',                   // verdigris on old copper
     cream: '#f0e0bc', cream2: '#c3ab84',                 // linen, canvas, paper
     orange: '#f06d4f', red: '#d84d66', green: '#80d66e',
@@ -52,7 +55,7 @@
     fA: '#6c9c6c', fB: '#d8e8dc', fC: '#4c7c50',                           // frost grass
     // ores
     ironore: '#8b93a3', ironore2: '#5f6674',
-    copper: '#d8814e', copper2: '#a85c32', copper3: '#f5ac77',
+    copper: '#d8814e', copper2: '#a85c32', copper3: '#f5ac77', copper4: '#7a4426',
     quartz: '#e59ae0', quartz2: '#c470c9', quartz3: '#f5c9f2',
     stoneore: '#a8a49c', stoneore2: '#6c6864',
     coal: '#303038', coal2: '#181820', coal3: '#585868',
@@ -768,47 +771,110 @@
   }
 
   // ---------- belt / pipe tiles 16x16 (phase 3): one tile per path step ----------
-  // A belt: an iron trestle carrying a slatted timber band over brass
-  // rollers — the slats walk along the axis as the frame advances.
-  // A pipe: riveted copper with brass flanges and a glinting flow dash.
-  function beltTile(frame, dir, pipe) {
-    const [c, x] = canvas(TILE, TILE);
-    const horiz = dir === 'h';
-    if (pipe) {
-      if (horiz) {
-        R(x, P.ironO, 0, 3, 16, 10);
-        R(x, P.copper2, 0, 4, 16, 8); R(x, P.copper, 0, 4, 16, 4); R(x, P.copper3, 0, 4, 16, 1);
-        R(x, P.brass1, 2, 3, 2, 10); R(x, P.brass2, 2, 3, 1, 10);
-        R(x, P.glow, (frame * 4) % 16, 8, 3, 1);
-      } else {
-        R(x, P.ironO, 3, 0, 10, 16);
-        R(x, P.copper2, 4, 0, 8, 16); R(x, P.copper, 4, 0, 4, 16); R(x, P.copper3, 4, 0, 1, 16);
-        R(x, P.brass1, 3, 2, 10, 2); R(x, P.brass2, 3, 2, 10, 1);
-        R(x, P.glow, 8, (frame * 4) % 16, 1, 3);
-      }
-      return c;
+  // A run of belting is one machine, not a row of tiles. Nothing is drawn at
+  // a tile edge that would give the joins away: the slats are placed by how
+  // far along the run a pixel lies, so they walk straight through every
+  // seam. Corners are a real quarter turn about the tile's inner corner —
+  // band, rails and slats all swing round it, and the goods ride the curve.
+  //
+  // shape: 'h' 'v' straights · 'ne' 'nw' 'se' 'sw' — the two sides a corner
+  // joins. rev: the run carries the other way, so the slats walk the other
+  // way too. frame: one world pixel of travel each.
+  const BELT_STEPS = 8;                 // slat frames = the pitch, one px apart
+  const BELT_PITCH = 8;                 // world px between slats (divides TILE)
+  const BELT_MID = TILE / 2;            // the band's centre line / the turn radius
+  // per shape: which way the canonical run enters, and the corner it turns
+  // about (null on a straight). `from` points from that corner at the
+  // entry edge's middle.
+  const BELT_SHAPE = {
+    h: { axis: 'x' }, v: { axis: 'y' },
+    ne: { pivot: [TILE, 0], from: [-1, 0] },
+    nw: { pivot: [0, 0], from: [1, 0] },
+    se: { pivot: [TILE, TILE], from: [-1, 0] },
+    sw: { pivot: [0, TILE], from: [1, 0] },
+  };
+  // where one pixel sits on the run: `d` out from the centre line, `n` which
+  // way that is (for the light), `s` how far along the tile in world pixels
+  function beltPixel(shape, px, py) {
+    const cx = px + 0.5, cy = py + 0.5;
+    const sh = BELT_SHAPE[shape] || BELT_SHAPE.h;
+    if (!sh.pivot) {
+      const flat = sh.axis === 'x';
+      const across = (flat ? cy : cx) - BELT_MID;
+      const sg = across < 0 ? -1 : 1;
+      return { d: Math.abs(across), nx: flat ? 0 : sg, ny: flat ? sg : 0, s: flat ? cx : cy };
     }
-    if (horiz) {
-      R(x, P.ironO, 0, 2, 16, 12);
-      R(x, P.iron2, 0, 3, 16, 10); R(x, P.iron, 0, 3, 16, 1); R(x, P.iron3, 0, 12, 16, 1);
-      R(x, P.bC, 0, 5, 16, 6);
-      for (let k = 0; k < 4; k++) { const o = (k * 4 + frame) % 16; R(x, P.bB, o, 5, 2, 6); R(x, P.bA, o, 5, 1, 6); }
-      R(x, P.brass1, 0, 5, 1, 6); R(x, P.brass1, 15, 5, 1, 6);
-      for (let i = 2; i < 16; i += 6) R(x, P.ironL, i, 3, 1, 1);
-    } else {
-      R(x, P.ironO, 2, 0, 12, 16);
-      R(x, P.iron2, 3, 0, 10, 16); R(x, P.iron, 3, 0, 1, 16); R(x, P.iron3, 12, 0, 1, 16);
-      R(x, P.bC, 5, 0, 6, 16);
-      for (let k = 0; k < 4; k++) { const o = (k * 4 + frame) % 16; R(x, P.bB, 5, o, 6, 2); R(x, P.bA, 5, o, 6, 1); }
-      R(x, P.brass1, 5, 0, 6, 1); R(x, P.brass1, 5, 15, 6, 1);
-      for (let i = 2; i < 16; i += 6) R(x, P.ironL, 3, i, 1, 1);
+    const vx = cx - sh.pivot[0], vy = cy - sh.pivot[1];
+    const r = Math.hypot(vx, vy) || 1e-6;
+    const sg = r < BELT_MID ? -1 : 1;
+    const dot = Math.max(-1, Math.min(1, (vx * sh.from[0] + vy * sh.from[1]) / r));
+    return { d: Math.abs(r - BELT_MID), nx: (vx / r) * sg, ny: (vy / r) * sg, s: (Math.acos(dot) / (Math.PI / 2)) * TILE };
+  }
+  function beltTile(frame, shape, rev, pipe) {
+    const [c, x] = canvas(TILE, TILE);
+    const ph = ((frame % BELT_STEPS) + BELT_STEPS) % BELT_STEPS;
+    for (let py = 0; py < TILE; py++) {
+      for (let px = 0; px < TILE; px++) {
+        const g = beltPixel(shape, px, py);
+        if (g.d >= (pipe ? 5 : 6)) continue;
+        const lit = g.nx + g.ny < 0;                       // the light is up and to the left
+        const run = rev ? TILE - g.s : g.s;                // how far the load has come
+        const walk = ((Math.floor(run) - ph) % BELT_PITCH + BELT_PITCH) % BELT_PITCH;
+        let col;
+        if (pipe) {
+          // riveted copper, brass collars every pitch, one glint running it
+          const collar = Math.floor(g.s) % BELT_PITCH < 2;
+          if (g.d >= 4) col = P.ironO;
+          else if (collar) col = g.d >= 3 ? (lit ? P.brass3 : P.brass1) : P.brass2;
+          else if (g.d < 1 && walk < 3) col = P.glow;
+          else col = lit ? (g.d >= 3 ? P.copper3 : P.copper) : (g.d >= 3 ? P.copper4 : P.copper2);
+        } else if (g.d >= 5) col = P.ironO;                // the trestle's outline
+        else if (g.d >= 4) col = lit ? P.iron : P.iron3;   // its lit lip, its shade
+        else if (g.d >= 3) col = P.iron2;                  // the rail the band runs in
+        else if (walk < 2) col = g.d < 2 ? P.beltM : (lit ? P.beltL : P.beltD);  // a slat
+        else col = g.d < 2 ? P.beltD : (lit ? P.beltE : P.beltS);                // the band
+        if (col) R(x, col, px, py, 1, 1);
+      }
     }
     return c;
   }
-  // a white 4x4 item dot — tinted per material by the renderer
+  // the drum a run ends on, where it meets the machine. `side` is the tile
+  // edge it sits against; drawn north and turned by whole quarters.
+  function beltEnd(frame, side, pipe) {
+    const [c, x] = canvas(TILE, TILE);
+    x.save();
+    x.translate(BELT_MID, BELT_MID);
+    x.rotate(({ n: 0, e: 1, s: 2, w: 3 }[side] || 0) * Math.PI / 2);
+    x.translate(-BELT_MID, -BELT_MID);
+    if (pipe) {
+      R(x, P.ironO, 2, 0, 12, 5);
+      R(x, P.brass1, 3, 0, 10, 4); R(x, P.brass2, 3, 0, 10, 1);
+      R(x, P.soot, 5, 1, 6, 3);
+    } else {
+      R(x, P.ironO, 2, 0, 12, 6);
+      R(x, P.brass1, 3, 1, 10, 4); R(x, P.brass2, 3, 1, 10, 1);
+      const ph = ((frame % BELT_STEPS) + BELT_STEPS) % BELT_STEPS;
+      for (let k = 0; k < 2; k++) R(x, P.brass3, 3 + ((k * 5 + ph) % 10), 1, 1, 4);
+      R(x, P.iron3, 3, 5, 10, 1);
+    }
+    x.restore();
+    return c;
+  }
+  // What rides the belt: a 4x4 core the renderer tints per material, under a
+  // rim that keeps its own colour whatever the load is — lit brass along the
+  // top and left, ink down the shade side. An ink outline alone would vanish
+  // into a band this dark, and coal would go with it; the lit half is what
+  // makes a black material read as an object on the belt.
   function itemDot() {
-    const [c, x] = canvas(4, 4);
-    R(x, P.ink, 0, 0, 4, 4); R(x, P.white, 1, 1, 2, 2); R(x, P.white, 0, 1, 1, 2); R(x, P.white, 1, 0, 2, 1); R(x, P.white, 3, 1, 1, 2); R(x, P.white, 1, 3, 2, 1);
+    const [c, x] = canvas(6, 6);
+    R(x, P.white, 1, 1, 4, 4);
+    return c;
+  }
+  function itemRing() {
+    const [c, x] = canvas(6, 6);
+    R(x, P.cream2, 1, 0, 4, 1); R(x, P.cream2, 0, 1, 1, 4);
+    R(x, P.ink, 1, 5, 4, 1); R(x, P.ink, 5, 1, 1, 4);
+    R(x, P.cream, 1, 1, 1, 1);
     return c;
   }
   // a spool of belting carried on the operator's back, 8x8
@@ -1107,8 +1173,11 @@
     characterWorkTex: (frame) => cachedTex('chw:' + frame, () => characterWork(frame)),
     beltTex: (frame) => tex(belt(frame)),
     matDotTex: () => tex(matDot()),
-    beltTileTex: (frame, dir, pipe) => cachedTex('bt:' + frame + dir + (pipe ? 'p' : 'b'), () => beltTile(frame, dir, pipe)),
+    beltTileTex: (frame, shape, rev, pipe) => cachedTex('bt:' + frame + shape + (rev ? 'r' : 'f') + (pipe ? 'p' : 'b'), () => beltTile(frame, shape, rev, pipe)),
+    beltEndTex: (frame, side, pipe) => cachedTex('be:' + frame + side + (pipe ? 'p' : 'b'), () => beltEnd(frame, side, pipe)),
+    BELT_PITCH,                        // world px a slat travels before the next takes its place
     itemDotTex: () => cachedTex('itemdot', itemDot),
+    itemRingTex: () => cachedTex('itemring', itemRing),
     spoolTex: () => cachedTex('spool', spool),
     stateDotTex: (kind) => cachedTex('state:' + kind, () => stateDot(kind)),
     // a material's tint (its first ore's main tone) for item dots
@@ -1136,7 +1205,8 @@
     nodeCanvas: nodePatch,
     sceneryCanvas: (kind) => SCENERY_DRAW[kind] ? SCENERY_DRAW[kind]() : window.TILES.scenery(kind),
     machineCanvas: machine, stationCanvas: station, characterCanvas: character, workCanvas: characterWork,
-    pressCanvas: press, beltTileCanvas: beltTile, boardCanvas: noticeBoard,
+    pressCanvas: press, beltTileCanvas: beltTile, beltEndCanvas: beltEnd, boardCanvas: noticeBoard,
+    itemDotCanvas: itemDot, itemRingCanvas: itemRing,
     propCanvas: (kind) => PROP_DRAW[kind](), kindIconCanvas: kindIcon, matIconCanvas: matIcon,
     matIconTex: (kind) => cachedTex('mat:' + kind, () => matIcon(kind)),
     pressTex: (frame) => tex(press(frame)),
