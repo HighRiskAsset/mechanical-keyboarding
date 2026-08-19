@@ -56,6 +56,25 @@ jobs:
       - name: Install lftp
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
 
+      # Preflight. A failed upload otherwise reports one opaque lftp exit code;
+      # this says which layer broke — the name, the handshake, or the login.
+      # It sends no credentials, so it is safe to read in a public build log.
+      - name: Probe the connection
+        continue-on-error: true
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+        run: |
+          echo "=== 1. does the hostname resolve? ==="
+          getent hosts "$FTP_HOST" || echo "FAILED: hostname does not resolve"
+
+          echo "=== 2. is port 21 open, and does it greet as FTP? ==="
+          timeout 15 bash -c "exec 3<>/dev/tcp/$FTP_HOST/21 && head -c 200 <&3" \
+            || echo "FAILED: nothing listening on port 21"
+
+          echo "=== 3. explicit FTPS handshake, and is the certificate valid for this host? ==="
+          timeout 20 openssl s_client -connect "$FTP_HOST:21" -starttls ftp -brief </dev/null 2>&1 | head -25 \
+            || echo "FAILED: no FTPS handshake on port 21"
+
       - name: Upload over FTPS
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
@@ -70,13 +89,16 @@ jobs:
           : "${FTP_DIR:?set the FTP_REMOTE_DIR variable}"
           # --env-password keeps the password out of the process list and out of
           # any shell expansion, so a password with quotes or $ in it is safe.
+          # No debug tracing: this log is public, and lftp's own error text plus
+          # the probe above localise a failure without risking the PASS command.
           lftp -c "
             set ftp:ssl-force true;
             set ftp:ssl-protect-data true;
             set ssl:verify-certificate true;
-            set net:max-retries 3;
+            set net:max-retries 2;
             set net:timeout 20;
             open -u '$FTP_USER' --env-password '$FTP_HOST';
+            pwd;
             mirror --reverse --verbose --parallel=4 --no-perms _site '$FTP_DIR';
           "
 
