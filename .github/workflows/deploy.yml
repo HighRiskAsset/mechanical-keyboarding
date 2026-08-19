@@ -1,0 +1,85 @@
+# Publishes the game to Hostinger on every push to main.
+#
+# One-time setup, all on github.com (nothing here needs a local install):
+#
+#   Settings -> Secrets and variables -> Actions -> "Secrets" tab -> New secret
+#     FTP_HOST      ftp.yourdomain.com   (hPanel -> Files -> FTP Accounts, "FTP hostname")
+#     FTP_USER      u123456789.yourdomain.com
+#     FTP_PASSWORD  the FTP account password
+#
+#   ...same page -> "Variables" tab -> New variable
+#     FTP_REMOTE_DIR  where the site lives on the host, e.g.
+#                       public_html            -> yourdomain.com
+#                       public_html/keyboard   -> yourdomain.com/keyboard
+#                       domains/demo.yourdomain.com/public_html -> a subdomain
+#
+# Deploys are additive: files are uploaded and overwritten, never deleted. See
+# the note on --delete at the bottom before turning pruning on.
+
+name: Deploy demo
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# One deploy at a time. If two pushes land together the older run is dropped
+# rather than racing the newer one onto the server half-uploaded.
+concurrency:
+  group: deploy-hostinger
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    # Dormant until the FTP settings exist, so the workflow can land on main
+    # without failing every push until you have added them.
+    if: vars.FTP_REMOTE_DIR != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The repo is not the site. Design notes, the dev/ scratch pages and the
+      # local PowerShell server stay behind; only what the game loads ships.
+      - name: Stage the site
+        run: |
+          set -eu
+          mkdir -p _site
+          cp index.html favicon.svg _site/
+          cp -r css js libs _site/
+          # Phase 6 bakes the art to PNG under assets/ — add `cp -r assets _site/`
+          # here when that lands, or the remastered sprites will not ship.
+          cp deploy/htaccess _site/.htaccess
+          echo "--- staged for upload ---"
+          find _site -type f | sort
+          du -sh _site
+
+      - name: Install lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      - name: Upload over FTPS
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          LFTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_DIR: ${{ vars.FTP_REMOTE_DIR }}
+        run: |
+          set -eu
+          : "${FTP_HOST:?set the FTP_HOST secret}"
+          : "${FTP_USER:?set the FTP_USER secret}"
+          : "${LFTP_PASSWORD:?set the FTP_PASSWORD secret}"
+          : "${FTP_DIR:?set the FTP_REMOTE_DIR variable}"
+          # --env-password keeps the password out of the process list and out of
+          # any shell expansion, so a password with quotes or $ in it is safe.
+          lftp -c "
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ssl:verify-certificate true;
+            set net:max-retries 3;
+            set net:timeout 20;
+            open -u '$FTP_USER' --env-password '$FTP_HOST';
+            mirror --reverse --verbose --parallel=4 --no-perms _site '$FTP_DIR';
+          "
+
+# Adding --delete to the mirror line prunes remote files that are no longer in
+# _site. Leave it off until a deploy has proved FTP_REMOTE_DIR points where you
+# think it does: aimed one level too high, --delete would empty public_html.

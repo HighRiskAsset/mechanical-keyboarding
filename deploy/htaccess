@@ -1,0 +1,17 @@
+# Shipped to the site root as .htaccess by .github/workflows/deploy.yml.
+
+# The demo is reshared and reloaded far more often than it is large, so a short
+# cache is the right trade: someone who saw last week's build and comes back to
+# a new link gets the new build, not a stale one out of their browser.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|js|css|svg)$">
+    Header set Cache-Control "public, max-age=300, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
+# The Russian course text, the Cyrillic glosses and the wordmark all assume
+# utf-8; a host defaulting to latin-1 turns every one of them into mojibake.
+AddDefaultCharset utf-8
+
+# Served as a plain static site: no directory listings if a path is mistyped.
+Options -Indexes
