@@ -47,7 +47,6 @@
   let alphabet = [];             // the current lesson's letters
   let menu = null;               // {rows:[{...row, action}], sel}
   let pendingUnlock = null;      // a pair just unlocked, card queued
-  let pendingAutomation = [];
   let producedSinceFloat = {};
 
   // ---- DOM ----
@@ -240,8 +239,8 @@
     }
   }
 
-  // ---------- automation: the one rule (mines in this build) ----------
-  const autoLive = (m) => !!(m && m.auto && m.kind === 'mine' && E.oreSticky(profile, m.ore));
+  // ---------- automation: bought at the mine; a Mk on its ore retools it ----------
+  const autoLive = (m) => !!(m && m.auto && m.kind === 'mine');
 
   // ---------- recipes: the player chooses at the machine's menu ----------
   // A machine remembers its chosen recipe (m.recipe = output id). Until one
@@ -308,10 +307,9 @@
         rows.push({ kind: 'mine', ore, items: price, enabled: canPay(price), action: { type: 'build-mine', ore, node: d.node.index, price } });
       } else {
         const np = CHAIN.nextPair(profile);
-        const price = CHAIN.PRICES.node[ore] || {};
+        const price = CHAIN.priceNode(ore) || {};
         if (np && np.ore === ore && np.mk === 1) {
-          const gate = E.gateProgress(profile);
-          rows.push({ kind: 'mine', ore, items: price, gauge: gate.min, enabled: gate.ready && canPay(price), action: { type: 'build-mine', ore, node: d.node.index, price, unlock: true } });
+          rows.push({ kind: 'mine', ore, items: price, enabled: canPay(price), action: { type: 'build-mine', ore, node: d.node.index, price, unlock: true } });
         } else {
           rows.push({ kind: 'mine', ore, items: price, ok: false, enabled: false, action: null });
         }
@@ -323,16 +321,14 @@
       if (mk < CHAIN.oreMaxMk(ore)) {
         const price = CHAIN.priceMk(ore, mk + 1) || {};
         if (np && np.ore === ore && np.mk === mk + 1) {
-          const gate = E.gateProgress(profile);
-          rows.push({ pre: 'MK' + (mk + 1), items: price, gauge: gate.min, enabled: gate.ready && canPay(price), action: { type: 'mk', ore, level: mk + 1, price } });
+          rows.push({ pre: 'MK' + (mk + 1), items: price, enabled: canPay(price), action: { type: 'mk', ore, level: mk + 1, price } });
         } else {
           rows.push({ pre: 'MK' + (mk + 1), items: price, ok: false, enabled: false, action: null });
         }
       }
       if (!m.auto) {
         const price = CHAIN.priceAuto(m);
-        const mastered = E.oreSticky(profile, ore);
-        rows.push({ pre: '⚙', items: price, ok: mastered ? undefined : false, enabled: mastered && canPay(price), action: { type: 'auto', m, price } });
+        rows.push({ pre: '⚙', items: price, enabled: canPay(price), action: { type: 'auto', m, price } });
       } else if (autoLive(m)) {
         const cap = CHAIN.TUNING.PICKUP_CAP;
         rows.push({ pre: '↓', ore, enabled: (profile.bag[ore] || 0) < cap, action: { type: 'collect', m } });
@@ -386,24 +382,25 @@
     } else if (act.type === 'build-mine') {
       if (!canPay(act.price)) return;
       let pair = null;
-      if (act.unlock) {
-        if (!E.pairReady(profile)) return;
-        pair = E.unlockNextPair(profile);
-      }
+      if (act.unlock) pair = E.unlockNextPair(profile);
       spend(act.price);
       profile.machines.push({ id: 'm' + (profile.nextMachineId++), kind: 'mine', ore: act.ore, node: act.node, auto: false });
       afterPurchase();
       if (pair) { pendingUnlock = pair; showUnlockCard(pair); }
     } else if (act.type === 'mk') {
-      if (!canPay(act.price) || !E.pairReady(profile)) return;
+      if (!canPay(act.price)) return;
       const np = CHAIN.nextPair(profile);
       if (!np || np.ore !== act.ore || np.mk !== act.level) return;
       spend(act.price);
       const pair = E.unlockNextPair(profile);
+      // a Mk retools every mine of this ore: the new keys are worked by hand
+      // until its automation is bought again
+      const retooled = CHAIN.machinesOfOre(profile, act.ore).some((m) => m.auto);
+      for (const m of CHAIN.machinesOfOre(profile, act.ore)) m.auto = false;
       afterPurchase();
-      if (pair) { pendingUnlock = pair; showUnlockCard(pair); }
+      if (pair) { pendingUnlock = pair; showUnlockCard(pair, retooled); }
     } else if (act.type === 'auto') {
-      if (!canPay(act.price) || !E.oreSticky(profile, act.m.ore)) return;
+      if (!canPay(act.price)) return;
       spend(act.price);
       act.m.auto = true;
       afterPurchase();
@@ -744,12 +741,7 @@
     flushFloats();
     refreshInventory();
 
-    pendingAutomation.push(...E.updateAutomation(profile));
     E.saveProfile(profile);
-    // an automated mine whose letters just went sticky changes look
-    if (dock && dock.kind === 'machine' && dock.m.kind === 'mine' && dock.m.auto && autoLive(dock.m)) {
-      FACTORY.setAutoLook(dock.id, true);
-    }
     // the bag may now pay for a different recipe
     if (dock && dock.kind === 'machine' && dock.m.kind !== 'mine') recipe = pickRecipe(dock.m);
     refreshStatus();
@@ -762,10 +754,6 @@
     proceedAfterLine();
   }
   function proceedAfterLine() {
-    if (pendingAutomation.length) {
-      showAutomationCard(pendingAutomation.shift());
-      return;
-    }
     newLine();
   }
 
@@ -813,8 +801,8 @@
     overlayRerender = null;
   }
 
-  function showUnlockCard(pair) {
-    overlayRerender = () => showUnlockCard(pair);
+  function showUnlockCard(pair, retooled) {
+    overlayRerender = () => showUnlockCard(pair, retooled);
     const keys = pair.keys;
     const first = keys[0];
     const code = LAYOUT.CHAR_TO_CODE[first];
@@ -828,6 +816,7 @@
       <h2>${title}</h2>
       <p class="muted">${T.t('unlockMeta', { finger, freq })}</p>
       <p>${T.t('unlockNote')}</p>
+      ${retooled ? `<p class="muted">${T.t('unlockRetool')}</p>` : ''}
       <button id="ov-continue" class="btn-primary">${T.t('unlockGo')}</button>
     `);
     const caps = keys.map((k) => keycapEls[LAYOUT.CHAR_TO_CODE[k]]).filter(Boolean);
@@ -839,18 +828,6 @@
       lastCorrectTime = null;
       redock();
     };
-    $('ov-continue').focus();
-  }
-  function showAutomationCard(ch) {
-    overlayRerender = () => showAutomationCard(ch);
-    A.fanfare();
-    showOverlay(`
-      <div class="card-station">${T.t('automationStation')}</div>
-      <h2>${T.t('automationTitle', { ch })}</h2>
-      <p>${T.t('automationNote')}</p>
-      <button id="ov-continue" class="btn-primary">${T.t('automationGo')}</button>
-    `);
-    $('ov-continue').onclick = () => { hideOverlay(); lastCorrectTime = null; proceedAfterLine(); };
     $('ov-continue').focus();
   }
   function showBenchAutoCard(m) {
@@ -890,7 +867,7 @@
       .map((x) => `<span class="weak-chip">${x.ch} <small>${Math.round(Math.min(1, x.r) * 100)}%</small></span>`)
       .join(' ');
     const next = E.nextPair(profile);
-    const gate = E.gateProgress(profile);
+    const bar = CHAIN.targetBar(profile);
     showOverlay(`
       <div class="card-station">${T.t('blockStation')}</div>
       <h2>${T.t('blockLines', { n: session.linesDone })}</h2>
@@ -900,7 +877,7 @@
         <div><span class="sum-val">${session.bestStreak}</span><span class="sum-label">${T.t('sumStreak')}</span></div>
       </div>
       <p class="muted">${T.t('weakLetters')} ${weakest || '—'}</p>
-      ${next ? `<p class="muted">${T.t('progressTo', { ch: next.keys.join(' '), pct: Math.round(gate.min * 100) })}</p>` : `<p class="muted">${T.t('allUnlocked')}</p>`}
+      ${next ? `<p class="muted">${T.t('nextKeys', { ch: next.keys.join(' '), wpm: bar.wpm, acc: Math.round(bar.acc * 100) })}</p>` : `<p class="muted">${T.t('allUnlocked')}</p>`}
       <button id="ov-continue" class="btn-primary">${T.t('blockGo')}</button>
     `);
     $('ov-continue').onclick = () => { hideOverlay(); };
@@ -1053,7 +1030,7 @@
     E.setLastMap(id);
 
     dock = null; recipe = null; menu = null;
-    pendingUnlock = null; pendingAutomation = [];
+    pendingUnlock = null;
     unitAcc = 0; unitPaid = false; dryNow = false; lastCorrectTime = null;
     producedSinceFloat = {};
     for (const k of Object.keys(invPrev)) delete invPrev[k];

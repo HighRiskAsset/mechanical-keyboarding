@@ -72,7 +72,6 @@
       km: 0,
       nightBlocks: 0,
       collected: {},     // word → {n, clean, at} — the passport
-      automated: {},     // letter → true; sticky automaticity
       bag: {},           // material id → count
       seen: {},          // material id → true once held (progressive reveal)
       machines: sm.machines, // {id, kind, ore?, node?|plot?, auto, recipe?}
@@ -102,7 +101,6 @@
     for (const k of ['totalActiveMs', 'totalChars', 'totalErrors', 'km', 'nightBlocks']) q[k] = typeof p[k] === 'number' ? p[k] : 0;
     q.unlockLog = Array.isArray(p.unlockLog) ? p.unlockLog : [];
     q.collected = p.collected || {};
-    q.automated = p.automated || {};
     // a v1 save past its first edition had the first crossing open
     if ((p.milestoneIdx || 0) >= 4) q.crossings.x1 = true;
     // the bag
@@ -139,7 +137,6 @@
     for (const k of ['totalActiveMs', 'totalChars', 'totalErrors', 'km', 'nightBlocks', 'heavy']) if (typeof p[k] !== 'number') p[k] = 0;
     if (!Array.isArray(p.unlockLog)) p.unlockLog = [];
     if (!p.collected) p.collected = {};
-    if (!p.automated) p.automated = {};
     if (!p.bag) p.bag = {};
     if (!p.seen) p.seen = {};
     if (!p.crossings) p.crossings = {};
@@ -261,7 +258,7 @@
   function readiness(p, ch, bar) {
     const s = p.letters[ch];
     if (!s || s.n === 0) return 0;
-    bar = bar || C().gateBar(p) || DEFAULT_BAR;
+    bar = bar || C().targetBar(p) || DEFAULT_BAR;
     const targetLat = 12000 / bar.wpm;
     const acc = 1 - s.ewErr;
     const accScore = clamp((acc - (bar.acc - ACC_SPAN)) / ACC_SPAN, 0, 1.25);
@@ -284,20 +281,9 @@
     s.misses++;
     s.ewErr = s.ewErr + EW_ALPHA_ERR * (1 - s.ewErr);
   }
-  // the curriculum gate: every unlocked (trainable) letter past the bar
-  function gateProgress(p) {
-    const bar = C().gateBar(p);
-    const keys = unlockedLetters(p).filter(trainable);
-    if (!keys.length) return { ready: true, min: 1, weakest: null };
-    let min = 2, weakest = null;
-    for (const ch of keys) {
-      const r = readiness(p, ch, bar);
-      if (r < min) { min = r; weakest = ch; }
-    }
-    return { ready: min >= 1, min: Math.min(1, min), weakest };
-  }
-  const pairReady = (p) => !!nextPair(p) && gateProgress(p).ready;
-  // unlock the next pair (called by the purchase that pays for it)
+  // unlock the next pair — the purchase that pays for it is the only gate
+  // (progress is what you type and spend; accuracy and speed are measured
+  // for the player, never a lock)
   function unlockNextPair(p) {
     const np = nextPair(p);
     if (!np) return null;
@@ -305,26 +291,6 @@
     p.unlockLog.push({ keys: np.keys, at: Date.now() });
     autoAdvance(p);
     return np;
-  }
-  // an ore's letters are sticky when each is automated (readiness ≥ 1 with
-  // enough samples) — the ⚙ gate for its mines
-  function oreSticky(p, ore) {
-    const letters = C().oreLetters(ore, C().oreMk(p, ore)).filter(trainable);
-    return letters.length > 0 && letters.every((ch) => !!p.automated[ch]);
-  }
-  // Sticky automaticity: returns letters newly crossing the bar.
-  function updateAutomation(p) {
-    const fresh = [];
-    const bar = C().gateBar(p);
-    for (const ch of unlockedLetters(p)) {
-      if (p.automated[ch]) continue;
-      const s = p.letters[ch];
-      if (s.n >= MIN_SAMPLES && readiness(p, ch, bar) >= 1) {
-        p.automated[ch] = true;
-        fresh.push(ch);
-      }
-    }
-    return fresh;
   }
 
   // ---------- content generation ----------
@@ -527,8 +493,8 @@
   window.ENGINE = {
     MIN_SAMPLES, MAX_LATENCY,
     loadProfile, saveProfile, resetProfile, peekProfile, adoptProfile, getLastMap, setLastMap,
-    unlockedLetters, nextPair, readiness, gateProgress, pairReady, unlockNextPair, oreSticky, trainable,
-    recordHit, recordMiss, updateAutomation,
+    unlockedLetters, nextPair, readiness, unlockNextPair, trainable,
+    recordHit, recordMiss,
     generateLine, realWordPool,
   };
 })();

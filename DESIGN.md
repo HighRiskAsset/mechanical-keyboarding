@@ -20,15 +20,17 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
 
 ## The five invariants (survived every pivot; never trade away)
 
-1. **Typing is the only source of skill and of new production.** Letters,
-   readiness and tier bars move only by typing; every current-tier good is
-   hand-made; nothing you have not mastered advances without keystrokes. No
-   timers, no time pressure ever. (Amended 2026-08-18 with the v3 tree:
-   *mastered* production — automated machines and belts — runs on the real
-   clock, so old lessons are truly obsolete; that idle is bounded by buffer
-   caps and by the fact that the current tier's goods are never automated,
-   so waiting can fill the inputs of your next lesson but never pay for your
-   next purchase.)
+1. **Progress is what you type and spend.** Every key-pair, vein, machine,
+   upgrade, repair and automation is bought with materials, and materials
+   come only from typing — at the frontier, by hand. Accuracy and speed are
+   measured and shown to the player (hints, weak-letter weighting, the
+   summary, a per-tier target) and are **never a lock**; the point is
+   accuracy and repetition, not a gate. No timers, no time pressure ever.
+   (Amended 2026-08-18/19 with the v3 tree: automated machines and belts run
+   on the real clock, so old lessons are truly obsolete; that idle is bounded
+   by buffer caps and by the fact that the current tier's goods are never
+   automated, so waiting can fill the inputs of your next lesson but never
+   pay for your next purchase.)
 2. **Stations are lessons.** Each machine wraps a drill mode; its letter set
    lights up on the keyboard when you dock. Walking IS the menu — no scene
    switches, no instructional text; icons carry all information. (v3: hold
@@ -44,16 +46,15 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
    IMPORTANT: internal save ids keep the legacy Slavic names
    (az/buki/vedi/slogi/slova/stroki/listy) — display names live in i18n
    matNames/stationNames, looks in pixels.js matIcon. Renames never touch ids.
-4. **Automation is earned honestly, and there is one rule for it.** The
-   *curriculum* unlocks by measured skill only (readiness per key-pair;
-   mastered letters — "sticky" automaticity in the code, flagged for good
-   after 30+ samples past the bar; per-tier bars). The *economy* (mines, Mk
-   upgrades, machines, automation) is bought from the bag at the place it
-   happens and buys placement and convenience, never skill progress. A
-   machine runs a recipe by itself iff it has its automation upgrade, every
-   letter of that recipe's alphabet is mastered, and its input buffers hold
-   a full set; automated recipes refuse labor, and un-automated recipes at
-   the same machine still accept it.
+4. **Automation is bought, and a new Mk takes it back.** The curriculum
+   advances by purchase — the next key-pair is bought at its mine or vein,
+   in the ladder's order, for a price that asks for that ore and a later
+   good. Automation is bought the same way; buying a Mk on an ore retools
+   every mine of that ore (automation off — the new keys are worked by hand
+   until its automation is bought again). A machine runs a recipe by itself
+   iff it has its automation upgrade and (phase 3) its input buffers hold a
+   full set; automated recipes refuse labor. There is no mastery test
+   anywhere: the price is the repetition.
 5. **Language and layout are data, never assumptions.** This is not a Russian
    product with other languages bolted on later. Everything language-specific
    (letter frequencies, unlock order, phonotactics, word lists, glosses) lives
@@ -98,16 +99,18 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
 - Learning engine: hesitation-gated hints (recall first), stop-on-error,
   per-letter EW latency/error stats; **v3 curriculum:** letters unlock in
   mirror key-pairs per ore Mk (`LANG_RU.PAIRS`), a pair is bought at the
-  place once every unlocked letter passes the tier bar; alphabets come from
-  the recipe graph (`CHAIN.alphabetOf`); drill grammars keys / letters /
-  syllables / clusters / words; word passport with glosses.
+  place for a price — the only gate; accuracy and speed are measured for
+  hints, weak-letter weighting and the summary, never as a lock (2026-08-19);
+  alphabets come from the recipe graph (`CHAIN.alphabetOf`); drill grammars
+  keys / letters / syllables / clusters / words; word passport with glosses.
 - Three T0 mines (iron а о, copper е н, stone и т) stand from the start;
-  automation on a mine needs its letters mastered ("sticky" in the code:
-  30+ samples past the tier bar, flagged for good) and the mine refuses labor
-  afterwards (hold Space → collect 100). Profile v2 with a v1 migration; save files
-  version 2 (v1 files import and migrate). Debug: Ctrl+Alt+M gives 100 of
-  every material that exists for the save. `dev/verify.html` runs the data
-  checks.
+  automation on a mine is bought (its ore + its own alloy) and the mine
+  refuses labor afterwards (hold Space → collect 100); buying a Mk on an
+  ore retools its mines (automation off until bought again). Every price is
+  the base table × `TUNING.PACE` — the one pacing knob. Profile v2 with a v1
+  migration; save files version 2 (v1 files import and migrate). Debug:
+  Ctrl+Alt+M gives 100 of every material that exists for the save.
+  `dev/verify.html` runs the data checks.
 - **One pixel grid, no exceptions**: integer device-pixel upscale with
   letterboxing (roundPixels, whole-pixel camera and sprite positions), bitmap
   pixel font for all in-world text (digits/arrows/₽, ink outline baked),
@@ -459,17 +462,17 @@ If a recipe or a tier disagrees with a rule, the recipe is wrong.
    design and pace it — they are never a check: order comes only from the
    letter ladder (the next key-pair is always the next one) and pacing from
    prices that ask for later materials plus the readiness bar. Each row shows
-   its curriculum gate (readiness of the letters it waits on, at the bar of
-   the tier the pair belongs to) ∧ price. Materials pay for placement, never
-   for progress.
+   a price and nothing else — accuracy and speed are shown, never a gate.
+   The ladder decides order (the next key-pair is the next one), the price
+   decides pace.
 7. **Automation runs on the clock. Skill never does.** What is mastered works
    without you: automated machines and belts run in real time — while you
    walk, build, or have the tab hidden (fast-forward on return). Idle
    production is bounded: buffers cap (~100) and then the machine waits, and
    the current tier's goods are always hand-made (a kind gets ⚙ one tier after
    it arrives), so waiting fills the inputs of your next lesson and never pays
-   for your next purchase. Letters, readiness and tier bars move only by
-   typing.
+   for your next purchase. New letters and machines come only from what
+   typing earns.
 
 ### RU course — pairs, ores, tiers (LOCKED)
 
@@ -477,24 +480,24 @@ Sixteen mine events (key-pairs) + four key events at machines = twenty key
 introductions. Coverage of running Russian text: T0 47% · T1 71% · T2 86% ·
 T3 95% · T4 99% · T5 100%. All six T0 keys are index-finger keys.
 
-| # | Tier | Event | Keys | Curriculum gate | Price at the place (pattern) | Opens |
+| # | Tier | Event | Keys | Comes after (the ladder) | Price at the place (pattern, ×PACE) | Opens |
 |---|---|---|---|---|---|---|
 | 1 | T0 | Iron Mk1 | а о (F J) | — | pre-built | first two keys, the F/J bumps; iron is the vowel bank |
 | 2 | T0 | Copper Mk1 | е н (T Y) | — | pre-built | bronze (2 iron + 1 copper) |
 | 3 | T0 | Stone Mk1 | и т (B N) | — | pre-built | cast iron (2 iron + 1 stone); first real words (тот, то, от) |
-| 4 | T1 | Quartz node | в л (D K) | 6 letters past bar 0 | 40 bronze + 40 cast iron | middle finger; quartz iron |
-| 5 | T1 | Iron Mk2 | п р (G H) | в л ready | 80 iron + 30 bronze | home-row core; bronze/cast iron/quartz iron widen; iron retools |
-| 6 | T1 | Quartz Mk2 | с б (C ,) | п р ready | 60 quartz + 40 quartz iron | quartz iron → 8 → Constructor; quartz bronze → 10 → Foundry |
-| 7 | T2 | Coal node | ы д (S L) | 12 past bar 1 | 60 parts + 40 quartz iron | ring finger; steel; alphabet ≥14 → Molder |
-| 8 | T2 | Copper Mk2 | к г (R U) | ы д ready | 80 copper + 30 steel | copper retools; -ник -ение family |
-| 9 | T2 | Stone Mk2 | м ь (V M) | к г ready | 80 stone + 30 steel | stone retools; brass; -ть verbs; ≥16 → Assembler |
-| 10 | T3 | Oil node | я . (Z /) | 18 past bar 2 | 60 modules + 40 steel | pinky and the period; black iron; Fastener Mk1 (comma = Shift+/) right after |
-| 11 | T3 | Quartz Mk3 | у ш (E I) | я . , ready | 60 quartz + 30 black iron | quartz retools; T1 stations refresh (суп шум шов) |
-| 12 | T3 | Oil Mk2 | й з (Q P) | у ш ready | 60 oil + 30 black iron | oil retools; black brass; -ый -ий -ой |
-| 13 | T4 | Coal Mk2 | ч ю (X .) | 24 past bar 3 | 60 fastened + 40 steel | coal retools; gunmetal; Fastener Mk2 (? ! -) |
-| 14 | T4 | Oil Mk3 | ф ж (A ;) | ч ю ready | 60 oil + 40 gunmetal | oil retools; black iron widens |
-| 15 | T4 | Coal Mk3 | ц щ (W O) | ф ж ready | 60 coal + 40 quartz steel | coal retools; quartz steel; -ция -щик |
-| 16 | T5 | Oil Mk4 | э х ё ъ (' [ ` ]) | 30 past bar 4 | 60 oil + 60 fastened | glass, coke iron; then Crane (Shift), then Fastener Mk3 (: ; " ( )) |
+| 4 | T1 | Quartz node | в л (D K) | и т | 40 bronze + 40 cast iron | middle finger; quartz iron |
+| 5 | T1 | Iron Mk2 | п р (G H) | в л | 80 iron + 30 bronze | home-row core; bronze/cast iron/quartz iron widen; iron retools |
+| 6 | T1 | Quartz Mk2 | с б (C ,) | п р | 60 quartz + 40 quartz iron | quartz iron → 8 → Constructor; quartz bronze → 10 → Foundry |
+| 7 | T2 | Coal node | ы д (S L) | с б | 60 parts + 40 quartz iron | ring finger; steel; alphabet ≥14 → Molder |
+| 8 | T2 | Copper Mk2 | к г (R U) | ы д | 80 copper + 30 steel | copper retools; -ник -ение family |
+| 9 | T2 | Stone Mk2 | м ь (V M) | к г | 80 stone + 30 steel | stone retools; brass; -ть verbs; ≥16 → Assembler |
+| 10 | T3 | Oil node | я . (Z /) | м ь | 60 modules + 40 steel | pinky and the period; black iron; Fastener Mk1 (comma = Shift+/) right after |
+| 11 | T3 | Quartz Mk3 | у ш (E I) | я . , | 60 quartz + 30 black iron | quartz retools; T1 stations refresh (суп шум шов) |
+| 12 | T3 | Oil Mk2 | й з (Q P) | у ш | 60 oil + 30 black iron | oil retools; black brass; -ый -ий -ой |
+| 13 | T4 | Coal Mk2 | ч ю (X .) | й з | 60 fastened + 40 steel | coal retools; gunmetal; Fastener Mk2 (? ! -) |
+| 14 | T4 | Oil Mk3 | ф ж (A ;) | ? ! - | 60 oil + 40 gunmetal | oil retools; black iron widens |
+| 15 | T4 | Coal Mk3 | ц щ (W O) | ф ж | 60 coal + 40 quartz steel | coal retools; quartz steel; -ция -щик |
+| 16 | T5 | Oil Mk4 | э х ё ъ (' [ ` ]) | ц щ | 60 oil + 60 fastened | glass, coke iron; then Crane (Shift), then Fastener Mk3 (: ; " ( )) |
 
 Key events at machines: comma (Fastener Mk1, T3 — Shift's first appearance,
 the layout's signature hurdle) · ? ! - (Fastener Mk2, T4) · Shift as
@@ -584,22 +587,19 @@ demands a measured pool of ≥25 real words before a recipe is offered.
 ### Automation
 
 - **The rule** (invariant 4): a machine runs a recipe by itself, in real time,
-  iff it has its ⚙ · every letter of that recipe's alphabet is sticky-mastered ·
-  its input buffers hold a full set at the recipe ratio. Otherwise that recipe
-  is hand-work. Automated recipes refuse labor; un-automated recipes at the
-  same machine still accept it.
-- What falls out: **retool is not a mechanic** (buy a Mk → the ore's alphabet
-  gains two un-sticky letters → every mine of that ore is hand-work again →
-  master them → they resume; its belts idle meanwhile, which is what pulls you
-  back — one ore, one pair, downstream keeps its ⚙ and simply starves);
-  **new recipes at an automated machine are still lessons**; the whole factory
-  ends automated except the Manufacturer, which is you.
-- **When ⚙ is purchasable:** mines — as soon as the ore's current keys are
-  sticky, per mine instance (cost: its ore + the tier's good; nothing forces
-  it — you automate because it ends the walk). Processors — one tier of hand
-  work first: ⚙ appears once the bar that closes the kind's arrival tier is
-  passed (Smelter → T1, Foundry/Constructor → T2, Molder/Assembler → T3,
-  Fastener → T4, Crane → T6, Manufacturer → after the finish).
+  iff it has its automation upgrade · (phase 3) its input buffers hold a full
+  set at the recipe ratio. Otherwise that recipe is hand-work. Automated
+  recipes refuse labor. No mastery test (removed 2026-08-19: progress is what
+  you type and spend).
+- **A Mk retools.** Buying a Mk on an ore switches automation off on every
+  mine of that ore: the new keys are worked by hand, its belts idle meanwhile
+  (which is what pulls you back — one ore, one pair; downstream keeps its
+  automation and simply starves) until its automation is bought again. The
+  whole factory ends automated except the Manufacturer, which is you.
+- **When automation is purchasable:** mines — any time, per mine instance,
+  for its ore + its own alloy (nothing forces it — you automate because it
+  ends the walk; the price is the repetition). Processors — phase 3, priced
+  in the next tier's good so a kind is hand-worked for about a tier first.
 
 ### Transport — belts and pipes
 
@@ -645,20 +645,20 @@ demands a measured pool of ≥25 real words before a recipe is offered.
 
 ### Tier bars, pacing, and the two clocks
 
-Tier bars replace the Издание exams: a per-tier readiness target that every
-unlocked letter must pass before the next tier's first purchase opens — no
-station, no ceremony. Bars (WPM-equivalent latency target · accuracy):
-T0→1 12·95% · T1→2 15·96% · T2→3 18·96% · T3→4 21·97% (with . ,) · T4→5
-24·97% (hints dimmed from here) · T5→6 28·97% (hint-free, capitals) · finish
-35·97% + K heavy modules produced (K ≈ 200 placeholder, tuned to ~6–8 h at
-~30 WPM). Estimated hours: T0 2 · T1 4 · T2 5 · T3 6 · T4 6 · T5 5 · T6 4+ ≈
-32 h — a floor set by the skill gates; prices, bars and K stretch it if it
-plays short.
+There are no exams and no skill gates (2026-08-19). The tier bars are
+*targets* shown to the player — WPM-equivalent · accuracy: T0 12·95% · T1
+15·96% · T2 18·96% · T3 21·97% · T4 24·97% (hints dimmed from here) · T5
+28·97% (hint-free) — they weight weak letters in the drills and appear in
+the summary, and they lock nothing. Finish = K heavy modules produced (K ≈
+200 placeholder, tuned to ~6–8 h at ~30 WPM). Estimated hours: T0 1–2 · T1
+4 · T2 5 · T3 6 · T4 6 · T5 5 · T6 4+ ≈ 32 h — set entirely by prices:
+`TUNING.PACE` multiplies every price (4 is the first-pass guess), and a
+purchase should ask for about the keystrokes we want spent on those keys.
 
-- **The skill clock (T0–T5):** pairs unlock on readiness (30+ clean samples at
-  the tier's latency target, ≥ its accuracy) so keys cannot arrive faster than
-  a modest fluency on the previous ones; every Mk retool and every flux slot is
-  review of an older bench with new material — one ore at a time.
+- **The material clock (T0–T5):** every key-pair is bought for its ore plus a
+  later good, so keys cannot arrive faster than the typing that pays for
+  them; every Mk retool and every flux slot is review of an older bench with
+  new material — one ore at a time.
 - **The volume clock (T5 to the finish, and beyond):** players know every key
   before they hold 30–40 WPM. Once everything is automated and belted, the
   whole chain runs on its own up to the Manufacturer, and heavy modules exist

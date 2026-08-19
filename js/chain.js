@@ -150,6 +150,11 @@
     RATIO_MIN_POOL: 25,    // below this many words the tilt is off
     K_HEAVY: 200,          // heavy modules to finish (placeholder)
     MACHINE_PRICE_STEP: 0.5, // nth instance of a kind costs ×(1 + step·(n−1))
+    // PACE multiplies every price. With no skill gates, prices are the whole
+    // pacing: a purchase should ask for about the keystrokes we want spent on
+    // those keys. The base table below is written at ×1; 4 is the first-pass
+    // guess for the ~30 h target — tune this one number from play logs.
+    PACE: 4,
   };
 
   // ---- prices (placeholders, all in the pattern "own material + tier good") ----
@@ -196,24 +201,27 @@
     for (const [m, n] of Object.entries(cost)) out[m] = Math.max(1, Math.round(n * k));
     return out;
   };
+  const paced = (cost) => (cost ? scaleCost(cost, TUNING.PACE) : null);
+  // opening an ore: its first mine
+  const priceNode = (ore) => paced(PRICES.node[ore] || null);
   // an extra mine of an already-open ore: its ore + its own alloy
   function priceExtraMine(ore) {
-    return { [ore]: 60, [ORE_GOOD[ore]]: 20 };
+    return paced({ [ore]: 60, [ORE_GOOD[ore]]: 20 });
   }
   function priceMk(ore, level) {
-    return (PRICES.mk[ore] && PRICES.mk[ore][level]) || null;
+    return paced((PRICES.mk[ore] && PRICES.mk[ore][level]) || null);
   }
   function priceMachine(kind, nth) {
     const base = PRICES.machine[kind];
     if (!base) return null;
-    return scaleCost(base, 1 + TUNING.MACHINE_PRICE_STEP * Math.max(0, nth - 1));
+    return paced(scaleCost(base, 1 + TUNING.MACHINE_PRICE_STEP * Math.max(0, nth - 1)));
   }
   // automation on a mine: its ore + its own alloy (processors: phase 3)
   function priceAuto(m) {
-    if (m.kind === 'mine') return { [m.ore]: 80, [ORE_GOOD[m.ore]]: 20 };
+    if (m.kind === 'mine') return paced({ [m.ore]: 80, [ORE_GOOD[m.ore]]: 20 });
     return null;
   }
-  const priceCrossing = (c) => PRICES.crossing[c.id] || null;
+  const priceCrossing = (c) => paced(PRICES.crossing[c.id] || null);
 
   // ---- the curriculum position, from the save ----
   // pairsUnlocked counts L.PAIRS unlocked in order; ore Mk levels derive.
@@ -238,9 +246,10 @@
   function nextPair(profile) {
     return L.PAIRS[profile.pairsUnlocked] || null;
   }
-  // the bar every unlocked letter must pass before the next pair: the bar
-  // that closes the tier before the next pair's tier (T0 → none)
-  function gateBar(profile) {
+  // the tier.s speed/accuracy target — shown to the player and used to weight
+  // weak letters in the drills; never a lock (progress is what you type and
+  // spend). The bar of the tier the next pair belongs to.
+  function targetBar(profile) {
     const np = nextPair(profile);
     const t = np ? np.tier : BARS.length;
     return BARS[Math.max(0, Math.min(BARS.length - 1, t - 1))];
@@ -654,8 +663,8 @@
     TILE, ORES, ORE_IDS, ORE_BY_NODE, ORE_GOOD, KINDS, KIND_IDS, MATS, MAT_IDS, INGOT_IDS, RECIPES, BARS, TIER_GOOD, TUNING, PRICES,
     MAPS, MAP_IDS, DEFAULT_MAP,
     oreLetters, oreMaxMk, recipesFor, recipeFor, matTier,
-    priceExtraMine, priceMk, priceMachine, priceAuto, priceCrossing, scaleCost, closedCrossings,
-    oreMk, unlockedKeys, currentTier, nextPair, gateBar,
+    priceNode, priceExtraMine, priceMk, priceMachine, priceAuto, priceCrossing, scaleCost, closedCrossings,
+    oreMk, unlockedKeys, currentTier, nextPair, targetBar,
     alphabetOf, recipeAlphabet, recipeTilt, wordPool, offerable, offerableRecipes, matExists, oreOpen, affordable,
     machinePos, machinesOfKind, machinesOfOre, nodeBuilt, freePlots, unbuiltNodes, buildableKinds, starterNodes,
     useMap, currentMap, plotById, crossingOpen, regionAt,

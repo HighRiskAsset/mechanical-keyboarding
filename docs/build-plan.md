@@ -153,7 +153,14 @@ closed crossings are repaired at the place for a price (`PRICES.crossing`);
 the space key types at once on press when a space is next and charges the
 menu when held (a held space that isn't next is never an error); a
 processor's recipe is chosen at its own menu and remembered per machine
-(no auto-switching; ✗ when unpayable).
+(no auto-switching; ✗ when unpayable). **And the larger correction:** no
+skill gates at all — the readiness check on unlocking a pair and the
+"mastered letters" check on automation (inherited from the pre-v3 design)
+are gone; progress is what you type and spend. Pairs, mines, machines,
+repairs and automation are prices only; a Mk on an ore retools its mines
+(automation off until bought again); tier bars are shown targets, never
+locks; every price is the base table × `TUNING.PACE` (4 as the first-pass
+guess — the one pacing knob, since prices now carry all the pacing).
 
 **Goal.** Kits, the Hub, contracts and the Depot go. Every purchase is a
 priced row at the place: Mk at a mine, a mine at a node, a machine at a plot,
