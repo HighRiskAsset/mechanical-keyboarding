@@ -276,8 +276,9 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   new set of rects.
 - Machine roster: hand drill rigs → powered mines (tier-1, on nodes, fixed);
   Smelter / Constructor / Assembler kits on chosen plots; Freight Depot with
-  a working crane; the Hub (roofed contract board). Anime-bright palette:
-  cream + teal machines, gold accents, chibi engineer with hard hat.
+  a working crane; the Hub (roofed contract board). Chibi engineer with hard
+  hat. The machines were reskinned steampunk on 2026-08-19 — see **Machinery
+  style** under ENVIRONMENT PLAN for the binding ruling.
 - Milestones = Hub contracts; the era edition = «Фаза I» (grid power).
   Drifting petals replaced dust motes; lampposts replaced light shafts.
 - **Requirement rows (UX)**: docking any machine shows what Enter can do
@@ -302,6 +303,36 @@ one-pixel-grid rules: 16×16 tiles, ¾ top-down; per-tile palette discipline
 soft on ground; cliffs as stratified faces with a lit top edge and a base
 shadow; water as banded, slowly animated ripples; distinct per-region
 palettes the way FF3's areas read at a glance.
+
+**Machinery style — steampunk, Final Fantasy VI as the reference (ruling
+2026-08-19).** The land is FF3-USA; the *machines* are FF6 machinery. They are
+**not** a futuristic factory, not sci-fi panels, not a colony on Mars — that is
+the whole reason this world is a slightly fantasy RPG one. Concretely, every
+machine is built from:
+
+- **cast-iron plate** — a dark outline, a shaded lower half, a lit top edge,
+  and a seam of rivet heads. The iron ramp is `ironO / iron3 / iron2 / iron /
+  ironL`; nothing on a machine is ceramic, white or cyan.
+- **brass** as trim only — hoops around a boiler, dial bezels, a collar on a
+  flue, a sill under a firebox door. Discipline: `brass1` carries the fitting,
+  `brass2` is a one-pixel ridge, `brass3` is a glint. Brass used as a *surface*
+  turns every machine into gold stripes; it is the first thing to check.
+- **copper pipework** with brass flanges, **oxblood enamel** panels (`enam`)
+  for the one warm colour field, **verdigris** (`teal`) on old copper fittings.
+- **fire and steam** — a sooted firebox mouth with the fire banked at the grate
+  on every machine, a flue that puffs steam across the animation frames.
+- **wood and canvas** (`trunk`, `bA/bB/bC`, `cream`) wherever a thing was
+  hand-built rather than cast: the tier-1 derrick, belt slats, the depot awning.
+
+Silhouette first, always: a derrick, a boiler, a walking beam, a tapered
+furnace — the shape must read at 1× against grass before any brass goes on. The
+machines are the dark, warm, heavy thing in a bright frame.
+
+All of it is one shared parts kit in `js/pixels.js` — `M.plate`, `M.rivets`,
+`M.band`, `M.vband`, `M.gauge`, `M.firebox`, `M.flue`, `M.pipeH/pipeV`,
+`M.wheel` (spokes turn per frame), `M.puff` (steam rises and thins). **Any new
+machine, belt, prop or build-menu icon goes through that kit**, so the whole
+frontier reads as one workshop. Proof sheet: `dev/machines.html`.
 
 **Grid & data.** 16×16 square tiles (`PIXELS.TILE`), world 33×15. Ground is
 authored as kinded, grid-aligned rects in chain.js `MAP`, baked to a tile grid
@@ -784,8 +815,8 @@ from T4, hint-free from T5 · the ×1.5-while-typing feel layer (off; gravy).
   Russian assumptions leak into the engine.
 - UI chrome reskin to match the bright outdoor world (the page frame is
   still night-train blue). Naming is done: Mechanical Keyboarding.
-- Art polish: smelter sprite reads house-like — make it more furnace;
-  shoreline fringe tiles.
+- Art polish: shoreline fringe tiles. (Smelter-reads-house-like is done —
+  it is a tapered blast furnace now, 2026-08-19 steampunk pass.)
 - Polish debt: re-voice the typing-rhythm layer (still train clacks);
   night runs as a lamp toggle; station relocation fee.
 
@@ -821,13 +852,16 @@ shared by both · `js/flags.js` drawn flags + `js/icons.js` the globe and
 keyboard marks that label the switches ·
 `js/chain.js` chain/economy data
 + the `MAPS` registry (Frontier, Open Range) · `js/factory.js` Pixi world
-(`loadMap` per world) · `js/pixels.js` sprite kit + the one palette ·
+(`loadMap` per world) · `js/pixels.js` sprite kit + the one palette, incl. the
+steampunk machinery parts kit `M` ·
 `js/tiles.js` terrain kit (fills, autotile spills, walls, faces, crossings,
 region scenery, `bake`, `minimap`) · `js/app.js` orchestration + the map
 picker · `js/audio.js` synth ·
 `js/i18n.js` EN/РУ · `serve.ps1` dev server (+ POST /upload for QA frames) ·
 `js/sim.js` the factory simulation (buffers, jobs, belts, the clock) ·
-`dev/tiles.html` terrain proof sheet · `dev/verify.html` data checks ·
+`dev/tiles.html` terrain proof sheet · `dev/machines.html` machinery proof
+sheet (rigs, works, belts, pipes, props, icons on real terrain) ·
+`dev/verify.html` data checks ·
 `dev/sim.html` simulation harness · `dev/play.html` the game headless (rAF
 shim) · `libs/pixi.min.js` vendored Pixi 8 ·
 `docs/tech-tree-v3.html` the agreed tech-tree page (keyboard-by-ore, tier

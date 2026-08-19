@@ -1,0 +1,104 @@
+<!doctype html>
+<!-- Machinery proof sheet (dev only). Every mining-rig frame, every station,
+     the depot, belts and pipes, props and the build-menu icons — on the
+     grounds they actually stand on, at 4x. POSTs a PNG to /upload.
+     Open: http://localhost:8123/dev/machines.html  (optionally ?name=x.png) -->
+<meta charset="utf-8">
+<title>machinery proof</title>
+<style>
+  body { margin: 0; background: #1a1a20; color: #ddd; font: 12px/1.4 monospace; }
+  #out { image-rendering: pixelated; display: block; margin: 8px; }
+  #log { padding: 8px; white-space: pre; }
+</style>
+<div id="log"></div>
+<canvas id="out"></canvas>
+<script src="../js/pixels.js"></script>
+<script src="../js/tiles.js"></script>
+<script src="../js/courses.js"></script>
+<script src="../js/language-ru.js"></script>
+<script src="../js/chain.js"></script>
+<script>
+(async function () {
+  const Q = new URLSearchParams(location.search);
+  const SCALE = +(Q.get('s') || 4), W = 300, H = 260;
+  const CROP = (Q.get('crop') || '').split(',').map(Number);
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  const label = (s, px, py) => { x.fillStyle = '#fff4dc'; x.font = '6px monospace'; x.fillText(s, px, py); };
+  const bed = (kind, px, py, w, h) => {
+    for (let ty = 0; ty < h; ty++) for (let tx = 0; tx < w; tx++) {
+      x.drawImage(TILES.fill(kind, (tx * 7 + ty * 13) % 23), px + tx * 16, py + ty * 16);
+    }
+  };
+  x.fillStyle = '#26262e'; x.fillRect(0, 0, W, H);
+
+  // 1. mining rigs: three tiers x four frames, on grass
+  bed('grass', 0, 6, 19, 3);
+  label('mining rigs — tier 1 / 2 / 3, four frames each', 2, 5);
+  [1, 2, 3].forEach((tier, row) => {
+    for (let f = 0; f < 4; f++) x.drawImage(PIXELS.machineCanvas(tier, f), 4 + row * 100 + f * 24, 16);
+  });
+
+  // 2. stations on their aprons
+  const cy2 = 60;
+  bed('pad', 0, cy2 + 4, 19, 2);
+  label('works: smelter · foundry · constructor · assembler', 2, cy2 + 2);
+  ['bigrams', 'foundry', 'words', 'lines'].forEach((k, i) => {
+    x.drawImage(PIXELS.stationCanvas(k), 4 + i * 34, cy2 + 6);
+  });
+  // the depot, four crane frames
+  for (let f = 0; f < 4; f++) x.drawImage(PIXELS.pressCanvas(f), 148 + f * 36, cy2 + 2);
+
+  // 3. belts and pipes rolling, on dirt
+  const cy3 = 106;
+  bed('dirt', 0, cy3 + 4, 19, 2);
+  label('belts + pipes, four roll frames (h then v)', 2, cy3 + 2);
+  for (let f = 0; f < 4; f++) {
+    for (let i = 0; i < 3; i++) x.drawImage(PIXELS.beltTileCanvas(f, 'h', false), 4 + f * 56 + i * 16, cy3 + 6);
+    x.drawImage(PIXELS.beltTileCanvas(f, 'v', false), 4 + f * 56, cy3 + 22);
+    for (let i = 0; i < 2; i++) x.drawImage(PIXELS.beltTileCanvas(f, 'h', true), 20 + f * 56 + i * 16, cy3 + 22);
+  }
+
+  // 4. props + the operator for scale, on grass
+  const cy4 = 148;
+  bed('grass', 0, cy4 + 4, 19, 2);
+  label('props + operator for scale', 2, cy4 + 2);
+  let px = 6;
+  for (const k of ['lamppost', 'crate', 'drum', 'sign', 'bush']) {
+    const cv = PIXELS.propCanvas(k);
+    x.drawImage(cv, px, cy4 + 36 - cv.height); px += cv.width + 8;
+  }
+  x.drawImage(PIXELS.characterCanvas('side', 0), px + 4, cy4 + 11); px += 26;
+  x.drawImage(PIXELS.machineCanvas(3, 0), px + 4, cy4 + 0);
+  x.drawImage(PIXELS.stationCanvas('bigrams'), px + 36, cy4 + 6);
+  x.drawImage(PIXELS.boardCanvas(true), px + 72, cy4 + 0);
+
+  // 5. build-menu icons + material icons at 12px
+  const cy5 = 194;
+  label('kind icons: mine smelter foundry constructor molder assembler fastener crane', 2, cy5);
+  ['mine', 'smelter', 'foundry', 'constructor', 'molder', 'assembler', 'fastener', 'crane'].forEach((k, i) => {
+    x.drawImage(PIXELS.kindIconCanvas(k), 4 + i * 16, cy5 + 4);
+  });
+  label('material icons', 2, cy5 + 26);
+  ['az', 'vedi', 'coal', 'oil', 'slogi', 'qzbronze', 'slova', 'mold', 'stroki', 'fast', 'crate', 'heavy', 'money'].forEach((k, i) => {
+    x.drawImage(PIXELS.matIconCanvas(k), 4 + i * 16, cy5 + 30);
+  });
+  label('palette: iron ramp · brass · copper · enamel · soot/steam', 2, cy5 + 54);
+  const P = PIXELS.P;
+  [P.ironO, P.iron3, P.iron2, P.iron, P.ironL, P.steel, P.brass1, P.brass2, P.brass3,
+   P.copper2, P.copper, P.copper3, P.enamD, P.enam, P.enamL, P.soot, P.steam, P.orange, P.glow, P.teal2, P.teal]
+    .forEach((col, i) => { x.fillStyle = col; x.fillRect(4 + i * 10, cy5 + 58, 9, 8); });
+
+  const out = document.getElementById('out');
+  const [kx, ky, kw, kh] = CROP.length === 4 ? CROP : [0, 0, W, H];
+  out.width = kw * SCALE; out.height = kh * SCALE;
+  const ox = out.getContext('2d'); ox.imageSmoothingEnabled = false;
+  ox.drawImage(c, kx, ky, kw, kh, 0, 0, kw * SCALE, kh * SCALE);
+  const name = new URLSearchParams(location.search).get('name') || 'machines.png';
+  try {
+    const blob = await (await fetch(out.toDataURL('image/png'))).blob();
+    const res = await fetch('/upload?name=' + encodeURIComponent(name), { method: 'POST', body: blob });
+    document.getElementById('log').textContent = 'uploaded ' + name + ': ' + res.status + ' ' + await res.text();
+  } catch (e) { document.getElementById('log').textContent = 'upload failed: ' + e; }
+})().catch((e) => { document.getElementById('log').textContent = 'ERROR ' + (e.stack || e); });
+</script>

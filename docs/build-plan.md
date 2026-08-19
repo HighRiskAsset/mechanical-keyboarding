@@ -314,9 +314,12 @@ appearance.
 - Tuning pass from Phase 5's log: prices, bars, K, rates, buffer cap, minimum
   alphabets — all in `TUNING`/`PRICES`/`BARS`; playtests until hours per tier
   are within ~±25% of the estimate and no tier feels empty or endless.
-- Art pass: every kind's sprite in the FF3 idiom (mines per ore and Mk look,
-  Foundry, Molder, Fastener, Crane, Manufacturer), alloy icons as ore-color
-  stacks, belt items, pipes, spool, menus; the Hub/Depot art retired.
+- Art pass: every kind's sprite in the **steampunk / FF6 machinery idiom**
+  (see DESIGN.md → ENVIRONMENT PLAN → *Machinery style*), built from the
+  shared parts kit `M` in pixels.js — mines per ore and Mk look, Foundry,
+  Molder, Fastener, Crane, Manufacturer; alloy icons as ore-colour stacks,
+  belt items, pipes, spool, menus; the Hub/Depot art retired. Check each new
+  sprite on `dev/machines.html` before it lands.
 - Sound: menu tick, spool/socket, belt clatter, retool cue on the ladder.
 - Content: the `PAGES` file organised for the user to write into (graded slots
   by length/punctuation); the passport/glosses cover the grown word list.

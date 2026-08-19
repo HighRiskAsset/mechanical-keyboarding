@@ -73,8 +73,26 @@
   const FILL = {
     grass(x, seed) {
       R(x, P.gA, 0, 0, T, T);
-      lattice(x, seed, P.gB, P.gC, 0.55);
-      if (seed % 5 === 0) { const px = 2 + seed % 10, py = 4 + (seed * 3) % 8; R(x, P.gD, px, py, 1, 2); R(x, P.gC, px + 1, py - 1, 1, 2); }
+      // Cross-hatched meadow blades: the tile has deliberate clumps and
+      // shadow pockets rather than a uniform random-noise carpet.
+      for (let row = 0; row < 3; row++) {
+        const y = 2 + row * 5;
+        const offset = (seed * 3 + row * 5) % 9;
+        for (let x0 = offset - 7; x0 < T; x0 += 9) {
+          const h = 1 + ((seed + row + x0 + 18) % 4 === 0 ? 1 : 0);
+          R(x, P.gC, x0 + 1, y + 1, 1, h);
+          R(x, P.gB, x0 + 2, y, 1, h + 1);
+          if ((seed + row + x0) % 3 === 0) R(x, P.gB, x0 + 3, y + 1, 1, 1);
+        }
+      }
+      if (seed % 4 === 0) {
+        const px = 2 + seed % 10, py = 4 + (seed * 3) % 8;
+        R(x, P.gD, px, py, 1, 3); R(x, P.gC, px + 1, py - 1, 1, 3); R(x, P.gB, px + 2, py, 2, 1);
+      }
+      if (seed % 7 === 2) {
+        const px = 3 + (seed * 5) % 9, py = 3 + (seed * 7) % 8;
+        R(x, P.gD, px, py + 1, 1, 2); R(x, P.petal, px - 1, py, 1, 1); R(x, P.petal, px + 1, py, 1, 1); R(x, P.brass3, px, py, 1, 1);
+      }
     },
     frost(x, seed) {
       R(x, P.fA, 0, 0, T, T);
@@ -86,7 +104,7 @@
       R(x, P.dA, 0, 0, T, T);
       specks(x, seed, P.dC, 5, 2, 1, 3);
       specks(x, seed, P.dB, 4, 1, 1, 7);
-      if (seed % 3 === 0) { const px = 3 + seed % 9, py = 2 + (seed * 5) % 11; R(x, P.dD, px, py + 1, 2, 1); R(x, P.dB, px, py, 2, 1); }
+      if (seed % 3 === 0) { const px = 3 + seed % 9, py = 2 + (seed * 5) % 11; R(x, P.dD, px, py + 1, 2, 1); R(x, P.dB, px, py, 2, 1); R(x, P.sB, px, py, 1, 1); }
     },
     sand(x, seed) {
       R(x, P.sA, 0, 0, T, T);
@@ -180,16 +198,17 @@
       }
     },
     water(x, seed, frame) {
-      // navy base, darker troughs, teal wave dashes that step with the frame
+      // Interlocking wavelets move diagonally across a deep blue base. A
+      // separate bright crest makes water feel lively even at 16px tiles.
       R(x, P.wA, 0, 0, T, T);
       specks(x, seed, P.wC, 3, 4, 1, 101);
       const o = frame ? 2 : 0;
       for (let row = 0; row < 3; row++) {
         const wy = 2 + row * 5 + (seed % 2);
         const wx = ((row * 6 + seed * 3 + o) % 14);
-        R(x, P.wB, wx, wy, 3, 1); R(x, P.wC, wx + 1, wy + 1, 2, 1);
+        R(x, P.wB, wx, wy, 4, 1); R(x, P.wF, wx + 1, wy, 2, 1); R(x, P.wC, wx + 2, wy + 1, 2, 1);
       }
-      if (seed % 4 === 0) R(x, P.wB, (seed * 5 + o) % 15, 9, 1, 1);
+      if (seed % 4 === 0) { const px = (seed * 5 + o) % 15; R(x, P.wF, px, 9, 1, 1); R(x, P.wB, px + 1, 9, 2, 1); }
     },
   };
 

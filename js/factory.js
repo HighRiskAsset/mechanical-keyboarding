@@ -166,7 +166,9 @@
     }
 
     dotTex = PIXELS.matDotTex();
-    for (let f = 0; f < 4; f++) {
+    // Eight walk beats preserve the old cadence while giving the operator
+    // distinct contact, passing and stride silhouettes.
+    for (let f = 0; f < 8; f++) {
       charTex.down.push(PIXELS.characterTex('down', f));
       charTex.up.push(PIXELS.characterTex('up', f));
       charTex.side.push(PIXELS.characterTex('side', f));
@@ -801,7 +803,7 @@
       const ny = Math.max(LIM.n, Math.min(LIM.s, playerY + vy * dt));
       if ((stuck || !collides(playerX, ny)) && terrainOK(playerX, playerY, playerX, ny)) playerY = ny;
       walkClock += dt;
-      if (walkClock > 7) { walkClock = 0; walkFrame = (walkFrame + 1) % 4; }
+      if (walkClock > 4) { walkClock = 0; walkFrame = (walkFrame + 1) % 8; }
     } else {
       walkFrame = 0;
     }

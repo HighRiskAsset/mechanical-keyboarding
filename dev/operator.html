@@ -15,7 +15,7 @@
 <script src="../js/tiles.js"></script>
 <script>
 (async function () {
-  const SCALE = 8, W = 200, H = 150;
+  const SCALE = 5, W = 360, H = 150;
   const c = document.createElement('canvas'); c.width = W; c.height = H;
   const x = c.getContext('2d');
   for (let ty = 0; ty < Math.ceil(H / 16); ty++) for (let tx = 0; tx < Math.ceil(W / 16); tx++) x.drawImage(TILES.fill('grass', (tx * 7 + ty * 13) % 23), tx * 16, ty * 16);
@@ -27,8 +27,8 @@
   const dirs = ['down', 'up', 'side'];
   dirs.forEach((d, row) => {
     label(d, 2, 10 + row * 34);
-    for (let f = 0; f < 4; f++) put(PIXELS.characterCanvas(d, f), 30 + f * 20, 2 + row * 34);
-    if (d === 'side') for (let f = 0; f < 4; f++) put(PIXELS.characterCanvas(d, f), 120 + f * 20, 2 + row * 34, true);
+    for (let f = 0; f < 8; f++) put(PIXELS.characterCanvas(d, f), 30 + f * 20, 2 + row * 34);
+    if (d === 'side') for (let f = 0; f < 8; f++) put(PIXELS.characterCanvas(d, f), 190 + f * 20, 2 + row * 34, true);
   });
   label('work', 2, 10 + 3 * 34);
   for (let f = 0; f < 4; f++) put(PIXELS.workCanvas(f), 30 + f * 20, 2 + 3 * 34);

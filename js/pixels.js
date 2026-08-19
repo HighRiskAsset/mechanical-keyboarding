@@ -1,39 +1,47 @@
 // Code-authored pixel sprites for the machine frontier. Deterministic,
-// palette-disciplined, no binary assets. Anime-bright: lush greens, clean
-// cream-and-teal machines, warm gold light. Global namespace: PIXELS
+// palette-disciplined, no binary assets. The visual target is a dense,
+// jewel-toned anime frontier: readable CrossCode-like ground strata, warm
+// settlement materials, and SNES-scale character silhouettes. Global: PIXELS
 (function () {
   'use strict';
 
   // One palette, no strays. brass* keys kept for the bitmap-font callers.
   const P = {
-    ink: '#221d29',
-    white: '#ffffff',
-    // machines: cream bodies, teal panels, steel frames
-    cream: '#f2ead6', cream2: '#d9cdb0',
-    teal: '#3fa8a0', teal2: '#2f7f7a',
-    frame: '#4b4a54', frame2: '#6f6e7a', dark: '#2e2d33', steel: '#b9bec7',
-    orange: '#e8834a', red: '#d84f4f', green: '#6cc46c',
-    glow: '#ffd27f',
-    brass1: '#c99a35', brass2: '#f2c14e', brass3: '#ffe08a',
+    ink: '#172033',
+    white: '#fff4dc',
+    // Machinery — steampunk in the SNES Final Fantasy idiom, not a clean
+    // future. Cast-iron plate with riveted seams, brass hoops and gauge
+    // rings, copper pipework, oxblood enamel panels, verdigris fittings,
+    // sooted flues and one live firebox per machine. Nothing on a machine
+    // is ceramic or cyan: it is heavy warm metal that burns something.
+    ironO: '#151824', iron3: '#2c303e', iron2: '#454b5c', iron: '#646c7d', ironL: '#8f96a3',
+    steel: '#c2c8d4',                                   // rivet heads, polished rod
+    enam: '#8c3f42', enamD: '#571f2c', enamL: '#bd6157', // oxblood enamel panel
+    soot: '#171420', steam: '#e4e0da',                   // firebox mouth / steam + gauge face
+    teal: '#4f8f7c', teal2: '#2f5c54',                   // verdigris on old copper
+    cream: '#f0e0bc', cream2: '#c3ab84',                 // linen, canvas, paper
+    orange: '#f06d4f', red: '#d84d66', green: '#80d66e',
+    glow: '#ffe28a',
+    brass1: '#bf813a', brass2: '#f0bd4f', brass3: '#fff0a6',
     // the land — legacy keys (props, vignette, old drawers)
     grass1: '#6cbf5a', grass2: '#5fae4f', grass3: '#86d370', grass4: '#549c46',
     dirt1: '#c2955f', dirt2: '#a87f4d', dirt3: '#8f6a3e',
     water1: '#4ba8d8', water2: '#3b8ec4', water3: '#bfe8f5',
-    leaf1: '#3f9147', leaf2: '#5cb457', leaf3: '#2f7038',
-    trunk: '#7a5638', trunk2: '#5d4128',
+    leaf1: '#4e9e52', leaf2: '#a4cf63', leaf3: '#245a43',
+    trunk: '#84503a', trunk2: '#4b2c2d',
     rock1: '#9aa0ab', rock2: '#7c828e', rock3: '#c6ccd6',
-    // terrain kit (tiles.js) — SNES FF3-USA reference, one notch brighter.
-    // 5-bit-ish steps; every ground kind is a 3–4 colour ramp + one outline.
+    // terrain kit (tiles.js). High chroma highlights sit over cool, deep
+    // shadows so paths, water and elevation still read at a glance.
     tOut: '#0c1a0c',                                    // terrain outline (green-black)
-    gA: '#2c9c3c', gB: '#3cac4c', gC: '#1c7c2c', gD: '#10561c',            // grass
-    dA: '#a07848', dB: '#b88c58', dC: '#80603c', dD: '#584028',            // worn dirt
-    sA: '#d8c488', sB: '#e8d8a0', sC: '#b8a068',                           // sand
-    wA: '#184c60', wB: '#2c7080', wC: '#0c3444', wF: '#a8dce0', wO: '#081c24', // water
+    gA: '#67ad4a', gB: '#9ad35e', gC: '#397d3e', gD: '#1f5036',            // sunlit meadow grass
+    dA: '#bc8a4c', dB: '#e0b665', dC: '#83563a', dD: '#4e3029',            // warm ochre dirt
+    sA: '#ddc47e', sB: '#f1dfa2', sC: '#ae8657',                           // sunlit sand
+    wA: '#17627a', wB: '#278ca1', wC: '#10465f', wF: '#b8edf0', wO: '#082b3b', // cool blue water
     pA: '#98a080', pB: '#b0b898', pC: '#6c7458', pD: '#484c38',            // paved pad (sage cobble)
     rA: '#8c8478', rB: '#a49c8c', rC: '#6c6458', rD: '#484038',            // rock floor / scree
-    cA: '#c8a870', cB: '#a08050', cC: '#705838', cD: '#403018', cO: '#181008', // cliff, tan
-    kA: '#b0b0b8', kB: '#888890', kC: '#5c5c68', kD: '#343440',            // cliff, grey stone
-    vA: '#8880a0', vB: '#5c5878', vC: '#3c3854', vD: '#201c30',            // cliff, violet canyon
+    cA: '#e0bd79', cB: '#b9894f', cC: '#7d5738', cD: '#463022', cO: '#21150f', // cliff, tan
+    kA: '#b9b9c2', kB: '#7b8195', kC: '#4a5067', kD: '#292d42',            // cool grey stone
+    vA: '#9a86bb', vB: '#665985', vC: '#403c62', vD: '#252340',            // violet canyon
     hA: '#6c6480', hB: '#847c98', hC: '#4c4460', hD: '#302c40',            // shale canyon floor
     mA: '#587040', mB: '#6c8450', mC: '#405030', mD: '#2c4c48', mE: '#8ca060', // marsh
     bA: '#8c6840', bB: '#a88050', bC: '#5c4028', bD: '#3c2818',            // boards / planks
@@ -44,7 +52,7 @@
     fA: '#6c9c6c', fB: '#d8e8dc', fC: '#4c7c50',                           // frost grass
     // ores
     ironore: '#8b93a3', ironore2: '#5f6674',
-    copper: '#d8814e', copper2: '#a85c32',
+    copper: '#d8814e', copper2: '#a85c32', copper3: '#f5ac77',
     quartz: '#e59ae0', quartz2: '#c470c9', quartz3: '#f5c9f2',
     stoneore: '#a8a49c', stoneore2: '#6c6864',
     coal: '#303038', coal2: '#181820', coal3: '#585868',
@@ -53,8 +61,8 @@
     // paper goods
     paper: '#f4ecd8', paper2: '#d8cba8',
     // the operator (SNES-style: 3 tones per material + one dark outline)
-    skin: '#f5cfa6', skin2: '#d9a878', hair: '#6b4a32', hair2: '#8c6a48',
-    suit: '#4a78c8', suit2: '#3a5f9e', suit3: '#6a98e0', hat: '#f2c14e', hat2: '#c99a35',
+    skin: '#f8cda4', skin2: '#cf946e', hair: '#5b3a35', hair2: '#9a6047',
+    suit: '#3e78c8', suit2: '#28508f', suit3: '#6ca9eb', hat: '#ffd05b', hat2: '#c88832',
     iris: '#5a9ce0', eye: '#1a2440', boot: '#4a3220', boot2: '#2c1c10',
     petal: '#f5b8d9',
   };
@@ -248,125 +256,257 @@
     return c;
   }
 
-  // ---------- mining rig, 26x36, 4 frames ----------
-  // tier 1: hand drill rig on a tripod. tier 3: powered mine with a piston.
+  // ---------- machinery parts kit ----------
+  // Every machine is assembled from one shared steampunk vocabulary, so the
+  // whole frontier reads as a single workshop: riveted cast-iron plate,
+  // brass hoops and dials, copper pipework, oxblood enamel, a flue that
+  // smokes and a firebox that burns. Final Fantasy machinery — worked metal
+  // and fire — not a clean future factory. Brass is trim, never a surface:
+  // brass1 carries it, brass2 is a one-pixel ridge, brass3 is a glint.
+  const M = {
+    plate(x, px, py, w, h) {                       // iron plate, lit top edge, dark foot
+      R(x, P.ironO, px - 1, py - 1, w + 2, h + 2);
+      R(x, P.iron2, px, py, w, h);
+      R(x, P.iron, px, py, w, Math.max(1, h >> 1));
+      R(x, P.ironL, px, py, w, 1);
+      R(x, P.iron3, px, py + h - 1, w, 1);
+    },
+    rivets(x, px, py, w, step) {                   // a seam of lit rivet heads
+      for (let i = 0; i < w; i += (step || 3)) { R(x, P.iron3, px + i, py + 1, 1, 1); R(x, P.steel, px + i, py, 1, 1); }
+    },
+    band(x, px, py, w) {                           // brass hoop: lit ridge, shadow beneath
+      R(x, P.brass1, px, py, w, 2);
+      R(x, P.brass2, px + 1, py, Math.max(1, w - 2), 1);
+      R(x, P.iron3, px, py + 2, w, 1);
+    },
+    vband(x, px, py, h) { R(x, P.brass1, px, py, 2, h); R(x, P.brass2, px, py + 1, 1, Math.max(1, h - 2)); },
+    gauge(x, px, py) {                             // 5x5 dial: iron bezel, brass ring, pale face
+      R(x, P.ironO, px + 1, py, 3, 5); R(x, P.ironO, px, py + 1, 5, 3);
+      R(x, P.brass1, px + 1, py + 1, 3, 3); R(x, P.brass2, px + 1, py + 1, 2, 1);
+      R(x, P.steam, px + 2, py + 2, 1, 1);
+    },
+    firebox(x, px, py, w, h) {                     // sooted mouth, fire banked at the grate
+      R(x, P.ironO, px - 1, py - 1, w + 2, h + 2);
+      R(x, P.soot, px, py, w, h);
+      R(x, P.orange, px + 1, py + h - 3, w - 2, 2);
+      R(x, P.glow, px + 2, py + h - 2, w - 4, 1);
+      R(x, P.brass1, px - 1, py + h, w + 2, 1);    // the sill under the door
+    },
+    flue(x, px, py, h) {                           // chimney: iron tube, brass collar, flared lip
+      R(x, P.ironO, px - 1, py + 2, 6, h - 2);
+      R(x, P.iron2, px, py + 3, 4, h - 3);
+      R(x, P.iron, px, py + 3, 2, h - 3);
+      R(x, P.ironO, px - 2, py, 8, 3);
+      R(x, P.iron, px - 1, py + 1, 6, 1);
+      R(x, P.brass1, px, py + 6, 4, 1);
+    },
+    pipeH(x, px, py, w) {                          // copper run with brass flanges
+      R(x, P.ironO, px, py - 1, w, 5); R(x, P.copper2, px, py, w, 3); R(x, P.copper, px, py, w, 1);
+      for (let i = 1; i < w; i += 6) { R(x, P.brass1, px + i, py - 1, 1, 5); R(x, P.brass2, px + i, py, 1, 1); }
+    },
+    pipeV(x, px, py, h) {
+      R(x, P.ironO, px - 1, py, 5, h); R(x, P.copper2, px, py, 3, h); R(x, P.copper, px, py, 1, h);
+      for (let i = 1; i < h; i += 6) { R(x, P.brass1, px - 1, py + i, 5, 1); R(x, P.brass2, px, py + i, 1, 1); }
+    },
+    wheel(x, cx, cy, r, f) {                       // flywheel / pulley; f turns the spokes
+      disc(x, P.ironO, cx, cy, r + 1);
+      disc(x, P.brass1, cx, cy, r);
+      if (r >= 4) {                                // big enough for a rim, a web and spokes
+        disc(x, P.iron3, cx, cy, r - 1);
+        if ((f || 0) % 2) for (let i = 2 - r; i < r - 1; i++) { R(x, P.brass1, cx + i, cy + i, 1, 1); R(x, P.brass1, cx + i, cy - i, 1, 1); }
+        else { R(x, P.brass1, cx - r + 1, cy, r * 2 - 1, 1); R(x, P.brass1, cx, cy - r + 1, 1, r * 2 - 1); }
+      } else if (r === 3) {                        // four dark ports read as spokes turning
+        for (const [dx, dy] of ((f || 0) % 2 ? [[-1, -1], [1, -1], [-1, 1], [1, 1]] : [[0, -2], [0, 2], [-2, 0], [2, 0]])) R(x, P.iron3, cx + dx, cy + dy, 1, 1);
+      }
+      R(x, P.iron3, cx, cy, 1, 1); R(x, P.brass2, cx, cy - 1, 1, 1);
+    },
+    puff(x, px, py, f) {                           // steam off a flue: rises and thins
+      const cols = ['rgba(228,224,218,0.75)', 'rgba(228,224,218,0.45)', 'rgba(228,224,218,0.2)'];
+      for (let i = 0; i < 3; i++) {
+        const r = 1 + i, cy = py - (f % 4) - i * 3;
+        if (cy - r < -1) continue;
+        x.fillStyle = cols[i];
+        x.fillRect(px + i - r, cy - r, r * 2, r * 2);
+      }
+    },
+  };
+
+  // ---------- mining rigs, 26x36, 4 frames ----------
+  // Three hand-me-down machines, each a step up in ambition: a timber
+  // prospector rig, a riveted steam extractor, a beam-engine works. Read the
+  // silhouette first — derrick, boiler, walking beam — then the brass.
   function machine(tier, frame) {
     const [c, x] = canvas(26, 36);
+    R(x, P.ironO, 2, 34, 22, 2); R(x, P.iron3, 5, 33, 16, 1);      // planted shadow
     if (tier === 1) {
-      // tripod legs
-      R(x, P.dark, 5, 22, 2, 12); R(x, P.dark, 19, 22, 2, 12);
-      R(x, P.frame, 5, 20, 16, 2);
-      // motor box, cream with a teal stripe
-      R(x, P.cream, 7, 10, 12, 8); R(x, P.white, 7, 10, 12, 1);
-      R(x, P.teal, 7, 15, 12, 2);
-      R(x, P.brass2, 8, 12, 1, 1); R(x, P.brass2, 17, 12, 1, 1);
-      R(x, P.dark, 10, 12, 6, 2);
-      // drill shaft + bit (bobs with the cast cycle)
+      // Prospector rig: a timber derrick splayed over a little upright
+      // boiler, hand-built, the drill rod bobbing on every beat.
       const bob = [0, 1, 2, 1][frame];
-      R(x, P.frame, 12, 18, 2, 6 + bob);
-      const by = 24 + bob;
-      R(x, P.frame2, 10, by, 6, 2);
-      R(x, frame % 2 ? P.steel : P.frame2, 11, by + 2, 4, 2);
-      R(x, P.frame, 12, by + 4, 2, 2);
-      // ore chute
-      R(x, P.dirt3, 20, 26, 5, 4); R(x, P.ironore, 21, 25, 3, 2);
-      // small spoil pile
-      R(x, P.dirt2, 2, 32, 6, 2); R(x, P.dirt3, 3, 31, 3, 1);
+      for (const [lx, ly] of [[14, 11], [13, 17], [11, 23], [9, 29], [16, 11], [17, 17], [19, 23], [21, 29]]) {
+        R(x, P.ironO, lx - 1, ly, 4, 6); R(x, P.trunk2, lx, ly, 2, 6); R(x, P.trunk, lx, ly, 1, 6);
+      }
+      R(x, P.ironO, 12, 21, 9, 3); R(x, P.trunk2, 13, 22, 7, 1); R(x, P.trunk, 13, 22, 7, 1);
+      R(x, P.ironO, 8, 30, 15, 2); R(x, P.trunk2, 9, 30, 13, 1);
+      R(x, P.ironO, 12, 8, 8, 4); R(x, P.trunk2, 13, 9, 6, 2); R(x, P.trunk, 13, 9, 6, 1);
+      R(x, P.ironO, 14, 10, 4, 4); R(x, P.iron2, 15, 11, 2, 2); R(x, P.brass1, 15, 11, 1, 1);
+      R(x, P.ironO, 14, 13 + bob, 3, 14); R(x, P.iron2, 15, 13 + bob, 1, 13); R(x, P.steel, 15, 14 + bob, 1, 4);
+      R(x, P.ironO, 13, 26 + bob, 5, 4); R(x, P.iron2, 14, 27 + bob, 3, 2); R(x, P.brass1, 15, 28 + bob, 1, 1);
+      M.plate(x, 2, 16, 7, 15);
+      M.gauge(x, 3, 17);
+      M.band(x, 2, 22, 7);
+      M.firebox(x, 3, 25, 5, 4);
+      M.flue(x, 3, 7, 10);
+      M.puff(x, 4, 6, frame);
+      R(x, P.dirt3, 5, 31, 4, 2); R(x, P.ironore, 19, 31, 3, 2);
     } else if (tier === 2) {
-      // compact powered rig (transitional; rarely seen)
-      R(x, P.frame, 4, 32, 18, 2);
-      R(x, P.cream, 6, 14, 14, 18); R(x, P.white, 6, 14, 14, 1);
-      R(x, P.teal, 6, 20, 14, 3);
-      R(x, [P.orange, P.red][frame % 2], 8, 16, 2, 2);
-      R(x, P.frame, 11, 6, 4, 8);
-      R(x, P.frame2, 9, 4 + (frame % 2), 8, 2);
+      // Steam extractor: a riveted boiler-house with an oxblood door, twin
+      // dials, a turning flywheel and a flue that never stops.
+      M.plate(x, 3, 15, 20, 16);
+      R(x, P.ironO, 1, 12, 24, 4); R(x, P.iron, 2, 13, 22, 2); R(x, P.ironL, 2, 13, 22, 1);
+      M.band(x, 5, 17, 16);
+      M.rivets(x, 4, 22, 18, 5);
+      R(x, P.ironO, 8, 19, 9, 7); R(x, P.enamD, 9, 20, 7, 5); R(x, P.enam, 9, 20, 7, 3); R(x, P.enamL, 9, 20, 7, 1);
+      R(x, P.brass1, 10, 22, 5, 1);
+      M.gauge(x, 3, 20); M.gauge(x, 18, 20);
+      M.firebox(x, 8, 26, 8, 4);
+      M.wheel(x, 20, 26, 3, frame);
+      M.flue(x, 15, 5, 9);
+      M.puff(x, 16, 4, frame);
+      R(x, P.ironO, 6, 8, 4, 6); R(x, P.brass1, 7, 9, 2, 5); R(x, P.brass2, 7, 9, 1, 5);
+      M.pipeV(x, 2, 18, 13);
     } else {
-      // powered mine: cream housing, teal roof, working piston
-      R(x, P.frame, 3, 33, 20, 3);
-      R(x, P.cream, 4, 12, 18, 21); R(x, P.cream2, 4, 30, 18, 3);
-      R(x, P.teal, 3, 10, 20, 3); R(x, P.teal2, 3, 12, 20, 1);
-      // piston
-      const armY = [2, 5, 8, 5][frame];
-      R(x, P.frame2, 9, armY, 8, 2);
-      R(x, P.frame, 11, armY + 2, 4, 12 - armY);
-      // power lamp
-      R(x, [P.orange, P.brass2][frame % 2], 6, 15, 2, 2);
-      // teal door with a warm window
-      R(x, P.teal2, 9, 24, 8, 9);
-      R(x, P.glow, 11, 26, 4, 3);
-      // side pipe
-      R(x, P.frame2, 22, 18, 3, 2); R(x, P.frame2, 23, 18, 2, 8);
+      // Beam-engine works: the walking beam rocks on its post, the flywheel
+      // turns, the firebox roars. The frontier's real machine.
+      const tilt = [0, 1, 0, -1][frame];
+      M.plate(x, 2, 15, 22, 16);
+      R(x, P.ironO, 0, 12, 26, 4); R(x, P.iron, 1, 13, 24, 2); R(x, P.ironL, 1, 13, 24, 1);
+      M.rivets(x, 3, 22, 20, 5);
+      R(x, P.ironO, 10, 5, 6, 10); R(x, P.iron2, 11, 6, 4, 9); R(x, P.iron, 11, 6, 1, 9);
+      R(x, P.ironO, 3, 6 + tilt, 9, 4); R(x, P.iron2, 4, 7 + tilt, 7, 2); R(x, P.ironL, 4, 7 + tilt, 7, 1);
+      R(x, P.ironO, 14, 6 - tilt, 9, 4); R(x, P.iron2, 15, 7 - tilt, 7, 2); R(x, P.ironL, 15, 7 - tilt, 7, 1);
+      R(x, P.brass1, 12, 8, 2, 2); R(x, P.brass2, 12, 8, 1, 1);
+      R(x, P.ironO, 4, 10 + tilt, 3, 9); R(x, P.iron, 5, 10 + tilt, 1, 8);
+      R(x, P.ironO, 19, 10 - tilt, 3, 7); R(x, P.iron, 20, 10 - tilt, 1, 6);
+      M.wheel(x, 6, 25, 5, frame);
+      R(x, P.ironO, 12, 17, 10, 7); R(x, P.enamD, 13, 18, 8, 5); R(x, P.enam, 13, 18, 8, 3); R(x, P.enamL, 13, 18, 8, 1);
+      M.gauge(x, 13, 18); R(x, P.brass1, 19, 19, 2, 3); R(x, P.brass2, 19, 19, 1, 3);
+      M.firebox(x, 13, 26, 8, 4);
+      M.flue(x, 20, 3, 10);
+      M.puff(x, 21, 2, frame);
     }
     return c;
   }
 
   // ---------- production stations 30x30 ----------
+  // Works buildings in the same idiom: a blast furnace, a crucible foundry,
+  // a belt-driven machine shop, an assembly hall. Same kit, heavier iron —
+  // each one gets a chimney on the roof, one fire, and one thing that moves.
   function station(kind) {
     const [c, x] = canvas(30, 30);
+    R(x, P.ironO, 1, 28, 28, 2);
     if (kind === 'bigrams') {
-      // SMELTER: cream furnace, glowing mouth, chimney
-      R(x, P.frame, 2, 28, 26, 2);
-      R(x, P.cream, 3, 10, 24, 18); R(x, P.white, 3, 10, 24, 1);
-      R(x, P.frame, 20, 2, 5, 9); R(x, P.frame2, 20, 2, 5, 1);
-      R(x, P.dark, 7, 15, 12, 10);
-      R(x, P.orange, 9, 17, 8, 7); R(x, P.glow, 11, 19, 4, 3);
-      R(x, P.ink, 9, 20, 8, 1); R(x, P.ink, 12, 17, 1, 7);
-      R(x, P.teal, 3, 11, 3, 12); R(x, P.teal2, 3, 21, 3, 2);
-    } else if (kind === 'words') {
-      // CONSTRUCTOR: teal cabinet, screen, overhead arm holding a gear
-      R(x, P.frame, 2, 28, 26, 2);
-      R(x, P.teal, 3, 12, 24, 16); R(x, P.teal2, 3, 26, 24, 2);
-      R(x, P.cream, 3, 8, 24, 5); R(x, P.white, 3, 8, 24, 1);
-      R(x, P.dark, 5, 9, 9, 3); R(x, P.brass2, 7, 10, 2, 1); R(x, P.green, 11, 10, 1, 1);
-      R(x, P.frame, 16, 1, 2, 8); R(x, P.frame, 16, 1, 9, 2);
-      R(x, P.frame2, 23, 3, 2, 3);
-      R(x, P.frame2, 21, 6, 3, 3); R(x, P.brass2, 22, 7, 1, 1);
-      R(x, P.glow, 8, 17, 6, 4); R(x, P.dark, 9, 18, 4, 2);
+      // SMELTER: a blast furnace that tapers as it climbs, charged from the
+      // hopper on top and tapped at the foot into a mould that still glows.
+      M.plate(x, 6, 20, 15, 8);                    // hearth
+      M.plate(x, 8, 14, 11, 6);                    // mid stack
+      M.plate(x, 10, 9, 7, 5);                     // throat
+      M.band(x, 8, 14, 11); M.band(x, 6, 20, 15);
+      M.rivets(x, 7, 24, 13, 4);
+      R(x, P.ironO, 8, 4, 11, 5); R(x, P.iron2, 9, 5, 9, 4); R(x, P.iron, 9, 5, 9, 1);
+      R(x, P.soot, 11, 5, 5, 2); R(x, P.ironore, 12, 5, 3, 1);   // ore in the hopper
+      M.firebox(x, 8, 22, 8, 5);
+      M.flue(x, 23, 4, 11); M.puff(x, 24, 3, 0);
+      R(x, P.ironO, 20, 14, 7, 8); R(x, P.iron2, 21, 15, 5, 6); R(x, P.iron, 21, 15, 5, 1); M.gauge(x, 21, 16);
+      R(x, P.brass1, 16, 25, 6, 1); R(x, P.glow, 16, 25, 4, 1);  // the tap runner
+      R(x, P.ironO, 21, 24, 7, 5); R(x, P.iron2, 22, 25, 5, 3); R(x, P.orange, 22, 25, 5, 1); R(x, P.glow, 23, 25, 3, 1);
+      M.pipeV(x, 2, 16, 12);
     } else if (kind === 'foundry') {
-      // FOUNDRY: squat cream crucible house, two short stacks, a tilted ladle
-      R(x, P.frame, 2, 28, 26, 2);
-      R(x, P.cream, 3, 12, 24, 16); R(x, P.white, 3, 12, 24, 1);
-      R(x, P.frame, 6, 3, 4, 10); R(x, P.frame2, 6, 3, 4, 1);
-      R(x, P.frame, 20, 5, 4, 8); R(x, P.frame2, 20, 5, 4, 1);
-      R(x, P.teal, 3, 22, 24, 3); R(x, P.teal2, 3, 25, 24, 1);
-      R(x, P.dark, 10, 15, 10, 7);
-      R(x, P.orange, 11, 16, 8, 5); R(x, P.glow, 13, 17, 4, 2);
-      R(x, P.frame2, 12, 9, 8, 3); R(x, P.steel, 13, 9, 6, 1);
-      R(x, P.brass2, 5, 14, 2, 1); R(x, P.brass2, 23, 14, 2, 1);
+      // FOUNDRY: a crucible house — twin flues over the fire, and a ladle on
+      // its trunnions tipping molten metal into the mould bed below.
+      M.plate(x, 2, 13, 26, 15);
+      R(x, P.ironO, 0, 10, 30, 4); R(x, P.iron, 1, 11, 28, 2); R(x, P.ironL, 1, 11, 28, 1);
+      M.rivets(x, 3, 14, 24, 4);
+      M.flue(x, 6, 2, 9); M.puff(x, 7, 1, 0);
+      M.flue(x, 20, 4, 7);
+      M.gauge(x, 4, 16); M.gauge(x, 10, 16);
+      M.firebox(x, 4, 22, 9, 5);
+      R(x, P.ironO, 16, 16, 9, 8); R(x, P.iron2, 17, 17, 7, 6); R(x, P.iron, 17, 17, 7, 2);
+      M.band(x, 17, 19, 7);
+      R(x, P.orange, 17, 16, 7, 1); R(x, P.glow, 19, 16, 3, 1);
+      R(x, P.brass1, 15, 18, 1, 4); R(x, P.brass1, 25, 18, 1, 4);
+      R(x, P.orange, 20, 24, 1, 2); R(x, P.glow, 20, 24, 1, 1);
+      R(x, P.ironO, 17, 25, 8, 4); R(x, P.iron2, 18, 26, 6, 2); R(x, P.orange, 18, 26, 6, 1); R(x, P.glow, 19, 26, 4, 1);
+    } else if (kind === 'words') {
+      // CONSTRUCTOR: a machine shop under a timber truss — a line shaft on
+      // brass pulleys, leather belting down to the press, dies at the bench.
+      M.plate(x, 2, 14, 26, 14);
+      R(x, P.ironO, 0, 6, 30, 5); R(x, P.trunk2, 1, 7, 28, 3); R(x, P.trunk, 1, 7, 28, 1);
+      R(x, P.ironO, 3, 11, 24, 2); R(x, P.iron, 4, 11, 22, 1);
+      M.wheel(x, 7, 12, 2, 0); M.wheel(x, 15, 12, 2, 1); M.wheel(x, 22, 12, 2, 0);
+      R(x, P.trunk2, 7, 14, 1, 6); R(x, P.trunk2, 15, 14, 1, 4); R(x, P.trunk2, 22, 14, 1, 5);
+      M.band(x, 3, 17, 24);
+      M.rivets(x, 4, 25, 22, 5);
+      R(x, P.ironO, 4, 20, 9, 8); R(x, P.iron3, 5, 21, 7, 6);
+      R(x, P.iron2, 6, 22, 5, 3); R(x, P.steel, 6, 22, 5, 1); R(x, P.brass1, 6, 26, 5, 1);
+      R(x, P.ironO, 14, 20, 8, 5); R(x, P.enamD, 15, 21, 6, 3); R(x, P.enam, 15, 21, 6, 2); R(x, P.enamL, 15, 21, 6, 1);
+      M.gauge(x, 23, 20);
+      M.firebox(x, 15, 26, 6, 2);
+      M.flue(x, 24, 1, 7); M.puff(x, 25, 0, 0);
     } else {
-      // ASSEMBLER: wide body, two arms, intake rollers
-      R(x, P.frame, 1, 28, 28, 2);
-      R(x, P.cream, 2, 12, 26, 14); R(x, P.white, 2, 12, 26, 1);
-      R(x, P.teal, 2, 18, 26, 3);
-      R(x, P.frame, 6, 4, 2, 9); R(x, P.frame, 22, 4, 2, 9);
-      R(x, P.frame2, 4, 3, 6, 2); R(x, P.frame2, 20, 3, 6, 2);
-      R(x, P.brass2, 5, 14, 2, 2); R(x, P.green, 9, 14, 2, 2); R(x, P.brass2, 13, 14, 2, 2);
-      R(x, P.dark, 3, 26, 24, 2);
-      R(x, P.frame2, 5, 26, 2, 2); R(x, P.frame2, 11, 26, 2, 2); R(x, P.frame2, 17, 26, 2, 2); R(x, P.frame2, 23, 26, 2, 2);
+      // ASSEMBLER: the big hall — a gantry over the floor, a heavy flywheel,
+      // a bank of dials on oxblood, and the firebox that drives it all.
+      M.plate(x, 1, 13, 28, 15);
+      R(x, P.ironO, 0, 10, 30, 4); R(x, P.iron, 1, 11, 28, 2); R(x, P.ironL, 1, 11, 28, 1);
+      R(x, P.ironO, 1, 3, 18, 3); R(x, P.iron2, 2, 4, 16, 2); R(x, P.ironL, 2, 4, 16, 1);
+      R(x, P.ironO, 2, 6, 4, 5); R(x, P.iron2, 3, 6, 2, 5);
+      R(x, P.ironO, 14, 6, 4, 5); R(x, P.iron2, 15, 6, 2, 5);
+      R(x, P.iron3, 10, 6, 1, 4); R(x, P.ironO, 8, 10, 5, 3); R(x, P.trunk, 9, 11, 3, 1);
+      M.band(x, 2, 16, 26);
+      M.rivets(x, 3, 25, 24, 5);
+      M.wheel(x, 7, 22, 5, 0);
+      R(x, P.ironO, 14, 19, 13, 5); R(x, P.enamD, 15, 20, 11, 3); R(x, P.enam, 15, 20, 11, 2); R(x, P.enamL, 15, 20, 11, 1);
+      M.gauge(x, 16, 19); M.gauge(x, 22, 19);
+      M.firebox(x, 15, 25, 10, 3);
+      M.pipeH(x, 1, 24, 5);
+      M.flue(x, 23, 1, 10); M.puff(x, 24, 0, 0);
     }
     return c;
   }
 
   // ---------- freight depot 44x36, 4 frames (crane hook cycles) ----------
+  // A timber loading stage with an iron crane and a steam donkey engine
+  // chuffing away beside the crates.
   function press(frame) {
     const [c, x] = canvas(44, 36);
-    // platform
-    R(x, P.frame, 2, 30, 40, 6); R(x, P.frame2, 2, 30, 40, 1);
-    // canopy on posts
-    R(x, P.teal, 2, 2, 28, 4); R(x, P.teal2, 2, 5, 28, 1);
-    R(x, P.frame, 4, 6, 2, 24); R(x, P.frame, 26, 6, 2, 24);
-    // crate stack
-    R(x, P.trunk, 6, 22, 10, 8); R(x, P.trunk2, 6, 26, 10, 1);
-    R(x, P.trunk, 8, 15, 8, 7); R(x, P.brass1, 9, 17, 6, 1);
-    // crane tower + moving hook
-    R(x, P.frame, 34, 4, 3, 26); R(x, P.frame2, 34, 4, 3, 1);
-    R(x, P.frame2, 20, 6, 16, 2);
+    R(x, P.ironO, 1, 28, 42, 8);
+    R(x, P.bC, 2, 29, 40, 6);
+    for (let px = 2; px < 42; px += 5) R(x, P.bA, px, 29, 4, 1);
+    R(x, P.bB, 2, 29, 40, 1);
+    R(x, P.iron2, 2, 33, 40, 2); M.rivets(x, 4, 33, 36, 5);
+    // canvas awning on timber posts
+    R(x, P.ironO, 1, 2, 26, 5); R(x, P.cream, 2, 3, 24, 3); R(x, P.cream2, 2, 5, 24, 1);
+    for (let px = 4; px < 25; px += 6) R(x, P.enam, px, 3, 1, 3);
+    R(x, P.trunk2, 3, 7, 2, 22); R(x, P.trunk2, 23, 7, 2, 22);
+    R(x, P.trunk, 3, 7, 1, 22); R(x, P.trunk, 23, 7, 1, 22);
+    // crates
+    R(x, P.ironO, 5, 21, 12, 9); R(x, P.trunk, 6, 22, 10, 7); R(x, P.trunk2, 6, 26, 10, 1); R(x, P.brass1, 6, 24, 10, 1);
+    R(x, P.ironO, 7, 13, 10, 8); R(x, P.trunk, 8, 14, 8, 6); R(x, P.brass1, 9, 16, 6, 1);
+    // crane: iron mast, brass sheave, a hook that rises and falls
+    R(x, P.ironO, 32, 3, 5, 26); R(x, P.iron2, 33, 4, 3, 25); R(x, P.iron, 33, 4, 1, 25);
+    R(x, P.ironO, 19, 5, 15, 4); R(x, P.iron2, 20, 6, 13, 2); R(x, P.ironL, 20, 6, 13, 1);
+    M.wheel(x, 22, 7, 2, frame);
     const hy = [14, 17, 20, 17][frame];
-    R(x, P.dark, 27, 8, 1, hy - 8);
-    R(x, P.trunk, 24, hy, 7, 5); R(x, P.brass1, 25, hy + 2, 5, 1);
-    // signal lamp
-    R(x, P.frame, 40, 8, 3, 7);
-    R(x, frame % 2 ? P.green : P.red, 41, 9, 1, 2);
+    R(x, P.iron3, 22, 9, 1, hy - 9);
+    R(x, P.ironO, 18, hy, 9, 6); R(x, P.trunk, 19, hy + 1, 7, 4); R(x, P.brass1, 19, hy + 3, 7, 1);
+    // steam donkey engine beside the mast
+    M.plate(x, 37, 19, 6, 9);
+    M.band(x, 37, 22, 6);
+    M.firebox(x, 38, 25, 4, 3);
+    M.flue(x, 38, 9, 10); M.puff(x, 39, 8, frame);
+    M.gauge(x, 28, 20);
+    // signal lantern on the mast
+    R(x, P.ironO, 28, 9, 5, 8); R(x, P.brass1, 29, 10, 3, 6); R(x, P.brass2, 29, 10, 1, 6);
+    R(x, frame % 2 ? P.green : P.red, 30, 12, 1, 2);
     return c;
   }
 
@@ -374,7 +514,7 @@
   function noticeBoard(hasWork) {
     const [c, x] = canvas(26, 36);
     R(x, P.trunk2, 4, 20, 3, 16); R(x, P.trunk2, 19, 20, 3, 16);
-    R(x, P.teal, 1, 5, 24, 3); R(x, P.teal2, 1, 8, 24, 1);
+    R(x, P.ironO, 0, 4, 26, 5); R(x, P.iron2, 1, 5, 24, 3); R(x, P.iron, 1, 5, 24, 1); R(x, P.brass1, 1, 8, 24, 1);
     R(x, P.trunk, 2, 9, 22, 14); R(x, P.trunk2, 2, 21, 22, 2);
     // pinned contracts
     R(x, P.paper, 4, 11, 7, 8); R(x, P.paper2, 5, 13, 5, 1); R(x, P.paper2, 5, 15, 5, 1);
@@ -389,9 +529,8 @@
   // Hand-authored pixel grids: a big outlined head under a hard hat, 2x2
   // eyes (highlight over dark), three tones per material, cream shirt under
   // blue overalls, tool belt, boots, a small pack on the back. dir: 'down' |
-  // 'up' | 'side' (side faces RIGHT; factory mirrors for left). Four walk
-  // frames: stand, stride, stand, stride — the body rises one pixel on the
-  // strides (the canvas keeps a spare top row for it). work(): four frames at
+  // 'up' | 'side' (side faces RIGHT; factory mirrors for left). Eight walk
+  // beats add settle and pass poses between the two long strides. work(): four frames at
   // the machine, back view, hands working.
   const OP = {
     '.': null, o: () => P.ink,
@@ -538,16 +677,28 @@
 
   function character(dir, frame) {
     const [c, x] = canvas(16, 25);
-    const stride = frame === 1 || frame === 3;
-    const oy = stride ? 0 : 1;             // the body rises a pixel on the strides
+    const phase = frame % 8;
+    const forward = phase === 2 || phase === 3;
+    const backward = phase === 6 || phase === 7;
+    const stride = forward || backward;
+    const settle = phase === 1 || phase === 5;
+    const oy = (stride || settle) ? 0 : 1;
     if (dir === 'side') {
       grid(x, HEAD_S, 0, oy);
-      grid(x, frame === 1 ? TORSO_S_FWD : frame === 3 ? TORSO_S_BACK : TORSO_S, 0, oy + 12);
-      grid(x, stride ? (frame === 1 ? LEGS_S_STEP : mirror(LEGS_S_STEP)) : LEGS_S, 0, oy + 18);
+      grid(x, forward ? TORSO_S_FWD : backward ? TORSO_S_BACK : TORSO_S, 0, oy + 12);
+      grid(x, stride ? (forward ? LEGS_S_STEP : mirror(LEGS_S_STEP)) : LEGS_S, 0, oy + 18);
+      const arm = forward ? 1 : backward ? -1 : settle ? (phase === 1 ? 1 : -1) : 0;
+      R(x, P.ink, 13 + arm, 16 + (arm < 0 ? 1 : 0), 2, 3);
+      R(x, P.skin, 14 + arm, 16 + (arm < 0 ? 1 : 0), 1, 2);
     } else {
       grid(x, dir === 'up' ? HEAD_U : HEAD_D, 0, oy);
       grid(x, dir === 'up' ? TORSO_U : TORSO_D, 0, oy + 12);
-      grid(x, stride ? (frame === 1 ? LEGS_D_STEP : mirror(LEGS_D_STEP)) : LEGS_D, 0, oy + 18);
+      grid(x, stride ? (forward ? LEGS_D_STEP : mirror(LEGS_D_STEP)) : LEGS_D, 0, oy + 18);
+      const arm = forward ? 1 : backward ? -1 : 0;
+      if (arm) {
+        R(x, P.ink, arm > 0 ? 1 : 13, oy + 15, 2, 3);
+        R(x, P.skin, arm > 0 ? 2 : 13, oy + 16, 1, 1);
+      }
     }
     return c;
   }
@@ -566,10 +717,11 @@
   // ---------- belt segment 12x8, 4 frames (rolling) ----------
   function belt(frame) {
     const [c, x] = canvas(12, 8);
-    R(x, P.frame, 0, 2, 12, 4);
-    R(x, P.frame2, 0, 2, 12, 1);
-    R(x, P.teal, 1 + frame * 3, 3, 2, 2);
-    R(x, P.frame, 2, 6, 2, 2); R(x, P.frame, 8, 6, 2, 2);
+    R(x, P.ironO, 0, 1, 12, 6);
+    R(x, P.iron2, 0, 2, 12, 4); R(x, P.iron, 0, 2, 12, 1);
+    R(x, P.bC, 0, 3, 12, 2); R(x, P.bB, 1 + frame * 3, 3, 2, 2);
+    R(x, P.brass1, 0, 3, 1, 2); R(x, P.brass1, 11, 3, 1, 2);
+    R(x, P.iron2, 2, 6, 2, 2); R(x, P.iron2, 8, 6, 2, 2);
     return c;
   }
 
@@ -581,24 +733,40 @@
   }
 
   // ---------- belt / pipe tiles 16x16 (phase 3): one tile per path step ----------
-  // A belt: dark bed, steel rails, three pale treads rolling along its axis.
-  // A pipe: a grey tube with a seam and a glinting flow dash. dir 'h' | 'v'.
+  // A belt: an iron trestle carrying a slatted timber band over brass
+  // rollers — the slats walk along the axis as the frame advances.
+  // A pipe: riveted copper with brass flanges and a glinting flow dash.
   function beltTile(frame, dir, pipe) {
     const [c, x] = canvas(TILE, TILE);
     const horiz = dir === 'h';
     if (pipe) {
-      if (horiz) { R(x, P.frame, 0, 4, 16, 8); R(x, P.frame2, 0, 5, 16, 1); R(x, P.dark, 0, 10, 16, 1); R(x, P.oil3, 0, 7, 16, 1); }
-      else { R(x, P.frame, 4, 0, 8, 16); R(x, P.frame2, 5, 0, 1, 16); R(x, P.dark, 10, 0, 1, 16); R(x, P.oil3, 7, 0, 1, 16); }
-      const o = (frame * 4) % 16;
-      if (horiz) R(x, P.steel, o, 7, 3, 1); else R(x, P.steel, 7, o, 1, 3);
+      if (horiz) {
+        R(x, P.ironO, 0, 3, 16, 10);
+        R(x, P.copper2, 0, 4, 16, 8); R(x, P.copper, 0, 4, 16, 4); R(x, P.copper3, 0, 4, 16, 1);
+        R(x, P.brass1, 2, 3, 2, 10); R(x, P.brass2, 2, 3, 1, 10);
+        R(x, P.glow, (frame * 4) % 16, 8, 3, 1);
+      } else {
+        R(x, P.ironO, 3, 0, 10, 16);
+        R(x, P.copper2, 4, 0, 8, 16); R(x, P.copper, 4, 0, 4, 16); R(x, P.copper3, 4, 0, 1, 16);
+        R(x, P.brass1, 3, 2, 10, 2); R(x, P.brass2, 3, 2, 10, 1);
+        R(x, P.glow, 8, (frame * 4) % 16, 1, 3);
+      }
       return c;
     }
     if (horiz) {
-      R(x, P.dark, 0, 3, 16, 10); R(x, P.frame2, 0, 3, 16, 1); R(x, P.frame2, 0, 12, 16, 1);
-      for (let k = 0; k < 4; k++) { const o = (k * 4 + frame) % 16; R(x, P.steel, o, 5, 2, 6); }
+      R(x, P.ironO, 0, 2, 16, 12);
+      R(x, P.iron2, 0, 3, 16, 10); R(x, P.iron, 0, 3, 16, 1); R(x, P.iron3, 0, 12, 16, 1);
+      R(x, P.bC, 0, 5, 16, 6);
+      for (let k = 0; k < 4; k++) { const o = (k * 4 + frame) % 16; R(x, P.bB, o, 5, 2, 6); R(x, P.bA, o, 5, 1, 6); }
+      R(x, P.brass1, 0, 5, 1, 6); R(x, P.brass1, 15, 5, 1, 6);
+      for (let i = 2; i < 16; i += 6) R(x, P.ironL, i, 3, 1, 1);
     } else {
-      R(x, P.dark, 3, 0, 10, 16); R(x, P.frame2, 3, 0, 1, 16); R(x, P.frame2, 12, 0, 1, 16);
-      for (let k = 0; k < 4; k++) { const o = (k * 4 + frame) % 16; R(x, P.steel, 5, o, 6, 2); }
+      R(x, P.ironO, 2, 0, 12, 16);
+      R(x, P.iron2, 3, 0, 10, 16); R(x, P.iron, 3, 0, 1, 16); R(x, P.iron3, 12, 0, 1, 16);
+      R(x, P.bC, 5, 0, 6, 16);
+      for (let k = 0; k < 4; k++) { const o = (k * 4 + frame) % 16; R(x, P.bB, 5, o, 6, 2); R(x, P.bA, 5, o, 6, 1); }
+      R(x, P.brass1, 5, 0, 6, 1); R(x, P.brass1, 5, 15, 6, 1);
+      for (let i = 2; i < 16; i += 6) R(x, P.ironL, 3, i, 1, 1);
     }
     return c;
   }
@@ -608,10 +776,11 @@
     R(x, P.ink, 0, 0, 4, 4); R(x, P.white, 1, 1, 2, 2); R(x, P.white, 0, 1, 1, 2); R(x, P.white, 1, 0, 2, 1); R(x, P.white, 3, 1, 1, 2); R(x, P.white, 1, 3, 2, 1);
     return c;
   }
-  // a belt spool carried on the operator's back, 8x8
+  // a spool of belting carried on the operator's back, 8x8
   function spool() {
     const [c, x] = canvas(8, 8);
-    disc(x, P.ink, 4, 4, 3); disc(x, P.frame2, 4, 4, 2); R(x, P.steel, 3, 2, 2, 1); R(x, P.dark, 3, 4, 2, 1);
+    disc(x, P.ironO, 4, 4, 3); disc(x, P.trunk2, 4, 4, 2); R(x, P.trunk, 3, 2, 2, 1);
+    R(x, P.brass2, 3, 3, 2, 2); R(x, P.brass3, 3, 3, 1, 1);
     return c;
   }
   // a machine's state dot 5x5: running (green) / starved (red) / full (gold)
@@ -664,11 +833,13 @@
 
   // ---------- props (walk-through set dressing) ----------
   function propLamppost() {
+    // a cast-iron post under a brass gas lantern
     const [c, x] = canvas(8, 26);
-    R(x, P.frame, 3, 6, 2, 18);
-    R(x, P.frame2, 2, 24, 4, 2);
-    R(x, P.frame, 1, 0, 6, 7); R(x, P.frame2, 1, 0, 6, 1);
-    R(x, P.glow, 2, 1, 4, 5);
+    R(x, P.ironO, 2, 7, 4, 19); R(x, P.iron2, 3, 7, 2, 18); R(x, P.iron, 3, 7, 1, 18);
+    R(x, P.ironO, 1, 24, 6, 2); R(x, P.iron, 2, 24, 4, 1);
+    R(x, P.ironO, 0, 1, 8, 7); R(x, P.brass1, 1, 2, 6, 5); R(x, P.brass2, 1, 2, 6, 1);
+    R(x, P.glow, 2, 3, 4, 3); R(x, P.white, 3, 4, 2, 1);
+    R(x, P.brass2, 3, 0, 2, 2);
     return c;
   }
   function propCrate(seed) {
@@ -677,14 +848,17 @@
     R(x, P.trunk2, 0, 11, 14, 1); R(x, P.trunk2, 0, 0, 1, 12); R(x, P.trunk2, 13, 0, 1, 12);
     R(x, '#8f6a44', 1, 0, 12, 1);
     for (let i = 0; i < 5; i++) R(x, P.trunk2, 2 + i * 2, 9 - i * 2, 2, 2);
+    R(x, P.brass1, 0, 5, 14, 1);
     if (seed % 2) R(x, P.paper2, 4, 4, 3, 2);
     return c;
   }
   function propDrum() {
+    // a verdigrised copper drum, brass-rimmed and iron-hooped
     const [c, x] = canvas(10, 13);
-    R(x, P.teal, 1, 1, 8, 12); R(x, P.teal2, 1, 10, 8, 3);
-    R(x, P.frame2, 1, 3, 8, 1); R(x, P.frame2, 1, 8, 8, 1);
-    R(x, P.frame, 2, 0, 6, 2); R(x, P.steel, 3, 0, 2, 1);
+    R(x, P.ironO, 0, 0, 10, 13);
+    R(x, P.teal2, 1, 1, 8, 11); R(x, P.teal, 1, 1, 8, 6); R(x, P.copper3, 1, 1, 1, 6);
+    R(x, P.brass1, 1, 4, 8, 1); R(x, P.brass1, 1, 9, 8, 1);
+    R(x, P.brass1, 2, 0, 6, 2); R(x, P.brass2, 2, 0, 6, 1);
     return c;
   }
   function propBush() {
@@ -754,9 +928,9 @@
         R(x, P.quartz2, 7, 2, 3, 9); R(x, P.quartz, 7, 1, 2, 9); R(x, P.quartz3, 7, 1, 1, 3);
         R(x, P.rock2, 2, 10, 9, 2);
       } else if (kind === 'oil') {
-        R(x, P.frame, 3, 2, 6, 9); R(x, P.frame2, 3, 2, 6, 1);
+        R(x, P.iron2, 3, 2, 6, 9); R(x, P.iron, 3, 2, 6, 1);
         R(x, P.oil, 4, 4, 4, 6); R(x, P.oil3, 4, 4, 1, 3);
-        R(x, P.frame2, 5, 0, 2, 2);
+        R(x, P.iron, 5, 0, 2, 2);
       } else {
         oreIcon(t[0], t[1], t[2]);
       }
@@ -771,32 +945,38 @@
         R(x, t[1], bx, by, bw, 3); R(x, t[0], bx, by, bw, 1); R(x, t[2], bx + 1, by, 1, 1);
       });
     } else if (form === 'parts') {
-      R(x, P.frame2, 5, 1, 2, 10); R(x, P.frame2, 1, 5, 10, 2);
-      disc(x, P.frame2, 6, 6, 3);
-      disc(x, P.steel, 6, 6, 2);
-      R(x, P.dark, 5, 5, 2, 2);
+      // a brass gear
+      R(x, P.brass1, 5, 0, 2, 12); R(x, P.brass1, 0, 5, 12, 2);
+      R(x, P.brass1, 2, 2, 2, 2); R(x, P.brass1, 8, 2, 2, 2); R(x, P.brass1, 2, 8, 2, 2); R(x, P.brass1, 8, 8, 2, 2);
+      disc(x, P.brass1, 6, 6, 4); disc(x, P.brass2, 6, 6, 3);
+      disc(x, P.iron3, 6, 6, 1); R(x, P.brass3, 4, 3, 2, 1);
     } else if (form === 'moldings') {
-      // a moulded bracket
-      R(x, P.frame2, 2, 2, 8, 3); R(x, P.steel, 2, 2, 8, 1);
-      R(x, P.frame2, 2, 5, 3, 5); R(x, P.frame2, 7, 5, 3, 5);
+      // a cast bracket, still warm at the edge
+      R(x, P.iron2, 2, 2, 8, 3); R(x, P.ironL, 2, 2, 8, 1);
+      R(x, P.iron2, 2, 5, 3, 5); R(x, P.iron2, 7, 5, 3, 5);
+      R(x, P.steel, 3, 5, 1, 5); R(x, P.steel, 8, 5, 1, 5);
       R(x, P.brass2, 3, 8, 1, 1); R(x, P.brass2, 8, 8, 1, 1);
     } else if (form === 'modules') {
-      R(x, P.teal2, 1, 2, 10, 8); R(x, P.teal, 1, 2, 10, 1);
-      R(x, P.brass2, 3, 4, 2, 2); R(x, P.brass2, 7, 4, 2, 2);
-      R(x, P.green, 3, 7, 6, 1);
+      // an instrument block: one brass dial, a copper coil, brass feet
+      R(x, P.iron2, 1, 2, 10, 8); R(x, P.iron, 1, 2, 10, 2);
+      R(x, P.brass1, 2, 4, 4, 4); R(x, P.brass2, 2, 4, 3, 1); R(x, P.steam, 3, 5, 2, 2);
+      R(x, P.copper2, 7, 4, 3, 5); R(x, P.copper, 7, 4, 3, 1); R(x, P.copper, 7, 6, 3, 1); R(x, P.copper, 7, 8, 3, 1);
       R(x, P.brass1, 2, 10, 1, 2); R(x, P.brass1, 5, 10, 1, 2); R(x, P.brass1, 8, 10, 1, 2);
     } else if (form === 'fastened') {
-      R(x, P.teal2, 1, 2, 10, 8); R(x, P.teal, 1, 2, 10, 1);
+      // a riveted plate with a brass boss
+      R(x, P.iron2, 1, 2, 10, 8); R(x, P.iron, 1, 2, 10, 3); R(x, P.ironL, 1, 2, 10, 1);
       R(x, P.steel, 2, 3, 1, 1); R(x, P.steel, 9, 3, 1, 1); R(x, P.steel, 2, 8, 1, 1); R(x, P.steel, 9, 8, 1, 1);
-      R(x, P.brass2, 5, 5, 2, 2);
+      R(x, P.brass1, 5, 5, 3, 3); R(x, P.brass2, 5, 5, 2, 1);
     } else if (form === 'crates') {
       R(x, P.trunk, 1, 2, 10, 9); R(x, '#8f6a44', 1, 2, 10, 1);
       R(x, P.trunk2, 1, 10, 10, 1);
       R(x, P.brass1, 1, 5, 10, 2);
       R(x, P.paper2, 7, 3, 3, 2);
     } else if (form === 'heavy') {
-      R(x, P.frame, 1, 1, 10, 10); R(x, P.frame2, 1, 1, 10, 1);
-      R(x, P.teal, 3, 3, 6, 6); R(x, P.glow, 4, 4, 2, 2); R(x, P.brass2, 7, 7, 1, 1);
+      // a boiler assembly: iron shell, brass hoop, a lit firebox
+      R(x, P.iron2, 1, 1, 10, 10); R(x, P.iron, 1, 1, 10, 3); R(x, P.ironL, 1, 1, 10, 1);
+      R(x, P.brass1, 1, 5, 10, 1);
+      R(x, P.soot, 3, 7, 6, 4); R(x, P.orange, 4, 8, 4, 2); R(x, P.glow, 5, 9, 2, 1);
     } else { // legacy cargo
       R(x, P.trunk, 1, 2, 10, 9); R(x, '#8f6a44', 1, 2, 10, 1);
       R(x, P.trunk2, 1, 10, 10, 1);
@@ -806,28 +986,46 @@
   }
 
   // ---------- machine-kind icons 12x12 (build menus) ----------
+  // Miniatures of the real machines: iron body, brass fitting, one fire.
   function kindIcon(kind) {
     const [c, x] = canvas(12, 12);
     if (kind === 'mine') {
-      // pick over a spoil mound
-      R(x, P.trunk, 5, 3, 2, 8); R(x, P.steel, 2, 2, 8, 2); R(x, P.frame2, 2, 4, 2, 1); R(x, P.frame2, 8, 4, 2, 1);
+      // a pick over a spoil mound
+      R(x, P.trunk, 5, 3, 2, 8); R(x, P.steel, 2, 2, 8, 2); R(x, P.iron2, 2, 4, 2, 1); R(x, P.iron2, 8, 4, 2, 1);
       R(x, P.dirt2, 1, 10, 10, 2);
     } else if (kind === 'smelter') {
-      R(x, P.cream, 2, 4, 8, 7); R(x, P.frame, 8, 0, 3, 5); R(x, P.dark, 3, 6, 6, 4); R(x, P.orange, 4, 7, 4, 2); R(x, P.glow, 5, 7, 2, 1);
+      // a tapered furnace with a tapped mouth
+      R(x, P.iron2, 3, 3, 6, 8); R(x, P.iron, 3, 3, 6, 3); R(x, P.brass1, 3, 5, 6, 1);
+      R(x, P.iron2, 9, 0, 3, 5); R(x, P.iron, 9, 0, 3, 1);
+      R(x, P.soot, 4, 7, 4, 4); R(x, P.orange, 4, 8, 4, 2); R(x, P.glow, 5, 9, 2, 1);
     } else if (kind === 'foundry') {
-      R(x, P.cream, 2, 5, 8, 6); R(x, P.frame, 3, 1, 2, 4); R(x, P.frame, 8, 2, 2, 3); R(x, P.dark, 4, 7, 4, 3); R(x, P.orange, 5, 8, 2, 1);
+      // twin flues over a crucible
+      R(x, P.iron2, 2, 4, 8, 7); R(x, P.iron, 2, 4, 8, 2);
+      R(x, P.iron2, 3, 0, 2, 4); R(x, P.iron2, 8, 1, 2, 3);
+      R(x, P.soot, 4, 7, 4, 4); R(x, P.orange, 4, 8, 4, 2); R(x, P.glow, 5, 9, 2, 1);
     } else if (kind === 'constructor') {
-      R(x, P.teal, 2, 5, 8, 6); R(x, P.cream, 2, 3, 8, 2); R(x, P.frame, 6, 0, 1, 3); R(x, P.frame, 6, 0, 4, 1); R(x, P.glow, 4, 7, 3, 2);
+      // a line shaft on brass pulleys over a bench
+      R(x, P.trunk2, 1, 1, 10, 2); R(x, P.trunk, 1, 1, 10, 1);
+      R(x, P.brass1, 3, 3, 2, 2); R(x, P.brass1, 8, 3, 2, 2); R(x, P.brass2, 3, 3, 1, 1); R(x, P.brass2, 8, 3, 1, 1);
+      R(x, P.iron2, 2, 6, 8, 5); R(x, P.iron, 2, 6, 8, 1); R(x, P.steel, 4, 8, 4, 1);
     } else if (kind === 'molder') {
-      R(x, P.cream, 2, 4, 8, 7); R(x, P.frame2, 3, 2, 6, 2); R(x, P.dark, 4, 6, 4, 3);
+      R(x, P.iron2, 2, 4, 8, 7); R(x, P.iron, 2, 4, 8, 2); R(x, P.brass1, 3, 2, 6, 2); R(x, P.brass2, 3, 2, 6, 1);
+      R(x, P.soot, 4, 7, 4, 3); R(x, P.orange, 5, 8, 2, 1);
     } else if (kind === 'assembler') {
-      R(x, P.cream, 1, 5, 10, 5); R(x, P.frame, 3, 2, 1, 3); R(x, P.frame, 8, 2, 1, 3); R(x, P.teal, 1, 7, 10, 1);
+      // a gantry over a riveted hall
+      R(x, P.iron2, 1, 1, 10, 2); R(x, P.iron, 1, 1, 10, 1);
+      R(x, P.iron2, 1, 5, 10, 6); R(x, P.iron, 1, 5, 10, 2);
+      R(x, P.steel, 2, 7, 1, 1); R(x, P.steel, 5, 7, 1, 1); R(x, P.steel, 8, 7, 1, 1);
+      R(x, P.enam, 4, 9, 5, 2); R(x, P.enamL, 4, 9, 5, 1);
     } else if (kind === 'fastener') {
-      R(x, P.teal, 2, 4, 8, 6); R(x, P.steel, 3, 5, 1, 1); R(x, P.steel, 8, 5, 1, 1); R(x, P.steel, 3, 8, 1, 1); R(x, P.steel, 8, 8, 1, 1);
+      R(x, P.iron2, 2, 3, 8, 8); R(x, P.iron, 2, 3, 8, 3);
+      R(x, P.steel, 3, 4, 1, 1); R(x, P.steel, 8, 4, 1, 1); R(x, P.steel, 3, 9, 1, 1); R(x, P.steel, 8, 9, 1, 1);
+      R(x, P.brass1, 5, 6, 2, 2); R(x, P.brass2, 5, 6, 1, 1);
     } else if (kind === 'crane') {
-      R(x, P.frame, 8, 1, 2, 10); R(x, P.frame2, 2, 2, 8, 1); R(x, P.dark, 3, 3, 1, 4); R(x, P.trunk, 2, 7, 3, 3);
+      R(x, P.iron2, 8, 1, 2, 10); R(x, P.iron, 2, 2, 8, 1); R(x, P.iron3, 3, 3, 1, 4); R(x, P.trunk, 2, 7, 3, 3);
+      R(x, P.brass1, 2, 8, 3, 1);
     } else {
-      R(x, P.frame, 1, 3, 10, 8); R(x, P.teal, 3, 5, 6, 4); R(x, P.glow, 4, 6, 2, 2);
+      R(x, P.iron2, 1, 3, 10, 8); R(x, P.iron, 1, 3, 10, 2); R(x, P.soot, 3, 6, 6, 4); R(x, P.orange, 4, 7, 4, 2); R(x, P.glow, 5, 8, 2, 1);
     }
     return c;
   }
@@ -903,6 +1101,8 @@
     nodeCanvas: nodePatch,
     sceneryCanvas: (kind) => SCENERY_DRAW[kind] ? SCENERY_DRAW[kind]() : window.TILES.scenery(kind),
     machineCanvas: machine, stationCanvas: station, characterCanvas: character, workCanvas: characterWork,
+    pressCanvas: press, beltTileCanvas: beltTile, boardCanvas: noticeBoard,
+    propCanvas: (kind) => PROP_DRAW[kind](), kindIconCanvas: kindIcon, matIconCanvas: matIcon,
     matIconTex: (kind) => cachedTex('mat:' + kind, () => matIcon(kind)),
     pressTex: (frame) => tex(press(frame)),
     vignetteURL: () => vignette().toDataURL(),
