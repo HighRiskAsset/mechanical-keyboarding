@@ -55,6 +55,21 @@ Interface language and course language are independent axes: the interface is
 available in English or Russian, and the trainer maps your physical keys
 itself, so you can drill a foreign alphabet without switching your OS layout.
 
+## Deploying
+
+Every push to `main` publishes the game to
+https://mechanical-keyboarding.digitalis.tech via
+[.github/workflows/deploy.yml](.github/workflows/deploy.yml). Only what the game
+loads is uploaded: `dev/`, `docs/`, DESIGN.md and `serve.ps1` stay out of the
+published site.
+
+The transport is SFTP with the server's host key pinned in the workflow, not
+FTP — the host serves a certificate valid for `*.hstgr.io` only, which can never
+verify against this domain. Credentials live in the repository's Actions
+secrets (`SSH_USER`, `SSH_PRIVATE_KEY`) and variables (`REMOTE_DIR`); the
+workflow header documents them, and the job skips rather than fails while they
+are unset.
+
 ## Development
 
 [DESIGN.md](DESIGN.md) is the design document and single source of truth.
