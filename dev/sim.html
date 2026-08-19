@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MK · simulation harness (phase 3)</title>
+<style>
+  body { font: 14px/1.5 Consolas, monospace; background: #14181b; color: #e4ece9; padding: 20px 28px; max-width: 980px; }
+  h1 { font-size: 18px; margin: 0 0 6px; } p { color: #9aa9ab; margin: 0 0 14px; }
+  .ok { color: #6cc46c; } .fail { color: #ff8a70; } .warn { color: #f2c14e; }
+  li { margin: 2px 0; } .sum { margin-top: 14px; font-weight: bold; }
+  pre { color: #9aa9ab; font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>Simulation harness — phase 3</h1>
+<p>Builds a T1 factory in memory (iron + copper → Smelter · bronze, quartz + Smelter → Foundry · quartz bronze, Foundry → Constructor · parts), runs it headless for 30 simulated minutes in 500 ms steps, and asserts the rules. Not linked from the game.</p>
+<ul id="out"></ul>
+<div class="sum" id="sum"></div>
+<pre id="log"></pre>
+<script src="../js/i18n.js"></script>
+<script src="../js/board-ansi.js"></script>
+<script src="../js/language-ru.js"></script>
+<script src="../js/layout-ru.js"></script>
+<script src="../js/layout-en.js"></script>
+<script src="../js/courses.js"></script>
+<script src="../js/chain.js"></script>
+<script src="../js/engine.js"></script>
+<script src="../js/sim.js"></script>
+<script>
+(() => {
+  const C = window.CHAIN, S = window.SIM;
+  const out = document.getElementById('out'), log = document.getElementById('log');
+  let pass = 0, fail = 0, warn = 0;
+  const line = (ok, text) => {
+    const li = document.createElement('li');
+    li.className = ok === true ? 'ok' : ok === false ? 'fail' : 'warn';
+    li.textContent = (ok === true ? '✓ ' : ok === false ? '✗ ' : '! ') + text;
+    out.appendChild(li);
+    if (ok === true) pass++; else if (ok === false) fail++; else warn++;
+  };
+  C.useMap('range');
+  // a T1 save: pairs through с б; letters don't matter to the simulation
+  const p = { pairsUnlocked: 6, letters: {}, seen: {}, bag: {}, machines: [], belts: [], crossings: {}, nextMachineId: 1 };
+  const add = (m) => { m.id = 'm' + (p.nextMachineId++); p.machines.push(m); S.ensureMachine(m); return m; };
+  const iron = add({ kind: 'mine', ore: 'az', node: 0, auto: true });
+  const copper = add({ kind: 'mine', ore: 'buki', node: 1, auto: true });
+  const quartz = add({ kind: 'mine', ore: 'vedi', node: 3, auto: true });
+  const smelter = add({ kind: 'smelter', plot: 'p1', auto: true, recipe: 'slogi', recipeIn: JSON.stringify({ az: 2, buki: 1 }) });
+  const foundry = add({ kind: 'foundry', plot: 'p2', auto: true, recipe: 'qzbronze', recipeIn: JSON.stringify({ slogi: 2, vedi: 1 }) });
+  const cons = add({ kind: 'constructor', plot: 'p3', auto: true, recipe: 'slova', recipeIn: JSON.stringify({ qzbronze: 2 }) });
+  const fakePath = (n) => Array.from({ length: n }, (_, i) => [i, 0]);
+  const link = (a, b, n) => { const ok = S.canLink(p, a, b); if (!ok.ok) { line(false, `canLink ${a.kind}→${b.kind}: ${ok.why}`); return null; } return S.addBelt(p, a, b, fakePath(n)); };
+  S.ensure(p);
+  link(iron, smelter, 6); link(copper, smelter, 6); link(smelter, foundry, 8); link(quartz, foundry, 6); link(foundry, cons, 8);
+  line(p.belts.length === 5, `five belts laid (${p.belts.length})`);
+  line(!S.canLink(p, iron, foundry).ok, 'a mine has one outlet — a second belt from the iron mine is refused');
+  line(S.canLink(p, smelter, cons).ok === false, 'the smelter cannot feed the constructor (it accepts quartz bronze, not bronze)');
+
+  // run 30 minutes
+  const cap = C.TUNING.BUFFER_CAP;
+  let worst = 0, negatives = 0, overCap = 0;
+  const MIN = 60 * 1000;
+  const snapshot = () => ({ parts: cons.buf.out.slova || 0, qzb: foundry.buf.out.qzbronze || 0, bronze: smelter.buf.out.slogi || 0, consIn: cons.buf.in.qzbronze || 0 });
+  const check = () => {
+    for (const m of p.machines) for (const side of ['in', 'out']) for (const [, n] of Object.entries(m.buf[side])) { if (n < 0) negatives++; if (n > cap) overCap++; worst = Math.max(worst, n); }
+  };
+  let t = 0;
+  const marks = {};
+  while (t < 30 * MIN) { S.step(p, 500); t += 500; check(); if (t % (5 * MIN) === 0) marks[t / MIN] = snapshot(); }
+  log.textContent = 'snapshots (minute → parts / quartz bronze / bronze in out-buffers):\n' + Object.entries(marks).map(([k, v]) => `${k}: ${JSON.stringify(v)}`).join('\n');
+  line(negatives === 0, `no buffer ever went negative`);
+  line(overCap === 0, `no buffer ever exceeded the cap of ${cap} (worst ${worst})`);
+  const parts = cons.buf.out.slova || 0;
+  // iron-limited chain: 1 ore / 2 s → 900 iron → 450 bronze → 225 quartz bronze → ~112 parts, minus belt latency
+  line(parts >= 70 && parts <= 130, `parts made in 30 min ≈ 112 expected, got ${parts}`);
+  line((smelter.buf.out.slogi || 0) < cap, 'the smelter\'s bronze is drained by its belt, not piling to the cap');
+
+  // retool: the iron mine goes back to hand work — the smelter starves, then recovers
+  S.collect(p, cons); S.collect(p, foundry); S.collect(p, smelter);   // empty the output buffers (the constructor had hit the cap)
+  iron.auto = false;
+  const before = cons.buf.out.slova || 0;
+  for (let k = 0; k < 6 * MIN / 500; k++) S.step(p, 500);
+  const st = S.state(p, smelter);
+  line(st === 'starved', `after the iron mine retools the smelter starves (state: ${st})`);
+  iron.auto = true;
+  for (let k = 0; k < 6 * MIN / 500; k++) S.step(p, 500);
+  line((cons.buf.out.slova || 0) > before + 5, `…and recovers when the mine is automated again (+${(cons.buf.out.slova || 0) - before} parts in six minutes)`);
+
+  // hands: a worked machine uses its buffers first, then the bag; output to belt or bag
+  p.bag = { az: 10, buki: 10 };
+  smelter.buf.in = { az: 1, buki: 0 };
+  const took = S.takeInput(p, smelter, { az: 2, buki: 1 });
+  line(took && smelter.buf.in.az === 0 && p.bag.az === 9 && p.bag.buki === 9, 'takeInput uses the buffer first, then the bag');
+  const where1 = S.emit(p, smelter, 'slogi', 1);
+  const where2 = S.emit(p, cons, 'slova', 1);
+  line(where1 === 'belt' && where2 === 'bag', 'output rolls onto an exit belt when one exists, else into the bag');
+
+  // catch-up equals stepping
+  const q = JSON.parse(JSON.stringify(p));
+  q.lastTick = 1000; S.catchUp(q, 1000 + 10 * MIN);
+  const r = JSON.parse(JSON.stringify(p));
+  for (let k = 0; k < 10 * MIN / 500; k++) S.step(r, 500);
+  const qc = q.machines.find((m) => m.kind === 'constructor').buf.out.slova || 0, rc = r.machines.find((m) => m.kind === 'constructor').buf.out.slova || 0;
+  line(Math.abs(qc - rc) <= 2, `fast-forward matches stepping (${qc} vs ${rc} parts after ten minutes)`);
+  line(S.removeBelt(p, p.belts[0].id) && p.belts.length === 4, 'a belt can be removed (its items return to the source)');
+
+  document.getElementById('sum').textContent = `${pass} passed · ${fail} failed · ${warn} to look at`;
+})();
+</script>
+</body>
+</html>

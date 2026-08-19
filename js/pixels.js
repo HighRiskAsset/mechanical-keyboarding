@@ -580,6 +580,48 @@
     return c;
   }
 
+  // ---------- belt / pipe tiles 16x16 (phase 3): one tile per path step ----------
+  // A belt: dark bed, steel rails, three pale treads rolling along its axis.
+  // A pipe: a grey tube with a seam and a glinting flow dash. dir 'h' | 'v'.
+  function beltTile(frame, dir, pipe) {
+    const [c, x] = canvas(TILE, TILE);
+    const horiz = dir === 'h';
+    if (pipe) {
+      if (horiz) { R(x, P.frame, 0, 4, 16, 8); R(x, P.frame2, 0, 5, 16, 1); R(x, P.dark, 0, 10, 16, 1); R(x, P.oil3, 0, 7, 16, 1); }
+      else { R(x, P.frame, 4, 0, 8, 16); R(x, P.frame2, 5, 0, 1, 16); R(x, P.dark, 10, 0, 1, 16); R(x, P.oil3, 7, 0, 1, 16); }
+      const o = (frame * 4) % 16;
+      if (horiz) R(x, P.steel, o, 7, 3, 1); else R(x, P.steel, 7, o, 1, 3);
+      return c;
+    }
+    if (horiz) {
+      R(x, P.dark, 0, 3, 16, 10); R(x, P.frame2, 0, 3, 16, 1); R(x, P.frame2, 0, 12, 16, 1);
+      for (let k = 0; k < 4; k++) { const o = (k * 4 + frame) % 16; R(x, P.steel, o, 5, 2, 6); }
+    } else {
+      R(x, P.dark, 3, 0, 10, 16); R(x, P.frame2, 3, 0, 1, 16); R(x, P.frame2, 12, 0, 1, 16);
+      for (let k = 0; k < 4; k++) { const o = (k * 4 + frame) % 16; R(x, P.steel, 5, o, 6, 2); }
+    }
+    return c;
+  }
+  // a white 4x4 item dot — tinted per material by the renderer
+  function itemDot() {
+    const [c, x] = canvas(4, 4);
+    R(x, P.ink, 0, 0, 4, 4); R(x, P.white, 1, 1, 2, 2); R(x, P.white, 0, 1, 1, 2); R(x, P.white, 1, 0, 2, 1); R(x, P.white, 3, 1, 1, 2); R(x, P.white, 1, 3, 2, 1);
+    return c;
+  }
+  // a belt spool carried on the operator's back, 8x8
+  function spool() {
+    const [c, x] = canvas(8, 8);
+    disc(x, P.ink, 4, 4, 3); disc(x, P.frame2, 4, 4, 2); R(x, P.steel, 3, 2, 2, 1); R(x, P.dark, 3, 4, 2, 1);
+    return c;
+  }
+  // a machine's state dot 5x5: running (green) / starved (red) / full (gold)
+  function stateDot(kind) {
+    const [c, x] = canvas(5, 5);
+    const col = kind === 'run' ? P.green : kind === 'starved' ? P.red : P.brass2;
+    disc(x, P.ink, 2, 2, 2); disc(x, col, 2, 2, 1);
+    return c;
+  }
+
   function spark() {
     const [c, x] = canvas(2, 2);
     R(x, P.white, 0, 0, 2, 2);
@@ -832,6 +874,18 @@
     characterWorkTex: (frame) => cachedTex('chw:' + frame, () => characterWork(frame)),
     beltTex: (frame) => tex(belt(frame)),
     matDotTex: () => tex(matDot()),
+    beltTileTex: (frame, dir, pipe) => cachedTex('bt:' + frame + dir + (pipe ? 'p' : 'b'), () => beltTile(frame, dir, pipe)),
+    itemDotTex: () => cachedTex('itemdot', itemDot),
+    spoolTex: () => cachedTex('spool', spool),
+    stateDotTex: (kind) => cachedTex('state:' + kind, () => stateDot(kind)),
+    // a material's tint (its first ore's main tone) for item dots
+    matTint: (mat) => {
+      const spec = window.CHAIN && window.CHAIN.MATS && window.CHAIN.MATS[mat];
+      const ore = spec && spec.ores && spec.ores[0];
+      const tone = (ore && ORE_TONE[ore]) || null;
+      const hex = tone ? tone[0] : (spec && spec.form === 'parts' ? P.steel : P.brass2);
+      return parseInt(hex.slice(1), 16);
+    },
     sparkTex: () => cachedTex('spark', spark),
     paperScrapTex: (frame) => cachedTex('scrap:' + frame, () => paperScrap(frame)),
     petalTex: (frame) => cachedTex('petal:' + frame, () => petal(frame)),

@@ -196,6 +196,16 @@ priced row at the place: Mk at a mine, a mine at a node, a machine at a plot,
 
 ### Phase 3 — The simulation
 
+**Status (2026-08-19): built.** `js/sim.js` (buffers, automated mines and
+jobs, belts with items, catch-up), `FACTORY.routeBelt` (BFS over free
+tiles), spool & socket with the green/red route preview, menus for feed /
+collect / spool / socket / put back / remove belt, processor automation
+for a price (no mastery), state dots, pipes for oil, the live 120 ms tick
+and catch-up on load / tab return, `dev/sim.html` (13 checks green) and
+`dev/play.html` (the game headless). Not yet: a contextual HUD (the bag
+HUD still lists everything held), belt sounds, an overpass (tier 4, phase
+5), relocation (no relocation exists yet).
+
 **Goal.** Machines have insides; automation runs on the real clock; belts move
 things across the map. This is the phase that makes automation mean something.
 

@@ -94,8 +94,32 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   hold-Space menu (default: the first offered), remembered per machine; a
   unit of output is paid for at its first keystroke and emitted at its
   `perUnit`-th; an unpayable choice runs dry with ✗ (typing still trains).
-  Mines yield one ore per correct letter. Belts and machine buffers arrive
-  with phase 3.
+  Mines yield one ore per correct letter.
+- **The factory simulation (phase 3, 2026-08-19, `js/sim.js`):** every
+  machine has an input buffer per material and an output buffer (cap
+  `TUNING.BUFFER_CAP` = 100); a worked machine takes inputs from its own
+  buffers first, then the bag, and its output rolls onto an exit belt if it
+  has one (overflow to the bag), else into the bag. Automated mines yield
+  on the clock (`TUNING.RATE.mine` s/ore) into their output buffer;
+  automated processors run timed jobs (`TUNING.RATE[kind]`) from their input
+  buffers into their output buffer and refuse labor; nothing automated ever
+  reaches into the bag. **Belts** (free, uncapped) run from one machine's
+  outlet to another's inlet — inlets = the kind's arity, outlets mines 1 /
+  processors 2 — laid by **spool & socket** (hold Space at the source →
+  spool on the back → walk → the route previews green/red at each machine →
+  hold Space to lay; `FACTORY.routeBelt` is a breadth-first search over
+  free tiles: machines, scenery, solids and other belts block, ramps carry
+  elevation, open crossings override); a belt carries only what its
+  consumer's chosen recipe accepts, one item per tile at
+  `TUNING.BELT_SPEED`; a belt from an oil derrick draws as a pipe. Menus:
+  feed (bag → an automated machine's inputs), collect (output buffer →
+  bag), spool / socket / put back, and one ✗ row per belt to remove it.
+  The clock is real time: a live tick every 120 ms, `SIM.catchUp` on load
+  and when the tab returns (bounded by buffers; at most six hours), saves
+  every 15 s. A Mk on an ore retools its mines (automation off). State dots
+  over automated machines: green running, red starved, gold full. Harness:
+  `dev/sim.html`; the whole game runs headless in `dev/play.html` (a rAF
+  shim) for automated checks.
 - Learning engine: hesitation-gated hints (recall first), stop-on-error,
   per-letter EW latency/error stats; **v3 curriculum:** letters unlock in
   mirror key-pairs per ore Mk (`LANG_RU.PAIRS`), a pair is bought at the
@@ -787,7 +811,10 @@ keyboard marks that label the switches ·
 region scenery, `bake`, `minimap`) · `js/app.js` orchestration + the map
 picker · `js/audio.js` synth ·
 `js/i18n.js` EN/РУ · `serve.ps1` dev server (+ POST /upload for QA frames) ·
-`dev/tiles.html` terrain proof sheet · `libs/pixi.min.js` vendored Pixi 8 ·
+`js/sim.js` the factory simulation (buffers, jobs, belts, the clock) ·
+`dev/tiles.html` terrain proof sheet · `dev/verify.html` data checks ·
+`dev/sim.html` simulation harness · `dev/play.html` the game headless (rAF
+shim) · `libs/pixi.min.js` vendored Pixi 8 ·
 `docs/tech-tree-v3.html` the agreed tech-tree page (keyboard-by-ore, tier
 board, material ladder, simulation, transport) · `docs/build-plan.md` the
 phased build order for v3.

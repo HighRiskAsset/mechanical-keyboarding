@@ -144,7 +144,12 @@
   const ORE_GOOD = { az: 'slogi', buki: 'slogi', stone: 'castiron', vedi: 'qziron', coal: 'steel', oil: 'blackiron' };
 
   const TUNING = {
-    PICKUP_CAP: 100,       // an automated mine refills your bag to this on collect
+    PICKUP_CAP: 100,       // (legacy) the old instant pickup; buffers cap below
+    // the simulation (phase 3): buffers, rates, belts — real time
+    BUFFER_CAP: 100,       // per material, input and output buffers
+    RATE: { mine: 2, smelter: 3, foundry: 4, constructor: 4, molder: 5, assembler: 6, fastener: 6, crane: 7, manufacturer: 10 }, // seconds per unit
+    BELT_SPEED: 2,         // tiles per second, one item per tile
+    OUTLETS: { mine: 1, processor: 2 }, // belts out of a machine; inlets = the kind's arity
     MIN_WORDS: 25,         // Constructor pool size before a recipe is offered
     RATIO_TILT_CAP: 3,     // ratio → sampling tilt, capped (variance only)
     RATIO_MIN_POOL: 25,    // below this many words the tilt is off
@@ -186,6 +191,17 @@
       crane: { fast: 80, glass: 40 },
       manufacturer: { crate: 100, mold: 60, slova: 60 },
     },
+    // automation on a processor: its own output + a later good (the price is
+    // the hand work; there is no mastery test)
+    auto: {
+      smelter: { slogi: 40, slova: 20 },
+      foundry: { qzbronze: 30, slova: 30 },
+      constructor: { slova: 60, qziron: 20 },
+      molder: { mold: 40, stroki: 20 },
+      assembler: { stroki: 40, fast: 20 },
+      fastener: { fast: 40, crate: 20 },
+      crane: { crate: 40, heavy: 10 },
+    },
     // repairing a closed crossing (The Frontier): paid in the goods of the
     // regions behind you
     crossing: {
@@ -219,7 +235,7 @@
   // automation on a mine: its ore + its own alloy (processors: phase 3)
   function priceAuto(m) {
     if (m.kind === 'mine') return paced({ [m.ore]: 80, [ORE_GOOD[m.ore]]: 20 });
-    return null;
+    return paced(PRICES.auto[m.kind] || null);
   }
   const priceCrossing = (c) => paced(PRICES.crossing[c.id] || null);
 

@@ -240,7 +240,10 @@
   }
 
   // ---------- automation: bought at the mine; a Mk on its ore retools it ----------
-  const autoLive = (m) => !!(m && m.auto && m.kind === 'mine');
+  const autoLive = (m) => !!(m && m.auto);
+  // the belt spool on the operator's back: {from: machine id} while carrying
+  let spool = null;
+  let spoolRoute = null;         // the route to the docked machine while carrying, or null
 
   // ---------- recipes: the player chooses at the machine's menu ----------
   // A machine remembers its chosen recipe (m.recipe = output id). Until one
@@ -272,19 +275,27 @@
 
   // per correct letter: mines yield an ore; processors pay for a unit at its
   // first keystroke and emit at its last
+  // output: onto the machine's exit belt if it has one, else into the bag
+  function produce(m, mat, n) {
+    const where = SIM.emit(profile, m, mat, n);
+    if (where === 'bag') { profile.seen[mat] = true; producedSinceFloat[mat] = (producedSinceFloat[mat] || 0) + n; }
+    else { profile.seen[mat] = true; beltFloat[mat] = (beltFloat[mat] || 0) + n; }
+  }
+  let beltFloat = {};
   function workKeystroke() {
     const m = dock.m;
-    if (m.kind === 'mine') { gain(m.ore, 1); return; }
+    if (m.kind === 'mine') { produce(m, m.ore, 1); return; }
     if (!recipe) return;
     const kind = CHAIN.KINDS[m.kind];
     if (!unitPaid) {
-      if (canPay(recipe.in)) { spend(recipe.in); unitPaid = true; if (dryNow) { dryNow = false; refreshInfo(); } }
+      // a worked machine uses what is inside it first, then the bag
+      if (SIM.takeInput(profile, m, recipe.in)) { unitPaid = true; if (dryNow) { dryNow = false; refreshInfo(); } }
       else { if (!dryNow) { dryNow = true; refreshInfo(); } return; }   // starved: runs dry, still trains
     }
     unitAcc++;
     if (unitAcc >= kind.perUnit) {
       unitAcc = 0; unitPaid = false;
-      gain(recipe.out, 1);
+      produce(m, recipe.out, 1);
     }
   }
 
@@ -329,19 +340,60 @@
       if (!m.auto) {
         const price = CHAIN.priceAuto(m);
         rows.push({ pre: '⚙', items: price, enabled: canPay(price), action: { type: 'auto', m, price } });
-      } else if (autoLive(m)) {
-        const cap = CHAIN.TUNING.PICKUP_CAP;
-        rows.push({ pre: '↓', ore, enabled: (profile.bag[ore] || 0) < cap, action: { type: 'collect', m } });
       }
+      beltRows(m, rows);
     } else if (d.kind === 'machine') {
-      // a processor's menu: its recipes — choose what this machine makes
+      // a processor's menu: its recipes (choose what this machine makes),
+      // automation, then the belt rows
       const m = d.m;
-      for (const r of CHAIN.offerableRecipes(m.kind, profile)) {
+      for (const r of CHAIN.offerableRecipes(m.kind, profile).slice(0, 4)) {
         const active = recipe === r;
         rows.push({ items: r.in, out: r.out, ok: active ? true : undefined, enabled: true, action: { type: 'recipe', m, r } });
       }
+      if (!m.auto) {
+        const price = CHAIN.priceAuto(m);
+        if (price) rows.push({ pre: '⚙', items: price, enabled: canPay(price), action: { type: 'auto', m, price } });
+      }
+      beltRows(m, rows);
     }
     return rows;
+  }
+  // the rows every machine shares (phase 3): socket / put the spool back /
+  // take the spool, feed, collect, and one row per belt to remove it
+  function beltRows(m, rows) {
+    const mid = 'm:' + m.id;
+    if (spool) {
+      if (spool.from === m.id) {
+        rows.unshift({ pre: '✗→', enabled: true, action: { type: 'putback' } });
+      } else {
+        const from = SIM.machineById(profile, spool.from);
+        const link = from ? SIM.canLink(profile, from, m) : { ok: false };
+        const ok = link.ok && !!spoolRoute;
+        rows.unshift({ pre: '→', kind: from ? from.kind : undefined, ore: from && from.kind === 'mine' ? from.ore : undefined, ok: ok ? true : false, enabled: ok, action: ok ? { type: 'socket', from, to: m, path: spoolRoute } : null });
+      }
+    }
+    // feed and collect come before the spool: the everyday rows first
+    if (m.auto && m.kind !== 'mine') rows.push({ pre: '→', items: recipeInputsIcons(m), enabled: SIM.canFeed(profile, m), action: { type: 'feed', m } });
+    if (SIM.hasOutput(m)) rows.push({ pre: '↓', items: nonZero(m.buf.out), enabled: true, action: { type: 'collect', m } });
+    if (!spool && SIM.beltsFrom(profile, m).length < SIM.outletsOf(m) && (m.kind === 'mine' || SIM.produces(profile, m).length)) {
+      rows.push({ pre: '→', enabled: true, action: { type: 'spool', m } });
+    }
+    // belts in and out of this machine: one row each, ✗ removes it
+    let k = 0;
+    for (const b of [...SIM.beltsTo(profile, m), ...SIM.beltsFrom(profile, m)]) {
+      if (k++ >= 3) break;
+      const other = SIM.machineById(profile, b.to === m.id ? b.from : b.to);
+      rows.push({ pre: b.to === m.id ? '✗→' : '✗←', kind: other ? other.kind : undefined, ore: other && other.kind === 'mine' ? other.ore : undefined, enabled: true, action: { type: 'unbelt', id: b.id } });
+    }
+    void mid;
+  }
+  const nonZero = (o) => Object.fromEntries(Object.entries(o || {}).filter(([, n]) => n > 0));
+  function recipeInputsIcons(m) {
+    const r = SIM.recipeOf(profile, m);
+    if (!r) return {};
+    const out = {};
+    for (const mat of Object.keys(r.in)) out[mat] = profile.bag[mat] || 0;
+    return out;
   }
   function openMenu() {
     const rows = menuRowsFor(dock);
@@ -376,11 +428,13 @@
   function performAction(act) {
     if (act.type === 'build-machine') {
       if (!canPay(act.price)) return;
+      if (!CHAIN.freePlots(profile).some((pl) => pl.id === act.plot)) return;   // the plot must still be free
       spend(act.price);
       profile.machines.push({ id: 'm' + (profile.nextMachineId++), kind: act.kind, plot: act.plot, auto: false });
       afterPurchase();
     } else if (act.type === 'build-mine') {
       if (!canPay(act.price)) return;
+      if (CHAIN.nodeBuilt(profile, act.node)) return;   // the vein must still be open
       let pair = null;
       if (act.unlock) pair = E.unlockNextPair(profile);
       spend(act.price);
@@ -403,6 +457,7 @@
       if (!canPay(act.price)) return;
       spend(act.price);
       act.m.auto = true;
+      SIM.ensureMachine(act.m);
       afterPurchase();
       showBenchAutoCard(act.m);
     } else if (act.type === 'recipe') {
@@ -420,17 +475,44 @@
       afterPurchase();
       A.fanfare();
     } else if (act.type === 'collect') {
-      const m = act.m, cap = CHAIN.TUNING.PICKUP_CAP;
-      const have = profile.bag[m.ore] || 0;
-      if (have >= cap) return;
-      gain(m.ore, cap - have);
-      flyMat(m.ore, dock.id, 5);
-      FACTORY.floatText(`+${cap - have}`, dock.id, 0x7fb98a);
+      const got = SIM.collect(profile, act.m);
+      const total = Object.values(got).reduce((a, b) => a + b, 0);
+      if (!total) return;
+      for (const mat of Object.keys(got)) { profile.seen[mat] = true; flyMat(mat, dock.id, 3); }
+      FACTORY.floatText(`+${total}`, dock.id, 0x7fb98a);
       A.ding();
-      producedSinceFloat = {};
       E.saveProfile(profile);
       refreshInventory();
       refreshStatus();
+    } else if (act.type === 'feed') {
+      const moved = SIM.feed(profile, act.m);
+      const total = Object.values(moved).reduce((a, b) => a + b, 0);
+      if (!total) return;
+      FACTORY.floatText(`→${total}`, dock.id, 0xeacc78);
+      A.mint();
+      E.saveProfile(profile);
+      refreshInventory();
+      refreshStatus();
+    } else if (act.type === 'spool') {
+      spool = { from: act.m.id };
+      spoolRoute = null;
+      FACTORY.setSpool(true);
+      A.click();
+      refreshStatus();
+    } else if (act.type === 'putback') {
+      spool = null; spoolRoute = null;
+      FACTORY.setSpool(false);
+      A.click();
+      refreshStatus();
+    } else if (act.type === 'socket') {
+      if (!act.path || !act.from || !act.to) return;
+      SIM.addBelt(profile, act.from, act.to, act.path);
+      spool = null; spoolRoute = null;
+      FACTORY.setSpool(false);
+      afterPurchase();
+    } else if (act.type === 'unbelt') {
+      SIM.removeBelt(profile, act.id);
+      afterPurchase();
     }
   }
   function afterPurchase() {
@@ -457,10 +539,21 @@
   // info rows above the docked machine: its recipes, the chosen one bright
   // (with ✗ while the bag can't pay for it)
   function refreshInfo() {
-    if (!dock || dock.kind !== 'machine' || dock.m.kind === 'mine') { FACTORY.clearInfo(); return; }
-    const offered = CHAIN.offerableRecipes(dock.m.kind, profile).slice(0, 4);
-    if (!offered.length) { FACTORY.showInfo(dock.id, [{ pre: '✗', enabled: false }]); return; }
-    FACTORY.showInfo(dock.id, offered.map((r) => ({ items: r.in, out: r.out, enabled: r === recipe, ok: r === recipe && !canPay(r.in) && !unitPaid ? false : undefined })));
+    if (!dock || dock.kind !== 'machine') { FACTORY.clearInfo(); return; }
+    const m = dock.m;
+    const rows = [];
+    if (m.kind !== 'mine') {
+      const offered = CHAIN.offerableRecipes(m.kind, profile).slice(0, 3);
+      if (!offered.length) rows.push({ pre: '✗', enabled: false });
+      for (const r of offered) rows.push({ items: r.in, out: r.out, enabled: r === recipe, ok: r === recipe && !SIM.canTake(profile, m, r.in) && !unitPaid ? false : undefined });
+    }
+    // what is inside the machine: inputs waiting, outputs made
+    SIM.ensureMachine(m);
+    const inb = nonZero(m.buf.in), outb = nonZero(m.buf.out);
+    if (Object.keys(inb).length) rows.push({ pre: '→', items: inb, enabled: true });
+    if (Object.keys(outb).length) rows.push({ pre: '↓', items: outb, enabled: true });
+    if (!rows.length) { FACTORY.clearInfo(); return; }
+    FACTORY.showInfo(dock.id, rows.slice(0, 5));
   }
 
   // ---------- line rendering ----------
@@ -778,11 +871,51 @@
     unitAcc = 0; unitPaid = false; dryNow = false;
     lastCorrectTime = null;
     glossLine.classList.remove('visible');
+    // carrying a spool: preview the route to this machine (green) or the
+    // lack of one (red)
+    spoolRoute = null;
+    FACTORY.clearGhost();
+    if (spool && dock && dock.kind === 'machine' && dock.m.id !== spool.from) {
+      const from = SIM.machineById(profile, spool.from);
+      const link = from ? SIM.canLink(profile, from, dock.m) : { ok: false };
+      if (link.ok) {
+        spoolRoute = FACTORY.routeBelt(from, dock.m, profile);
+        FACTORY.showGhost(spoolRoute || [], !!spoolRoute);
+      }
+    }
     if (canTypeHere()) newLine(); else clearLine();
     refreshLessonLights();
     refreshStatus();
   };
   const redock = () => FACTORY.onDock(FACTORY.getDocked());
+
+  // ---------- the clock (phase 3) ----------
+  // Automated machines and belts run in real time; the live tick advances
+  // them by the real elapsed time, a return from a hidden tab or a reload
+  // fast-forwards (bounded by buffers). Hands never touch this.
+  let simTimer = null, simSaveAcc = 0, beltFloatAcc = 0;
+  function simTick() {
+    if (!profile) return;
+    const dt = SIM.tick(profile, Date.now());
+    if (dt <= 0) return;
+    simSaveAcc += dt;
+    if (simSaveAcc > 15000) { simSaveAcc = 0; E.saveProfile(profile); }
+    // the docked machine's buffers change under you; redraw its rows now and then
+    beltFloatAcc += dt;
+    if (beltFloatAcc > 1000) {
+      beltFloatAcc = 0;
+      const parts = Object.entries(beltFloat).filter(([, k]) => k > 0);
+      if (parts.length && dock) { FACTORY.floatText('→' + parts.map(([, k]) => k).join('+'), dock.id, 0xeacc78); beltFloat = {}; }
+      if (dock && dock.kind === 'machine') refreshInfo();
+    }
+  }
+  function startClock() {
+    if (simTimer) clearInterval(simTimer);
+    simTimer = setInterval(simTick, 120);
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && profile) { SIM.catchUp(profile, Date.now()); refreshInventory(); if (dock) refreshInfo(); }
+  });
 
   // ---------- overlays ----------
   let overlayRerender = null;
@@ -835,8 +968,8 @@
     A.fanfare();
     showOverlay(`
       <div class="card-station">${T.t('benchAutoStation')}</div>
-      <h2>${T.t('benchAutoTitle', { name: T.t('oreMineNames')[m.ore] || m.ore })}</h2>
-      <p>${T.t('benchAutoNote')}</p>
+      <h2>${T.t('benchAutoTitle', { name: m.kind === 'mine' ? (T.t('oreMineNames')[m.ore] || m.ore) : (T.t('kindNames')[m.kind] || m.kind) })}</h2>
+      <p>${T.t(m.kind === 'mine' ? 'benchAutoNote' : 'autoNoteProcessor')}</p>
       <button id="ov-continue" class="btn-primary">${T.t('automationGo')}</button>
     `);
     $('ov-continue').onclick = () => { hideOverlay(); };
@@ -1037,6 +1170,10 @@
     for (const k of Object.keys(countTimers)) clearInterval(countTimers[k]);
     hudKeysShown = [];
     cancelCharge(); spaceState = null;
+
+    spool = null; spoolRoute = null; FACTORY.setSpool(false);
+    SIM.catchUp(profile, Date.now());
+    startClock();
 
     FACTORY.loadMap();
     rebuildWorld();

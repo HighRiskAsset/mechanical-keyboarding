@@ -162,6 +162,7 @@
       }
     }
     autoAdvance(p);
+    if (window.SIM) SIM.ensure(p);   // buffers, belts, the clock (phase 3)
     return p;
   }
 

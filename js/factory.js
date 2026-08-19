@@ -34,6 +34,13 @@
   let grid = null;
   let crossSprites = [], openRects = [], closedRects = [];
   const machineTexCache = {};
+  // phase 3: belts on the map, items riding them, the spool, the ghost route
+  let simProfile = null;               // the save whose belts/items we draw (set by buildWorld)
+  let beltViews = {};                  // belt id → {c, items:[sprite], pipe, b}
+  let spoolSp = null, spoolOn = false;
+  let ghostG = null;
+  let stateDots = {};                  // machine dock id → sprite (automated machines)
+  let beltFrame = 0;
   // in-canvas pixel HUD (the bag) + the hold-to-interact charge bar
   let uiC = null, hudPanel = null;
   let hudRows = {}, hudKeys = [];
@@ -394,7 +401,12 @@
   // by itself right now (⚙ bought and its letters sticky).
   function buildWorld(profile, autoLive) {
     if (!ready) return;
-    clearInfo(); clearMenu();
+    simProfile = profile;
+    clearInfo(); clearMenu(); clearGhost();
+    for (const v of Object.values(beltViews)) { cameraC.removeChild(v.c); v.c.destroy({ children: true }); }
+    beltViews = {};
+    for (const s of Object.values(stateDots)) { cameraC.removeChild(s); s.destroy(); }
+    stateDots = {};
     for (const s of Object.values(stations)) { cameraC.removeChild(s.root); s.root.destroy({ children: true }); }
     for (const l of labelsC.children.slice()) { labelsC.removeChild(l); l.destroy(); }
     floats.length = 0;
@@ -451,7 +463,15 @@
       cameraC.addChild(root);
       const id = 'm:' + m.id;
       stations[id] = { def: { id, x: pos.x, y: pos.y, kind: m.kind, m }, root, sp, glow, built: true, auto: live, sqTtl: 0 };
+      if (live) {
+        const d = new PIXI.Sprite(PIXELS.stateDotTex('run'));
+        d.position.set(pos.x + 24, pos.y - 40);
+        d.zIndex = pos.y + 1;
+        cameraC.addChild(d);
+        stateDots[id] = d;
+      }
     }
+    drawBelts(profile);
     // free plots: surveyed markers, dockable, walk-through
     for (const p of CHAIN.freePlots(profile)) {
       const root = new PIXI.Container();
@@ -502,6 +522,137 @@
     st.auto = live;
     st.sp.texture = texFor(live ? 3 : 1)[0];
   }
+
+  // ---------- belts on the map (phase 3) ----------
+  const T16 = 16;
+  const tileOf = (px, py) => [Math.floor(px / T16), Math.floor(py / T16)];
+  // the tiles a machine's body covers (its collision box)
+  function footprintTiles(m) {
+    const pos = CHAIN.machinePos(m);
+    const [x0, y0] = tileOf(pos.x - 3, pos.y - 14), [x1, y1] = tileOf(pos.x + 28, pos.y + 1);
+    const out = [];
+    for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) out.push([tx, ty]);
+    return out;
+  }
+  const key = (tx, ty) => tx + ',' + ty;
+  function occupiedByBelts(profile, exceptId) {
+    const set = new Set();
+    for (const b of profile.belts || []) { if (b.id === exceptId) continue; for (const [tx, ty] of b.path) set.add(key(tx, ty)); }
+    return set;
+  }
+  // can a belt lie on this tile: in bounds, not solid (an open crossing
+  // overrides), not under a machine, not in scenery, not under another belt
+  function beltFree(profile, tx, ty, blocked, beltTiles) {
+    if (!grid || tx < 0 || ty < 0 || tx >= grid.cols || ty >= grid.rows) return false;
+    if (blocked.has(key(tx, ty)) || beltTiles.has(key(tx, ty))) return false;
+    const cx = tx * T16 + 8, cy = ty * T16 + 8;
+    const inRect = (r) => cx >= r.x && cx < r.x + r.w && cy >= r.y && cy < r.y + r.h;
+    if (closedRects.some(inRect)) return false;
+    if (openRects.some(inRect)) return true;
+    const i = ty * grid.cols + tx;
+    if (grid.flags[i] & TILES.FL.SOLID) return false;
+    for (const sc of CHAIN.SCENERY) {
+      const b = sc.box;
+      if (cx >= b.x - 2 && cx < b.x + b.w + 2 && cy >= b.y - 2 && cy < b.y + b.h + 2) return false;
+    }
+    return true;
+  }
+  // may a belt step between two adjacent tiles (elevation: ramps only)
+  function beltStep(ax, ay, bx, by) {
+    const inRect = (r, px, py) => px >= r.x && px < r.x + r.w && py >= r.y && py < r.y + r.h;
+    const a = [ax * T16 + 8, ay * T16 + 8], b = [bx * T16 + 8, by * T16 + 8];
+    if (openRects.some((r) => inRect(r, a[0], a[1])) && openRects.some((r) => inRect(r, b[0], b[1]))) return true;
+    if (openRects.some((r) => inRect(r, a[0], a[1])) || openRects.some((r) => inRect(r, b[0], b[1]))) return true;
+    return TILES.passable(grid, a[0], a[1], b[0], b[1]);
+  }
+  // the free tiles around a machine's footprint (where a belt may start/end)
+  function ringTiles(m, profile, blocked, beltTiles) {
+    const fp = footprintTiles(m);
+    const inFp = new Set(fp.map(([x, y]) => key(x, y)));
+    const out = [];
+    for (const [x, y] of fp) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const tx = x + dx, ty = y + dy;
+      if (inFp.has(key(tx, ty))) continue;
+      if (beltFree(profile, tx, ty, blocked, beltTiles)) { out.push([tx, ty]); inFp.add(key(tx, ty)); }
+    }
+    return out;
+  }
+  // shortest belt path from one machine to another over free tiles, or null.
+  // Breadth-first from every free tile around the source to the first free
+  // tile around the target; machines, scenery, solids and other belts block.
+  function routeBelt(from, to, profile) {
+    if (!grid) return null;
+    const blocked = new Set();
+    for (const m of profile.machines) for (const [x, y] of footprintTiles(m)) blocked.add(key(x, y));
+    const beltTiles = occupiedByBelts(profile, null);
+    const starts = ringTiles(from, profile, blocked, beltTiles);
+    const goals = new Set(ringTiles(to, profile, blocked, beltTiles).map(([x, y]) => key(x, y)));
+    if (!starts.length || !goals.size) return null;
+    const prev = new Map();
+    const q = [];
+    for (const s of starts) { const k = key(s[0], s[1]); prev.set(k, null); q.push(s); }
+    let found = null, guard = 0;
+    while (q.length && guard++ < 20000) {
+      const [x, y] = q.shift();
+      if (goals.has(key(x, y))) { found = [x, y]; break; }
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, ny = y + dy, k = key(nx, ny);
+        if (prev.has(k)) continue;
+        if (!beltFree(profile, nx, ny, blocked, beltTiles)) continue;
+        if (!beltStep(x, y, nx, ny)) continue;
+        prev.set(k, [x, y]);
+        q.push([nx, ny]);
+      }
+    }
+    if (!found) return null;
+    const path = [];
+    let cur = found;
+    while (cur) { path.push(cur); cur = prev.get(key(cur[0], cur[1])); }
+    path.reverse();
+    return path;
+  }
+  function drawBelts(profile) {
+    for (const b of profile.belts || []) {
+      const from = profile.machines.find((m) => m.id === b.from);
+      const pipe = !!(from && from.kind === 'mine' && from.ore === 'oil');
+      const c = new PIXI.Container();
+      c.zIndex = -500;
+      for (let i = 0; i < b.path.length; i++) {
+        const [tx, ty] = b.path[i];
+        const nb = b.path[i + 1] || b.path[i - 1] || b.path[i];
+        const dir = nb[1] !== ty ? 'v' : 'h';
+        const sp = new PIXI.Sprite(PIXELS.beltTileTex(0, dir, pipe));
+        sp.position.set(tx * T16, ty * T16);
+        sp._dir = dir;
+        c.addChild(sp);
+      }
+      cameraC.addChild(c);
+      beltViews[b.id] = { c, items: [], pipe, b, tiles: b.path.length };
+    }
+  }
+  // world position of a fractional path index
+  function pathPos(path, pos) {
+    const i = Math.max(0, Math.min(path.length - 1, Math.floor(pos)));
+    const j = Math.min(path.length - 1, i + 1);
+    const f = Math.max(0, Math.min(1, pos - i));
+    const [ax, ay] = path[i], [bx, by] = path[j];
+    return [Math.round((ax + (bx - ax) * f) * T16 + 6), Math.round((ay + (by - ay) * f) * T16 + 6)];
+  }
+  function clearGhost() {
+    if (!ghostG) return;
+    cameraC.removeChild(ghostG); ghostG.destroy(); ghostG = null;
+  }
+  // a translucent route preview while carrying the spool (green = will lay,
+  // red = no free path)
+  function showGhost(path, ok) {
+    clearGhost();
+    ghostG = new PIXI.Graphics();
+    ghostG.zIndex = -499;
+    const col = ok ? 0x6cc46c : 0xd84f4f;
+    for (const [tx, ty] of path || []) ghostG.rect(tx * T16 + 2, ty * T16 + 2, 12, 12).fill({ color: col, alpha: 0.45 });
+    cameraC.addChild(ghostG);
+  }
+  function setSpool(on) { spoolOn = !!on; if (!on) clearGhost(); }
 
   function setMove(which, down) { moving[which] = down; }
 
@@ -638,6 +789,45 @@
       if (window.FACTORY.onDock) window.FACTORY.onDock(dockedId);
     }
 
+    // the spool on the operator's back while carrying a belt
+    if (spoolOn) {
+      if (!spoolSp) { spoolSp = new PIXI.Sprite(PIXELS.spoolTex()); spoolSp.zIndex = 5500; cameraC.addChild(spoolSp); }
+      spoolSp.visible = true;
+      spoolSp.position.set(Math.round(playerX) - 9, Math.round(playerY) - 18);
+      spoolSp.zIndex = playerY + 0.5;
+    } else if (spoolSp) spoolSp.visible = false;
+    // belts roll; items ride
+    if (simProfile) {
+      if (frameClock % 6 === 0) {
+        beltFrame = (beltFrame + 1) % 4;
+        for (const v of Object.values(beltViews)) for (const sp of v.c.children) sp.texture = PIXELS.beltTileTex(beltFrame, sp._dir, v.pipe);
+      }
+      for (const b of simProfile.belts || []) {
+        const v = beltViews[b.id];
+        if (!v) continue;
+        while (v.items.length < b.items.length) {
+          const sp = new PIXI.Sprite(PIXELS.itemDotTex());
+          sp.zIndex = -450;
+          cameraC.addChild(sp);
+          v.items.push(sp);
+        }
+        while (v.items.length > b.items.length) { const sp = v.items.pop(); cameraC.removeChild(sp); sp.destroy(); }
+        b.items.forEach((it, i) => {
+          const sp = v.items[i];
+          const [px, py] = pathPos(b.path, it.pos);
+          sp.position.set(px, py);
+          sp.tint = PIXELS.matTint(it.mat);
+        });
+      }
+      if (frameClock % 20 === 0 && window.SIM) {
+        for (const [id, d] of Object.entries(stateDots)) {
+          const st = stations[id];
+          if (!st) continue;
+          d.texture = PIXELS.stateDotTex(SIM.state(simProfile, st.def.m));
+        }
+      }
+    }
+
     frameClock++;
     if (frameClock % 9 === 0) {
       frameIdx = (frameIdx + 1) % 4;
@@ -725,6 +915,7 @@
     init, loadMap, buildWorld, setMove, castLetter, floatText, stamp, getDocked, posOf,
     playerPos: () => ({ x: playerX, y: playerY }),
     screenPos, setDockGlow, showInfo, clearInfo, showMenu, clearMenu, setAutoLook,
+    routeBelt, showGhost, clearGhost, setSpool,
     setInvValue, invScreenPos, setHudKeys, setCharge,
     onDock: null,
   };
