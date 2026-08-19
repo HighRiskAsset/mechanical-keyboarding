@@ -616,16 +616,56 @@
     return out;
   }
   const key = (tx, ty) => tx + ',' + ty;
-  function occupiedByBelts(profile, exceptId) {
-    const set = new Set();
-    for (const b of profile.belts || []) { if (b.id === exceptId) continue; for (const [tx, ty] of b.path) set.add(key(tx, ty)); }
-    return set;
+
+  // ---------- the shape of a belt tile ----------
+  // Which sides of a tile the run joins tells the art what to draw, the goods
+  // where to turn, and another run whether it may cross here. A tile at
+  // either end of the run joins its one neighbour and carries straight on
+  // through the other side.
+  const SIDE = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0] };
+  const OPP = { n: 's', s: 'n', e: 'w', w: 'e' };
+  const SHAPE_OF = {
+    we: 'h', ew: 'h', ns: 'v', sn: 'v',
+    ne: 'ne', en: 'ne', nw: 'nw', wn: 'nw', se: 'se', es: 'se', sw: 'sw', ws: 'sw',
+  };
+  const SHAPE_HEAD = { h: 'w', v: 'n', ne: 'n', nw: 'n', se: 's', sw: 's' };  // the side the art runs from
+  const sideTo = (a, b) => (b[0] > a[0] ? 'e' : b[0] < a[0] ? 'w' : b[1] > a[1] ? 's' : 'n');
+  // one entry per run over a tile: the axis it crosses on ('h' or 'v'), or
+  // null where that run turns, starts or ends there and so owns the tile
+  // outright. Two runs may share a tile only by crossing — one on each axis,
+  // both going straight through — which makes a crossing a single tile and
+  // never a shared length.
+  function beltAxes(profile, exceptId) {
+    const at = new Map();
+    for (const b of profile.belts || []) {
+      if (b.id === exceptId) continue;
+      const n = b.path.length;
+      for (let i = 0; i < n; i++) {
+        const inS = i > 0 ? sideTo(b.path[i], b.path[i - 1]) : null;
+        const outS = i < n - 1 ? sideTo(b.path[i], b.path[i + 1]) : null;
+        const shape = SHAPE_OF[(inS || OPP[outS]) + (outS || OPP[inS])];
+        const through = i > 0 && i < n - 1 && (shape === 'h' || shape === 'v') ? shape : null;
+        const k = key(b.path[i][0], b.path[i][1]);
+        const list = at.get(k);
+        if (list) list.push(through); else at.set(k, [through]);
+      }
+    }
+    return at;
+  }
+  // may a run on `axis` ('h'/'v', or null when the heading is not settled)
+  // lie on a tile another run already uses
+  function crossable(here, axis) {
+    if (!here) return true;
+    if (!axis || here.length > 1) return false;   // no heading yet, or already a crossing
+    return here[0] !== null && here[0] !== axis;  // it must go straight, and the other way
   }
   // can a belt lie on this tile: in bounds, not solid (an open crossing
-  // overrides), not under a machine, not in scenery, not under another belt
-  function beltFree(profile, tx, ty, blocked, beltTiles) {
+  // overrides), not under a machine, not in scenery, and either clear of
+  // other runs or square across a single one
+  function beltFree(profile, tx, ty, blocked, beltAt, axis) {
     if (!grid || tx < 0 || ty < 0 || tx >= grid.cols || ty >= grid.rows) return false;
-    if (blocked.has(key(tx, ty)) || beltTiles.has(key(tx, ty))) return false;
+    if (blocked.has(key(tx, ty))) return false;
+    if (!crossable(beltAt.get(key(tx, ty)), axis)) return false;
     const cx = tx * T16 + 8, cy = ty * T16 + 8;
     const inRect = (r) => cx >= r.x && cx < r.x + r.w && cy >= r.y && cy < r.y + r.h;
     if (closedRects.some(inRect)) return false;
@@ -646,93 +686,135 @@
     if (openRects.some((r) => inRect(r, a[0], a[1])) || openRects.some((r) => inRect(r, b[0], b[1]))) return true;
     return TILES.passable(grid, a[0], a[1], b[0], b[1]);
   }
-  // the free tiles around a machine's footprint (where a belt may start/end)
-  function ringTiles(m, profile, blocked, beltTiles) {
+  // the free tiles around a machine's footprint (where a belt may start/end).
+  // No axis is passed: a run's own two ends carry its drums, so they want a
+  // tile to themselves and never sit on another run's crossing.
+  function ringTiles(m, profile, blocked, beltAt) {
     const fp = footprintTiles(m);
     const inFp = new Set(fp.map(([x, y]) => key(x, y)));
     const out = [];
     for (const [x, y] of fp) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       const tx = x + dx, ty = y + dy;
       if (inFp.has(key(tx, ty))) continue;
-      if (beltFree(profile, tx, ty, blocked, beltTiles)) { out.push([tx, ty]); inFp.add(key(tx, ty)); }
+      if (beltFree(profile, tx, ty, blocked, beltAt, null)) { out.push([tx, ty]); inFp.add(key(tx, ty)); }
     }
     return out;
   }
-  // shortest belt path from one machine to another over free tiles, or null.
+  // shortest belt path from one machine to another over free tiles, or null
+  // when there is none — the caller says so rather than laying anything.
   // Breadth-first from every free tile around the source to the first free
-  // tile around the target; machines, scenery, solids and other belts block.
+  // tile around the target; machines, scenery and solids block, and another
+  // run blocks unless this one can cross it square.
+  //
+  // The search walks states of (tile, the way we came in), not bare tiles.
+  // A tile another run already crosses may only be entered at right angles
+  // and left the same way it was entered, which needs the heading in hand;
+  // it also means a crossing is always one tile, never a shared length.
   // Of the shortest routes it takes one with the fewest corners: the walk
   // back over the distance field holds its heading for as long as the field
   // allows, so an open field gives a long straight and one turn, not stairs.
-  function routeBelt(from, to, profile) {
-    if (!grid) return null;
-    const blocked = new Set();
-    for (const m of profile.machines) for (const [x, y] of footprintTiles(m)) blocked.add(key(x, y));
-    const beltTiles = occupiedByBelts(profile, null);
-    const starts = ringTiles(from, profile, blocked, beltTiles);
-    const goals = new Set(ringTiles(to, profile, blocked, beltTiles).map(([x, y]) => key(x, y)));
-    if (!starts.length || !goals.size) return null;
-    const STEPS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-    const dist = new Map();
-    const q = [];
-    for (const s of starts) { const k = key(s[0], s[1]); if (dist.has(k)) continue; dist.set(k, 0); q.push(s); }
+  const STEPS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  const STEP_AXIS = ['h', 'h', 'v', 'v'];
+  const FROM_MACHINE = 4;            // the heading a run leaves its source with: none yet
+  const sk = (x, y, d) => x + ',' + y + ',' + d;
+  // the ground a run may cover, laid out from the source's ring. Stops at the
+  // first goal when given one, floods everything when not, so the bars under
+  // the machines and the route the hold lays come out of the same walk.
+  function beltFlood(profile, starts, blocked, beltAt, goals) {
+    const dist = new Map(), q = [];
+    for (const [x, y] of starts) {
+      const k = sk(x, y, FROM_MACHINE);
+      if (dist.has(k)) continue;
+      dist.set(k, 0); q.push([x, y, FROM_MACHINE]);
+    }
     let found = null, guard = 0, head = 0;
-    while (head < q.length && guard++ < 20000) {
-      const [x, y] = q[head++];
-      if (goals.has(key(x, y))) { found = [x, y]; break; }
-      const d = dist.get(key(x, y));
-      for (const [dx, dy] of STEPS) {
-        const nx = x + dx, ny = y + dy, k = key(nx, ny);
-        if (dist.has(k)) continue;
-        if (!beltFree(profile, nx, ny, blocked, beltTiles)) continue;
+    while (head < q.length && guard++ < 40000) {
+      const [x, y, d] = q[head++];
+      // a run needs at least two tiles, so the source's own ring doesn't count
+      if (d !== FROM_MACHINE && goals && goals.has(key(x, y))) { found = [x, y, d]; break; }
+      const straightOnly = beltAt.has(key(x, y));
+      const here = dist.get(sk(x, y, d));
+      for (let s = 0; s < 4; s++) {
+        if (straightOnly && d !== FROM_MACHINE && s !== d) continue;   // cross it, don't turn on it
+        const nx = x + STEPS[s][0], ny = y + STEPS[s][1], nk = sk(nx, ny, s);
+        if (dist.has(nk)) continue;
+        if (!beltFree(profile, nx, ny, blocked, beltAt, STEP_AXIS[s])) continue;
         if (!beltStep(x, y, nx, ny)) continue;
-        dist.set(k, d + 1);
-        q.push([nx, ny]);
+        dist.set(nk, here + 1);
+        q.push([nx, ny, s]);
       }
     }
+    return { dist, found, guard };
+  }
+  // the map a run reads before it is laid: machines block, scenery and solids
+  // block, another run blocks unless this one can cross it square
+  function beltGround(profile) {
+    const blocked = new Set();
+    for (const m of profile.machines) for (const [x, y] of footprintTiles(m)) blocked.add(key(x, y));
+    return { blocked, beltAt: beltAxes(profile, null) };
+  }
+  function routeBelt(from, to, profile) {
+    if (!grid) return null;
+    const { blocked, beltAt } = beltGround(profile);
+    const starts = ringTiles(from, profile, blocked, beltAt);
+    const goals = new Set(ringTiles(to, profile, blocked, beltAt).map(([x, y]) => key(x, y)));
+    if (!starts.length || !goals.size) return null;
+    const { dist, found, guard } = beltFlood(profile, starts, blocked, beltAt, goals);
     if (!found) return null;
     const path = [];
-    let cur = found, hx = 0, hy = 0;
+    let cur = found;
     for (let n = 0; n <= guard; n++) {
-      path.push(cur);
-      const d = dist.get(key(cur[0], cur[1]));
+      path.push([cur[0], cur[1]]);
+      const d = dist.get(sk(cur[0], cur[1], cur[2]));
       if (!d) break;
-      let step = null;
-      for (const [dx, dy] of [[hx, hy], ...STEPS]) {
-        if (!dx && !dy) continue;
-        const nx = cur[0] + dx, ny = cur[1] + dy;
-        if (dist.get(key(nx, ny)) !== d - 1) continue;
-        if (!beltStep(cur[0], cur[1], nx, ny)) continue;
-        step = [nx, ny, dx, dy];
-        break;
+      const px = cur[0] - STEPS[cur[2]][0], py = cur[1] - STEPS[cur[2]][1];
+      let back = null;
+      for (const pd of [cur[2], 0, 1, 2, 3, FROM_MACHINE]) {
+        if (dist.get(sk(px, py, pd)) === d - 1) { back = pd; break; }
       }
-      if (!step) break;
-      cur = [step[0], step[1]]; hx = step[2]; hy = step[3];
+      if (back === null) break;
+      cur = [px, py, back];
     }
     path.reverse();
     return path;
   }
-  // ---------- the shape of a belt tile ----------
-  // Which sides of a tile the run joins tells the art what to draw and the
-  // goods where to turn. A tile at either end of the run joins its one
-  // neighbour and carries straight on through the other side.
-  const SIDE = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0] };
-  const OPP = { n: 's', s: 'n', e: 'w', w: 'e' };
-  const SHAPE_OF = {
-    we: 'h', ew: 'h', ns: 'v', sn: 'v',
-    ne: 'ne', en: 'ne', nw: 'nw', wn: 'nw', se: 'se', es: 'se', sw: 'sw', ws: 'sw',
-  };
-  const SHAPE_HEAD = { h: 'w', v: 'n', ne: 'n', nw: 'n', se: 's', sw: 's' };  // the side the art runs from
-  const sideTo = (a, b) => (b[0] > a[0] ? 'e' : b[0] < a[0] ? 'w' : b[1] > a[1] ? 's' : 'n');
-
+  // which machines a run from this one could actually reach, by geometry
+  // alone — one flood rather than a search per machine, so the green bars
+  // never promise a belt the ground has no room for
+  function beltReaches(from, profile) {
+    const out = new Set();
+    if (!grid) return out;
+    const { blocked, beltAt } = beltGround(profile);
+    const starts = ringTiles(from, profile, blocked, beltAt);
+    if (!starts.length) return out;
+    const { dist } = beltFlood(profile, starts, blocked, beltAt, null);
+    const reached = new Set();
+    for (const k of dist.keys()) {
+      const i = k.lastIndexOf(',');
+      if (k.slice(i + 1) !== String(FROM_MACHINE)) reached.add(k.slice(0, i));
+    }
+    for (const m of profile.machines) {
+      if (m.id === from.id) continue;
+      if (ringTiles(m, profile, blocked, beltAt).some(([x, y]) => reached.has(key(x, y)))) out.add(m.id);
+    }
+    return out;
+  }
   function drawBelts(profile) {
-    for (const b of profile.belts || []) {
+    const belts = profile.belts || [];
+    // where two runs cross, the later one bridges the earlier: laying order
+    // decides, so a crossing looks the same every time the world is drawn
+    const crossings = new Set();
+    for (let bi = 1; bi < belts.length; bi++) {
+      const under = beltAxes({ belts: belts.slice(0, bi) }, null);
+      for (const [tx, ty] of belts[bi].path) if (under.has(key(tx, ty))) crossings.add(belts[bi].id + '@' + key(tx, ty));
+    }
+    belts.forEach((b, bi) => {
       const from = profile.machines.find((m) => m.id === b.from);
       const pipe = !!(from && from.kind === 'mine' && from.ore === 'oil');
       const n = b.path.length;
-      if (n < 2) continue;
+      if (n < 2) return;
       const c = new PIXI.Container();
-      c.zIndex = -500;
+      c.zIndex = -500 + bi * 0.01;      // the later run draws over the earlier
       const geo = [];
       for (let i = 0; i < n; i++) {
         const [tx, ty] = b.path[i];
@@ -740,6 +822,14 @@
         const outS = i < n - 1 ? sideTo(b.path[i], b.path[i + 1]) : null;
         const a = inS || OPP[outS], z = outS || OPP[inS];
         const shape = SHAPE_OF[a + z];
+        // the shadow the bridging run throws on the one beneath it
+        if (crossings.has(b.id + '@' + key(tx, ty))) {
+          const sh = new PIXI.Graphics();
+          if (shape === 'h') sh.rect(tx * T16, ty * T16 + 4, T16, 12);
+          else sh.rect(tx * T16 + 4, ty * T16, 12, T16);
+          sh.fill({ color: 0x0b0a12, alpha: 0.45 });
+          c.addChild(sh);
+        }
         const sp = new PIXI.Sprite(PIXELS.beltTileTex(Math.max(0, beltFrame), shape, SHAPE_HEAD[shape] !== a, pipe));
         sp.position.set(tx * T16, ty * T16);
         sp._shape = shape; sp._rev = SHAPE_HEAD[shape] !== a;
@@ -759,7 +849,7 @@
       c.addChild(itemsC);
       cameraC.addChild(c);
       beltViews[b.id] = { c, itemsC, items: [], pipe, b, geo };
-    }
+    });
   }
   // how the band crosses one tile: straight through its centre, or a quarter
   // turn of radius 8 about the corner the two sides share
@@ -1112,7 +1202,7 @@
     init, loadMap, buildWorld, setMove, castLetter, floatText, stamp, getDocked, posOf,
     playerPos: () => ({ x: playerX, y: playerY }),
     screenPos, setDockGlow, showInfo, clearInfo, showMenu, clearMenu, setAutoLook,
-    routeBelt, showGhost, clearGhost, setSpool, markStations, setSocketTarget,
+    routeBelt, beltReaches, showGhost, clearGhost, setSpool, markStations, setSocketTarget,
     setInvValue, invScreenPos, setHudKeys, setCharge,
     onDock: null,
   };

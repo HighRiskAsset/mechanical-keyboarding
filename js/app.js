@@ -502,14 +502,19 @@
     setCaption('');
   }
   // while carrying the spool: a green bar under every machine the belt may
-  // end at, red under the rest
+  // end at, red under the rest. A machine has to want the material AND have
+  // ground the run can cross to reach it — a bar that promised the first
+  // without the second sent you walking to a machine where the hold could
+  // only drop the spool.
   function refreshMarks() {
     if (!profile || !spool) { FACTORY.markStations(null); return; }
     const from = SIM.machineById(profile, spool.from);
+    if (!from) { FACTORY.markStations(null); return; }
+    const reachable = FACTORY.beltReaches(from, profile);
     const marks = {};
     for (const m of profile.machines) {
-      if (!from || m.id === from.id) continue;
-      marks['m:' + m.id] = SIM.canLink(profile, from, m).ok ? 'ok' : 'no';
+      if (m.id === from.id) continue;
+      marks['m:' + m.id] = SIM.canLink(profile, from, m).ok && reachable.has(m.id) ? 'ok' : 'no';
     }
     FACTORY.markStations(marks);
   }
