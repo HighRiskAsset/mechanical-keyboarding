@@ -56,24 +56,52 @@ jobs:
       - name: Install lftp
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
 
-      # Preflight. A failed upload otherwise reports one opaque lftp exit code;
-      # this says which layer broke — the name, the handshake, or the login.
-      # It sends no credentials, so it is safe to read in a public build log.
-      - name: Probe the connection
-        continue-on-error: true
+      # The connection is probed one layer at a time, each in its own step, on
+      # purpose: a build log on this repo is readable only with admin rights,
+      # but step names and their pass/fail are public. So the first step that
+      # goes red names the fault, with nobody needing to open a log.
+      #
+      # None of these carries a secret into the output, and none retries a bad
+      # password — a host's brute-force guard should never see this coming.
+
+      - name: Probe 1 - the hostname resolves
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+        run: getent hosts "$FTP_HOST"
+
+      - name: Probe 2 - port 21 accepts a connection
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+        run: timeout 15 bash -c "exec 3<>/dev/tcp/$FTP_HOST/21 && head -c 120 <&3"
+
+      - name: Probe 3 - FTPS handshake, certificate valid for this host
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
         run: |
-          echo "=== 1. does the hostname resolve? ==="
-          getent hosts "$FTP_HOST" || echo "FAILED: hostname does not resolve"
+          set -eu
+          out=$(timeout 20 openssl s_client -connect "$FTP_HOST:21" -starttls ftp -brief </dev/null 2>&1 || true)
+          echo "$out"
+          echo "$out" | grep -q "Verification: OK" \
+            || { echo "^ the certificate is not trusted for this hostname"; exit 1; }
 
-          echo "=== 2. is port 21 open, and does it greet as FTP? ==="
-          timeout 15 bash -c "exec 3<>/dev/tcp/$FTP_HOST/21 && head -c 200 <&3" \
-            || echo "FAILED: nothing listening on port 21"
-
-          echo "=== 3. explicit FTPS handshake, and is the certificate valid for this host? ==="
-          timeout 20 openssl s_client -connect "$FTP_HOST:21" -starttls ftp -brief </dev/null 2>&1 | head -25 \
-            || echo "FAILED: no FTPS handshake on port 21"
+      - name: Probe 4 - the credentials log in
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          LFTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -eu
+          # pwd prints the landing directory, which is what FTP_REMOTE_DIR is
+          # relative to; cls proves the session can actually read the account.
+          lftp -c "
+            set ftp:ssl-force true;
+            set ssl:verify-certificate true;
+            set net:max-retries 1;
+            set net:timeout 20;
+            open -u '$FTP_USER' --env-password '$FTP_HOST';
+            pwd;
+            cls -1;
+          "
 
       - name: Upload over FTPS
         env:
@@ -83,14 +111,11 @@ jobs:
           FTP_DIR: ${{ vars.FTP_REMOTE_DIR }}
         run: |
           set -eu
-          : "${FTP_HOST:?set the FTP_HOST secret}"
-          : "${FTP_USER:?set the FTP_USER secret}"
-          : "${LFTP_PASSWORD:?set the FTP_PASSWORD secret}"
           : "${FTP_DIR:?set the FTP_REMOTE_DIR variable}"
           # --env-password keeps the password out of the process list and out of
           # any shell expansion, so a password with quotes or $ in it is safe.
-          # No debug tracing: this log is public, and lftp's own error text plus
-          # the probe above localise a failure without risking the PASS command.
+          # Deliberately no `debug`: this log is public, and the levels that
+          # trace the control conversation also carry the PASS command.
           lftp -c "
             set ftp:ssl-force true;
             set ftp:ssl-protect-data true;
@@ -98,7 +123,6 @@ jobs:
             set net:max-retries 2;
             set net:timeout 20;
             open -u '$FTP_USER' --env-password '$FTP_HOST';
-            pwd;
             mirror --reverse --verbose --parallel=4 --no-perms _site '$FTP_DIR';
           "
 
