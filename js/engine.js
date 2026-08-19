@@ -1,21 +1,24 @@
 // Skill model + adaptive content generator (tech tree v3). Global: ENGINE
 //
 // The engine knows kinds and grammars, never letters (invariant 5): every
-// letter it touches comes from the course data (LANG_RU) or from the chain's
-// alphabet functions. Profile v2: letters unlock in pairs (per ore Mk), the
-// bag holds materials, machines are instances standing on plots and nodes.
+// letter it touches comes from the active course's data (COURSES) or from the
+// chain's alphabet functions. Profile v2: letters unlock in pairs (per ore
+// Mk), the bag holds materials, machines are instances standing on plots and
+// nodes.
 (function () {
   'use strict';
 
-  const L = window.LANG_RU;
+  const L = COURSES.course();
 
-  // One save per map: mk.profile.v1.<mapId> (the key kept its name across the
-  // v1 → v2 profile change; the version lives inside the object).
+  // One save per map and course: mk.profile.v1.<course.><mapId>. The first
+  // course carries no tag, so saves made before the switch keep loading. (The
+  // key kept its name across the v1 → v2 profile change; the version lives
+  // inside the object.)
   const STORAGE_PREFIX = 'mk.profile.v1.';
   const LAST_MAP_KEY = 'mk.map';
   const SINGLE_KEY = 'mk.profile.v1';
   const LEGACY_KEY = 'transsib.profile.v1';
-  const keyFor = (mapId) => STORAGE_PREFIX + mapId;
+  const keyFor = (mapId) => STORAGE_PREFIX + COURSES.saveTag() + mapId;
 
   // Tuning constants
   const MIN_SAMPLES = 30;                    // presses before a letter can pass its gate

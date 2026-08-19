@@ -10,8 +10,8 @@
   const loadingCard = document.getElementById('loading');
   if (loadingCard) loadingCard.classList.add('s2');
 
-  const L = window.LANG_RU;
-  const LAYOUT = window.LAYOUT_RU;
+  const L = COURSES.course();
+  const LAYOUT = COURSES.layout();
   const E = window.ENGINE;
   const T = window.I18N;
   const A = window.AUDIO;
@@ -945,6 +945,56 @@
     if (diff === 1) return T.t('dayYesterday');
     return d.toLocaleDateString(T.getLang() === 'ru' ? 'ru-RU' : 'en-GB', { day: 'numeric', month: 'short' });
   }
+  // ---------- the two switches: interface language, keyboard course ----------
+  // Flags carry the recognition — Windows has no flag emoji, so FLAGS draws
+  // them. The layout switch names itself as well: the choice there is QWERTY
+  // or ЙЦУКЕН, not a country. Both switches render from their registry, so a
+  // third language or layout arrives without touching this file.
+  function langSwitchHTML() {
+    return T.langs().map((l) => {
+      const on = l.id === T.getLang();
+      return `<button class="seg-btn flag-btn${on ? ' active' : ''}" data-lang="${l.id}"`
+        + ` title="${l.native}" aria-label="${l.native}" aria-pressed="${on}">`
+        + `${FLAGS.svg(l.flag)}</button>`;
+    }).join('');
+  }
+  function courseSwitchHTML() {
+    return COURSES.list().map((c) => {
+      const on = c.id === COURSES.get();
+      return `<button class="seg-btn flag-btn${on ? ' active' : ''}" data-course="${c.id}"`
+        + ` title="${c.name}" aria-pressed="${on}"${c.ready ? '' : ' disabled'}>`
+        + `${FLAGS.svg(c.flag)}<span>${c.shortName}</span></button>`;
+    }).join('');
+  }
+  // A globe marks the language the game speaks, a keyboard the layout it
+  // teaches. No words: a player who reads neither language still has to find
+  // both switches on the first screen. The words survive as the icon's
+  // accessible name and tooltip.
+  function switchesHTML(idPrefix) {
+    return `
+      <div class="switches">
+        <span class="switch-label" title="${T.t('setLanguage')}">${ICONS.svg('globe', T.t('setLanguage'))}</span>
+        <span class="seg" id="${idPrefix}-lang">${langSwitchHTML()}</span>
+        <span class="switch-label" title="${T.t('setLayout')}">${ICONS.svg('keyboard', T.t('setLayout'))}</span>
+        <span class="seg" id="${idPrefix}-course">${courseSwitchHTML()}</span>
+      </div>`;
+  }
+  function wireSwitches(idPrefix, rerender) {
+    document.querySelectorAll(`#${idPrefix}-lang .seg-btn`).forEach((b) => {
+      b.onclick = () => { T.setLang(b.dataset.lang); applyI18n(); rerender(); };
+    });
+    document.querySelectorAll(`#${idPrefix}-course .seg-btn`).forEach((b) => {
+      b.onclick = () => {
+        // The layout and its course data bind once at load, and every save is
+        // course-scoped; starting over is the honest way to hand the game a
+        // different keyboard.
+        if (!COURSES.set(b.dataset.course)) return;
+        if (profile) E.saveProfile(profile);
+        location.reload();
+      };
+    });
+  }
+
   function showMapSelect() {
     overlayRerender = showMapSelect;
     const focusId = mapId || E.getLastMap() || CHAIN.DEFAULT_MAP;
@@ -965,21 +1015,17 @@
           <span class="map-go">${go}</span>
         </button>`;
     }).join('');
-    const langBtns = T.LANGS.map((l) =>
-      `<button class="seg-btn${l === T.getLang() ? ' active' : ''}" data-lang="${l}">${l === 'ru' ? 'РУ' : l.toUpperCase()}</button>`).join('');
     showOverlay(`
       <div class="card-station">${T.t('mapSelectStation')}</div>
       <h2>${T.t('mapSelectTitle')}</h2>
-      <p class="muted">${T.t('mapSelectNote')}</p>
+      <p class="muted map-note">${T.t('mapSelectNote')}</p>
       <div class="map-cards" id="map-cards">${cards}</div>
       <div class="map-foot">
-        <span class="seg" id="map-lang">${langBtns}</span>
+        ${switchesHTML('map')}
         ${mapId ? `<button id="ov-cancel" class="link-btn">${T.t('mapSelectBack')}</button>` : ''}
       </div>
     `, true);
-    document.querySelectorAll('#map-lang .seg-btn').forEach((b) => {
-      b.onclick = () => { T.setLang(b.dataset.lang); applyI18n(); showMapSelect(); };
-    });
+    wireSwitches('map', showMapSelect);
     const btns = [...document.querySelectorAll('#map-cards .map-card')];
     btns.forEach((b) => { b.onclick = () => startMap(b.dataset.map); });
     $('map-cards').onkeydown = (e) => {
@@ -1162,8 +1208,6 @@
   }
   function showSettings() {
     overlayRerender = showSettings;
-    const langBtns = T.LANGS.map((l) =>
-      `<button class="seg-btn${l === T.getLang() ? ' active' : ''}" data-lang="${l}">${l === 'ru' ? 'РУ' : l.toUpperCase()}</button>`).join('');
     const tips = DONATE.map((d) => {
       const coins = d.coins.map((c) => `<i class="coin">${c}</i>`).join('');
       return `<a class="tip-btn" href="${d.url}" target="_blank" rel="noopener"><span class="tip-coins">${coins}</span><b>${d.label}</b><span>${d.sub}</span></a>`;
@@ -1177,14 +1221,13 @@
         </div>
         <p class="set-note">${T.t('setWorldNote')}</p>
         <div class="set-row">
-          <span class="set-label">${T.t('setLanguage')}</span>
-          <span class="seg" id="set-lang">${langBtns}</span>
+          <span class="set-label">${ICONS.svg('globe', T.t('setLanguage'))}${T.t('setLanguage')}</span>
+          <span class="seg" id="set-lang">${langSwitchHTML()}</span>
         </div>
         <div class="set-row">
-          <span class="set-label">${T.t('setLayout')}</span>
-          <span class="seg"><button class="seg-btn active">ЙЦУКЕН</button><button class="seg-btn" disabled>QWERTY</button></span>
+          <span class="set-label">${ICONS.svg('keyboard', T.t('setLayout'))}${T.t('setLayout')}</span>
+          <span class="seg" id="set-course">${courseSwitchHTML()}</span>
         </div>
-        <p class="set-note">${T.t('setLayoutSoon')}</p>
         <div class="set-row">
           <span class="set-label">${T.t('setSaveFile')}</span>
           <span class="seg"><button class="seg-btn" id="set-export">${T.t('setExport')}</button><button class="seg-btn" id="set-import">${T.t('setImport')}</button></span>
@@ -1198,9 +1241,7 @@
       <button id="set-reset" class="link-btn danger">${T.t('btnReset')}</button>
       <div><button id="ov-continue" class="btn-primary">${T.t('passportClose')}</button></div>
     `);
-    document.querySelectorAll('#set-lang .seg-btn').forEach((b) => {
-      b.onclick = () => { T.setLang(b.dataset.lang); applyI18n(); showSettings(); };
-    });
+    wireSwitches('set', showSettings);
     $('set-map').onclick = () => showMapSelect();
     $('set-export').onclick = () => exportSave();
     $('set-import').onclick = () => pickImportFile();

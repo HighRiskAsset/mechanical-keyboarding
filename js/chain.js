@@ -16,7 +16,7 @@
 (function () {
   'use strict';
 
-  const L = window.LANG_RU;
+  const L = COURSES.course();
   const TILE = 16;
 
   // ---- ores: six fingers. ids are material ids (legacy names never rename) ----

@@ -58,10 +58,17 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
    product with other languages bolted on later. Everything language-specific
    (letter frequencies, unlock order, phonotactics, word lists, glosses) lives
    in a `language-<code>.js`; everything layout-specific (key geometry, shift
-   rules, intrusion mapping) lives in a `layout-<code>.js`. The engine,
-   economy, tier structure, and art must hold for any alphabet + layout pair.
-   Adding a course means adding two data files, not editing the engine —
-   if a change would break that, it is the wrong change.
+   rules, intrusion mapping) lives in a `layout-<code>.js`. The physical slab
+   underneath — key geometry, finger assignment, home row — is the same for
+   every layout on it and lives once in `board-ansi.js`. `courses.js` is the
+   registry that pairs a layout with its course data; the engine, chain and
+   app read the active course through it and never touch a `LANG_*` /
+   `LAYOUT_*` global. The engine, economy, tier structure, and art must hold
+   for any alphabet + layout pair. Adding a course means adding two data
+   files and one registry row, not editing the engine — if a change would
+   break that, it is the wrong change. A course with no course data yet is
+   listed but not ready: the switch shows it greyed. Saves are per world
+   *and* per course (the first course keeps the untagged key).
 
 ## Current mechanics (implemented)
 
@@ -125,9 +132,27 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
 - Side panel inventory with pixel icons; fly-to-inventory animations; float
   "+N"; icon rows sit on dark plates (legible over windows); welcome card
   carries a pixel vignette; EN/РУ interface.
+- **The two switches** (on the map picker, and again in settings): interface
+  language and keyboard course, stacked, language above layout. Both are
+  flags — drawn in `flags.js` on a 21×14 pixel grid, because Windows ships no
+  flag emoji and a blurry flag has no place in a pixel game — the layout one
+  flags plus its name (ЙЦУКЕН, QWERTY), since the choice there is a keyboard,
+  not a country. **The switches are labelled by icon, not by word** (`icons.js`:
+  a globe for the language the game speaks, a keyboard for the layout it
+  teaches): the player who cannot read the current interface language is
+  exactly the player who needs to find them. The words survive as tooltip and
+  accessible name. Both switches render from their registry, so a third entry
+  needs no UI work; a course whose data is still a stub simply renders greyed
+  out. No explainer line under them — every listed course ships before
+  release, so there is nothing to apologize for. Changing the course reloads
+  (layout and course data bind once at load).
+- **Changing the interface language must not move the furniture.** Every
+  translated text block on the picker and in settings reserves its tallest
+  case (`.map-tagline`, `.map-progress`, `.map-note`, `.set-note`, `.set-row`),
+  so switching EN↔РУ leaves the card the same height and every control where
+  it was. Any new translated block on those screens owes the same reserve.
 - **Settings menu** (⚙ header button → overlay card): the current world +
-  «Change» (back to the map picker); interface language EN/РУ; keyboard
-  layout switch (ЙЦУКЕН active, QWERTY a disabled placeholder); save file
+  «Change» (back to the map picker); the same two switches; save file
   export/import (JSON wrapper `{app, version:1, map, profile, sound,
   uilang}`; the file names its world and imports into that world's slot — a
   pre-maps file lands on the Frontier; import confirms, then reloads); reset
@@ -711,10 +736,11 @@ from T4, hint-free from T5 · the ×1.5-while-typing feel layer (off; gravy).
   phased order, acceptance criteria and data checks live in
   `docs/build-plan.md`: curriculum core → build-from-bag → the simulation →
   tiers 2–3 → tiers 4–6 → content and tuning.
-- **English QWERTY course** (committed scope, not optional): `language-en.js`
-  + `layout-en.js`, an EN frequency-ordered unlock order and word list, and a
-  course picker so progress is tracked per course. The settings menu already
-  has the layout switch stubbed (QWERTY disabled) — this lights it up. Doing
+- **English QWERTY course** (committed scope, not optional): `layout-en.js`
+  and the course picker are in place and progress is already tracked per
+  course; what is missing is `language-en.js` — an EN frequency-ordered
+  unlock order, phonotactics and word list. The QWERTY entry goes live the
+  moment that file exists (`courses.js` reads readiness from it). Doing
   this early is the honest test of invariant 5; the longer it waits, the more
   Russian assumptions leak into the engine.
 - UI chrome reskin to match the bright outdoor world (the page frame is
@@ -748,8 +774,13 @@ Fitts & Posner automaticity = the automation metaphor.
 
 ## Files
 
-`js/engine.js` learning engine + per-world save slots · `js/language-ru.js`
-RU course data · `js/layout-ru.js` ЙЦУКЕН · `js/chain.js` chain/economy data
+`js/engine.js` learning engine + per-world save slots · `js/courses.js` the
+course registry (which keyboard is being taught) · `js/language-ru.js`
+RU course data · `js/layout-ru.js` ЙЦУКЕН glyphs · `js/layout-en.js` QWERTY
+glyphs (course data pending) · `js/board-ansi.js` the physical ANSI slab
+shared by both · `js/flags.js` drawn flags + `js/icons.js` the globe and
+keyboard marks that label the switches ·
+`js/chain.js` chain/economy data
 + the `MAPS` registry (Frontier, Open Range) · `js/factory.js` Pixi world
 (`loadMap` per world) · `js/pixels.js` sprite kit + the one palette ·
 `js/tiles.js` terrain kit (fills, autotile spills, walls, faces, crossings,

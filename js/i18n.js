@@ -23,7 +23,6 @@
       setWorldNote: 'Each world keeps its own save. Switching leaves this one where you stood.',
       setLanguage: 'Interface language',
       setLayout: 'Keyboard layout',
-      setLayoutSoon: 'More layouts are planned — English QWERTY is next.',
       setSaveFile: 'Save file',
       setExport: 'Export',
       setImport: 'Import',
@@ -193,7 +192,6 @@
       setWorldNote: 'У каждого мира своё сохранение. При смене этот останется там, где вы стояли.',
       setLanguage: 'Язык интерфейса',
       setLayout: 'Раскладка клавиатуры',
-      setLayoutSoon: 'Другие раскладки в планах — следующая: английская QWERTY.',
       setSaveFile: 'Файл сохранения',
       setExport: 'Экспорт',
       setImport: 'Импорт',
@@ -353,6 +351,13 @@
     },
   };
 
+  // How each interface language shows on its switch: its own flag, its own
+  // name. A new language is a STRINGS block above plus one row here.
+  const LANG_META = {
+    en: { flag: 'us', native: 'English' },
+    ru: { flag: 'ru', native: 'Русский' },
+  };
+
   let lang = DEFAULT_LANG;
   try {
     let saved = localStorage.getItem(STORAGE_KEY);
@@ -380,5 +385,14 @@
     try { localStorage.setItem(STORAGE_KEY, lang); } catch { /* non-fatal */ }
   }
 
-  window.I18N = { t, fingerName, getLang, setLang, LANGS: Object.keys(STRINGS) };
+  // Every interface language, ready for the switch to render.
+  function langs() {
+    return Object.keys(STRINGS).map((id) => ({
+      id,
+      flag: (LANG_META[id] || {}).flag || null,
+      native: (LANG_META[id] || {}).native || id.toUpperCase(),
+    }));
+  }
+
+  window.I18N = { t, fingerName, getLang, setLang, langs };
 })();
