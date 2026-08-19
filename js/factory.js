@@ -209,6 +209,7 @@
     if (window.ResizeObserver) new ResizeObserver(resize).observe(mountEl);
 
     app.ticker.add(tick);
+    setInterval(frameWatchdog, 250);
     ready = true;
     window.FACTORY._app = app;
   }
@@ -601,18 +602,34 @@
     const st = stations[dockId];
     if (!st || st.def.kind !== 'mine') return;
     st.auto = live;
-    st.sp.texture = texFor(live ? 3 : 1)[0];
+    st.simState = live ? 'run' : 'off';
+    st.sp.texture = band(lookOf(st.def.kind, live), live ? 'idle' : 'still')[0];
   }
 
   // ---------- belts on the map (phase 3) ----------
   const T16 = 16;
   const tileOf = (px, py) => [Math.floor(px / T16), Math.floor(py / T16)];
   // the tiles a machine's body covers (its collision box)
+  // The tiles a machine's body covers, and so the tiles no run may lie on.
+  //
+  // A machine claims a tile when its body covers at least six of that tile's
+  // sixteen pixels. The walking box is three pixels wider than the machine
+  // on each side so the operator never clips it, and snapping that box out
+  // to whole tiles used to hand a machine a tile its sprite never touches:
+  // the run stopped on the far side of it and left a gap it had no way to
+  // close. Six is well under the twelve a belt's band is wide, so whatever
+  // sliver of machine hangs over a run's last tile is covered by the machine
+  // itself — it draws above the belt — and the run meets it flush.
+  const CLAIM = 6;
   function footprintTiles(m) {
     const pos = CHAIN.machinePos(m);
-    const [x0, y0] = tileOf(pos.x - 3, pos.y - 14), [x1, y1] = tileOf(pos.x + 28, pos.y + 1);
+    const x0 = pos.x, x1 = pos.x + 25;            // the body as drawn, 26 wide
+    const y0 = pos.y - 14, y1 = pos.y + 1;        // it stands on its base; runs pass behind the rest
+    const covers = (lo, hi, t) => Math.min(hi, t * T16 + T16 - 1) - Math.max(lo, t * T16) + 1 >= CLAIM;
     const out = [];
-    for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) out.push([tx, ty]);
+    for (let ty = Math.floor(y0 / T16); ty <= Math.floor(y1 / T16); ty++)
+      for (let tx = Math.floor(x0 / T16); tx <= Math.floor(x1 / T16); tx++)
+        if (covers(x0, x1, tx) && covers(y0, y1, ty)) out.push([tx, ty]);
     return out;
   }
   const key = (tx, ty) => tx + ',' + ty;
@@ -722,6 +739,7 @@
   // the machines and the route the hold lays come out of the same walk.
   function beltFlood(profile, starts, blocked, beltAt, goals) {
     const dist = new Map(), q = [];
+    const startSet = new Set(starts.map(([x, y]) => key(x, y)));
     for (const [x, y] of starts) {
       const k = sk(x, y, FROM_MACHINE);
       if (dist.has(k)) continue;
@@ -730,8 +748,12 @@
     let found = null, guard = 0, head = 0;
     while (head < q.length && guard++ < 40000) {
       const [x, y, d] = q[head++];
-      // a run needs at least two tiles, so the source's own ring doesn't count
-      if (d !== FROM_MACHINE && goals && goals.has(key(x, y))) { found = [x, y, d]; break; }
+      // A run ends somewhere other than where it started. Where two machines
+      // stand close enough to share a tile around them, that tile is both a
+      // place to start and a place to finish, and without this the walk
+      // stepped off it and straight back onto it — a run of three tiles that
+      // doubled back on itself and stood on its own end.
+      if (d !== FROM_MACHINE && goals && goals.has(key(x, y)) && !startSet.has(key(x, y))) { found = [x, y, d]; break; }
       const straightOnly = beltAt.has(key(x, y));
       const here = dist.get(sk(x, y, d));
       for (let s = 0; s < 4; s++) {
@@ -788,10 +810,12 @@
     const starts = ringTiles(from, profile, blocked, beltAt);
     if (!starts.length) return out;
     const { dist } = beltFlood(profile, starts, blocked, beltAt, null);
+    const startSet = new Set(starts.map(([x, y]) => key(x, y)));
     const reached = new Set();
     for (const k of dist.keys()) {
       const i = k.lastIndexOf(',');
-      if (k.slice(i + 1) !== String(FROM_MACHINE)) reached.add(k.slice(0, i));
+      const tile = k.slice(0, i);
+      if (k.slice(i + 1) !== String(FROM_MACHINE) && !startSet.has(tile)) reached.add(tile);
     }
     for (const m of profile.machines) {
       if (m.id === from.id) continue;
@@ -984,7 +1008,25 @@
 
   let camX = 0, camY = 0;
 
+  // A watchdog on the animation frame. Some hosts — the in-app browser pane
+  // among them — stop delivering frames to a tab that is not on top without
+  // ever marking the page hidden: no visibilitychange fires and
+  // visibilityState still reads 'visible', so the page has no way to know
+  // and everything driven by the frame simply stops. When the page believes
+  // it is visible and no frame has arrived for a while, wind the ticker by
+  // hand instead. A tab that is genuinely hidden says so, and that one we
+  // let sleep — nobody is looking at it, and the clock in app.js carries
+  // the factory on its own timer either way.
+  let lastFrame = 0, windingByHand = false;
+  function frameWatchdog() {
+    if (!app || !ready || document.visibilityState !== 'visible') return;
+    if (performance.now() - lastFrame < 400) return;
+    windingByHand = true;
+    try { app.ticker.update(performance.now()); } finally { windingByHand = false; }
+  }
+
   function tick(ticker) {
+    if (!windingByHand) lastFrame = performance.now();
     if (!ready || !player) return;
     const dt = ticker.deltaTime;
 

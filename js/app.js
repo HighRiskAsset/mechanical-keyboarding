@@ -1089,10 +1089,16 @@
   // ---------- the clock (phase 3) ----------
   // Automated machines and belts run in real time; the live tick advances
   // them by the real elapsed time, a return from a hidden tab or a reload
-  // fast-forwards (bounded by buffers). Hands never touch this. It runs off
-  // the animation frame rather than a timer so goods on a belt move once per
-  // drawn frame — on a timer they advanced in visible jumps between frames.
-  let simRaf = null, simSaveAcc = 0, beltFloatAcc = 0;
+  // fast-forwards (bounded by buffers). Hands never touch this.
+  //
+  // Two hands wind the same clock. SIM.tick advances by the time actually
+  // elapsed and takes it from one lastTick, so whichever hand arrives first
+  // does the work and the other finds nothing left to do — they cannot
+  // double-count between them. The animation frame drives it while the page
+  // is drawing, which is what moves goods a pixel at a time instead of in
+  // visible jumps; the timer carries it while the tab is in the background,
+  // where frames stop but the factory should not.
+  let simRaf = null, simTimer = null, simSaveAcc = 0, beltFloatAcc = 0;
   function simTick() {
     if (!profile) return;
     const dt = SIM.tick(profile, Date.now());
@@ -1110,13 +1116,18 @@
   }
   function startClock() {
     if (simRaf) cancelAnimationFrame(simRaf);
+    if (simTimer) clearInterval(simTimer);
     const spin = () => { simTick(); simRaf = requestAnimationFrame(spin); };
     simRaf = requestAnimationFrame(spin);
+    // the background hand: browsers hold this to about once a second in a
+    // hidden tab, which is plenty — the tick reads the real elapsed time
+    simTimer = setInterval(simTick, 250);
   }
   document.addEventListener('visibilitychange', () => {
     if (!profile) return;
-    // frames stop while the tab is hidden: bank the save now, catch the
-    // clock up on the way back
+    // the clock keeps running in the background on the timer; bank the save
+    // on the way out in case the tab never comes back, and on the way in
+    // settle up whatever the throttle has let pile up
     if (document.hidden) { E.saveProfile(profile); return; }
     SIM.catchUp(profile, Date.now()); refreshInventory(); if (dock) refreshInfo();
   });
