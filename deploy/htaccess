@@ -1,5 +1,11 @@
 # Shipped to the site root as .htaccess by .github/workflows/deploy.yml.
 
+# The host leaves its own default.php in a new public_html, and its index order
+# can reach a .php before an .html — which would serve the placeholder to every
+# visitor while a perfectly good deploy sat next to it. Name the winner outright
+# rather than deleting a file the host put there.
+DirectoryIndex index.html
+
 # The demo is reshared and reloaded far more often than it is large, so a short
 # cache is the right trade: someone who saw last week's build and comes back to
 # a new link gets the new build, not a stale one out of their browser.
