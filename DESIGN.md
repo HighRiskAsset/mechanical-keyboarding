@@ -98,14 +98,73 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   offered. A unit of output is paid for at its first keystroke and emitted at
   its `perUnit`-th; an unpayable choice runs dry with ✗ (typing still
   trains). Mines yield one ore per correct letter.
+- **Building — the menu on you, and the ghost (rotation overhaul,
+  2026-08-21):** building happens anywhere. A long press of Space on open
+  ground — anywhere a hold would not open something else — raises the
+  **build menu on the operator**: the mine first, then every kind whose
+  price's materials have been held (progressive reveal unchanged), priced
+  and greyed when unaffordable. Arrows choose; a **tap** of Space picks; a
+  **hold** over the open menu puts it away (this one menu answers the
+  release, because its hold means cancel). The pick becomes a **ghost on
+  the grid that walks with the operator** — body translucent in its facing,
+  every tile under it marked buildable or not, its port plates already on
+  the ground and faint where their way out is blocked, its price in a row
+  over the operator's head. A **tap** of Space turns it a quarter
+  clockwise; a **hold** builds it on good ground, and on bad ground the
+  same hold cancels; Escape cancels too. Valid ground **for now** is the
+  surveyed pads (mines: a free vein the body covers — the mine row prices
+  itself off the vein under the ghost, and an unopened ore's first mine
+  still unlocks its keys); free placement over open terrain is a later mode
+  that swaps exactly that one zone test for a terrain answer (big rocks
+  invalid, stairs invalid though belts may cross them). Machines are seated
+  in the save as tiles (`m.at` + `m.face`), and pads and veins stopped
+  being dockable places — their markers survey the ground, the menu came to
+  the operator.
 - **Taking a machine down (2026-08-20):** the last row of every machine's
   menu. Its price comes back at the price of the newest one of its kind — so
   down-and-up again is even — with everything in its buffers, and its belts
-  come up with it (goods riding them roll back into the machine each one
-  runs from). A vein's opening price is never refunded: that bought keys, and
-  the keys stay. The last mine standing on an ore cannot be taken down: a new
-  one is paid for in that same ore, so it could put the vein out of reach for
-  good. The highlight never opens on the removal row.
+  come up with it. A vein's opening price is never refunded: that bought
+  keys, and the keys stay. The last mine standing on an ore cannot be taken
+  down: a new one is paid for in that same ore, so it could put the vein out
+  of reach for good. The highlight never opens on the removal row.
+- **Destruction, and loose materials on the ground (2026-08-20,
+  `js/drops.js`):** nothing that cost materials is ever simply deleted, and
+  nothing destroyed pays straight into the bag. **`DROPS.demolish` is the one
+  door** — machines and runs go through it today, and anything destructible
+  added later must too, so the poof, the refund, the insides and the goods on
+  the belts stay one behaviour in one place instead of a rule each new kind
+  has to remember. What comes out of it:
+  - the thing poofs where it stood — puffs of smoke over the whole body (a
+    run puffs along its length, sampled down to a handful), a ring of
+    sparks, and one soft `AUDIO.poof`: a ramped swell, not a step, filtered
+    from a breath down to a thud. Nothing here explodes; a machine lets go.
+  - its price, its input buffer and its output buffer burst out of its foot
+    as a few stacks per material (four, not one per unit — a spray reads as
+    a refund where sixty icons read as a mess), tossed up on a real arc with
+    a bounce and clamped to within one tile of the burst.
+  - every good riding one of its runs falls **where it rides**, not back
+    into the machine it came from: a hop in place, as if the ground went out
+    from under it.
+  - what lands **never expires** and nothing sweeps it away. It is saved
+    (`profile.drops`, `{id, mat, n, x, y}` once at rest — the wobble and the
+    magnet's jitter are read off the id, not stored) and it is still lying
+    there after a reload. There is no hurry.
+  - a generous magnet — nearly three tiles, a tug at the edge and a snap up
+    close — draws it in when the operator walks near, and it arrives with
+    the flight into the HUD and the rising pop the typed goods already use
+    (`AUDIO.pickup` climbs a semitone per good while they keep coming). The
+    magnet is deaf while a good is airborne and for a beat after it lands,
+    or the burst would be in the bag before the first frame drew it.
+  Re-laying a run — a machine turned, a machine built across it, a save from
+  before ports — sorts it into one of two, and only one of them is a
+  destruction. A run that finds a new route **moves**: it is the same run
+  over different tiles, its goods roll home into the source, and nothing
+  poofs. A run that finds none has **died**, and it goes out this same door
+  as everything else, with the poof, the sound, and its goods left on the
+  tiles it was still crossing. It used to vanish in silence, which was the
+  one thing in the game the door exists to make impossible (2026-08-21).
+  Which of the two a run is is not known until the route has been tried, so
+  its goods come off it when it is lifted and wait there for the answer.
 - **The factory simulation (phase 3, 2026-08-19, `js/sim.js`):** every
   machine has an input buffer per material and an output buffer (cap
   `TUNING.BUFFER_CAP` = 100); a worked machine takes inputs from its own
@@ -533,15 +592,58 @@ The binding rules:
    parts. If the two can't be told apart at 1× from ten tiles away, the work
    animation is not doing enough — fix the work animation, never by making idle
    busier.
-4. New machine art is **not finished** until all three states exist. The proof
-   sheet shows every machine in all three.
+4. New machine art is **not finished** until all three states exist **at all
+   four facings**. The proof sheet shows every machine in all of them.
 
 Frames and clocks: `work` is the 4-frame beat (one frame every 9 ticks); `idle`
 is a 6-frame breath on a slower count (one frame every 12 ticks), so the two
 never read as the same animation slowed down. In code, `PIXELS.machineTex(look,
-frame, mode)` and `PIXELS.stationTex(kind, frame, mode)` take the mode;
-`js/factory.js` caches one texture band per (look, state) and picks the state
-each tick.
+frame, mode, facing)` and `PIXELS.stationTex(kind, frame, mode, facing)` take
+the mode and the facing; `js/factory.js` caches one texture band per (look,
+state, facing) and picks both each tick.
+
+### Machine drawing — four facings and the doors (rotation overhaul, 2026-08-21)
+
+Machines turn rigidly, so every kind is drawn **from four angles** — and the
+four are three: the **front** (`s`, the fully-furnished face every station
+was born with), the **back** (`n`), and the **flank** (`e`), with **`w` the
+flank flipped** — exactly how the operator's own `down/up/side` sprites
+already turn. The rules that keep the four reading as one machine:
+
+- **A half turn swaps left for right.** The back view is the front's massing
+  mirrored: a smokestack on the front's left stands on the back's right. A
+  quarter turn clockwise carries a pipe that left at the bottom to the left
+  edge. The facings strip on `dev/machines.html` shows the smelter turned
+  through all four over its port plates — that strip is the contract.
+- **The fire and the furniture face front.** Fireboxes, dial banks, mould
+  beds and delivery stacks live on the front view; the back is service iron
+  — rivets, ladders, plain plate — and the flanks are working profiles. The
+  **signal lamp shows in every view** (the idle breath must read from any
+  side), every flue keeps its puff, and each view keeps at least one moving
+  part on the work beat.
+- **The overhang cap.** A sprite overhangs the back edge of its body box by
+  at most ~8px (art height ≤ `deep·16 + 6`, seated with its bottom 10px —
+  mines 2px — above the box's south edge), so the **outer half of the row
+  behind stays clear**: a port that lands back there keeps its ground plate
+  and its arriving run visible. This is the readable-back ruling that
+  reopened the fourth side, and it is what trimmed the mining rigs from
+  26×36 to 26×22.
+- **The doors — every port's body half (the aesthetic ruling that started
+  the overhaul).** Every inlet and outlet on the ground has a fixture on
+  the body it serves, in the plates' own colours — **verdigris takes
+  deliveries in, brass sends the product out** — so which way the goods go
+  is written on the machine as well as the ground, and it turns with the
+  machine. Three fixtures in the shared kit, chosen per view by where the
+  port's side stands (`DOORS` + `doorsS/N/E` in pixels.js):
+  - a **hatch** — an 8×6 roller door on the visible face, on the tile
+    centres its plates take;
+  - a **jamb** — a 3px door-post strip riding a near edge of the body;
+  - a **crest** — a lintel tick over the far silhouette, high on the roof,
+    for a port whose side looks away (with the plate and the run on the
+    ground behind completing it).
+  The side views wear the doors of the flank that actually shows: facing
+  east that is the machine's right flank, facing west its left — the body
+  flips, the doors must not lie (`doorsE`'s `west` flag).
 
 **Grid & data.** 16×16 square tiles (`PIXELS.TILE`), world 33×15. Ground is
 authored as kinded, grid-aligned rects in chain.js `MAP`, baked to a tile grid
@@ -933,68 +1035,84 @@ demands a measured pool of ≥25 real words before a recipe is offered.
   (round-robin); a mine feeds one consumer, which is what grows the pyramid.
   No cap on the number of belts. A belt carries only what its consumer accepts
   (the outlet filters), so belts never clog.
-- **Ports (2026-08-20):** every inlet and every outlet stands at one tile
-  against the body, and a run has to reach that tile and meet it head-on —
-  it leaves an outlet straight out and enters an inlet straight in, which is
-  what makes a run look plugged in rather than merely finishing nearby. A
-  machine has **three sides, not four**: its tower stands above its base and
-  anything behind it is hidden by the machine itself — a port nobody can see
-  is no better than the old rule of ending a run wherever it fitted. The
-  places are **one per column across the front, one per row down each side**,
-  so a body two across and two deep holds six:
+- **Ports (2026-08-20; body-relative since the rotation overhaul,
+  2026-08-21):** every inlet and every outlet stands at one tile against the
+  body, and a run has to reach that tile and meet it head-on — it leaves an
+  outlet straight out and enters an inlet straight in, which is what makes a
+  run look plugged in rather than merely finishing nearby. The places are
+  **body-relative**: one per column across the front, one per row down each
+  flank, so a body two across and two deep holds six:
 
   ```
-        [w1] [  B O D Y  ] [e1]      (behind: hidden)
-        [w0] [  B O D Y  ] [e0]      the row it stands on
-             [s0]  [s1]              the row in front
+        [r1] [  B O D Y  ] [l1]      (behind: the portless back)
+        [r0] [  B O D Y  ] [l0]      the row it stands on
+             [f0]  [f1]              the row in front
   ```
 
-  **One whole side discharges; the other two take deliveries.** Turning steps
-  the discharge side round — front → right → left → front — and the inlets
-  fill the two remaining sides in turn (`SIM.ports`, `FACTORY.machinePorts`).
-  Marked on the ground with a bolted plate — verdigris rim and a wedge
-  pointing into the machine for an inlet, brass and a wedge pointing out for
-  an outlet — drawn under the runs, so a port with a belt on it still shows
-  its colour down either side of the band. A port whose tile or whose one way
-  out is blocked draws faint: it is a port you cannot use where the machine
-  stands and faces now, and turning is the answer.
+  **The whole front discharges; deliveries fill the machine's own right
+  flank to the brim, then its left; the back carries nothing.** The ports
+  turn rigidly with the body (`SIM.ports`, `MAPKIT.portTile`,
+  `FACTORY.machinePorts`): a facing whose front or flank happens to look
+  north puts those ports behind the body, and that is legal — see the
+  machine-drawing spec for how it stays readable. Marked on the ground with
+  a bolted plate — verdigris rim and a wedge pointing into the machine for
+  an inlet, brass and a wedge pointing out for an outlet — drawn under the
+  runs, so a port with a belt on it still shows its colour down either side
+  of the band. A port whose tile or whose one way out is blocked draws
+  faint: it is a port you cannot use where the machine stands and faces
+  now, and turning is the answer.
 - **Machine sizes (2026-08-20), `KINDS[kind].size = [across, deep]`:** how
   much ground a machine stands on is not decoration — it is what seats its
   ports, and it is the one place the tree's climb is visible in the world.
-  A whole side discharges, and a side of a one-deep body is a single tile, so
-  **only a one-outlet machine can be one deep**: the **mine, 2×1**, and
-  nothing else. Everything from the Smelter to the Fastener is **2×2** —
+  The whole front discharges, and a flank of a one-deep body is a single
+  tile, so **only a one-outlet machine can be one deep**: the **mine, 2×1**,
+  and nothing else. Everything from the Smelter to the Fastener is **2×2** —
   six places, four ports, and the sprite already drew to that box. The
   **Crane and the Manufacturer are 3×2**: the Manufacturer needs its front's
   third place for a fifth port (3 in + 2 out), the Crane earns the width with
   its jib, and the last two kinds ought not to look like the first Smelter
-  you ever built. Bodies grow upward from the same foot, so a plot stays a
-  point and free placement later changes nothing here. Rejected: 3×3 (it
-  starts costing plots and buys no places), and one-deep processors (they
-  would have exactly one legal orientation, which is to say no turning at
-  all).
-- **A build plot is one size: 3×2 (user ruling 2026-08-20).** Machines vary;
-  plots do not. A plot has to take the largest kind there is, and a smaller
-  machine simply leaves slack on it — a Smelter on a 3×2 pad wears two thirds
-  of it. The alternative was plots that matched their machine, which would
-  make "which kinds can I build here?" a question you can only answer by
-  walking there and being told no. The pad is drawn as it is: 48×32 of
-  surveyed ground, taped and pegged, the same box a body will take.
-  A plot wants **five tiles across and four deep** — body, the places round
-  it, and a tile beyond each place for a run to arrive on — for all three of
-  its turns to be legal, and `dev/verify.html` asserts exactly that for every
-  plot on every map with the whole map built. Both worlds were re-laid to
-  pass it (2026-08-20): the Frontier's basin lattice moved a tile down and a
-  tile left to clear the veins standing among it, five landmark plots moved
-  one to three tiles, and the two on the bog island came ashore — a mine
-  fits an island, a 3×2 pad does not.
-- **Turning is free** (`⟳` on every machine's menu) and re-lays that
-  machine's runs to follow; a run with no route left comes up and its goods
-  roll back into the source, which the caption says before you press it.
+  you ever built. **The footprint turns with the machine** (rotation
+  overhaul, 2026-08-21): facing east or west a body stands `deep` across and
+  `across` deep (`MAPKIT.footprint`), so a 3×2 kind sideways is 2×3.
+  Rejected: 3×3 (it starts costing plots and buys no places), and one-deep
+  processors (with one outlet's worth of flank they could never seat two
+  belts of intake).
+- **A build pad is one size: 3×3 (user rulings 2026-08-20, grown from 3×2
+  with the rotation overhaul).** Machines vary; pads do not. A pad has to
+  take the largest kind there is **at every facing** — a 3×2 kind sideways
+  is 2×3, so the pad is the square of the two — and a smaller machine simply
+  leaves slack on it. The alternative was pads that matched their machine,
+  which would make "which kinds can I build here?" a question you can only
+  answer by walking there and being told no. The pad is drawn as it is:
+  48×48 of surveyed ground, taped and pegged, on the exact tiles the zone is
+  (`MAPKIT.padBox`), anchored at the plot's foot and grown upward.
+  **The four-facing guarantee:** a pad wants every facing of the largest
+  kind seatable with every port usable — some seat of the body inside the
+  pad, the port tiles and the tile beyond each free. `dev/verify.html`
+  asserts it for every pad on every map; the current maps were laid for the
+  old three-side rule, so today it reports the shortfalls as warnings — the
+  worklist of the **coming map rework** (both maps get moderately larger and
+  re-laid; user ruling 2026-08-20). Until then the build ghost simply shows
+  a facing that does not fit as invalid, and blocked ports draw faint.
+- **Turning is free** (`⟳` on every machine's menu) and turns the whole
+  body a quarter clockwise — sprite, doors, ports and footprint together,
+  about its foot-left corner (rotation overhaul, 2026-08-21; a turn whose
+  swung footprint would land on another machine is refused with a caption).
+  Its runs are re-laid to follow; a run that moves rolls its goods home into
+  the source, and a run with no route left comes apart like anything else
+  destroyed — a poof, the sound, and its goods on the ground where it lay
+  (see "Destruction, and loose materials on the ground"). The menu caption
+  says the runs are re-laid before you press it, and the flash caption after
+  counts the ones that came up and says where their goods went.
   Saves from before ports have their runs re-laid once on load, on the same
-  rule. Rejected: a fourth port side at the back (hidden by the machine's own
-  tower); free-standing ports the player places (a second placement puzzle on
-  top of plots, for a machine two tiles wide).
+  rule; saves from before machines stood on tiles are seated once at their
+  old plot or vein (`m.at` = the body box's top-left tile, `m.face` the
+  facing — engine.js `normalize`). Superseded (2026-08-21): "no fourth port
+  side at the back" — rigid rotation reopened the back, and the readability
+  that ruling protected is carried by the art instead (the overhang cap and
+  the door fixtures, below). Still rejected: free-standing ports the player
+  places (a second placement puzzle on top of pads, for a machine two tiles
+  wide).
 - **Routing and congestion:** one belt per tile; the router takes the shortest
   free path. Choke points are authored into the map (bridges, gaps between
   rocks) — choosing which lines get the bridge is the same bounded strategy as
@@ -1162,6 +1280,8 @@ region scenery, `bake`, `minimap`) · `js/app.js` orchestration + the map
 picker · `js/audio.js` synth ·
 `js/i18n.js` EN/РУ · `serve.ps1` dev server (+ POST /upload for QA frames) ·
 `js/sim.js` the factory simulation (buffers, jobs, belts, the clock) ·
+`js/drops.js` loose materials on the ground + `DROPS.demolish`, the one door
+everything destroyed goes through ·
 `dev/map.html` + `dev/map-proof.js` world proof sheet · `dev/tiles.html`
 terrain proof sheet · `dev/machines.html` machinery proof
 sheet (rigs, works, belts, pipes, props, icons on real terrain, and every

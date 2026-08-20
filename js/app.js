@@ -2,8 +2,10 @@
 // Walk with arrows; dock at a place by standing near it; type to work a
 // machine; hold Space to open the place's menu (arrows choose, a tap of
 // Space confirms, Escape closes). Tech tree v3: everything is bought from
-// the bag at the place — mines and Mk at ore nodes, machines at plots, ⚙ at
-// the machine. The one screen before the world is the map picker.
+// the bag — Mk and ⚙ at the machine, and machines through the build menu a
+// hold raises on open ground: pick a kind, walk its ghost to a pad (mines
+// to a free vein), tap Space to turn it, hold Space to build (rotation
+// overhaul, 2026-08-21). The one screen before the world is the map picker.
 (function () {
   'use strict';
 
@@ -39,13 +41,15 @@
   let lastCorrectTime = null;
 
   // ---- world state ----
-  let dock = null;               // {id, kind:'machine'|'plot'|'node', m?, plot?, node?}
+  let dock = null;               // {id, kind:'machine'|'crossing'|'belt', m?, crossing?, belts?}
   let recipe = null;             // active recipe at a processor
   let unitAcc = 0;               // keystrokes into the current unit of output
   let unitPaid = false;          // inputs deducted for the current unit
   let dryNow = false;
   let alphabet = [];             // the current lesson's letters
   let menu = null;               // {rows:[{...row, action}], sel}
+  let buildMenu = null;          // the build menu, raised on the operator in open field
+  let placing = null;            // {kind, face, at, ok, vein, price, …} — the build ghost
   let pendingUnlock = null;      // a pair just unlocked, card queued
   let producedSinceFloat = {};
 
@@ -240,13 +244,18 @@
     }
   }
   function flyMat(mat, dockId, count) {
+    const def = FACTORY.posOf(dockId);
+    if (def) flyFrom(mat, count, def.x + 13, def.y - 30);
+  }
+  // the same flight from anywhere on the map: a loose good swept off the
+  // ground takes it too, so picking one up looks exactly like typing one out
+  function flyFrom(mat, count, wx, wy) {
     const canvas = document.querySelector('#factory-mount canvas');
-    if (!canvas || !iconURLs[mat]) return;
+    if (!canvas) return;
+    if (!iconURLs[mat]) iconURLs[mat] = PIXELS.matURL(mat);
     const rect = canvas.getBoundingClientRect();
     const scale = rect.width / canvas.width;
-    const def = FACTORY.posOf(dockId);
-    if (!def) return;
-    const sp = FACTORY.screenPos(def.x + 13, def.y - 30);
+    const sp = FACTORY.screenPos(wx, wy);
     const sx = rect.left + sp.x * scale, sy = rect.top + sp.y * scale;
     const tp = FACTORY.invScreenPos(mat);
     if (!tp) return;
@@ -308,7 +317,7 @@
     }
     return { mode: kind.grammar, alphabet: CHAIN.recipeAlphabet(recipe, profile), tilt: CHAIN.recipeTilt(recipe, profile) };
   }
-  const canTypeHere = () => !!(dock && dock.kind === 'machine' && !autoLive(dock.m) && (dock.m.kind === 'mine' || recipe));
+  const canTypeHere = () => !!(dock && dock.kind === 'machine' && !autoLive(dock.m) && (dock.m.kind === 'mine' || recipe)) && !placing && !buildMenu;
 
   // per correct letter: mines yield an ore; processors pay for a unit at its
   // first keystroke and emit at its last
@@ -349,12 +358,7 @@
   function menuRowsFor(d) {
     if (!d) return [];
     const rows = [];
-    if (d.kind === 'plot') {
-      for (const k of CHAIN.buildableKinds(profile)) {
-        const price = CHAIN.priceMachine(k, CHAIN.machinesOfKind(profile, k).length + 1);
-        rows.push({ kind: k, items: price, enabled: canPay(price), priced: true, caption: T.t('capBuild', { kind: kindName(k) }), action: { type: 'build-machine', kind: k, plot: d.plot.id, price } });
-      }
-    } else if (d.kind === 'crossing') {
+    if (d.kind === 'crossing') {
       const price = CHAIN.priceCrossing(d.crossing) || {};
       rows.push({ pre: '→', items: price, enabled: canPay(price), priced: true, caption: T.t('capRepair'), action: { type: 'repair', id: d.crossing.id, price } });
     } else if (d.kind === 'belt') {
@@ -370,20 +374,6 @@
           caption: T.t('capUnbelt', { from: machineName(from), to: machineName(to) }),
           action: { type: 'unbelt', id },
         });
-      }
-    } else if (d.kind === 'node') {
-      const ore = d.node.ore;
-      if (CHAIN.oreOpen(profile, ore)) {
-        const price = CHAIN.priceExtraMine(ore);
-        rows.push({ kind: 'mine', ore, items: price, enabled: canPay(price), priced: true, caption: T.t('capBuildMineMore', { name: mineName(ore) }), action: { type: 'build-mine', ore, node: d.node.index, price } });
-      } else {
-        const np = CHAIN.nextPair(profile);
-        const price = CHAIN.priceNode(ore) || {};
-        if (np && np.ore === ore && np.mk === 1) {
-          rows.push({ kind: 'mine', ore, items: price, enabled: canPay(price), priced: true, caption: T.t('capBuildMine', { name: mineName(ore), keys: pairKeys(np) }), action: { type: 'build-mine', ore, node: d.node.index, price, unlock: true } });
-        } else {
-          rows.push({ kind: 'mine', ore, items: price, ok: false, enabled: false, caption: T.t('capVeinLater', { name: mineName(ore) }), action: null });
-        }
       }
     } else if (d.kind === 'machine' && d.m.kind === 'mine') {
       const m = d.m, ore = m.ore;
@@ -466,18 +456,40 @@
     if (!spool && SIM.beltsFrom(profile, m).length < SIM.outletsOf(m) && (m.kind === 'mine' || SIM.produces(profile, m).length)) {
       rows.push({ pre: '→', enabled: true, caption: T.t('capSpool', { mats: matList(SIM.produces(profile, m)) }), action: { type: 'spool', m } });
     }
-    // turning a machine costs nothing and steps its discharge side round —
-    // front, right, left: it is how an intake is pointed at the line that
-    // feeds it. Its runs are re-laid to follow; any that no longer have a
-    // route come up, which is why the row says so before you press it.
+    // turning a machine costs nothing and turns the whole body a quarter
+    // clockwise — sprite, doors and ports together (rotation overhaul,
+    // 2026-08-21): it is how an intake is pointed at the line that feeds
+    // it. Its runs are re-laid to follow; any that no longer have a route
+    // come up, which is why the row says so before you press it. A turn
+    // whose footprint would land on another machine is refused.
     if (!spool) {
-      const next = SIM.facingOf({ rot: SIM.rotOf(m) + 1 });
-      rows.push({ pre: '⟳', enabled: true, caption: T.t('capTurn', { side: sideName(next) }), action: { type: 'turn', m } });
+      const ok = turnFits(m);
+      rows.push({ pre: '⟳', enabled: ok, caption: T.t(ok ? 'capTurn' : 'capTurnBlocked', { side: sideName(SIM.nextFacing(m)) }), action: ok ? { type: 'turn', m } : null });
     }
     // taking a run up is not offered here. A machine with several runs
     // coming and going gave a list of ✗ rows there was no reading, and the
     // wrong one went too easily; you take a run up by standing on it.
     void mid;
+  }
+  // where a body stands after a quarter turn: the facing steps clockwise,
+  // the footprint turns with it, and the foot-left corner holds still
+  function turnedPose(m) {
+    const face = SIM.nextFacing(m);
+    const fp = MAPKIT.footprint(SIM.sizeOf(m), face);
+    const b = CHAIN.machineBox(m);
+    return { face, at: [b.c0, b.r1 - (fp[1] - 1)] };
+  }
+  function boxHitsMachine(b, ignore) {
+    for (const om of profile.machines) {
+      if (om === ignore) continue;
+      const ob = CHAIN.machineBox(om);
+      if (b.c0 <= ob.c1 && b.c1 >= ob.c0 && b.r0 <= ob.r1 && b.r1 >= ob.r0) return true;
+    }
+    return false;
+  }
+  function turnFits(m) {
+    const pose = turnedPose(m);
+    return !boxHitsMachine(MAPKIT.boxAt(pose.at, SIM.sizeOf(m), pose.face), m);
   }
   const nonZero = (o) => Object.fromEntries(Object.entries(o || {}).filter(([, n]) => n > 0));
   function recipeInputsIcons(m) {
@@ -503,8 +515,6 @@
   function placeName(d) {
     if (!d) return '';
     if (d.kind === 'machine') return machineName(d.m) + (d.m.auto ? ' · ' + T.t('capAutomated') : '');
-    if (d.kind === 'plot') return T.t('capPlot');
-    if (d.kind === 'node') return (T.t('veinNames') || {})[d.node.ore] || d.node.ore;
     if (d.kind === 'crossing') return T.t('capCrossing');
     if (d.kind === 'belt') return T.t(d.belts.length > 1 ? 'capOnCrossing' : 'capOnBelt');
     return '';
@@ -526,14 +536,24 @@
   function refreshCaption() {
     if (captionFlash) return;
     if (!profile) { setCaption(''); return; }
-    if (menu) {
-      const row = menu.rows[menu.sel] || {};
+    if (menu || buildMenu) {
+      const mm = menu || buildMenu;
+      const row = mm.rows[mm.sel] || {};
       let text = row.caption || '';
       let cls = '';
       if (row.enabled === false) { cls = 'dim'; if (row.priced) text += T.t('capUnaffordable'); }
       else if (row.action && row.action.type === 'socket') cls = 'ok';
       if (row.ok === false && row.action === null && spool) cls = 'no';
       setCaption(text, cls);
+      return;
+    }
+    if (placing) {
+      if (placing.kind === 'mine' && !placing.vein) { setCaption(T.t('capPlaceVein'), 'no'); return; }
+      if (placing.later) { setCaption(T.t('capVeinLater', { name: mineName(placing.vein.ore) }), 'no'); return; }
+      if (!placing.ground) { setCaption(T.t('capPlaceBad'), 'no'); return; }
+      const name = placing.kind === 'mine' ? mineName(placing.vein.ore) : kindName(placing.kind);
+      if (placing.price && !canPay(placing.price)) { setCaption(T.t('capPlacePoor', { name }), 'no'); return; }
+      setCaption(T.t('capPlace', { name }), 'ok');
       return;
     }
     if (spool && dock && dock.kind === 'machine' && dock.m.id !== spool.from) {
@@ -588,6 +608,155 @@
     refreshStatus();
   }
 
+  // ---------- the build menu and the ghost (rotation overhaul, 2026-08-21) ----------
+  // Building happens anywhere: a long press on open ground — anywhere a
+  // hold would not open something else — raises the build menu on the
+  // operator. Arrows choose, a tap of Space picks, and the pick becomes a
+  // ghost on the grid that walks with you: every tile under it says
+  // buildable or not, its port plates lie where they will land, a tap of
+  // Space turns it a quarter clockwise, and a hold builds it on good
+  // ground. On bad ground — or over the open menu — the hold cancels
+  // instead. Mines are rows in the same menu: their ghost asks to be stood
+  // on a free vein, and prices itself off the vein under it.
+  function buildMenuRows() {
+    const rows = [];
+    rows.push({ kind: 'mine', enabled: true, caption: T.t('capBuildMinePick'), action: { type: 'pick', kind: 'mine' } });
+    for (const k of CHAIN.buildableKinds(profile)) {
+      const price = CHAIN.priceMachine(k, CHAIN.machinesOfKind(profile, k).length + 1);
+      rows.push({ kind: k, items: price, enabled: canPay(price), priced: true, caption: T.t('capBuild', { kind: kindName(k) }), action: { type: 'pick', kind: k } });
+    }
+    return rows;
+  }
+  function openBuildMenu() {
+    buildMenu = { rows: buildMenuRows(), sel: 0 };
+    FACTORY.showMenu('@player', buildMenu.rows, 0);
+    refreshCaption();
+    A.click();
+  }
+  function closeBuildMenu() {
+    buildMenu = null;
+    FACTORY.clearMenu();
+    refreshCaption();
+  }
+  function confirmBuildMenu() {
+    if (!buildMenu) return;
+    const row = buildMenu.rows[buildMenu.sel];
+    if (!row || row.enabled === false || !row.action) { A.thud(); return; }
+    closeBuildMenu();
+    startPlacing(row.action.kind);
+  }
+  function startPlacing(kind) {
+    placing = { kind, face: 's', at: null, ok: false, vein: null, price: null, unlock: false };
+    clearLine();
+    refreshLessonLights();
+    updatePlacing(true);
+    A.click();
+  }
+  function rotatePlacing() {
+    if (!placing) return;
+    placing.face = SIM.FACINGS[(SIM.FACINGS.indexOf(placing.face) + 1) % 4];
+    updatePlacing(true);
+    A.click();
+  }
+  function cancelPlacing() {
+    if (!placing) return;
+    placing = null;
+    FACTORY.clearBuildGhost();
+    FACTORY.clearInfo();
+    A.thud();
+    redock();
+  }
+  // The zone, as tiles: for now a machine may only stand on a surveyed pad
+  // (CURRENT RULE — free placement over open terrain is a later mode, and
+  // this set is the one thing it will replace with a terrain answer).
+  let padTiles = null, padTilesMap = null;
+  function padZone() {
+    if (padTiles && padTilesMap === mapId) return padTiles;
+    padTiles = new Set();
+    padTilesMap = mapId;
+    for (const p of CHAIN.PLOTS) {
+      const b = MAPKIT.padBox(p);
+      for (let ty = b.r0; ty <= b.r1; ty++) for (let tx = b.c0; tx <= b.c1; tx++) padTiles.add(tx + ',' + ty);
+    }
+    return padTiles;
+  }
+  // the ghost follows the operator: the body's foot row is the row they
+  // stand on, its columns centred on them, snapped to the grid
+  function updatePlacing(force) {
+    if (!placing) return;
+    const pp = FACTORY.playerPos();
+    const fp = MAPKIT.footprint(CHAIN.KINDS[placing.kind].size, placing.face);
+    const c0 = Math.floor(pp.x / 16) - ((fp[0] - 1) >> 1);
+    const r0 = Math.floor((pp.y - 2) / 16) - (fp[1] - 1);
+    if (!force && placing.at && placing.at[0] === c0 && placing.at[1] === r0) return;
+    placing.at = [c0, r0];
+    const phantom = { kind: placing.kind, at: [c0, r0], face: placing.face };
+    const box = CHAIN.machineBox(phantom);
+    const zone = padZone();
+    const bodies = new Set();
+    for (const om of profile.machines) {
+      const ob = CHAIN.machineBox(om);
+      for (let ty = ob.r0; ty <= ob.r1; ty++) for (let tx = ob.c0; tx <= ob.c1; tx++) bodies.add(tx + ',' + ty);
+    }
+    const mine = placing.kind === 'mine';
+    // a mine stands on a vein: the first free vein its body covers claims it
+    let vein = null;
+    if (mine) {
+      for (const n of CHAIN.unbuiltNodes(profile)) {
+        const vb = MAPKIT.bodyBox(n.x + 4, n.y + 12, 2, 1);
+        if (box.c0 <= vb.c1 && box.c1 >= vb.c0 && box.r0 <= vb.r1 && box.r1 >= vb.r0) { vein = n; break; }
+      }
+    }
+    const tiles = [];
+    let ground = true;
+    for (let ty = box.r0; ty <= box.r1; ty++) for (let tx = box.c0; tx <= box.c1; tx++) {
+      const k = tx + ',' + ty;
+      const ok = !bodies.has(k) && (mine ? !!vein : zone.has(k));
+      if (!ok) ground = false;
+      tiles.push([tx, ty, ok]);
+    }
+    // the price: a machine's is its kind's next instance; a mine prices
+    // itself off the vein under it, and an unopened ore only when its keys
+    // are the next rung of the ladder
+    let price = null, unlock = false, later = false;
+    if (!mine) price = CHAIN.priceMachine(placing.kind, CHAIN.machinesOfKind(profile, placing.kind).length + 1);
+    else if (vein) {
+      if (CHAIN.oreOpen(profile, vein.ore)) price = CHAIN.priceExtraMine(vein.ore);
+      else {
+        const np = CHAIN.nextPair(profile);
+        if (np && np.ore === vein.ore && np.mk === 1) { price = CHAIN.priceNode(vein.ore) || {}; unlock = true; }
+        else later = true;
+      }
+    }
+    placing.vein = vein;
+    placing.price = price;
+    placing.unlock = unlock;
+    placing.later = later;
+    placing.ground = ground;
+    placing.ok = ground && !later && (!mine || !!vein) && (!price || canPay(price));
+    FACTORY.showBuildGhost(phantom, tiles, placing.ok);
+    const info = price ? [{ kind: placing.kind, ore: mine && vein ? vein.ore : undefined, items: price, enabled: canPay(price), priced: true }] : [];
+    FACTORY.showInfo(info.length ? '@player' : null, info);
+    refreshCaption();
+  }
+  function placeNow() {
+    if (!placing) return;
+    updatePlacing(true);
+    if (!placing.ok) { cancelPlacing(); return; }
+    const { kind, face, at, price, vein, unlock } = placing;
+    let pair = null;
+    if (unlock) pair = E.unlockNextPair(profile);
+    if (price) spend(price);
+    const m = { id: 'm' + (profile.nextMachineId++), kind, at: at.slice(), face, auto: false };
+    if (kind === 'mine') { m.ore = vein.ore; m.node = vein.index; }
+    profile.machines.push(m);
+    placing = null;
+    FACTORY.clearBuildGhost();
+    FACTORY.clearInfo();
+    afterPurchase();
+    if (pair) { pendingUnlock = pair; showUnlockCard(pair); }
+  }
+
   function openMenu() {
     const rows = menuRowsFor(dock);
     if (!rows.length) return false;
@@ -609,10 +778,11 @@
     refreshCaption();
   }
   function moveMenu(dir) {
-    if (!menu) return;
-    const n = menu.rows.length;
-    menu.sel = (menu.sel + dir + n) % n;
-    FACTORY.showMenu(dock.id, menu.rows, menu.sel);
+    const mm = menu || buildMenu;
+    if (!mm) return;
+    const n = mm.rows.length;
+    mm.sel = (mm.sel + dir + n) % n;
+    FACTORY.showMenu(menu ? dock.id : '@player', mm.rows, mm.sel);
     refreshCaption();
     A.click();
   }
@@ -626,22 +796,7 @@
 
   // ---------- actions ----------
   function performAction(act) {
-    if (act.type === 'build-machine') {
-      if (!canPay(act.price)) return;
-      if (!CHAIN.freePlots(profile).some((pl) => pl.id === act.plot)) return;   // the plot must still be free
-      spend(act.price);
-      profile.machines.push({ id: 'm' + (profile.nextMachineId++), kind: act.kind, plot: act.plot, auto: false });
-      afterPurchase();
-    } else if (act.type === 'build-mine') {
-      if (!canPay(act.price)) return;
-      if (CHAIN.nodeBuilt(profile, act.node)) return;   // the vein must still be open
-      let pair = null;
-      if (act.unlock) pair = E.unlockNextPair(profile);
-      spend(act.price);
-      profile.machines.push({ id: 'm' + (profile.nextMachineId++), kind: 'mine', ore: act.ore, node: act.node, auto: false });
-      afterPurchase();
-      if (pair) { pendingUnlock = pair; showUnlockCard(pair); }
-    } else if (act.type === 'mk') {
+    if (act.type === 'mk') {
       if (!canPay(act.price)) return;
       const np = CHAIN.nextPair(profile);
       if (!np || np.ore !== act.ore || np.mk !== act.level) return;
@@ -715,9 +870,13 @@
       FACTORY.setSocketTarget(null);
       afterPurchase();
     } else if (act.type === 'turn') {
-      // the world is rebuilt first: re-laying the runs is part of turning,
-      // and what comes of it is what gets saved
-      SIM.turn(act.m);
+      // the body turns rigidly: the facing steps clockwise and the
+      // footprint turns with it about its foot-left corner. The world is
+      // rebuilt first: re-laying the runs is part of turning, and what
+      // comes of it is what gets saved.
+      const pose = turnedPose(act.m);
+      act.m.face = pose.face;
+      act.m.at = pose.at;
       const relaid = rebuildWorld();
       E.saveProfile(profile);
       refreshInventory();
@@ -726,35 +885,39 @@
       A.build();
       if (relaid && relaid.lost) flashCaption(T.t('capTurnLost', { n: relaid.lost }));
     } else if (act.type === 'unbelt') {
-      SIM.removeBelt(profile, act.id);
-      afterPurchase();
+      const b = (profile.belts || []).find((x) => x.id === act.id);
+      if (!b) return;
+      DROPS.demolish(profile, { belt: b });
+      afterDemolish();
     } else if (act.type === 'remove-machine') {
       const m = act.m;
-      const i = profile.machines.indexOf(m);
-      if (i < 0) return;
-      // its belts come up first (goods riding them roll back into the
-      // machine each one comes from), then the machine's own insides and
-      // its price go into the bag
-      for (const b of [...SIM.beltsTo(profile, m), ...SIM.beltsFrom(profile, m)]) SIM.removeBelt(profile, b.id);
-      SIM.ensureMachine(m);
-      const back = {};
-      for (const o of [act.back, m.buf.in, m.buf.out]) {
-        for (const [mat, n] of Object.entries(o || {})) if (n > 0) back[mat] = (back[mat] || 0) + n;
-      }
-      profile.machines.splice(i, 1);
-      for (const [mat, n] of Object.entries(back)) { profile.bag[mat] = (profile.bag[mat] || 0) + n; profile.seen[mat] = true; }
-      const total = Object.values(back).reduce((a, b) => a + b, 0);
-      if (total && dock) FACTORY.floatText(`+${total}`, dock.id, 0x7fb98a);
-      afterPurchase();
+      if (profile.machines.indexOf(m) < 0) return;
+      DROPS.demolish(profile, { machine: m, back: act.back });
+      afterDemolish();
     }
   }
+  // The world is rebuilt before the save, here and below, for the reason the
+  // turn gives: re-laying the runs is part of the act, and a run that had
+  // nowhere to go leaves its goods on the ground. Saving first wrote the
+  // world as it was a moment before that.
   function afterPurchase() {
-    E.saveProfile(profile);
     rebuildWorld();
+    E.saveProfile(profile);
     refreshInventory();
     refreshKeyboard();
     redock();
     A.build();
+  }
+  // Taking a thing down is a purchase run backwards, minus the chunk of the
+  // latch closing: DROPS.demolish has already made the poof and its sound,
+  // and nothing has reached the bag yet — the materials are lying on the
+  // ground waiting to be walked over.
+  function afterDemolish() {
+    rebuildWorld();
+    E.saveProfile(profile);
+    refreshInventory();
+    refreshKeyboard();
+    redock();
   }
   // returns {moved, lost}: runs the world re-laid or gave up on because a
   // machine's ports are somewhere else now (a turn, or a save from before
@@ -894,34 +1057,30 @@
   }
 
   // ---------- input ----------
-  // ONE interact key, two things at once. On press: if the drill's next
-  // character is a space, it is typed right then (never on release, and a
-  // held space that isn't the next character costs nothing). Holding for half
-  // a second (a charge bar fills above the operator) opens the place's menu.
-  // Once it is open the hold is over: arrows choose and a tap of Space
-  // confirms the highlighted row; Escape closes it.
+  // ONE interact key, three lives. On press: if the drill's next character
+  // is a space, it is typed right then (never on release, and a held space
+  // that isn't the next character costs nothing). Holding for half a second
+  // (a charge bar fills above the operator) does the place's big thing:
+  // opens the menu at a place with rows, lays or drops a carried belt — and
+  // in open field, where a hold once did nothing, it raises the BUILD menu
+  // (rotation overhaul, 2026-08-21). The build menu answers the release: a
+  // tap of Space picks the highlighted kind, a hold cancels the menu. With
+  // the ghost up, a tap turns it a quarter clockwise and a hold builds —
+  // on bad ground the same hold cancels. A regular menu keeps its manners:
+  // arrows choose, a tap confirms on the press, Escape closes.
   const HOLD_MS = 500;
   let spaceDown = false;   // Space is held right now
   let chargeTimer = null;
+  let tapVerb = null;      // what a release before the threshold does
 
   function cancelCharge() {
     if (chargeTimer) { clearInterval(chargeTimer); chargeTimer = null; }
+    tapVerb = null;
     FACTORY.setCharge(null);
   }
-  function startSpace() {
-    if (spaceDown) return;
-    spaceDown = true;
-    // a menu is open: the tap confirms the highlighted row, nothing else
-    if (menu) { confirmMenu(); refreshStatus(); return; }
-    // the typed space, at once — only when it is the next character
-    if (canTypeHere() && lineText[pos] === ' ') handleTyped(' ');
-    // what the hold will do: lay the belt here / drop the spool (carrying),
-    // open the menu (a place with rows)
-    let verb = null;
-    if (spool) verb = socketHere() ? 'socket' : 'drop';
-    else if (menuRowsFor(dock).length > 0) verb = 'open';
-    if (!verb) return;
-    const color = verb === 'socket' ? 0x6cc46c : verb === 'drop' ? 0xd84f4f : 0xf2c14e;
+  // charge toward `hold`; a release before the threshold fires `tap` instead
+  function beginHold(hold, color, tap) {
+    tapVerb = tap || null;
     const start = performance.now();
     FACTORY.setCharge(0, color);
     chargeTimer = setInterval(() => {
@@ -929,17 +1088,45 @@
       FACTORY.setCharge(Math.min(1, p), color);
       if (p >= 1) {
         cancelCharge();
-        if (verb === 'socket') { const act = socketHere(); if (act) performAction(act); else dropSpool(); }
-        else if (verb === 'drop') dropSpool();
-        else openMenu();
+        hold();
         refreshStatus();
       }
     }, 33);
   }
+  function startSpace() {
+    if (spaceDown) return;
+    spaceDown = true;
+    // a menu is open: the tap confirms the highlighted row, nothing else
+    if (menu) { confirmMenu(); refreshStatus(); return; }
+    // the build menu: a tap picks, a hold puts the whole thing away
+    if (buildMenu) { beginHold(closeBuildMenu, 0xd84f4f, confirmBuildMenu); return; }
+    // the ghost: a tap turns it, a hold builds — or cancels on bad ground
+    if (placing) {
+      const ok = !!placing.ok;
+      beginHold(ok ? placeNow : cancelPlacing, ok ? 0x6cc46c : 0xd84f4f, rotatePlacing);
+      return;
+    }
+    // the typed space, at once — only when it is the next character
+    if (canTypeHere() && lineText[pos] === ' ') handleTyped(' ');
+    // what the hold will do: lay the belt here / drop the spool (carrying),
+    // open the menu (a place with rows), or raise the build menu in open field
+    if (spool) {
+      const here = socketHere();
+      beginHold(
+        here ? () => { const act = socketHere(); if (act) performAction(act); else dropSpool(); } : dropSpool,
+        here ? 0x6cc46c : 0xd84f4f
+      );
+      return;
+    }
+    if (menuRowsFor(dock).length > 0) beginHold(openMenu, 0xf2c14e);
+    else beginHold(openBuildMenu, 0xf2c14e);
+  }
   function endSpace() {
     if (!spaceDown) return;
+    const tap = tapVerb;
     cancelCharge();
     spaceDown = false;
+    if (tap) { tap(); refreshStatus(); }
   }
 
   // headless inspection (dev/play.html and the harnesses): read-only state
@@ -947,6 +1134,8 @@
     state: () => ({
       dock: dock ? dock.id : null,
       menu: menu ? { sel: menu.sel, rows: menu.rows.map((r) => (r.action ? r.action.type : 'none') + (r.enabled === false ? '(off)' : '')) } : null,
+      buildMenu: buildMenu ? { sel: buildMenu.sel, rows: buildMenu.rows.map((r) => (r.action ? r.action.kind : 'none') + (r.enabled === false ? '(off)' : '')) } : null,
+      placing: placing ? { kind: placing.kind, face: placing.face, at: placing.at, ok: placing.ok } : null,
       spool, spoolRoute: spoolRoute ? spoolRoute.length : null,
     }),
   };
@@ -988,20 +1177,24 @@
     if (ARROWS[e.code]) {
       e.preventDefault();
       if (overlayOpen) return;
-      if (menu) {
+      if (menu || buildMenu) {
         if (!e.repeat) moveMenu(e.code === 'ArrowUp' || e.code === 'ArrowLeft' ? -1 : 1);
         return;
       }
       FACTORY.setMove(ARROWS[e.code], true);
       return;
     }
-    if (e.code === 'Escape' && menu && !overlayOpen) { e.preventDefault(); closeMenu(); refreshStatus(); return; }
+    if (e.code === 'Escape' && !overlayOpen) {
+      if (menu) { e.preventDefault(); closeMenu(); refreshStatus(); return; }
+      if (buildMenu) { e.preventDefault(); closeBuildMenu(); refreshStatus(); return; }
+      if (placing) { e.preventDefault(); cancelPlacing(); refreshStatus(); return; }
+    }
     if (e.code === 'Space' && !overlayOpen) {
       e.preventDefault();
       if (!e.repeat) startSpace();
       return;
     }
-    if (overlayOpen || menu) return;
+    if (overlayOpen || menu || buildMenu || placing) return;
     if (e.ctrlKey || e.altKey || e.metaKey) return;
     if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') return;
     if (!canTypeHere()) return;
@@ -1120,12 +1313,6 @@
     if (id && id.startsWith('m:')) {
       const m = profile.machines.find((x) => 'm:' + x.id === id);
       if (m) dock = { id, kind: 'machine', m };
-    } else if (id && id.startsWith('plot:')) {
-      const plot = CHAIN.plotById(id.slice(5));
-      if (plot) dock = { id, kind: 'plot', plot };
-    } else if (id && id.startsWith('node:')) {
-      const node = CHAIN.unbuiltNodes(profile).find((n) => 'node:' + n.index === id);
-      if (node) dock = { id, kind: 'node', node };
     } else if (id && id.startsWith('cross:')) {
       const crossing = CHAIN.closedCrossings(profile).find((c) => 'cross:' + c.id === id);
       if (crossing) dock = { id, kind: 'crossing', crossing };
@@ -1168,11 +1355,33 @@
   // visible jumps; the timer carries it while the tab is in the background,
   // where frames stop but the factory should not.
   let simRaf = null, simTimer = null, simSaveAcc = 0, beltFloatAcc = 0;
+  // The goods lying on the ground settle, then follow the operator in. This
+  // is the only place they reach the bag: DROPS says what was picked up and
+  // where it was lying, and the flight and the pop are the ones the typed
+  // goods already use. Returns true when anything landed.
+  function sweepDrops(dt) {
+    if (!window.DROPS || !FACTORY.playerPos) return false;
+    const at = FACTORY.playerPos();
+    const got = DROPS.tick(profile, dt, at.x, at.y);
+    if (!got) return false;
+    for (const g of got) {
+      profile.bag[g.mat] = (profile.bag[g.mat] || 0) + g.n;
+      profile.seen[g.mat] = true;
+      flyFrom(g.mat, Math.min(g.n, 3), g.x, g.y);
+      A.pickup();
+    }
+    refreshInventory();
+    refreshStatus();
+    return true;
+  }
   function simTick() {
     if (!profile) return;
+    // the build ghost walks with the operator: re-aim it as they move
+    if (placing) updatePlacing();
     const dt = SIM.tick(profile, Date.now());
     if (dt <= 0) return;
     simSaveAcc += dt;
+    if (sweepDrops(dt)) simSaveAcc += 16000;   // the ground changed: bank it on this beat
     if (simSaveAcc > 15000) { simSaveAcc = 0; E.saveProfile(profile); }
     // the docked machine's buffers change under you; redraw its rows now and then
     beltFloatAcc += dt;
@@ -1471,6 +1680,8 @@
     E.setLastMap(id);
 
     dock = null; recipe = null; menu = null;
+    buildMenu = null; placing = null; padTiles = null;
+    FACTORY.clearBuildGhost();
     pendingUnlock = null;
     unitAcc = 0; unitPaid = false; dryNow = false; lastCorrectTime = null;
     producedSinceFloat = {};

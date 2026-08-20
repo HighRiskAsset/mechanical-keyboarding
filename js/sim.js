@@ -25,7 +25,13 @@
     if (!m.buf.out) m.buf.out = {};
     if (m.job === undefined) m.job = null;
     if (typeof m.acc !== 'number') m.acc = 0;
-    if (typeof m.rot !== 'number') m.rot = 0;   // which way it faces (ports, below)
+    // which way it faces (ports, below). A save from before machines turned
+    // rigidly carries `rot` — a step through the discharge sides s, e, w —
+    // and keeps the side it discharged on as its facing.
+    if (!FACINGS.includes(m.face)) {
+      m.face = ['s', 'e', 'w'][m.rot | 0] || 's';
+      delete m.rot;
+    }
   }
   function ensure(p) {
     for (const m of p.machines) ensureMachine(m);
@@ -49,44 +55,48 @@
   // arrive there. What a machine takes and what it gives is then something
   // you read off the ground before you lay anything.
   //
-  // A machine has three sides, not four. The operator sees it from the front
-  // and its tower stands above its base, so anything on the row behind it is
-  // hidden by the machine itself, and a port nobody can see is no better
-  // than the old rule of ending a run wherever it fitted. The places are one
-  // per column across the front and one per row down each side — a body two
-  // across and two deep gives six:
+  // Ports are body-relative and turn rigidly with the machine (rotation
+  // overhaul, 2026-08-20). The whole front discharges; deliveries fill the
+  // machine's own right flank to the brim, then its left; the back carries
+  // nothing. A body two across and two deep, facing front (s), gives six
+  // places for four ports:
   //
-  //        [w1] [ B O D Y ] [e1]      (behind: hidden)
-  //        [w0] [ B O D Y ] [e0]      the row it stands on
-  //             [s0] [s1]             the row in front of it
+  //        [r1] [ B O D Y ] [l1]      (behind: the portless back)
+  //        [r0] [ B O D Y ] [l0]      the row it stands on
+  //             [f0] [f1]             the row in front of it
   //
-  // One whole side discharges; the other two take deliveries. Turning steps
-  // the discharge side round — front, right, left — and the inlets fill the
-  // two remaining sides in turn, the first to the brim before the second.
+  // A quarter turn clockwise steps the facing s → w → n → e, and every port
+  // steps with it — a pipe leaving at the bottom leaves on the left after
+  // one turn. Turned sideways the body itself turns too: footprintOf swaps
+  // across and deep, and a facing whose ports come up behind the body (the
+  // n rows) is legal — the ground plates and the doors high on the sprite
+  // keep it readable (DESIGN.md).
   //
-  // This is what sets a kind's size (chain.js). A side of a one-deep body is
-  // a single tile, so a one-deep machine can only ever have one outlet: the
-  // mine, and nothing else. The Manufacturer's fifth port is why it is three
-  // across — its front holds three places.
-  const OUT_SIDE = ['s', 'e', 'w'];                                  // what a turn steps through
-  const IN_SIDES = { s: ['w', 'e'], e: ['s', 'w'], w: ['e', 's'] };  // and what is left to take in by
-  const ROTS = OUT_SIDE.length;
+  // This is what sets a kind's size (chain.js). A flank of a one-deep body
+  // is a single tile, so a one-deep machine can only ever have one outlet:
+  // the mine, and nothing else. The Manufacturer's fifth port is why it is
+  // three across — its front holds three places.
+  const FACINGS = ['s', 'w', 'n', 'e'];         // a clockwise quarter each
   const sizeOf = (m) => (C().KINDS[m.kind] || {}).size || [2, 2];
-  const placesOf = (m) => { const [w, h] = sizeOf(m); return { s: w, e: h, w: h }; };
-  const rotOf = (m) => ((((m && m.rot) | 0) % ROTS) + ROTS) % ROTS;
-  const facingOf = (m) => OUT_SIDE[rotOf(m)];   // the side the product leaves by
-  const turn = (m) => { m.rot = (rotOf(m) + 1) % ROTS; return m.rot; };
-  // every port of a machine, in order, as a side and a place on it.
-  // factory.js turns these into tiles; nothing here knows where the machine
-  // stands. A kind whose size cannot seat all its ports comes back short,
-  // and dev/sim.html says so rather than letting it reach the map.
+  const faceOf = (m) => (m && FACINGS.includes(m.face)) ? m.face : 's';
+  const facingOf = faceOf;                      // the side the product leaves by
+  const footprintOf = (m) => window.MAPKIT.footprint(sizeOf(m), faceOf(m));
+  const nextFacing = (m) => FACINGS[(FACINGS.indexOf(faceOf(m)) + 1) % 4];
+  const turn = (m) => { m.face = nextFacing(m); return m.face; };
+  // every port of a machine, in order: its body side (f/r/l + slot) and the
+  // world side that lands on at this facing. factory.js turns these into
+  // tiles; nothing here knows where the machine stands. A kind whose size
+  // cannot seat all its ports comes back short, and dev/sim.html says so
+  // rather than letting it reach the map.
   function ports(m) {
-    const face = facingOf(m), room = placesOf(m);
+    const face = faceOf(m), [across, deep] = sizeOf(m);
+    const world = window.MAPKIT.BODY_SIDE[face];
+    const room = { f: across, r: deep, l: deep };
     const out = [], inn = [];
-    for (let i = 0; i < outletsOf(m) && i < room[face]; i++) out.push({ face, slot: i, dir: 'out', i });
+    for (let i = 0; i < outletsOf(m) && i < room.f; i++) out.push({ side: 'f', slot: i, face: world.f, dir: 'out', i });
     let i = 0;
-    for (const side of IN_SIDES[face]) {
-      for (let s = 0; s < room[side] && i < inletsOf(m); s++, i++) inn.push({ face: side, slot: s, dir: 'in', i });
+    for (const bs of ['r', 'l']) {
+      for (let s = 0; s < room[bs] && i < inletsOf(m); s++, i++) inn.push({ side: bs, slot: s, face: world[bs], dir: 'in', i });
     }
     return { out, in: inn };
   }
@@ -132,16 +142,13 @@
     p.belts.push(b);
     return b;
   }
-  function removeBelt(p, beltId) {
-    const i = p.belts.findIndex((b) => b.id === beltId);
-    if (i < 0) return false;
-    // items on the belt go back to the source's output buffer (cap permitting)
-    const b = p.belts[i];
-    const from = machineById(p, b.from);
-    if (from) for (const it of b.items) if ((from.buf.out[it.mat] || 0) < CAP()) from.buf.out[it.mat] = (from.buf.out[it.mat] || 0) + 1;
-    p.belts.splice(i, 1);
-    return true;
-  }
+  // There is no removeBelt here, and there was one until 2026-08-21. It took
+  // a run out of the save and rolled the goods riding it back into the
+  // machine they came from; nothing wants that any more. A run is taken up
+  // through DROPS.demolish (js/drops.js) — the one door everything destroyed
+  // goes through — which poofs it and lets its goods fall where they were
+  // riding. Re-laying one after a turn is factory.js's business
+  // (reconcileBelts), because only the world knows what the ground will take.
   const hasExit = (p, m) => beltsFrom(p, m).length > 0;
 
   // ---------- hands: buffers first, then the bag ----------
@@ -301,8 +308,8 @@
 
   window.SIM = {
     ensure, ensureMachine, machineById, beltsFrom, beltsTo, outletsOf, inletsOf,
-    ports, rotOf, facingOf, turn, sizeOf,
-    recipeOf, accepts, produces, canLink, addBelt, removeBelt, hasExit,
+    ports, facingOf, nextFacing, turn, sizeOf, footprintOf, FACINGS,
+    recipeOf, accepts, produces, canLink, addBelt, hasExit,
     takeInput, canTake, emit, collect, feed, canFeed, hasOutput, state,
     step, catchUp, tick,
   };

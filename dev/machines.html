@@ -21,10 +21,11 @@
 <script src="../js/maps/range.js"></script>
 <script src="../js/chain.js"></script>
 <script src="../js/sim.js"></script>
+<script src="../js/drops.js"></script>
 <script>
 (async function () {
   const Q = new URLSearchParams(location.search);
-  const SCALE = +(Q.get('s') || 4), W = 320, H = 620;
+  const SCALE = +(Q.get('s') || 4), W = 320, H = 960;
   const CROP = (Q.get('crop') || '').split(',').map(Number);
   const c = document.createElement('canvas'); c.width = W; c.height = H;
   const x = c.getContext('2d');
@@ -121,44 +122,48 @@
   row((f, m) => PIXELS.machineCanvas(3, f, m), cy6 + 6, 26);   // the beam-engine rig
   row((f, m) => PIXELS.stationCanvas('lines', f, m), cy6 + 46, 30);  // the assembler
 
-  // 7. sizes and ports: a kind's [across, deep] sets both the ground it
-  // stands on and the places around it — one per column in front, one per
-  // row down each side. Verdigris wedges point in, brass out. `ox, oy` is
-  // the body's bottom-left tile, the way factory.js hangs them off the box.
+  // 7. facings and ports (rotation overhaul, 2026-08-21): a machine turns
+  // rigidly — body, doors and ports together, a clockwise quarter per turn,
+  // s → w → n → e — and the footprint turns with it. Verdigris wedges point
+  // in, brass out; a door on the sprite sits over the plate it serves in
+  // every facing. `tx, ty` is the body box's top-left tile.
   const cy7 = 356;
-  bed('grass', 0, cy7 + 4, 20, 15);
-  label('sizes + ports — mine 2×1 · smelter 2×2 turned through its three sides · crane and manufacturer 3×2', 2, cy7 + 2);
-  const OPPOSITE = { s: 'n', e: 'w', w: 'e' };
-  const rig = (kind, look, rot, ox, oy, plug) => {
-    const [W, H] = SIM.sizeOf({ kind });
-    const at = { s: (s) => [s, 1], e: (s) => [W, -s], w: (s) => [-1, -s] };
-    const ps = SIM.ports({ kind, rot });
+  bed('grass', 0, cy7 + 4, 20, 37);
+  label('facings + ports — the smelter turned s → w → n → e (doors follow their plates)', 2, cy7 + 2);
+  const OPPOSITE = { s: 'n', e: 'w', w: 'e', n: 's' };
+  const FOOT = (kind) => kind === 'mine' ? 2 : 10;
+  const rig = (kind, look, face, tx0, ty0, plug) => {
+    const size = CHAIN.KINDS[kind].size;
+    const b = MAPKIT.boxAt([tx0, ty0], size, face);
+    const ps = SIM.ports({ kind, face });
     for (const q of ps.out.concat(ps.in)) {
-      const [dx, dy] = at[q.face](q.slot);
-      x.drawImage(PIXELS.portCanvas(OPPOSITE[q.face], q.dir), ox + dx * 16, oy + dy * 16);
+      const [tx, ty] = MAPKIT.portTile(b, face, q.side, q.slot);
+      x.drawImage(PIXELS.portCanvas(OPPOSITE[q.face], q.dir), tx * 16, ty * 16);
       if (!plug || !plug.includes(q.face + q.slot)) continue;
       // a run leaving straight out of the port, and its drum against the plate
-      const vertical = q.face === 's';
-      const away = { s: [0, 1], e: [1, 0], w: [-1, 0] }[q.face];
-      x.drawImage(PIXELS.beltTileCanvas(0, vertical ? 'v' : 'h', false, false), ox + dx * 16, oy + dy * 16);
-      x.drawImage(PIXELS.beltTileCanvas(0, vertical ? 'v' : 'h', false, false), ox + (dx + away[0]) * 16, oy + (dy + away[1]) * 16);
-      x.drawImage(PIXELS.beltEndCanvas(0, OPPOSITE[q.face], false), ox + dx * 16, oy + dy * 16);
+      const vertical = q.face === 's' || q.face === 'n';
+      const [ax, ay] = MAPKIT.PORT_AWAY[q.face];
+      x.drawImage(PIXELS.beltTileCanvas(0, vertical ? 'v' : 'h', false, false), tx * 16, ty * 16);
+      x.drawImage(PIXELS.beltTileCanvas(0, vertical ? 'v' : 'h', false, false), (tx + ax) * 16, (ty + ay) * 16);
+      x.drawImage(PIXELS.beltEndCanvas(0, OPPOSITE[q.face], false), tx * 16, ty * 16);
     }
     // the body's box, so the art can be checked against the ground it claims
     x.strokeStyle = 'rgba(255,230,140,0.5)';
-    x.strokeRect(ox + 0.5, oy - (H - 1) * 16 + 0.5, W * 16 - 1, H * 16 - 1);
-    const art = look === 'mine' ? PIXELS.machineCanvas(1, 0, 'idle') : PIXELS.stationCanvas(look, 0, 'idle');
-    x.drawImage(art, ox, oy + 16 - art.height);
-    label(kind.slice(0, 4) + ' ' + W + 'x' + H + ' r' + rot + ' ' + SIM.facingOf({ rot }), ox, oy + 30);
+    x.strokeRect(b.c0 * 16 + 0.5, b.r0 * 16 + 0.5, b.w * 16 - 1, b.h * 16 - 1);
+    const art = look === 'mine' ? PIXELS.machineCanvas(2, 0, 'idle', face) : PIXELS.stationCanvas(look, 0, 'idle', face);
+    x.drawImage(art, b.c0 * 16 + ((b.w * 16 - art.width) >> 1), (b.r1 + 1) * 16 - FOOT(kind) - art.height);
+    label(kind.slice(0, 4) + ' → ' + face, b.c0 * 16, (b.r1 + 1) * 16 + 22);
   };
-  rig('mine', 'mine', 0, 12, cy7 + 44);
-  [0, 1, 2].forEach((r, i) => rig('smelter', 'bigrams', r, 60 + i * 64, cy7 + 44));
-  rig('crane', 'crane', 0, 252, cy7 + 44);
-  label('the manufacturer — five ports, turned through its three sides', 2, cy7 + 82);
-  [0, 1, 2].forEach((r, i) => rig('manufacturer', 'manufacturer', r, 28 + i * 96, cy7 + 124));
-  label('plugged in — the plate still reads under the band', 2, cy7 + 162);
-  rig('manufacturer', 'manufacturer', 0, 28, cy7 + 204, ['s0', 'w1']);
-  rig('crane', 'crane', 1, 172, cy7 + 204, ['e0', 's1']);
+  ['s', 'w', 'n', 'e'].forEach((f, i) => rig('smelter', 'bigrams', f, 1 + i * 5, 24));
+  label('the mine turned through its four facings — the vein must stay readable', 2, 446);
+  ['s', 'w', 'n', 'e'].forEach((f, i) => rig('mine', 'mine', f, 1 + i * 5, 29));
+  label('the manufacturer, 3×2: five ports; sideways it stands 2×3', 2, 542);
+  ['s', 'w'].forEach((f, i) => rig('manufacturer', 'manufacturer', f, 1 + i * 7, 35, i ? ['w0', 'n0'] : ['s0', 'w1']));
+  ['n', 'e'].forEach((f, i) => rig('manufacturer', 'manufacturer', f, 8 + i * 6, 40));
+  label('the crane end-on, and the backs of the rest', 2, 764);
+  rig('crane', 'crane', 'e', 1, 49);
+  [['foundry', 'foundry'], ['words', 'constructor'], ['molder', 'molder']].forEach(([k, kind], i) => rig(kind, k, 'n', 5 + i * 4, 49));
+  [['lines', 'assembler'], ['fastener', 'fastener']].forEach(([k, kind], i) => rig(kind, k, 'n', 5 + i * 4, 54));
 
   const out = document.getElementById('out');
   const [kx, ky, kw, kh] = CROP.length === 4 ? CROP : [0, 0, W, H];

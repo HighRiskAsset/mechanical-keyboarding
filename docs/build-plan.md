@@ -460,6 +460,13 @@ south lake, each with wide flights and side cuts on every approachable side.
 Nothing is gated (user ruling): every crossing carries `free`. Open Range
 row A carries the same node set and is unchanged.
 
+**Pending — the map rework (user ruling 2026-08-20, with the rotation
+overhaul):** both worlds get moderately larger and are re-laid to the
+four-facing guarantee — pads are 3×3 now and every facing of the largest
+kind must seat with its ports usable; `dev/verify.html`'s warning line lists
+the spots that fall short (52 at the time of the ruling). Re-space the
+grown pads while at it (3×3 pads on the old lattice run edge-to-edge).
+
 ## 6. Gravy (after the foundation, in no order)
 
 Guidance checklist ("what to build next" — UI, not a mechanic) · the

@@ -76,6 +76,8 @@
       seen: {},          // material id → true once held (progressive reveal)
       machines: sm.machines, // {id, kind, ore?, node?|plot?, auto, recipe?}
       nextMachineId: sm.nextId,
+      drops: [],         // loose materials on the ground: {id, mat, n, x, y}
+      nextDropId: 1,
       crossings: {},     // crossing id → true once repaired (bought at the place)
       heavy: 0,          // heavy modules toward the finish
     };
@@ -153,7 +155,7 @@
       const n = C().MAP.NODES[m.node];
       if (n && C().ORE_BY_NODE[n.kind] === m.ore) continue;
       const alt = C().unbuiltNodes(p).find((nd) => nd.ore === m.ore);
-      if (alt) m.node = alt.index; else p.machines.splice(p.machines.indexOf(m), 1);
+      if (alt) { m.node = alt.index; delete m.at; } else p.machines.splice(p.machines.indexOf(m), 1);
     }
     // the starter ores always have their first mine
     for (const s of C().starterNodes()) {
@@ -162,7 +164,16 @@
       }
     }
     autoAdvance(p);
-    if (window.SIM) SIM.ensure(p);   // buffers, belts, the clock (phase 3)
+    if (window.SIM) SIM.ensure(p);   // buffers, belts, the clock, the facing (phase 3)
+    if (window.DROPS) DROPS.ensure(p);   // goods lying on the ground; they never expire
+    // machines stand on tiles now (rotation overhaul, 2026-08-21): a machine
+    // from before carries a plot or node anchor and no `at` — seat it there
+    // once, at the facing sim.js migrated off its old rot
+    for (const m of p.machines) {
+      if (Array.isArray(m.at) && m.at.length === 2) continue;
+      const b = C().machineBox(m);   // the anchor fallback path
+      m.at = [b.c0, b.r0];
+    }
     return p;
   }
 

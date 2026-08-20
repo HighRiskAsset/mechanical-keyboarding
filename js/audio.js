@@ -1,4 +1,5 @@
 // Synthesized sound: key clicks, error thuds, arrival whistle, collect ding,
+// the soft poof of a thing coming apart, the pickup run off the ground,
 // and the train rhythm — steady typing makes the ride sound smooth.
 // No audio assets; everything is WebAudio. Global namespace: AUDIO
 (function () {
@@ -114,6 +115,71 @@
   }
   // inventory count-up: rising micro-ticks (the addictive one)
   function countTick(i) { ensureCtx(); tone(820 + Math.min(i, 14) * 55, 0.04, 0.05); }
+  // a thing coming apart: a soft puff, never a bang. The attack is a ramp
+  // and not a step — a step is exactly what makes a noise burst read as a
+  // crack — and the filter closes from a breath down to a thud over the
+  // whole length of it, so what is heard is air leaving, then weight
+  // settling, then three quiet taps of the pieces landing.
+  function poof() {
+    ensureCtx();
+    if (!enabled || !ctx) return;
+    const t = ctx.currentTime, dur = 0.42;
+    const len = Math.floor(ctx.sampleRate * dur);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.Q.value = 0.5;                                   // no resonance: a resonant sweep whistles
+    lp.frequency.setValueAtTime(1300, t);
+    lp.frequency.exponentialRampToValueAtTime(220, t + dur);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.2, t + 0.05);      // the swell
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(lp).connect(g).connect(ctx.destination);
+    src.start(t); src.stop(t + dur);
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(150, t);
+    o.frequency.exponentialRampToValueAtTime(58, t + 0.3);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(0.0001, t);
+    og.gain.linearRampToValueAtTime(0.13, t + 0.035);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
+    o.connect(og).connect(ctx.destination);
+    o.start(t); o.stop(t + 0.36);
+    noiseBurst(0.05, 900, 0.05, 'lowpass', 0.12);
+    noiseBurst(0.05, 700, 0.04, 'lowpass', 0.2);
+    noiseBurst(0.06, 520, 0.03, 'lowpass', 0.29);
+  }
+  // a loose good swept off the ground and into the bag: the same pop the
+  // typed goods make, but it climbs a semitone for every one that follows
+  // close behind, so clearing a heap is a run up the scale instead of the
+  // same note eight times. The run resets after a moment of quiet.
+  let pickAt = 0, pickRun = 0;
+  function pickup() {
+    ensureCtx();
+    if (!enabled || !ctx) return;
+    const now = performance.now();
+    pickRun = now - pickAt < 900 ? Math.min(pickRun + 1, 11) : 0;
+    pickAt = now;
+    const t = ctx.currentTime;
+    const base = 460 * Math.pow(2, pickRun / 12);
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(base, t);
+    o.frequency.exponentialRampToValueAtTime(base * 2, t + 0.06);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.1, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
+    o.connect(g).connect(ctx.destination);
+    o.start(t); o.stop(t + 0.13);
+    noiseBurst(0.02, 4200, 0.025, 'highpass');          // the sparkle on top of it
+  }
   // purchase: latch + heavy chunk + body resonance
   function build() {
     ensureCtx();
@@ -186,5 +252,5 @@
   }
   function isEnabled() { return enabled; }
 
-  window.AUDIO = { click, thud, ding, whistle, press, mint, build, countTick, fanfare, onKey, setEnabled, isEnabled };
+  window.AUDIO = { click, thud, ding, whistle, press, mint, build, countTick, fanfare, poof, pickup, onKey, setEnabled, isEnabled };
 })();

@@ -29,6 +29,7 @@
 <script src="../js/chain.js"></script>
 <script src="../js/engine.js"></script>
 <script src="../js/sim.js"></script>
+<script src="../js/drops.js"></script>
 <script>
 (() => {
   const C = window.CHAIN, S = window.SIM;
@@ -105,48 +106,52 @@
   for (let k = 0; k < 10 * MIN / 500; k++) S.step(r, 500);
   const qc = q.machines.find((m) => m.kind === 'constructor').buf.out.slova || 0, rc = r.machines.find((m) => m.kind === 'constructor').buf.out.slova || 0;
   line(Math.abs(qc - rc) <= 2, `fast-forward matches stepping (${qc} vs ${rc} parts after ten minutes)`);
-  line(S.removeBelt(p, p.belts[0].id) && p.belts.length === 4, 'a belt can be removed (its items return to the source)');
+  // taking a run up: the one door, and the goods it was carrying end up on
+  // the ground rather than back in the machine they came from
+  const D = window.DROPS;
+  const doomed = p.belts[0], riding = doomed.items.length, looseBefore = D.count(p);
+  const ironOut = iron.buf.out.az || 0;
+  const razed = D.demolish(p, { belt: doomed });
+  line(!!razed && p.belts.length === 4 && !p.belts.includes(doomed), 'a run is taken up through DROPS.demolish (nothing else removes one)');
+  line(riding > 0 && D.count(p) - looseBefore === riding && (iron.buf.out.az || 0) === ironOut,
+    `its ${riding} goods fall where they rode, not into the source (${D.count(p) - looseBefore} landed on the ground)`);
 
-  // ports: every kind's inlets and outlets have a place on the three sides
-  // the operator can see, no two ports share one, and a turn moves them all
+  // ports (rotation overhaul, 2026-08-21): body-relative — the whole front
+  // discharges, the right flank fills first — and they turn RIGIDLY: a
+  // quarter clockwise per turn, the world side of every port stepping
+  // s → w → n → e with the body, slots and all
   const place = (q) => q.face + q.slot;
-  const shortOf = [], shared = [], stuck = [];
+  const CW = { s: 'w', w: 'n', n: 'e', e: 's' };
+  const shortOf = [], shared = [], loose = [];
   for (const kind of Object.keys(C.KINDS)) {
-    const m = { kind, rot: 0 };
-    for (let r = 0; r < 3; r++) {
-      m.rot = r;
+    for (const f of S.FACINGS) {
+      const m = { kind, face: f };
       const ps = S.ports(m);
       const all = ps.out.concat(ps.in).map(place);
-      if (ps.out.length !== S.outletsOf(m) || ps.in.length !== S.inletsOf(m)) shortOf.push(`${kind} r${r}`);
-      if (new Set(all).size !== all.length) shared.push(`${kind} r${r}`);
-      if (ps.out.some((q) => q.face === 'n') || ps.in.some((q) => q.face === 'n')) shared.push(`${kind} r${r} behind`);
-    }
-    // A turn always moves the whole discharge side — that is what a turn is.
-    // It cannot move every inlet: three inlets over two sides fill four
-    // places, so one of them is bound to stay where it was.
-    for (let r = 0; r < 3; r++) {
-      m.rot = r;
-      const wasOut = new Set(S.ports(m).out.map(place));
-      const was = S.ports(m).out.concat(S.ports(m).in).map((q) => q.dir + place(q)).sort().join();
-      m.rot = r + 1;
-      const now = S.ports(m);
-      if (now.out.some((q) => wasOut.has(place(q)))) stuck.push(`${kind} r${r} outlet`);
-      if (now.out.concat(now.in).map((q) => q.dir + place(q)).sort().join() === was) stuck.push(`${kind} r${r} whole`);
+      if (ps.out.length !== S.outletsOf(m) || ps.in.length !== S.inletsOf(m)) shortOf.push(`${kind} ${f}`);
+      if (new Set(all).size !== all.length) shared.push(`${kind} ${f}`);
+      const next = S.ports({ kind, face: S.nextFacing(m) });
+      const turned = ps.out.concat(ps.in).map((q) => q.dir + q.side + q.slot + CW[q.face]).sort().join();
+      const found = next.out.concat(next.in).map((q) => q.dir + q.side + q.slot + q.face).sort().join();
+      if (turned !== found) loose.push(`${kind} ${f}`);
     }
   }
-  line(!shortOf.length, `every kind's ports are all placed${shortOf.length ? ' — short at ' + shortOf.join(', ') : ''}`);
-  line(!shared.length, `no two ports share a place, and none stands behind the machine${shared.length ? ' — ' + shared.join(', ') : ''}`);
-  line(!stuck.length, `a turn moves the whole discharge side, and never leaves a machine unchanged${stuck.length ? ' — held at ' + stuck.join(', ') : ''}`);
-  const sm = { kind: 'smelter', rot: 0 };
-  S.turn(sm); S.turn(sm); S.turn(sm);
-  line(sm.rot === 0 && S.facingOf(sm) === 's', 'three turns bring a machine back to facing front');
+  line(!shortOf.length, `every kind's ports are all placed at every facing${shortOf.length ? ' — short at ' + shortOf.join(', ') : ''}`);
+  line(!shared.length, `no two ports share a place${shared.length ? ' — ' + shared.join(', ') : ''}`);
+  line(!loose.length, `rotation is rigid: a quarter turn carries every port with the body${loose.length ? ' — loose at ' + loose.join(', ') : ''}`);
+  const sm = { kind: 'smelter', face: 's' };
+  S.turn(sm); S.turn(sm); S.turn(sm); S.turn(sm);
+  line(sm.face === 's' && S.facingOf(sm) === 's', 'four turns bring a machine back to facing front');
+  const fpM = S.footprintOf({ kind: 'manufacturer', face: 'e' });
+  line(fpM[0] === 2 && fpM[1] === 3, `a 3×2 kind turned sideways stands 2×3 (got ${fpM.join('×')})`);
 
-  // sizes: a whole side discharges, and a side of a body `d` deep is `d`
-  // tiles, so a kind can only be one deep if it has one outlet. This is the
-  // rule that decides every size in chain.js — assert it rather than trust it.
+  // sizes: the whole front discharges and the flanks take deliveries, so a
+  // kind needs a front of `w` places for its outlets and flanks of `d` for
+  // its inlets. This is the rule that decides every size in chain.js —
+  // assert it rather than trust it.
   const tooShallow = Object.keys(C.KINDS).filter((k) => {
     const m = { kind: k }, [w, d] = S.sizeOf(m);
-    return S.outletsOf(m) > Math.min(w, d) || S.inletsOf(m) > w + d;
+    return S.outletsOf(m) > w || S.inletsOf(m) > 2 * d;
   });
   line(!tooShallow.length, `every kind is big enough to seat its ports${tooShallow.length ? ' — too small: ' + tooShallow.join(', ') : ''}`);
   line(S.sizeOf({ kind: 'mine' })[1] === 1 && Object.keys(C.KINDS).every((k) => k === 'mine' || S.sizeOf({ kind: k })[1] > 1),

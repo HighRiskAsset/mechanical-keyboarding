@@ -27,7 +27,7 @@
   let dockedId = null;
   let frameClock = 0;
   let dotTex = null;
-  const particles = [], floats = [], flashes = [], sparks = [];
+  const particles = [], floats = [], flashes = [], sparks = [], puffs = [];
   const petals = [];
   let ambient = [], waterSprites = [], terrain = [];
   let waterTexes = [];
@@ -38,6 +38,7 @@
   let simProfile = null;               // the save whose belts/items we draw (set by buildWorld)
   let beltViews = {};                  // belt id → {c, items:[sprite], pipe, b}
   let portSprites = [];                // the inlet/outlet plates around every machine
+  let padSprites = [];                 // the surveyed pads and veins (markers only)
   const beltTileIndex = new Map();      // "tx,ty" → belt ids on that tile (two where runs cross)
   let spoolSp = null, spoolOn = false;
   let ghostG = null;
@@ -60,13 +61,14 @@
   const STATION_LOOK = { smelter: 'bigrams', foundry: 'foundry', constructor: 'words', molder: 'molder', fastener: 'fastener', crane: 'crane', manufacturer: 'manufacturer' };
   // an automated mine is a different machine to look at, not a different state
   const lookOf = (kind, auto) => kind === 'mine' ? (auto ? 3 : 1) : (STATION_LOOK[kind] || 'lines');
-  function band(look, mode) {
-    const k = look + ':' + mode;
+  function band(look, mode, facing) {
+    const face = facing || 's';
+    const k = look + ':' + mode + ':' + face;
     if (!machineTexCache[k]) {
       const n = mode === 'work' ? PIXELS.WORK_FRAMES : mode === 'idle' ? PIXELS.IDLE_FRAMES : 1;
       const draw = typeof look === 'number'
-        ? (f) => PIXELS.machineTex(look, f, mode)
-        : (f) => PIXELS.stationTex(look, f, mode);
+        ? (f) => PIXELS.machineTex(look, f, mode, face)
+        : (f) => PIXELS.stationTex(look, f, mode, face);
       machineTexCache[k] = Array.from({ length: n }, (_, f) => draw(f));
     }
     return machineTexCache[k];
@@ -394,28 +396,35 @@
     infoBox = null;
   }
   function clearInfo() { wipeInfo(); drawMenu(); }
+  // the def a floating panel anchors to: a station's, or the operator
+  // themself ('@player') for the panels the build flow raises in open field
+  function defOf(dockId) {
+    if (dockId === '@player') return { id: '@player', x: Math.round(playerX) - 13, y: Math.round(playerY), bw: 26 };
+    const st = stations[dockId];
+    return st ? st.def : null;
+  }
   function showInfo(dockId, rows) {
     wipeInfo();
     if (!ready || !dockId || !rows || !rows.length) { drawMenu(); return; }
-    const st = stations[dockId];
-    if (!st) { drawMenu(); return; }
-    const cx = midX(st.def);
-    let y = st.def.y - 46 - (rows.length - 1) * 16;
+    const def = defOf(dockId);
+    if (!def) { drawMenu(); return; }
+    const cx = midX(def);
+    let y = def.y - 46 - (rows.length - 1) * 16;
     // no room above (a place near the world's top edge): the rows stand
     // beside the place instead, right of it — or left near the east edge —
     // so the ground below (a belt route, say) stays visible
     const side = y < 2;
-    if (side) y = Math.max(2, st.def.y - 40);
+    if (side) y = Math.max(2, def.y - 40);
     if (!side) infoBox = { dockId, top: y };
     const built = rows.map((row) => rowContainer(row));
     const widest = Math.max(...built.map((c) => c._w));
-    const rightOK = st.def.x + 40 + widest + 6 <= CHAIN.WORLD_W;
+    const rightOK = def.x + 40 + widest + 6 <= CHAIN.WORLD_W;
     built.forEach((c, i) => {
       const row = rows[i];
       const back = new PIXI.Graphics().rect(-3, -2, c._w + 6, 16).fill({ color: 0x17161a, alpha: 0.7 });
       c.addChildAt(back, 0);
       if (!side) c.position.set(Math.round(cx - c._w / 2), y);
-      else c.position.set(rightOK ? st.def.x + 40 : st.def.x - 12 - c._w, y);
+      else c.position.set(rightOK ? def.x + 40 : def.x - 12 - c._w, y);
       c.alpha = row.enabled === false ? 0.5 : 1;
       labelsC.addChild(c);
       infoRows.push(c);
@@ -446,8 +455,8 @@
     wipeMenu();
     if (!ready || !menuState) return;
     const { dockId, rows, sel } = menuState;
-    const st = stations[dockId];
-    if (!st) return;
+    const def = defOf(dockId);
+    if (!def) return;
     // the window of rows on show: the whole list when it fits, else a slice
     // that keeps the selection in the middle
     const n = rows.length;
@@ -458,17 +467,17 @@
     const built = shown.map((r) => rowContainer(r));
     const w = Math.max(...built.map((c) => c._w)) + (n > win ? 16 : 10);
     const h = win * 16 + 6;
-    const cx = midX(st.def);
+    const cx = midX(def);
     let px = Math.round(cx - w / 2);
     // above the machine's own rows when it has any, else above the machine —
     // and always inside the window the player is looking at: a tall panel
     // near the world's top edge drops below the place rather than off-screen
-    let base = st.def.y - 50;
+    let base = def.y - 50;
     if (infoBox && infoBox.dockId === dockId) base = Math.min(base, infoBox.top - 6);
     const vx = Math.round(camX), vy = Math.round(camY);
     px = Math.max(vx + 2, Math.min(vx + viewW - w - 2, px));
     let py = base - h;
-    if (py < vy + 2) py = st.def.y + 8;
+    if (py < vy + 2) py = def.y + 8;
     py = Math.max(vy + 2, Math.min(vy + viewH - h - 2, py));
     const panel = new PIXI.Graphics()
       .rect(0, 0, w, h).fill({ color: 0x17161a, alpha: 0.9 })
@@ -494,7 +503,7 @@
   // the pose a machine is built in: automated ones start on the idle breath,
   // the rest stand still. The ticker takes over from the next frame.
   function stationSpriteTex(m) {
-    return band(lookOf(m.kind, m.autoLive), m.autoLive ? 'idle' : 'still')[0];
+    return band(lookOf(m.kind, m.autoLive), m.autoLive ? 'idle' : 'still', SIM.facingOf(m))[0];
   }
 
   // Build the world from the save: machines on plots and nodes, free plots,
@@ -503,11 +512,13 @@
   function buildWorld(profile, autoLive) {
     if (!ready) return;
     simProfile = profile;
-    clearInfo(); clearMenu(); clearGhost();
+    clearInfo(); clearMenu(); clearGhost(); clearBuildGhost();
     for (const v of Object.values(beltViews)) { cameraC.removeChild(v.c); v.c.destroy({ children: true }); }
     beltViews = {};
     for (const s of portSprites) { cameraC.removeChild(s); s.destroy(); }
     portSprites = [];
+    for (const s of padSprites) { cameraC.removeChild(s); s.destroy(); }
+    padSprites = [];
     beltTileIndex.clear();
     beltDockId = null;                 // its station goes with the rest, below
     for (const s of Object.values(stateDots)) { cameraC.removeChild(s); s.destroy(); }
@@ -553,35 +564,42 @@
       }
     }
 
-    // machines
+    // machines: seated on their tile box, the sprite centred on it with its
+    // feet a step up from the box's south edge — the ground the front ports
+    // use stays visible, and the tower covers at most half of the row
+    // behind (rotation overhaul, 2026-08-21)
     for (const m of profile.machines) {
-      const pos = CHAIN.machinePos(m);
+      const b = bodyBox(m);
+      const bx = b.c0 * T16, by = b.r0 * T16, bwPx = b.w * T16, bhPx = b.h * T16;
+      const foot = m.kind === 'mine' ? 2 : 10;
       const live = !!(autoLive && autoLive(m));
       const root = new PIXI.Container();
       const sp = new PIXI.Sprite(stationSpriteTex({ ...m, autoLive: live }));
+      sp.position.set((bwPx - sp.texture.width) >> 1, bhPx - foot - sp.texture.height);
       root.addChild(sp);
-      // a kind three tiles across wears everything that hangs off it wider
-      const bw = SIM.sizeOf(m)[0] * T16 - 2;
-      const glow = new PIXI.Graphics().rect(0, 36, bw - 4, 2).fill(0xc9a24a);
+      const bw = bwPx - 2;
+      const glow = new PIXI.Graphics().rect(1, bhPx - 5, bw - 4, 2).fill(0xc9a24a);
       glow.visible = false;
       root.addChild(glow);
       // the belt mark: green = a belt from the carried spool can end here,
       // red = it cannot (shown only while carrying)
-      const mark = new PIXI.Graphics().rect(-2, 39, bw, 2).fill(0x6cc46c);
+      const mark = new PIXI.Graphics().rect(-1, bhPx - 2, bw, 2).fill(0x6cc46c);
       mark.visible = false;
       root.addChild(mark);
-      root.position.set(pos.x, pos.y - 36);
-      root.zIndex = pos.y;
+      root.position.set(bx, by);
+      root.zIndex = by + bhPx - 5;
       cameraC.addChild(root);
       const id = 'm:' + m.id;
       stations[id] = {
-        def: { id, x: pos.x, y: pos.y, kind: m.kind, m, bw }, root, sp, glow, mark, built: true, auto: live, sqTtl: 0,
+        def: { id, x: bx + 1, y: by + bhPx - 5, kind: m.kind, m, bw }, root, sp, glow, mark, built: true, auto: live, sqTtl: 0,
+        spBase: sp.y,
+        glowRect: { x: 1, y: bhPx - 5, w: bw - 4, h: 2 },
         simState: live && window.SIM ? SIM.state(profile, m) : 'off',
       };
       if (live) {
         const d = new PIXI.Sprite(PIXELS.stateDotTex('run'));
-        d.position.set(pos.x + bw - 6, pos.y - 40);
-        d.zIndex = pos.y + 1;
+        d.position.set(bx + bwPx - 6, by - 10);
+        d.zIndex = by + bhPx - 4;
         cameraC.addChild(d);
         stateDots[id] = d;
       }
@@ -589,44 +607,31 @@
     const relaid = reconcileBelts(profile);
     drawPorts(profile);
     drawBelts(profile);
-    // free plots: surveyed markers, dockable, walk-through
+    // Free pads and unbuilt veins: surveyed markers on the ground, and
+    // nothing more. They stopped being dockable places when the build ghost
+    // arrived (rotation overhaul, 2026-08-21): a long press on open ground
+    // opens the build menu, and the ghost is aimed by walking — so a pad is
+    // just the ground that will take a body, drawn where the zone really is
+    // (one size, 3×3, the largest kind every way up).
     for (const p of CHAIN.freePlots(profile)) {
-      const root = new PIXI.Container();
-      const sp = new PIXI.Sprite(PIXELS.plotTex());
-      root.addChild(sp);
-      // the pad is drawn on the ground it actually is: three tiles across and
-      // two deep, anchored at the plot's foot, the same box a body takes
-      const glow = new PIXI.Graphics().rect(0, 33, 48, 2).fill(0xc9a24a);
-      glow.visible = false;
-      root.addChild(glow);
-      root.position.set(p.x, p.y - 32);
-      root.zIndex = -700;
-      cameraC.addChild(root);
+      const b = MAPKIT.padBox(p);
+      const sp = new PIXI.Sprite(PIXELS.plotTex(48, 48));
+      sp.position.set(b.c0 * T16, b.r0 * T16);
+      sp.zIndex = -700;
       sp.alpha = 0.9;
-      stations['plot:' + p.id] = {
-        def: { id: 'plot:' + p.id, x: p.x, y: p.y, kind: 'plot', plot: p, bw: 48 },
-        root, sp, glow, built: false, auto: false, sqTtl: 0,
-        glowRect: { x: 0, y: 33, w: 48, h: 2 },
-      };
+      cameraC.addChild(sp);
+      padSprites.push(sp);
     }
-    // unbuilt ore nodes: the vein, surveyed. A vein takes a mine and a mine
-    // is two tiles by one, so its mark is that and not a build plot's pad.
+    // a vein takes a mine and a mine is two tiles by one, so its mark is
+    // that and not a build pad's
     for (const n of CHAIN.unbuiltNodes(profile)) {
-      const root = new PIXI.Container();
+      const b = MAPKIT.bodyBox(n.x + 4, n.y + 12, 2, 1);
       const sp = new PIXI.Sprite(PIXELS.plotTex(32, 16));
-      root.addChild(sp);
-      const glow = new PIXI.Graphics().rect(0, 17, 32, 2).fill(0xc9a24a);
-      glow.visible = false;
-      root.addChild(glow);
-      root.position.set(n.x + 4, n.y - 4);
-      root.zIndex = -700;
-      cameraC.addChild(root);
+      sp.position.set(b.c0 * T16, b.r0 * T16);
+      sp.zIndex = -700;
       sp.alpha = 0.6;
-      stations['node:' + n.index] = {
-        def: { id: 'node:' + n.index, x: n.x + 4, y: n.y + 12, kind: 'node', node: n, bw: 32 },
-        root, sp, glow, built: false, auto: false, sqTtl: 0,
-        glowRect: { x: 0, y: 17, w: 32, h: 2 },
-      };
+      cameraC.addChild(sp);
+      padSprites.push(sp);
     }
 
     player = new PIXI.Sprite(charTex.side[0]);
@@ -642,7 +647,7 @@
     if (!st || st.def.kind !== 'mine') return;
     st.auto = live;
     st.simState = live ? 'run' : 'off';
-    st.sp.texture = band(lookOf(st.def.kind, live), live ? 'idle' : 'still')[0];
+    st.sp.texture = band(lookOf(st.def.kind, live), live ? 'idle' : 'still', SIM.facingOf(st.def.m))[0];
   }
 
   // ---------- belts on the map (phase 3) ----------
@@ -652,11 +657,11 @@
   // ---------- the ground a machine stands on ----------
   // The box is both the tiles no run may lie on and the frame the ports hang
   // off, so a port is never a tile the body covers and a run always meets
-  // the machine flush. The arithmetic is MAPKIT's: dev/verify.html checks
-  // every plot on every map against the same answer this draws from.
+  // the machine flush. The arithmetic is CHAIN's (the seated `at` plus the
+  // facing's footprint): dev/verify.html checks every plot on every map
+  // against the same answer this draws from.
   function bodyBox(m) {
-    const [w, h] = SIM.sizeOf(m), pos = CHAIN.machinePos(m);
-    return MAPKIT.bodyBox(pos.x, pos.y, w, h);
+    return CHAIN.machineBox(m);
   }
   function footprintTiles(m) {
     const b = bodyBox(m);
@@ -746,12 +751,13 @@
   // plugged in rather than merely finishing nearby — and it is why a port
   // with a rock right outside it is a port you cannot use until you turn the
   // machine.
-  const AWAY_STEP = { e: 0, w: 1, s: 2 };   // into STEPS, below
+  const AWAY_STEP = { e: 0, w: 1, s: 2, n: 3 };   // into STEPS, below
   function machinePorts(m) {
     const b = bodyBox(m);
+    const facing = SIM.facingOf(m);
     const plan = SIM.ports(m);
     const place = (q) => {
-      const [tx, ty] = MAPKIT.portTile(b, q.face, q.slot);
+      const [tx, ty] = MAPKIT.portTile(b, facing, q.side, q.slot);
       const away = AWAY_STEP[q.face];
       return { ...q, tx, ty, away, toward: away ^ 1 };
     };
@@ -917,9 +923,14 @@
   // machine turned since leaves its runs in the same state: meeting the body
   // at no port at all. Re-lay each one between the same two machines rather
   // than leave it plugged into nothing; where the ground has no route left,
-  // take it up. Either way the goods riding it roll back into the source, as
-  // they do when a run is taken up by hand — the tiles under them are about
-  // to be somewhere else.
+  // take it up.
+  // A run that moves has not died — it is the same run over different tiles,
+  // so its goods roll home into the source and it makes no smoke. A run with
+  // nowhere to go has died, and dying is dying: it goes out the same door as
+  // everything else destroyed (DROPS.demolish), with the poof, the sound and
+  // its goods left lying on the tiles it was crossing. Which of the two it is
+  // is not known until the route has been tried, so the goods come off the
+  // run as it is lifted and wait here for the answer.
   // Every run that has to move comes up first, and only then do they go back
   // down. Lifting them one at a time let a run still lying on its old path
   // block the ground another one needed, and the second run was taken up for
@@ -938,29 +949,38 @@
       if (!from || !to) return;
       if (beltPlugged(b, from, to) && !b.path.some(([x, y]) => under.has(key(x, y)))) return;
       SIM.ensureMachine(from);
-      for (const it of b.items) {
-        if ((from.buf.out[it.mat] || 0) < CHAIN.TUNING.BUFFER_CAP) from.buf.out[it.mat] = (from.buf.out[it.mat] || 0) + 1;
-      }
+      lift.push({ b, at, from, to, riding: b.items });
       b.items = [];
-      lift.push({ b, at, from, to });
     });
     if (!lift.length) return { moved: 0, lost: 0 };
     profile.belts = belts.filter((b) => !lift.some((l) => l.b === b));
-    let moved = 0, lost = 0;
-    const back = [];
+    let moved = 0;
+    const back = [], gone = [];
     for (const l of lift) {
       const path = routeBelt(l.from, l.to, profile);
-      if (!path) { lost++; continue; }
+      if (!path) { gone.push(l); continue; }
+      // it moved: the goods it was carrying roll home, as if it had been
+      // lying along its new tiles all along
+      for (const it of l.riding) {
+        if ((l.from.buf.out[it.mat] || 0) < CHAIN.TUNING.BUFFER_CAP) l.from.buf.out[it.mat] = (l.from.buf.out[it.mat] || 0) + 1;
+      }
       l.b.path = path;
       profile.belts.push(l.b);      // in the ground's eyes at once, so the next one routes around it
       back.push(l);
       moved++;
     }
+    // and the rest died. Their goods go back on them first, so the one door
+    // drops each one where it was riding; one call, so however many runs came
+    // up it is one poof and one sound.
+    if (gone.length) {
+      for (const l of gone) l.b.items = l.riding;
+      DROPS.demolish(profile, { belts: gone.map((l) => l.b) });
+    }
     // laying order decides which run bridges which at a crossing: put them
     // back where they were, so a world drawn twice looks the same twice
     profile.belts = profile.belts.filter((b) => !back.some((l) => l.b === b));
     for (const l of back) profile.belts.splice(Math.min(l.at, profile.belts.length), 0, l.b);
-    return { moved, lost };
+    return { moved, lost: gone.length };
   }
   // Every inlet and outlet, marked on the tile a run has to reach to use it.
   // A port under a run keeps its plate (the drum sits on top of it and says
@@ -1128,6 +1148,54 @@
     }
     cameraC.addChild(ghostG);
   }
+  // ---------- the build ghost (rotation overhaul, 2026-08-21) ----------
+  // The machine the operator is about to build, walking with them: the body
+  // translucent in its facing, every tile under it marked buildable or not,
+  // and its port plates already on the ground — faint where the way out of
+  // them is blocked — so a placement is aimed with the traffic in view.
+  // app.js owns the rules; this draws what it is handed.
+  let buildC = null, buildBodyC = null;
+  function clearBuildGhost() {
+    if (buildC) { cameraC.removeChild(buildC); buildC.destroy({ children: true }); buildC = null; }
+    if (buildBodyC) { cameraC.removeChild(buildBodyC); buildBodyC.destroy({ children: true }); buildBodyC = null; }
+  }
+  function showBuildGhost(m, tiles, ok) {
+    clearBuildGhost();
+    if (!ready) return;
+    // the ground half — tile marks and the plates-to-be — under the bodies
+    buildC = new PIXI.Container();
+    buildC.zIndex = -498;
+    const g = new PIXI.Graphics();
+    for (const [tx, ty, tok] of tiles || []) {
+      g.rect(tx * T16 + 1, ty * T16 + 1, 14, 14).fill({ color: 0x17161a, alpha: 0.4 });
+      g.rect(tx * T16 + 2, ty * T16 + 2, 12, 12).fill({ color: tok ? 0xf2c14e : 0xd84f4f, alpha: 0.5 });
+    }
+    buildC.addChild(g);
+    if (simProfile) {
+      const { blocked, beltAt } = beltGround(simProfile);
+      const ps = machinePorts(m);
+      for (const q of ps.out.concat(ps.in)) {
+        const spr = new PIXI.Sprite(PIXELS.portTex(OPP[q.face], q.dir));
+        spr.position.set(q.tx * T16, q.ty * T16);
+        spr.alpha = portOpen(q, simProfile, blocked, beltAt) ? 0.9 : 0.35;
+        buildC.addChild(spr);
+      }
+    }
+    cameraC.addChild(buildC);
+    // the body half sorts like the machine it will be, so the operator
+    // stands in front of it or behind it the way they will once it is real
+    const b = bodyBox(m);
+    const foot = m.kind === 'mine' ? 2 : 10;
+    const tex0 = band(lookOf(m.kind, false), 'still', SIM.facingOf(m))[0];
+    const sp = new PIXI.Sprite(tex0);
+    sp.position.set(b.c0 * T16 + ((b.w * T16 - tex0.width) >> 1), b.r0 * T16 + b.h * T16 - foot - tex0.height);
+    sp.alpha = 0.6;
+    if (!ok) sp.tint = 0xff9a8a;
+    buildBodyC = new PIXI.Container();
+    buildBodyC.zIndex = b.r0 * T16 + b.h * T16 - 5;
+    buildBodyC.addChild(sp);
+    cameraC.addChild(buildBodyC);
+  }
   // carrying: `from` is the source machine's world position (the tether
   // line runs from there to the operator)
   function setSpool(on, from) {
@@ -1178,6 +1246,73 @@
     }
   }
 
+  // ---------- coming apart, and what is left lying there ----------
+  // The poof a destroyed thing makes: a box of ground, filled with puffs of
+  // smoke that rise and open out, and a ring of sparks at its foot. A wider
+  // body gets more of them, a single belt tile three, so one machine reads
+  // as heavier than one tile of run without anything having to say so.
+  // Everything that can be destroyed comes through DROPS.demolish, which
+  // calls this; nothing else should.
+  function poof(wx, wy, w, h) {
+    if (!ready) return;
+    const n = Math.max(3, Math.min(9, Math.round((w * h) / 90)));
+    for (let i = 0; i < n; i++) {
+      const sp = new PIXI.Sprite(PIXELS.puffTex(0));
+      sp.anchor.set(0.5);
+      sp.zIndex = 5600;
+      sp.visible = false;
+      cameraC.addChild(sp);
+      puffs.push({
+        sp, frame: -1,
+        x: wx + Math.random() * w, y: wy + h * 0.25 + Math.random() * h * 0.75,
+        vx: Math.random() * 0.7 - 0.35, vy: -(0.14 + Math.random() * 0.3),
+        t: 0, life: 26 + Math.random() * 14, delay: i * 1.6,
+      });
+    }
+    spawnSparks(wx + w / 2, wy + h * 0.7, 7, 0xe8dcc0);
+  }
+  // Goods lying on the ground, drawn straight off the save: one sprite and
+  // one shadow each, created and destroyed as the pile changes. They are
+  // plain children of the camera, so rebuilding the world (which takes the
+  // machines, the runs and the labels with it) leaves them where they lie —
+  // and a world loaded from another save simply finds none of these ids and
+  // clears them.
+  let dropViews = {};
+  function syncDrops() {
+    const list = (simProfile && simProfile.drops) || [];
+    const live = new Set();
+    for (const d of list) {
+      live.add(d.id);
+      let v = dropViews[d.id];
+      if (!v) {
+        const sh = new PIXI.Sprite(PIXELS.dropShadowTex());
+        sh.anchor.set(0.5);
+        const sp = new PIXI.Sprite(PIXELS.matTex(d.mat));
+        sp.anchor.set(0.5);
+        cameraC.addChild(sh); cameraC.addChild(sp);
+        v = dropViews[d.id] = { sp, sh, mat: d.mat, ph: (d.id.charCodeAt(d.id.length - 1) * 37) % 64 };
+      }
+      if (v.mat !== d.mat) { v.mat = d.mat; v.sp.texture = PIXELS.matTex(d.mat); }
+      const z = d.z || 0;
+      // at rest it breathes, a pixel up and a pixel down, on its own phase:
+      // enough to say "pick me up" and not enough to look like it is loose
+      const bob = z ? 0 : Math.round(Math.sin((frameClock + v.ph) * 0.07)) * 0.5;
+      v.sp.position.set(Math.round(d.x), Math.round(d.y - 3 - z + bob));
+      v.sp.zIndex = d.y + 0.2;
+      v.sh.position.set(Math.round(d.x), Math.round(d.y));
+      v.sh.zIndex = d.y + 0.1;
+      v.sh.alpha = 0.42 / (1 + z * 0.06);
+      v.sh.scale.set(Math.max(0.55, 1 - z * 0.035), 1);
+    }
+    for (const id of Object.keys(dropViews)) {
+      if (live.has(id)) continue;
+      const v = dropViews[id];
+      cameraC.removeChild(v.sp); v.sp.destroy();
+      cameraC.removeChild(v.sh); v.sh.destroy();
+      delete dropViews[id];
+    }
+  }
+
   function castLetter(ok) {
     if (!ready || !dockedId) return;
     const st = stations[dockedId];
@@ -1187,7 +1322,7 @@
     workTtl = 50;
     working = true;
     if (ok) {
-      st.sp.y = 1; st.sqTtl = 4;
+      st.sp.y = (st.spBase || 0) + 1; st.sqTtl = 4;
       const p = new PIXI.Sprite(dotTex);
       p.zIndex = st.def.y + 1;
       cameraC.addChild(p);
@@ -1390,12 +1525,12 @@
       for (const s of Object.values(stations)) {
         if (!s.def.m) continue;
         const mode = modeOf(s);
-        const t = band(lookOf(s.def.kind, s.auto), mode)[mode === 'work' ? wf : mode === 'idle' ? idf : 0];
+        const t = band(lookOf(s.def.kind, s.auto), mode, SIM.facingOf(s.def.m))[mode === 'work' ? wf : mode === 'idle' ? idf : 0];
         if (s.sp.texture !== t) s.sp.texture = t;
       }
     }
     for (const s of Object.values(stations)) {
-      if (s.sqTtl > 0) { s.sqTtl--; if (s.sqTtl <= 0) s.sp.y = 0; }
+      if (s.sqTtl > 0) { s.sqTtl--; if (s.sqTtl <= 0) s.sp.y = s.spBase || 0; }
     }
 
     if (chargeG) chargeG.clear();
@@ -1440,6 +1575,22 @@
       p.sp.position.set(Math.round(p.x), Math.round(p.y));
       if (--p.ttl <= 0) { cameraC.removeChild(p.sp); p.sp.destroy(); particles.splice(i, 1); }
     }
+    // smoke: it rises, opens out through its four frames and thins away.
+    // They start a beat apart so a body comes apart in a roll rather than
+    // all at once.
+    for (let i = puffs.length - 1; i >= 0; i--) {
+      const p = puffs[i];
+      if (p.delay > 0) { p.delay -= dt; continue; }
+      p.sp.visible = true;
+      p.t += dt;
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      const f = Math.min(PIXELS.PUFF_FRAMES - 1, Math.floor((p.t / p.life) * PIXELS.PUFF_FRAMES));
+      if (p.frame !== f) { p.frame = f; p.sp.texture = PIXELS.puffTex(f); }
+      p.sp.position.set(Math.round(p.x), Math.round(p.y));
+      p.sp.alpha = Math.max(0, 1 - p.t / p.life) * 0.85;
+      if (p.t >= p.life) { cameraC.removeChild(p.sp); p.sp.destroy(); puffs.splice(i, 1); }
+    }
+    syncDrops();
     for (let i = sparks.length - 1; i >= 0; i--) {
       const p = sparks[i];
       p.vy += 0.07 * dt;
@@ -1470,11 +1621,12 @@
   }
 
   window.FACTORY = {
-    init, loadMap, buildWorld, setMove, castLetter, floatText, stamp, getDocked, posOf,
+    init, loadMap, buildWorld, setMove, castLetter, floatText, stamp, getDocked, posOf, poof,
     playerPos: () => ({ x: playerX, y: playerY }),
     scale: () => S,                    // device px per world px, so the DOM can match the canvas
     screenPos, setDockGlow, showInfo, clearInfo, showMenu, clearMenu, setAutoLook,
     routeBelt, beltReaches, machinePorts, portsOpen, showGhost, clearGhost, setSpool, markStations, setSocketTarget,
+    showBuildGhost, clearBuildGhost,
     setInvValue, invScreenPos, setHudKeys, setCharge,
     onDock: null,
   };

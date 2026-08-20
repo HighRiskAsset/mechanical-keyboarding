@@ -49,14 +49,17 @@
   // autoFrom = the tier from which ⚙ is purchasable (mines: when keys are
   // sticky). ready = implemented in this build (phases 4–5 add the rest).
   //
-  // `size` is [tiles across, tiles deep] — the ground the body stands on,
-  // and so the ports around it: the front holds one place per column, each
-  // side one per row (sim.js). How deep a machine stands is not decoration;
-  // it is set by how many belts leave it. A whole side discharges, and a
-  // side of a one-deep body is one tile, so only the mine — one outlet — can
-  // be one deep. Everything else is two, and the last two kinds are three
-  // across: the Crane's jib and the printing hall have the reach to earn it,
-  // and the Manufacturer needs the front's third place for its fifth port.
+  // `size` is [tiles across, tiles deep] — the body's own ground, before any
+  // turn. The machine turns rigidly (2026-08-20): facing e or w the body
+  // stands size[1] across and size[0] deep (MAPKIT.footprint), and its
+  // ports turn with it: the front holds one place per column, each flank
+  // one per row (sim.js). How deep a machine stands is not decoration; it
+  // is set by how many belts leave it. The whole front discharges, and a
+  // flank of a one-deep body is one tile, so only the mine — one outlet —
+  // can be one deep. Everything else is two, and the last two kinds are
+  // three across: the Crane's jib and the printing hall have the reach to
+  // earn it, and the Manufacturer needs the front's third place for its
+  // fifth port.
   const KINDS = {
     mine:         { id: 'mine',         arity: 0, grammar: 'letters',   minAlpha: 2,  perUnit: 1,  autoFrom: 0,  tier: 0, size: [2, 1], ready: true },
     smelter:      { id: 'smelter',      arity: 2, grammar: 'syllables', minAlpha: 4,  perUnit: 4,  autoFrom: 1,  tier: 0, size: [2, 2], ready: true, needsVC: true },
@@ -389,7 +392,12 @@
   }
 
   // ---- machines standing on the map ----
-  function machinePos(m) {
+  // A machine stands where it was placed: `at` = [c0, r0], the top-left tile
+  // of its body box, chosen with the build ghost (rotation overhaul,
+  // 2026-08-20). The box turns with the facing. A save from before carries a
+  // plot/node anchor instead; engine.js seats it once on load, and the
+  // anchor fallback here is what it seats from.
+  function machineAnchor(m) {
     if (m.node !== undefined && m.node !== null) {
       const n = cur.MAP.NODES[m.node];
       return n ? { x: n.x + 4, y: n.y + 12 } : { x: 0, y: 0 };
@@ -397,12 +405,37 @@
     const p = plotById(m.plot);
     return p ? { x: p.x, y: p.y } : { x: 0, y: 0 };
   }
+  function machineBox(m) {
+    const size = (KINDS[m.kind] || {}).size || [2, 2];
+    const face = MAPKIT.FACINGS.includes(m.face) ? m.face : 's';
+    if (Array.isArray(m.at)) return MAPKIT.boxAt(m.at, size, face);
+    const a = machineAnchor(m);
+    const fp = MAPKIT.footprint(size, face);
+    return MAPKIT.bodyBox(a.x, a.y, fp[0], fp[1]);
+  }
+  // the point everything that hangs off a machine reads: just inside the
+  // box's foot-left corner, matching where the old plot anchors stood
+  function machinePos(m) {
+    const b = machineBox(m);
+    return { x: b.c0 * TILE + 1, y: (b.r1 + 1) * TILE - 5 };
+  }
   const machinesOfKind = (profile, kind) => profile.machines.filter((m) => m.kind === kind);
   const machinesOfOre = (profile, ore) => profile.machines.filter((m) => m.kind === 'mine' && m.ore === ore);
   const nodeBuilt = (profile, i) => profile.machines.some((m) => m.node === i);
+  // pads with no body standing on any of their tiles. A plot stopped being a
+  // dockable shop when the build ghost arrived; what is left of it is the
+  // ground it surveys.
   function freePlots(profile) {
-    const taken = new Set(profile.machines.map((m) => m.plot).filter(Boolean));
-    return cur.PLOTS.filter((p) => !taken.has(p.id));
+    const taken = new Set();
+    for (const m of profile.machines) {
+      const b = machineBox(m);
+      for (let ty = b.r0; ty <= b.r1; ty++) for (let tx = b.c0; tx <= b.c1; tx++) taken.add(tx + ',' + ty);
+    }
+    return cur.PLOTS.filter((p) => {
+      const b = MAPKIT.padBox(p);
+      for (let ty = b.r0; ty <= b.r1; ty++) for (let tx = b.c0; tx <= b.c1; tx++) if (taken.has(tx + ',' + ty)) return false;
+      return true;
+    });
   }
   function unbuiltNodes(profile) {
     const out = [];
@@ -491,7 +524,7 @@
     priceNode, priceExtraMine, priceMk, priceAt, kindMk, priceMachine, priceAuto, priceCrossing, scaleCost, closedCrossings,
     oreMk, unlockedKeys, currentTier, nextPair, targetBar,
     alphabetOf, recipeAlphabet, recipeTilt, recipeFocus, wordPool, offerable, offerableRecipes, matExists, oreOpen, affordable,
-    machinePos, machinesOfKind, machinesOfOre, nodeBuilt, freePlots, unbuiltNodes, buildableKinds, starterNodes,
+    machinePos, machineBox, machineAnchor, machinesOfKind, machinesOfOre, nodeBuilt, freePlots, unbuiltNodes, buildableKinds, starterNodes,
     useMap, currentMap, plotById, crossingOpen, regionAt,
     // per-map fields (MAP, PLOTS, SCENERY, PROPS, WORLD_W, WORLD_H, SPAWN, LEGACY, MAP_ID) are set by useMap
   };

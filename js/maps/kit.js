@@ -105,10 +105,10 @@
     return out;
   }
 
-  // A worn patch under a station: the plot's own dirt apron. A plot is a 3x2
-  // pad anchored at its foot, so the patch is the two rows the body stands on
-  // and the row in front of it where its outlets are — three tiles by three,
-  // which is what a machine and its traffic actually wear away.
+  // A worn patch under a station: the plot's own dirt apron. A plot is a 3x3
+  // pad anchored at its foot, so the patch is the rows a body stands on and
+  // the row in front of it where its outlets are — what a machine and its
+  // traffic actually wear away.
   const apron = (x, y, kind) => ({ kind: kind || 'dirt', x, y: y - 32, w: 48, h: 48 });
   // the same for an ore node (the patch art is 36×16 at the node's corner)
   const nodeApron = (x, y, kind) => ({ kind: kind || 'dirt', x: x - 14, y: y - 16, w: 64, h: 48 });
@@ -140,16 +140,46 @@
     const c0 = bestWindow(x, x + w * T - 3, w), r0 = bestWindow(y - (h * T - 4), y + 1, h);
     return { c0, c1: c0 + w - 1, r0, r1: r0 + h - 1, w, h };
   }
-  // one place on the ring: the front counts columns from the left, a side
-  // counts rows up from the one the machine stands on
-  const PORT_TILE = {
-    s: (b, slot) => [b.c0 + slot, b.r1 + 1],
-    e: (b, slot) => [b.c1 + 1, b.r1 - slot],
-    w: (b, slot) => [b.c0 - 1, b.r1 - slot],
+  // ---------- facings (rotation overhaul, 2026-08-20) ----------
+  // A machine faces one of the four world sides — the side its whole front,
+  // the discharge, looks at — and a quarter turn clockwise steps s → w → n
+  // → e (a pipe at the bottom turns up on the left). Everything on the body
+  // is body-relative and turns rigidly with it: the front, the machine's own
+  // right and left flanks, and the back, which carries no ports.
+  const FACINGS = ['s', 'w', 'n', 'e'];
+  // the world side each body side looks at, per facing
+  const BODY_SIDE = {
+    s: { f: 's', r: 'w', l: 'e', b: 'n' },
+    w: { f: 'w', r: 'n', l: 's', b: 'e' },
+    n: { f: 'n', r: 'e', l: 'w', b: 's' },
+    e: { f: 'e', r: 's', l: 'n', b: 'w' },
   };
-  // the step that leads away from the machine, as [dx, dy]
-  const PORT_AWAY = { s: [0, 1], e: [1, 0], w: [-1, 0] };
-  const portTile = (box, face, slot) => PORT_TILE[face](box, slot);
+  // the ground a size takes at a facing: turned sideways, a body stands as
+  // many tiles across as it stood deep
+  const footprint = (size, facing) =>
+    (facing === 'e' || facing === 'w') ? [size[1], size[0]] : [size[0], size[1]];
+  // the tile box of a machine seated at `at` = [c0, r0] (its top-left tile)
+  const boxAt = (at, size, facing) => {
+    const [w, h] = footprint(size, facing);
+    return { c0: at[0], c1: at[0] + w - 1, r0: at[1], r1: at[1] + h - 1, w, h };
+  };
+  // One place on the ring, body-relative so it turns with the machine: the
+  // front counts places from the machine's own right hand, each flank counts
+  // from its front corner back. A door drawn over a port on the sprite stays
+  // over that port at every turn — this table is what makes that true.
+  const PORT_TILE = {
+    s: { f: (b, k) => [b.c0 + k, b.r1 + 1], r: (b, k) => [b.c0 - 1, b.r1 - k], l: (b, k) => [b.c1 + 1, b.r1 - k] },
+    w: { f: (b, k) => [b.c0 - 1, b.r0 + k], r: (b, k) => [b.c0 + k, b.r0 - 1], l: (b, k) => [b.c0 + k, b.r1 + 1] },
+    n: { f: (b, k) => [b.c1 - k, b.r0 - 1], r: (b, k) => [b.c1 + 1, b.r0 + k], l: (b, k) => [b.c0 - 1, b.r0 + k] },
+    e: { f: (b, k) => [b.c1 + 1, b.r1 - k], r: (b, k) => [b.c1 - k, b.r1 + 1], l: (b, k) => [b.c1 - k, b.r0 - 1] },
+  };
+  // the step that leads away from the machine, by the world side a port is on
+  const PORT_AWAY = { s: [0, 1], e: [1, 0], w: [-1, 0], n: [0, -1] };
+  const portTile = (box, facing, bodySide, slot) => PORT_TILE[facing][bodySide](box, slot);
+  // a build plot's pad: one size, the 3x3 of tiles that takes the largest
+  // kind whichever way it faces, anchored at the plot's foot
+  const PAD = 3;
+  const padBox = (p) => bodyBox(p.x, p.y, PAD, PAD);
 
   // ---------- the registry ----------
   const MAPS = {};
@@ -165,6 +195,7 @@
     T, FOOT_W, sc, hash, noise, fbm, field, apron, nodeApron,
     blob, anyOf, box, path,
     bodyBox, portTile, PORT_AWAY,
+    FACINGS, BODY_SIDE, footprint, boxAt, PAD, padBox,
     register, MAPS, IDS,
     get DEFAULT() { return IDS[0]; },
   };

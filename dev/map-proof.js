@@ -48,8 +48,12 @@ window.MAPPROOF = async (mapId, name, sx, sy, sw, sh, scale) => {
   }
   late.sort((a, b) => a.z - b.z).forEach((o) => o.draw());
 
+  // every pad outlined on the tiles it actually zones (3×3, MAPKIT.padBox)
   x.strokeStyle = 'rgba(255, 230, 140, 0.85)';
-  for (const p of m.PLOTS) x.strokeRect(p.x + 0.5, p.y - 12.5, 25, 12);
+  for (const p of m.PLOTS) {
+    const b = MAPKIT.padBox(p);
+    x.strokeRect(b.c0 * T + 0.5, b.r0 * T + 0.5, b.w * T - 1, b.h * T - 1);
+  }
 
   const c = document.createElement('canvas');
   c.width = sw * scale; c.height = sh * scale;
