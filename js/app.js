@@ -461,6 +461,14 @@
     if (!spool && SIM.beltsFrom(profile, m).length < SIM.outletsOf(m) && (m.kind === 'mine' || SIM.produces(profile, m).length)) {
       rows.push({ pre: '→', enabled: true, caption: T.t('capSpool', { mats: matList(SIM.produces(profile, m)) }), action: { type: 'spool', m } });
     }
+    // turning a machine costs nothing and steps its discharge side round —
+    // front, right, left: it is how an intake is pointed at the line that
+    // feeds it. Its runs are re-laid to follow; any that no longer have a
+    // route come up, which is why the row says so before you press it.
+    if (!spool) {
+      const next = SIM.facingOf({ rot: SIM.rotOf(m) + 1 });
+      rows.push({ pre: '⟳', enabled: true, caption: T.t('capTurn', { side: sideName(next) }), action: { type: 'turn', m } });
+    }
     // taking a run up is not offered here. A machine with several runs
     // coming and going gave a list of ✗ rows there was no reading, and the
     // wrong one went too easily; you take a run up by standing on it.
@@ -479,6 +487,7 @@
   const mineName = (ore) => (T.t('oreMineNames') || {})[ore] || ore;
   const matName = (mat) => (T.t('matNames') || {})[mat] || mat;
   const matList = (mats) => (mats || []).map(matName).join(' / ');
+  const sideName = (face) => (T.t('sideNames') || {})[face] || face;
   const machineName = (m) => (m ? (m.kind === 'mine' ? mineName(m.ore) : kindName(m.kind)) : '?');
   const pairKeys = (pair) => (pair && pair.keys ? pair.keys.map((c) => c.toUpperCase()).join(' ') : '');
   function beltWhy(why, from) {
@@ -700,6 +709,17 @@
       FACTORY.setSpool(false);
       FACTORY.setSocketTarget(null);
       afterPurchase();
+    } else if (act.type === 'turn') {
+      // the world is rebuilt first: re-laying the runs is part of turning,
+      // and what comes of it is what gets saved
+      SIM.turn(act.m);
+      const relaid = rebuildWorld();
+      E.saveProfile(profile);
+      refreshInventory();
+      refreshKeyboard();
+      redock();
+      A.build();
+      if (relaid && relaid.lost) flashCaption(T.t('capTurnLost', { n: relaid.lost }));
     } else if (act.type === 'unbelt') {
       SIM.removeBelt(profile, act.id);
       afterPurchase();
@@ -731,9 +751,12 @@
     redock();
     A.build();
   }
+  // returns {moved, lost}: runs the world re-laid or gave up on because a
+  // machine's ports are somewhere else now (a turn, or a save from before
+  // machines had ports)
   function rebuildWorld() {
-    if (!profile) return;
-    FACTORY.buildWorld(profile, autoLive);
+    if (!profile) return null;
+    return FACTORY.buildWorld(profile, autoLive) || null;
   }
 
   // ---------- Enter-action + dock glow (icons in-world carry the info) ----------
@@ -1456,7 +1479,10 @@
     startClock();
 
     FACTORY.loadMap();
-    rebuildWorld();
+    // a save from before machines had ports has runs meeting them nowhere:
+    // the build re-lays what it can, and that is worth keeping
+    const relaid = rebuildWorld();
+    if (relaid && (relaid.moved || relaid.lost)) E.saveProfile(profile);
     clearLine();
     refreshInventory();
     refreshKeyboard();

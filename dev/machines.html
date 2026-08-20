@@ -17,10 +17,11 @@
 <script src="../js/courses.js"></script>
 <script src="../js/language-ru.js"></script>
 <script src="../js/chain.js"></script>
+<script src="../js/sim.js"></script>
 <script>
 (async function () {
   const Q = new URLSearchParams(location.search);
-  const SCALE = +(Q.get('s') || 4), W = 300, H = 350;
+  const SCALE = +(Q.get('s') || 4), W = 300, H = 520;
   const CROP = (Q.get('crop') || '').split(',').map(Number);
   const c = document.createElement('canvas'); c.width = W; c.height = H;
   const x = c.getContext('2d');
@@ -126,6 +127,39 @@
   };
   row((f, m) => PIXELS.machineCanvas(3, f, m), cy6 + 6, 26);   // the beam-engine rig
   row((f, m) => PIXELS.stationCanvas('lines', f, m), cy6 + 46, 30);  // the assembler
+
+  // 7. ports: a machine's inlets and outlets, and the turns that move them.
+  // Six places on the three sides the operator can see; verdigris wedges
+  // point in, brass wedges point out. The second row plugs runs into two of
+  // them, to check a port still reads with a belt sitting on it.
+  const cy7 = 356;
+  bed('grass', 0, cy7 + 4, 19, 8);
+  label('ports — a smelter turned through its three sides (2 in / 2 out), then a manufacturer (3 in / 2 out)', 2, cy7 + 2);
+  // the places, as factory.js lays them: the body's own columns in front,
+  // and the standing row plus the shoulder row down each side
+  const RING_XY = { s: (s) => [s ? 1 : 0, 1], e: (s) => [2, -s], w: (s) => [-1, -s] };
+  const OPPOSITE = { s: 'n', e: 'w', w: 'e' };
+  const rig = (kind, look, rot, ox, oy, plug) => {
+    const ps = SIM.ports({ kind, rot });
+    for (const q of ps.out.concat(ps.in)) {
+      const [dx, dy] = RING_XY[q.face](q.slot);
+      x.drawImage(PIXELS.portCanvas(OPPOSITE[q.face], q.dir), ox + dx * 16, oy + dy * 16);
+      if (!plug || !plug.includes(q.face + q.slot)) continue;
+      // a run leaving straight out of the port, and its drum against the plate
+      const vertical = q.face === 's';
+      const away = { s: [0, 1], e: [1, 0], w: [-1, 0] }[q.face];
+      x.drawImage(PIXELS.beltTileCanvas(0, vertical ? 'v' : 'h', false, false), ox + dx * 16, oy + dy * 16);
+      x.drawImage(PIXELS.beltTileCanvas(0, vertical ? 'v' : 'h', false, false), ox + (dx + away[0]) * 16, oy + (dy + away[1]) * 16);
+      x.drawImage(PIXELS.beltEndCanvas(0, OPPOSITE[q.face], false), ox + dx * 16, oy + dy * 16);
+    }
+    x.drawImage(PIXELS.stationCanvas(look, 0, 'idle'), ox, oy - 14);
+    label(kind.slice(0, 4) + ' r' + rot + ' ' + SIM.facingOf({ rot }), ox, oy + 30);
+  };
+  [0, 1, 2].forEach((r, i) => rig('smelter', 'bigrams', r, 30 + i * 68, cy7 + 44));
+  rig('manufacturer', 'lines', 0, 236, cy7 + 44);
+  label('the same, with runs plugged in — the plate still reads under the band', 2, cy7 + 78);
+  rig('smelter', 'bigrams', 0, 46, cy7 + 116, ['s0', 'w1']);
+  rig('smelter', 'bigrams', 1, 170, cy7 + 116, ['e0', 's1']);
 
   const out = document.getElementById('out');
   const [kx, ky, kw, kh] = CROP.length === 4 ? CROP : [0, 0, W, H];

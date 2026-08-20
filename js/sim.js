@@ -25,6 +25,7 @@
     if (!m.buf.out) m.buf.out = {};
     if (m.job === undefined) m.job = null;
     if (typeof m.acc !== 'number') m.acc = 0;
+    if (typeof m.rot !== 'number') m.rot = 0;   // which way it faces (ports, below)
   }
   function ensure(p) {
     for (const m of p.machines) ensureMachine(m);
@@ -40,6 +41,45 @@
   const beltsTo = (p, m) => p.belts.filter((b) => b.to === m.id);
   const outletsOf = (m) => (m.kind === 'mine' ? T().OUTLETS.mine : T().OUTLETS.processor);
   const inletsOf = (m) => C().KINDS[m.kind].arity;
+
+  // ---------- ports: the sides a run may meet a machine on ----------
+  // A run used to end wherever it could reach, so a machine's traffic said
+  // nothing about the machine. Now every inlet and every outlet stands at
+  // one named place on the ring of tiles around the body, and a run has to
+  // arrive there. What a machine takes and what it gives is then something
+  // you read off the ground before you lay anything.
+  //
+  // A machine has three sides, not four. The body is two tiles across and
+  // one deep, but the operator sees it from the front and its tower stands a
+  // good two tiles above its base: anything on the row behind it is hidden
+  // by the machine itself, and a port nobody can see is no better than the
+  // old rule of ending a run wherever it fitted. So the places are
+  //
+  //        [w1]  (behind: hidden)  [e1]      the row at its shoulders
+  //        [w0] [ B O D Y ] [e0]             the row it stands on
+  //             [s0] [s1]                    the row in front of it
+  //
+  // One whole side discharges; the other two take deliveries. Turning a
+  // machine steps the discharge side round — front, right, left — and the
+  // inlets fill the two remaining sides in turn. Every kind fits: at most
+  // two outlets, which is one side, and at most three inlets, where two
+  // sides hold four.
+  const OUT_SIDE = ['s', 'e', 'w'];                                  // what a turn steps through
+  const IN_SIDES = { s: ['w', 'e'], e: ['s', 'w'], w: ['e', 's'] };  // and what is left to take in by
+  const ROTS = OUT_SIDE.length;
+  const rotOf = (m) => ((((m && m.rot) | 0) % ROTS) + ROTS) % ROTS;
+  const facingOf = (m) => OUT_SIDE[rotOf(m)];   // the side the product leaves by
+  const turn = (m) => { m.rot = (rotOf(m) + 1) % ROTS; return m.rot; };
+  // every port of a machine, in order, as a side and a place on it.
+  // factory.js turns these into tiles; nothing here knows where the machine
+  // stands.
+  function ports(m) {
+    const face = facingOf(m), sides = IN_SIDES[face];
+    const out = [], inn = [];
+    for (let i = 0; i < outletsOf(m) && i < 2; i++) out.push({ face, slot: i, dir: 'out', i });
+    for (let i = 0; i < inletsOf(m) && i < 4; i++) inn.push({ face: sides[i >> 1], slot: i & 1, dir: 'in', i });
+    return { out, in: inn };
+  }
 
   // ---------- recipes, inputs, outputs ----------
   // the recipe a machine runs by itself: its chosen one, else the first it offers
@@ -251,6 +291,7 @@
 
   window.SIM = {
     ensure, ensureMachine, machineById, beltsFrom, beltsTo, outletsOf, inletsOf,
+    ports, rotOf, facingOf, turn,
     recipeOf, accepts, produces, canLink, addBelt, removeBelt, hasExit,
     takeInput, canTake, emit, collect, feed, canFeed, hasOutput, state,
     step, catchUp, tick,

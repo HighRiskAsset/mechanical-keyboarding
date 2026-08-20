@@ -116,7 +116,10 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   buffers into their output buffer and refuse labor; nothing automated ever
   reaches into the bag. **Belts** (free, uncapped) run from one machine's
   outlet to another's inlet — inlets = the kind's arity, outlets mines 1 /
-  processors 2 — laid by **spool & socket** (hold Space at the source →
+  processors 2, and every one of them stands at a **port**: a named tile
+  against one side of the body, marked on the ground (verdigris wedge in,
+  brass wedge out) and reached head-on or not at all — laid by
+  **spool & socket** (hold Space at the source →
   spool on the back → walk → the route previews green/red at each machine →
   hold Space to lay; `FACTORY.routeBelt` is a breadth-first search over
   states of (tile, heading): machines, scenery and solids block, ramps carry
@@ -848,6 +851,41 @@ demands a measured pool of ≥25 real words before a recipe is offered.
   (round-robin); a mine feeds one consumer, which is what grows the pyramid.
   No cap on the number of belts. A belt carries only what its consumer accepts
   (the outlet filters), so belts never clog.
+- **Ports (2026-08-20):** every inlet and every outlet stands at one tile
+  against the body, and a run has to reach that tile and meet it head-on —
+  it leaves an outlet straight out and enters an inlet straight in, which is
+  what makes a run look plugged in rather than merely finishing nearby. A
+  machine has **three sides, not four**: the body is two tiles across and one
+  deep, its tower stands two tiles above its base, and anything behind it is
+  hidden by the machine itself — a port nobody can see is no better than the
+  old rule of ending a run wherever it fitted. Six places, then: two in
+  front (the body's own columns), and two down each side (the row it stands
+  on and the row at its shoulder).
+
+  ```
+        [w1]   (behind: hidden)   [e1]      the shoulder row
+        [w0] [   B O D Y   ] [e0]           the row it stands on
+             [s0]  [s1]                     the row in front
+  ```
+
+  **One whole side discharges; the other two take deliveries.** Turning steps
+  the discharge side round — front → right → left → front — and the inlets
+  fill the two remaining sides in turn (`SIM.ports`, `FACTORY.machinePorts`).
+  Every kind fits: at most two outlets, which is one side, and at most three
+  inlets, where two sides hold four. Marked on the ground with a bolted plate
+  — verdigris rim and a wedge pointing into the machine for an inlet, brass
+  and a wedge pointing out for an outlet — drawn under the runs, so a port
+  with a belt on it still shows its colour down either side of the band. A
+  port whose tile or whose one way out is blocked draws faint: it is a port
+  you cannot use where the machine stands and faces now, and turning is the
+  answer.
+- **Turning is free** (`⟳` on every machine's menu) and re-lays that
+  machine's runs to follow; a run with no route left comes up and its goods
+  roll back into the source, which the caption says before you press it.
+  Saves from before ports have their runs re-laid once on load, on the same
+  rule. Rejected: a fourth port side at the back (hidden by the machine's own
+  tower); free-standing ports the player places (a second placement puzzle on
+  top of plots, for a machine two tiles wide).
 - **Routing and congestion:** one belt per tile; the router takes the shortest
   free path. Choke points are authored into the map (bridges, gaps between
   rocks) — choosing which lines get the bridge is the same bounded strategy as

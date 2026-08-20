@@ -37,6 +37,7 @@
   // phase 3: belts on the map, items riding them, the spool, the ghost route
   let simProfile = null;               // the save whose belts/items we draw (set by buildWorld)
   let beltViews = {};                  // belt id → {c, items:[sprite], pipe, b}
+  let portSprites = [];                // the inlet/outlet plates around every machine
   const beltTileIndex = new Map();      // "tx,ty" → belt ids on that tile (two where runs cross)
   let spoolSp = null, spoolOn = false;
   let ghostG = null;
@@ -505,6 +506,8 @@
     clearInfo(); clearMenu(); clearGhost();
     for (const v of Object.values(beltViews)) { cameraC.removeChild(v.c); v.c.destroy({ children: true }); }
     beltViews = {};
+    for (const s of portSprites) { cameraC.removeChild(s); s.destroy(); }
+    portSprites = [];
     beltTileIndex.clear();
     beltDockId = null;                 // its station goes with the rest, below
     for (const s of Object.values(stateDots)) { cameraC.removeChild(s); s.destroy(); }
@@ -581,6 +584,8 @@
         stateDots[id] = d;
       }
     }
+    const relaid = reconcileBelts(profile);
+    drawPorts(profile);
     drawBelts(profile);
     // free plots: surveyed markers, dockable, walk-through
     for (const p of CHAIN.freePlots(profile)) {
@@ -624,6 +629,7 @@
     player.position.set(Math.round(playerX), Math.round(playerY));
     cameraC.addChild(player);
     if (dockedId && stations[dockedId]) stations[dockedId].glow.visible = true;
+    return relaid;   // {moved, lost} — what turning or an older save did to the runs
   }
   // an automated mine changes look without a full rebuild
   function setAutoLook(dockId, live) {
@@ -731,24 +737,73 @@
     if (openRects.some((r) => inRect(r, a[0], a[1])) || openRects.some((r) => inRect(r, b[0], b[1]))) return true;
     return TILES.passable(grid, a[0], a[1], b[0], b[1]);
   }
-  // the free tiles around a machine's footprint (where a belt may start/end).
-  // No axis is passed: a run's own two ends carry its drums, so they want a
-  // tile to themselves and never sit on another run's crossing.
-  function ringTiles(m, profile, blocked, beltAt) {
-    const fp = footprintTiles(m);
-    const inFp = new Set(fp.map(([x, y]) => key(x, y)));
-    const out = [];
-    for (const [x, y] of fp) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const tx = x + dx, ty = y + dy;
-      if (inFp.has(key(tx, ty))) continue;
-      if (beltFree(profile, tx, ty, blocked, beltAt, null)) { out.push([tx, ty]); inFp.add(key(tx, ty)); }
+  // ---------- a machine's ports, on the ground ----------
+  // sim.js names six places on the ring around a body and hands each inlet
+  // and outlet one of them. Here they become tiles.
+  //
+  // The two columns are the ones the body really stands on: 26 pixels can
+  // graze a third, and the thin edge of it is not a side of the machine.
+  // The sides take the row the machine's foot is on — the row the eye reads
+  // a run against — while back and front take the rows above and below
+  // whatever the body claims, so a port is never a tile the body covers.
+  function portBox(m) {
+    const pos = CHAIN.machinePos(m);
+    const x0 = pos.x, x1 = pos.x + 25;
+    let c0 = Math.floor(x0 / T16), c1 = Math.floor(x1 / T16);
+    while (c1 - c0 > 1) {
+      if ((c0 + 1) * T16 - x0 < x1 - c1 * T16 + 1) c0++; else c1--;
     }
-    return out;
+    if (c1 === c0) c1 = c0 + 1;
+    const rows = footprintTiles(m).map(([, ty]) => ty);
+    const r0 = rows.length ? Math.min(...rows) : Math.floor((pos.y - 7) / T16);
+    const r1 = rows.length ? Math.max(...rows) : r0;
+    return { c0, c1, r0, r1 };
   }
-  // shortest belt path from one machine to another over free tiles, or null
+  // The front's two places are the body's own columns; a side's two are the
+  // row the machine stands on and the row at its shoulder, both clear of the
+  // body whatever the body claims.
+  const PORT_TILE = {
+    s: (b, slot) => [slot ? b.c1 : b.c0, b.r1 + 1],
+    e: (b, slot) => [b.c1 + 1, b.r1 - slot],
+    w: (b, slot) => [b.c0 - 1, b.r1 - slot],
+  };
+  // the STEPS index that leads away from the machine, per side it stands on
+  const PORT_AWAY = { e: 0, w: 1, s: 2 };
+  // A run leaves an outlet, and reaches an inlet, along that one heading and
+  // no other. It is what makes the drum face the machine and the run look
+  // plugged in rather than merely finishing nearby — and it is why a port
+  // with a rock right outside it is a port you cannot use until you turn the
+  // machine.
+  function machinePorts(m) {
+    const b = portBox(m);
+    const plan = SIM.ports(m);
+    const place = (q) => {
+      const [tx, ty] = PORT_TILE[q.face](b, q.slot);
+      const away = PORT_AWAY[q.face];
+      return { ...q, tx, ty, away, toward: away ^ 1 };
+    };
+    return { out: plan.out.map(place), in: plan.in.map(place) };
+  }
+  // the ports of a machine a run could actually use: the port tile free, the
+  // tile straight out from it free, and the step between them walkable
+  function openPorts(m, dir, profile, blocked, beltAt) {
+    return machinePorts(m)[dir].filter((q) => portOpen(q, profile, blocked, beltAt));
+  }
+  // the same, for a caller that has no map in hand (the dev pages)
+  function portsOpen(m, dir, profile) {
+    const { blocked, beltAt } = beltGround(profile);
+    return openPorts(m, dir, profile, blocked, beltAt);
+  }
+  function portOpen(q, profile, blocked, beltAt) {
+    if (!beltFree(profile, q.tx, q.ty, blocked, beltAt, null)) return false;
+    const nx = q.tx + STEPS[q.away][0], ny = q.ty + STEPS[q.away][1];
+    if (!beltFree(profile, nx, ny, blocked, beltAt, STEP_AXIS[q.away])) return false;
+    return beltStep(q.tx, q.ty, nx, ny);
+  }
+  // shortest belt path from one machine's outlet to another's inlet, or null
   // when there is none — the caller says so rather than laying anything.
-  // Breadth-first from every free tile around the source to the first free
-  // tile around the target; machines, scenery and solids block, and another
+  // Breadth-first from every open outlet of the source to the first open
+  // inlet of the target; machines, scenery and solids block, and another
   // run blocks unless this one can cross it square.
   //
   // The search walks states of (tile, the way we came in), not bare tiles.
@@ -762,16 +817,25 @@
   const STEP_AXIS = ['h', 'h', 'v', 'v'];
   const FROM_MACHINE = 4;            // the heading a run leaves its source with: none yet
   const sk = (x, y, d) => x + ',' + y + ',' + d;
-  // the ground a run may cover, laid out from the source's ring. Stops at the
-  // first goal when given one, floods everything when not, so the bars under
-  // the machines and the route the hold lays come out of the same walk.
+  // the ground a run may cover, laid out from the source's open outlets.
+  // Stops at the first goal when given one, floods everything when not, so
+  // the bars under the machines and the route the hold lays come out of the
+  // same walk.
+  //
+  // `starts` are ports: the walk begins one tile straight out from each,
+  // with the port tile itself standing at distance nothing so the way back
+  // finds it. `goals` maps an inlet's tile to the one heading it may be
+  // entered on — straight in at the machine — which is what keeps a run
+  // from sliding into an inlet sideways.
   function beltFlood(profile, starts, blocked, beltAt, goals) {
     const dist = new Map(), q = [];
-    const startSet = new Set(starts.map(([x, y]) => key(x, y)));
-    for (const [x, y] of starts) {
-      const k = sk(x, y, FROM_MACHINE);
-      if (dist.has(k)) continue;
-      dist.set(k, 0); q.push([x, y, FROM_MACHINE]);
+    const startSet = new Set(starts.map((s) => key(s.tx, s.ty)));
+    for (const s of starts) {
+      dist.set(sk(s.tx, s.ty, FROM_MACHINE), 0);
+      const nx = s.tx + STEPS[s.away][0], ny = s.ty + STEPS[s.away][1];
+      const nk = sk(nx, ny, s.away);
+      if (dist.has(nk)) continue;
+      dist.set(nk, 1); q.push([nx, ny, s.away]);
     }
     let found = null, guard = 0, head = 0;
     while (head < q.length && guard++ < 40000) {
@@ -781,13 +845,19 @@
       // place to start and a place to finish, and without this the walk
       // stepped off it and straight back onto it — a run of three tiles that
       // doubled back on itself and stood on its own end.
-      if (d !== FROM_MACHINE && goals && goals.has(key(x, y)) && !startSet.has(key(x, y))) { found = [x, y, d]; break; }
+      if (goals && goals.get(key(x, y)) === d && !startSet.has(key(x, y))) { found = [x, y, d]; break; }
+      // A port is a place a run ends, never one it passes over. Reaching an
+      // inlet on the wrong heading is a dead end, not a corner to turn on,
+      // and the source's other outlets are not tiles to walk across either:
+      // without this the walk found an inlet sideways, stepped past it and
+      // came back in — a run standing on its own last tile.
+      if (goals && goals.has(key(x, y))) continue;
       const straightOnly = beltAt.has(key(x, y));
       const here = dist.get(sk(x, y, d));
       for (let s = 0; s < 4; s++) {
         if (straightOnly && d !== FROM_MACHINE && s !== d) continue;   // cross it, don't turn on it
         const nx = x + STEPS[s][0], ny = y + STEPS[s][1], nk = sk(nx, ny, s);
-        if (dist.has(nk)) continue;
+        if (dist.has(nk) || startSet.has(key(nx, ny))) continue;
         if (!beltFree(profile, nx, ny, blocked, beltAt, STEP_AXIS[s])) continue;
         if (!beltStep(x, y, nx, ny)) continue;
         dist.set(nk, here + 1);
@@ -806,8 +876,9 @@
   function routeBelt(from, to, profile) {
     if (!grid) return null;
     const { blocked, beltAt } = beltGround(profile);
-    const starts = ringTiles(from, profile, blocked, beltAt);
-    const goals = new Set(ringTiles(to, profile, blocked, beltAt).map(([x, y]) => key(x, y)));
+    const starts = openPorts(from, 'out', profile, blocked, beltAt);
+    const goals = new Map();
+    for (const q of openPorts(to, 'in', profile, blocked, beltAt)) goals.set(key(q.tx, q.ty), q.toward);
     if (!starts.length || !goals.size) return null;
     const { dist, found, guard } = beltFlood(profile, starts, blocked, beltAt, goals);
     if (!found) return null;
@@ -826,6 +897,13 @@
       cur = [px, py, back];
     }
     path.reverse();
+    // The walk holds states of (tile, heading), so nothing in it forbids a
+    // route from crossing itself on two headings. Geometry makes that all
+    // but impossible now that ports are ends rather than through-tiles, and
+    // a route that managed it anyway would draw as a run lying over itself:
+    // say there is none rather than lay it.
+    const seen = new Set();
+    for (const [tx, ty] of path) { if (seen.has(key(tx, ty))) return null; seen.add(key(tx, ty)); }
     return path;
   }
   // which machines a run from this one could actually reach, by geometry
@@ -835,21 +913,100 @@
     const out = new Set();
     if (!grid) return out;
     const { blocked, beltAt } = beltGround(profile);
-    const starts = ringTiles(from, profile, blocked, beltAt);
+    const starts = openPorts(from, 'out', profile, blocked, beltAt);
     if (!starts.length) return out;
     const { dist } = beltFlood(profile, starts, blocked, beltAt, null);
-    const startSet = new Set(starts.map(([x, y]) => key(x, y)));
-    const reached = new Set();
-    for (const k of dist.keys()) {
-      const i = k.lastIndexOf(',');
-      const tile = k.slice(0, i);
-      if (k.slice(i + 1) !== String(FROM_MACHINE) && !startSet.has(tile)) reached.add(tile);
-    }
+    const startSet = new Set(starts.map((s) => key(s.tx, s.ty)));
     for (const m of profile.machines) {
       if (m.id === from.id) continue;
-      if (ringTiles(m, profile, blocked, beltAt).some(([x, y]) => reached.has(key(x, y)))) out.add(m.id);
+      // an inlet counts as reached only on the heading it may be entered on
+      const ok = openPorts(m, 'in', profile, blocked, beltAt)
+        .some((q) => dist.has(sk(q.tx, q.ty, q.toward)) && !startSet.has(key(q.tx, q.ty)));
+      if (ok) out.add(m.id);
     }
     return out;
+  }
+  // is this run actually plugged in at both ends — on a port, and meeting it
+  // square? Both are needed: a run that slid into an inlet sideways would
+  // draw its drum against open field instead of against the machine.
+  function beltPlugged(b, from, to) {
+    const n = b.path.length;
+    if (n < 2) return false;
+    const at = (list, tile) => list.find((q) => q.tx === tile[0] && q.ty === tile[1]);
+    const head = at(machinePorts(from).out, b.path[0]);
+    const tail = at(machinePorts(to).in, b.path[n - 1]);
+    if (!head || !tail) return false;
+    const out = STEPS[head.away], into = STEPS[tail.toward];
+    return b.path[1][0] === b.path[0][0] + out[0] && b.path[1][1] === b.path[0][1] + out[1]
+      && b.path[n - 2][0] === b.path[n - 1][0] - into[0] && b.path[n - 2][1] === b.path[n - 1][1] - into[1];
+  }
+  // A run laid before machines had ports ends wherever it could reach, and a
+  // machine turned since leaves its runs in the same state: meeting the body
+  // at no port at all. Re-lay each one between the same two machines rather
+  // than leave it plugged into nothing; where the ground has no route left,
+  // take it up. Either way the goods riding it roll back into the source, as
+  // they do when a run is taken up by hand — the tiles under them are about
+  // to be somewhere else.
+  // Every run that has to move comes up first, and only then do they go back
+  // down. Lifting them one at a time let a run still lying on its old path
+  // block the ground another one needed, and the second run was taken up for
+  // want of a route that was about to be free.
+  function reconcileBelts(profile) {
+    const belts = profile.belts || [];
+    const lift = [];
+    belts.forEach((b, at) => {
+      const from = SIM.machineById(profile, b.from), to = SIM.machineById(profile, b.to);
+      if (!from || !to || beltPlugged(b, from, to)) return;
+      SIM.ensureMachine(from);
+      for (const it of b.items) {
+        if ((from.buf.out[it.mat] || 0) < CHAIN.TUNING.BUFFER_CAP) from.buf.out[it.mat] = (from.buf.out[it.mat] || 0) + 1;
+      }
+      b.items = [];
+      lift.push({ b, at, from, to });
+    });
+    if (!lift.length) return { moved: 0, lost: 0 };
+    profile.belts = belts.filter((b) => !lift.some((l) => l.b === b));
+    let moved = 0, lost = 0;
+    const back = [];
+    for (const l of lift) {
+      const path = routeBelt(l.from, l.to, profile);
+      if (!path) { lost++; continue; }
+      l.b.path = path;
+      profile.belts.push(l.b);      // in the ground's eyes at once, so the next one routes around it
+      back.push(l);
+      moved++;
+    }
+    // laying order decides which run bridges which at a crossing: put them
+    // back where they were, so a world drawn twice looks the same twice
+    profile.belts = profile.belts.filter((b) => !back.some((l) => l.b === b));
+    for (const l of back) profile.belts.splice(Math.min(l.at, profile.belts.length), 0, l.b);
+    return { moved, lost };
+  }
+  // Every inlet and outlet, marked on the tile a run has to reach to use it.
+  // A port under a run keeps its plate (the drum sits on top of it and says
+  // the same thing); a port with no room outside it is drawn faint, because
+  // it is a port you cannot use where the machine stands and faces now.
+  function drawPorts(profile) {
+    const { blocked, beltAt } = beltGround(profile);
+    const ends = new Set();
+    for (const b of profile.belts || []) {
+      if (b.path && b.path.length) {
+        ends.add(key(b.path[0][0], b.path[0][1]));
+        ends.add(key(b.path[b.path.length - 1][0], b.path[b.path.length - 1][1]));
+      }
+    }
+    for (const m of profile.machines) {
+      const ps = machinePorts(m);
+      for (const q of ps.out.concat(ps.in)) {
+        if (!grid || q.tx < 0 || q.ty < 0 || q.tx >= grid.cols || q.ty >= grid.rows) continue;
+        const sp = new PIXI.Sprite(PIXELS.portTex(OPP[q.face], q.dir));
+        sp.position.set(q.tx * T16, q.ty * T16);
+        sp.zIndex = -520;                    // over the ground, under the runs and the bodies
+        if (!ends.has(key(q.tx, q.ty)) && !portOpen(q, profile, blocked, beltAt)) sp.alpha = 0.4;
+        cameraC.addChild(sp);
+        portSprites.push(sp);
+      }
+    }
   }
   function drawBelts(profile) {
     const belts = profile.belts || [];
@@ -1331,7 +1488,7 @@
     init, loadMap, buildWorld, setMove, castLetter, floatText, stamp, getDocked, posOf,
     playerPos: () => ({ x: playerX, y: playerY }),
     screenPos, setDockGlow, showInfo, clearInfo, showMenu, clearMenu, setAutoLook,
-    routeBelt, beltReaches, showGhost, clearGhost, setSpool, markStations, setSocketTarget,
+    routeBelt, beltReaches, machinePorts, portsOpen, showGhost, clearGhost, setSpool, markStations, setSocketTarget,
     setInvValue, invScreenPos, setHudKeys, setCharge,
     onDock: null,
   };

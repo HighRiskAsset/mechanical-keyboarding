@@ -433,7 +433,9 @@ full run; data checks green; the EN stub loads.
 | Job seconds | mine 2 · smelter 3 · foundry 4 · constructor 4 · molder 5 · assembler 6 · fastener 6 · crane 7 · manufacturer 10 | −20% at bars 2 and 4 |
 | Belt speed | 2 tiles/s, 1 item/tile | pipes same |
 | Buffer cap | 100 per material | in and out |
-| Outlets / inlets | mines 1, processors 2 / arity | |
+| Outlets / inlets | mines 1, processors 2 / arity | each at a port: one tile against the body, met head-on |
+| Port sides | front (2 places) · right (2) · left (2) | the back is hidden by the machine's own tower |
+| Turning | free, 3 steps — discharge side front → right → left | re-lays that machine's runs; a stranded run comes up |
 | ⚙ lag | one tier after a kind arrives | mines: when keys are sticky |
 | Ratio tilt cap | 3:1, off when pool < 25 | variance only |
 | Overpass | tier 4 | |

@@ -21,7 +21,7 @@
     // belting: a dark band on purpose — brass, copper and coal riding it
     // all have to read at a glance against it
     beltS: '#0e0d16', beltD: '#1b1928', beltE: '#272437', beltM: '#37324b', beltL: '#4f4a6a',
-    teal: '#4f8f7c', teal2: '#2f5c54',                   // verdigris on old copper
+    teal: '#4f8f7c', teal2: '#2f5c54', teal3: '#7fc9a8',  // verdigris on old copper (teal3: its highlight)
     cream: '#f0e0bc', cream2: '#c3ab84',                 // linen, canvas, paper
     orange: '#f06d4f', red: '#d84d66', green: '#80d66e',
     glow: '#ffe28a',
@@ -981,6 +981,41 @@
     x.restore();
     return c;
   }
+  // An inlet or an outlet, bolted to the machine's side and standing on the
+  // tile a run has to reach to use it. Drawn against the tile's north edge
+  // and turned by whole quarters, the way the drum above is, so `side` is
+  // the tile edge the machine is on the far side of.
+  //
+  // Which way the goods go is said twice over: an intake is verdigris and
+  // its wedge points into the machine, a discharge is brass and its wedge
+  // points out at the field. Colour alone would fail the eye that can't tell
+  // the two apart, and a wedge alone would be four pixels of nothing at this
+  // size, so it is both.
+  function portPlate(side, dir) {
+    const [c, x] = canvas(TILE, TILE);
+    const into = dir === 'in';
+    const lit = into ? P.teal3 : P.brass2, dim = into ? P.teal2 : P.brass1;
+    x.save();
+    x.translate(BELT_MID, BELT_MID);
+    x.rotate(({ n: 0, e: 1, s: 2, w: 3 }[side] || 0) * Math.PI / 2);
+    x.translate(-BELT_MID, -BELT_MID);
+    // Fourteen long and six deep, which is two pixels shy of the tile both
+    // ways. Two ports on one side of a machine sit one tile apart, and at
+    // the full sixteen they ran together into a pillar taller than the body
+    // they were bolted to; the gap keeps them two tabs. The coloured rim
+    // still reaches past the twelve a run's drum covers, so a port with a
+    // belt on it shows a thread of verdigris or brass down either side of
+    // the band and goes on saying which way the goods go.
+    R(x, lit, 1, 0, 14, 5);                            // the rim, in the port's own colour
+    R(x, P.ironO, 1, 5, 14, 1);                        // ink along its far edge
+    R(x, P.iron3, 2, 0, 12, 5);                        // its face, dark enough for the wedge
+    R(x, dim, 2, 0, 12, 1);                            // the lip against the machine
+    // the wedge: three rows, tip at the machine (intake) or at the field
+    const rows = into ? [[7, 2], [6, 4], [5, 6]] : [[5, 6], [6, 4], [7, 2]];
+    rows.forEach(([px, w], i) => R(x, lit, px, 1 + i, w, 1));
+    x.restore();
+    return c;
+  }
   // What rides the belt: a 4x4 core the renderer tints per material, under a
   // rim that keeps its own colour whatever the load is — lit brass along the
   // top and left, ink down the shade side. An ink outline alone would vanish
@@ -1300,6 +1335,7 @@
     matDotTex: () => tex(matDot()),
     beltTileTex: (frame, shape, rev, pipe) => cachedTex('bt:' + frame + shape + (rev ? 'r' : 'f') + (pipe ? 'p' : 'b'), () => beltTile(frame, shape, rev, pipe)),
     beltEndTex: (frame, side, pipe) => cachedTex('be:' + frame + side + (pipe ? 'p' : 'b'), () => beltEnd(frame, side, pipe)),
+    portTex: (side, dir) => cachedTex('port:' + side + dir, () => portPlate(side, dir)),
     BELT_PITCH,                        // world px a slat travels before the next takes its place
     itemDotTex: () => cachedTex('itemdot', itemDot),
     itemRingTex: () => cachedTex('itemring', itemRing),
@@ -1330,7 +1366,7 @@
     nodeCanvas: nodePatch,
     sceneryCanvas: (kind) => SCENERY_DRAW[kind] ? SCENERY_DRAW[kind]() : window.TILES.scenery(kind),
     machineCanvas: machine, stationCanvas: station, characterCanvas: character, workCanvas: characterWork,
-    pressCanvas: press, beltTileCanvas: beltTile, beltEndCanvas: beltEnd, boardCanvas: noticeBoard,
+    pressCanvas: press, beltTileCanvas: beltTile, beltEndCanvas: beltEnd, portCanvas: portPlate, boardCanvas: noticeBoard,
     itemDotCanvas: itemDot, itemRingCanvas: itemRing,
     propCanvas: (kind) => PROP_DRAW[kind](), kindIconCanvas: kindIcon, matIconCanvas: matIcon,
     matIconTex: (kind) => cachedTex('mat:' + kind, () => matIcon(kind)),
