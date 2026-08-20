@@ -160,6 +160,10 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   finish: `K_HEAVY` heavy modules typed by hand at the Manufacturer —
   `profile.heavy` counts them, the 🏁 card celebrates, free play
   continues. Nothing else changes at the finish.
+- **Pacing accepted (2026-08-20, the user):** ~20 bot-hours to the finish
+  at PACE 3 is the target shape. Any lengthening comes from **more page
+  variety extending the late game**, not from raising prices — the PAGES
+  file is where the game grows.
 - **The pacing log (phase 6, 2026-08-20):** `dev/playtest.html` simulates
   a learner playing a fresh save to the finish (WPM ramp, serial hand
   work, automation as investment, parallel machines) and prints hours per
