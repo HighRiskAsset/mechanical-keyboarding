@@ -366,9 +366,17 @@ pages, the human playtest log.
   40/60/60→30/40/40); K_HEAVY 200 → 150; the Crane's automation price no
   longer asks for heavy modules (the finish counter) — crate + mold now.
   The bot then reads **29.5 h**. Placeholders until the human log.
-- **Invariant-5 dry run:** `js/language-en.js` (a stub, `stub: true` keeps
-  the course greyed in the switch) + `dev/en.html` — chain and engine run
-  an EN T0 world with no edit: 6 checks green.
+- **The EN course (2026-08-20, no longer a stub):** `js/language-en.js` is
+  a playable course — the RU ladder key-for-key (order pinned for later),
+  758 words, 56 phrases, 71 sentences, 12 pages, names. `dev/en.html`
+  checks it (14 green), including the **traversability walk**: every
+  price producible when its rung appears. That walk found and fixed two
+  systemic deadlocks — the coal node priced in parts before EN can field
+  25 words, and castiron/qziron/steel/blackiron prices before EN iron
+  (f j g h, vowelless) can smelt them — so the shared price tables now
+  use only both-courses-producible goods, and verify.html runs the same
+  walk for RU. After the reprice the bot reads **20.5 h** (the fastener's
+  automation price also dropped crates — they hid the Crane pyramid).
 - **PAGES organised:** placeholders in `language-ru.js` with the writing
   rules in a comment (the course's keys only — no numbers, no em-dash, no
   guillemets); the engine grades and orders them itself.

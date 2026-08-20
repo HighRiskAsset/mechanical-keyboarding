@@ -124,19 +124,33 @@
   const clBad = L.CLUSTERS.filter((c) => [...c].some((x) => !RU.includes(x) || isVowel(x)));
   line(!clBad.length, `cluster list (${L.CLUSTERS.length}) is consonants only`, clBad.join(' '));
 
-  // 9. prices reference materials the player can hold by then
-  const priceBad = [];
-  const checkPrice = (label, tier, cost) => {
-    for (const mat of Object.keys(cost || {})) {
-      if (!C.MATS[mat]) { priceBad.push(`${label}: unknown material ${mat}`); continue; }
-      const mt = C.matTier(mat);
-      if (mt > tier) priceBad.push(`${label} (T${tier}) asks for ${mat} (T${mt})`);
+  // 9. every price is producible when its rung appears — measured against
+  // the live recipe graph, not the tier labels (a label says when a recipe
+  // tends to arrive; producibility is what a player can actually pay).
+  function producible(mat, prof, seen) {
+    seen = seen || new Set();
+    if (seen.has(mat)) return false;
+    seen.add(mat);
+    const spec = C.MATS[mat];
+    if (!spec) return false;
+    if (spec.form === 'ore') return C.oreOpen(prof, mat);
+    for (const kind of C.KIND_IDS) {
+      if (kind === 'mine') continue;
+      for (const r of C.recipesFor(kind)) {
+        if (r.out !== mat || !C.offerable(r, prof)) continue;
+        if (Object.keys(r.in).every((m) => producible(m, prof, new Set(seen)))) return true;
+      }
     }
-  };
-  for (const [ore, cost] of Object.entries(C.PRICES.node)) { const p = L.PAIRS.find((q) => q.ore === ore); checkPrice('node ' + ore, p ? p.tier : 0, cost); }
-  for (const [ore, levels] of Object.entries(C.PRICES.mk)) for (const [lvl, cost] of Object.entries(levels)) { const p = L.PAIRS.find((q) => q.ore === ore && q.mk === +lvl); checkPrice(`mk ${ore}${lvl}`, p ? p.tier : 0, cost); }
-  for (const [k, cost] of Object.entries(C.PRICES.machine)) checkPrice('machine ' + k, C.KINDS[k].tier, cost);
-  line(!priceBad.length, 'every price is payable in materials that exist by that tier', priceBad.join('<br>'));
+    return false;
+  }
+  const priceBad = [];
+  for (let i = 3; i < L.PAIRS.length; i++) {
+    const prof = { pairsUnlocked: i, letters: {}, seen: {}, bag: {}, machines: [] };
+    const ev = L.PAIRS[i];
+    const price = ev.at ? C.priceAt(ev.at, ev.mk) : (ev.mk === 1 ? C.priceNode(ev.ore) : C.priceMk(ev.ore, ev.mk));
+    for (const m of Object.keys(price || {})) if (!producible(m, prof)) priceBad.push(`pair ${i + 1} (${ev.keys.join(' ')}): ${m} not producible`);
+  }
+  line(!priceBad.length, 'the ladder is traversable: every price is producible when its rung appears', priceBad.join('<br>'));
 
   // 10. arity matches recipe inputs
   const arBad = C.RECIPES.filter((r) => Object.keys(r.in).length !== C.KINDS[r.kind].arity).map((r) => `${r.kind} → ${r.out}: ${Object.keys(r.in).length} inputs, arity ${C.KINDS[r.kind].arity}`);

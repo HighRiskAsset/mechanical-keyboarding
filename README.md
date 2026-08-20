@@ -52,7 +52,9 @@ No installation, no build step: plain HTML/CSS/JS with a vendored copy of
 there are no image assets.
 
 Interface language and course language are independent axes: the interface is
-available in English or Russian, and the trainer maps your physical keys
+available in English or Russian, and two courses are playable — Russian
+ЙЦУКЕН and English QWERTY (same ladder key-for-key, its own saves; switch
+from ⚙). The trainer maps your physical keys
 itself, so you can drill a foreign alphabet without switching your OS layout.
 
 ## Deploying

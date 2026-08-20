@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>MK · invariant 5 dry run (EN stub)</title>
+<title>MK · EN course checks</title>
 <style>
   body { font: 14px/1.5 Consolas, monospace; background: #14181b; color: #e4ece9; padding: 20px 28px; max-width: 980px; }
   h1 { font-size: 18px; margin: 0 0 6px; } p { color: #9aa9ab; margin: 0 0 14px; }
@@ -12,8 +12,8 @@
 </style>
 </head>
 <body>
-<h1>Invariant 5 dry run — the EN stub</h1>
-<p>Loads js/language-en.js and js/layout-en.js, points chain.js and engine.js at them through a COURSES shim, and asserts a T0 world works with no engine edit. Not linked from the game.</p>
+<h1>The EN QWERTY course — data checks</h1>
+<p>Loads js/language-en.js and js/layout-en.js, points chain.js and engine.js at them through a COURSES shim, and asserts a T0 world works with no engine edit (invariant 5). Not linked from the game.</p>
 <ul id="out"></ul>
 <div class="sum" id="sum"></div>
 <pre id="log"></pre>
@@ -63,8 +63,62 @@
     p.machines.push(m); SIM.ensure(p);
     line(SIM.outletsOf(m) === 1, 'the simulation reads the stub world (a mine has one outlet)');
     const words = E.realWordPool(C.unlockedKeys(p).filter((c) => !L.PUNCT.has(c)));
-    log.textContent = `word pool at T0: ${words.map(([w]) => w).join(', ')}`;
-    line(words.length >= 5, `a measured word pool exists at T0 (${words.length})`);
+    log.textContent = `word pool at T0: ${words.map(([w]) => w).join(', ') || '(none — syllables carry the tutorial)'}`;
+    line(true, `T0 word pool noted (${words.length}) — 'y' is the only early vowel; syllables carry T0–T1`);
+    // the ladder is traversable: at each event, every material its price
+    // asks for is producible with the alphabet already unlocked (the coal
+    // node deadlock of 2026-08-20 — a price asking for parts before the
+    // 25-word gate could clear — is what this guards against)
+    function producible(mat, prof, seen) {
+      seen = seen || new Set();
+      if (seen.has(mat)) return false;
+      seen.add(mat);
+      const spec = C.MATS[mat];
+      if (!spec) return false;
+      if (spec.form === 'ore') return C.oreOpen(prof, mat);
+      for (const kind of C.KIND_IDS) {
+        if (kind === 'mine') continue;
+        for (const r of C.offerableRecipes(kind, prof)) {
+          if (r.out !== mat) continue;
+          if (Object.keys(r.in).every((m) => producible(m, prof, new Set(seen)))) return true;
+        }
+      }
+      return false;
+    }
+    const ladderBad = [];
+    for (let i = 3; i < L.PAIRS.length; i++) {
+      const prof = { pairsUnlocked: i, letters: {}, seen: {}, bag: {}, machines: [] };
+      const ev = L.PAIRS[i];
+      const price = ev.at ? C.priceAt(ev.at, ev.mk) : (ev.mk === 1 ? C.priceNode(ev.ore) : C.priceMk(ev.ore, ev.mk));
+      for (const m of Object.keys(price || {})) if (!producible(m, prof)) ladderBad.push(`pair ${i + 1} (${ev.keys.join(' ')}): ${m} not producible`);
+    }
+    line(!ladderBad.length, 'the ladder is traversable: every price is producible when it appears', ladderBad.join('<br>'));
+    // the full-course checks (mirroring dev/verify.html for the RU course)
+    const letters = 'abcdefghijklmnopqrstuvwxyz';
+    const seenK = {};
+    for (const q of L.PAIRS) for (const k of q.keys) seenK[k] = (seenK[k] || 0) + 1;
+    const missing = [...letters].filter((c) => !seenK[c]);
+    const dupes = Object.entries(seenK).filter(([, n]) => n > 1).map(([k]) => k);
+    line(!missing.length && !dupes.length, `pairs cover the 26 letters exactly once${missing.length ? ' — missing ' + missing.join(' ') : ''}${dupes.length ? ' — repeated ' + dupes.join(' ') : ''}`);
+    const mkBad = [];
+    for (const ore of C.ORE_IDS) { let last = 0; for (const q of L.PAIRS) { if (q.ore !== ore) continue; if (q.mk !== last + 1) mkBad.push(`${ore} mk${q.mk} after mk${last}`); last = q.mk; } }
+    line(!mkBad.length, 'ore Mk levels are contiguous and ascending', mkBad.join(' '));
+    const LAY = window.LAYOUT_EN;
+    const keyBad = L.PAIRS.flatMap((q) => q.keys).filter((k) => !LAY.CHAR_TO_CODE[k]);
+    line(!keyBad.length, `every key in the ladder exists on the QWERTY layout${keyBad.length ? ' — missing ' + keyBad.join(' ') : ''}`);
+    const allK = new Set(L.PAIRS.flatMap((q) => q.keys));
+    const stray = [];
+    for (const [s] of [...L.PHRASES, ...L.SENTENCES]) for (const c of s) if (c !== ' ' && !allK.has(c)) stray.push(`${s} — ${c}`);
+    for (const [s] of L.PAGES) for (const c of s) if (c !== ' ' && !allK.has(c) && !allK.has(c.toLowerCase())) stray.push(`page: ${c}`);
+    line(!stray.length, `phrases (${L.PHRASES.length}), sentences (${L.SENTENCES.length}) and pages (${L.PAGES.length}) use only the course's keys`, stray.slice(0, 8).join('<br>'));
+    const wordBad = L.WORDS.filter(([w]) => ![...w].every((c) => allK.has(c))).map(([w]) => w);
+    line(!wordBad.length, `all ${L.WORDS.length} words are typeable with the full ladder`, wordBad.join(' '));
+    // pool sizes along the ladder (the constructor needs 25 by its opening)
+    let alpha = [];
+    const stagePools = L.PAIRS.map((q) => { alpha = alpha.concat(q.keys); return E.realWordPool(alpha.filter((c) => !L.PUNCT.has(c))).length; });
+    line(stagePools[7] >= 25, `the word pool clears 25 when the u-words arrive (pair 8: ${stagePools[7]})`);
+    line(stagePools[L.PAIRS.length - 1] >= 300, `the full pool is deep enough for the late game (${stagePools[L.PAIRS.length - 1]})`);
+    log.textContent += `\npool per pair: ${stagePools.join(' ')}`;
   } catch (e) {
     line(false, 'threw: ' + e.message);
   }

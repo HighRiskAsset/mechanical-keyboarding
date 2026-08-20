@@ -83,8 +83,7 @@
         // a glyph on it (the Fastener's marks live on the number row)
         if (key.inert && plain === undefined && (shifted === undefined || L.PUNCT === undefined || !L.PUNCT.has(shifted))) cap.classList.add('inert');
         if (isSpace) cap.classList.add('space');
-        if (key.code === 'Slash') cap.innerHTML = '<span class="cap-shift">,</span>.';
-        else if (shifted !== undefined && L.PUNCT && L.PUNCT.has(shifted)) cap.innerHTML = `<span class="cap-shift">${shifted}</span>${key.label ?? plain ?? ''}`;
+        if (shifted !== undefined && L.PUNCT && L.PUNCT.has(shifted)) cap.innerHTML = `<span class="cap-shift">${shifted}</span>${plain ?? key.label ?? ''}`;
         else cap.textContent = key.label ?? (plain || '').toUpperCase();
         cap.style.left = left + 'px';
         cap.style.top = (row.y * ROW_PITCH) + 'px';

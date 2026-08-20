@@ -131,6 +131,23 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   over automated machines: green running, red starved, gold full. Harness:
   `dev/sim.html`; the whole game runs headless in `dev/play.html` (a rAF
   shim) for automated checks.
+- **The EN QWERTY course (2026-08-20):** selectable from the switch, its
+  own saves per world. The ladder maps the RU course key-for-key — the
+  same physical keys arrive in the same order, so ore = finger and every
+  price and tier behaves identically. PINNED: whether EN deserves its own
+  pair order (f j holds no vowel; y carries the early game, u lands at
+  pair 8, e at 12, a at 16, o last at 17 — word pools open at pair 8).
+  Deviations where the RU key holds a letter but the EN key a mark: the
+  period joins oil Mk1, the apostrophe coal Mk2, and the Fastener deals
+  ? · ! - · : " ( ) — '?' is Shift+Slash, the same stroke as the Russian
+  comma. Oil stops at Mk3 (18 events to Russian's 19). This audit forced
+  a shared reprice: **every price is now payable only in goods both
+  courses can produce when the rung appears** (EN iron f j g h holds no
+  vowel, so castiron never clears the smelter's V+C gate and qziron /
+  steel / blackiron wait for e / o / a) — checked from now on by the
+  producibility walk in dev/verify.html (RU) and dev/en.html (EN, plus
+  ladder coverage checks). ORE_GOOD retuned the same way (stone → brass,
+  coal → gunmetal, oil → glass).
 - **Tiers 4–6 (phase 5, 2026-08-20):** the Crane drills *capitals*
   (sentence-initial, with `NAMES`; a capital's stats fold onto its
   lowercase letter) and the Manufacturer drills *pages* (`PAGES`, real

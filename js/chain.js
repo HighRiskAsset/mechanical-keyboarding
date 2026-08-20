@@ -141,7 +141,7 @@
   // behind a tier number — prices ask for later materials, that is all)
   const TIER_GOOD = ['slogi', 'slova', 'stroki', 'fast', 'fast', 'crate', 'heavy'];
   // each ore's own alloy — the good its extra mines and automation cost in
-  const ORE_GOOD = { az: 'slogi', buki: 'slogi', stone: 'castiron', vedi: 'qziron', coal: 'steel', oil: 'blackiron' };
+  const ORE_GOOD = { az: 'slogi', buki: 'slogi', stone: 'brass', vedi: 'qziron', coal: 'gunmetal', oil: 'glass' };
 
   const TUNING = {
     PICKUP_CAP: 100,       // (legacy) the old instant pickup; buffers cap below
@@ -165,34 +165,39 @@
   // ---- prices (placeholders, all in the pattern "own material + tier good") ----
   const PRICES = {
     // opening an ore (its first mine): the tier's goods
+    // priced only in goods every course can produce when the rung appears
+    // (EN iron holds no vowel: castiron never smelts there, and qziron /
+    // steel / blackiron wait for e / o / a — dev/en.html checks this)
     node: {
-      vedi: { slogi: 40, castiron: 40 },
-      coal: { slova: 60, qziron: 40 },
-      oil: { stroki: 60, steel: 40 },
+      vedi: { slogi: 40, brass: 40 },
+      // never slova here: the Constructor's 25-word gate is course-dependent
+      // and the EN ladder can't field 25 words this early (2026-08-20)
+      coal: { brass: 60, slogi: 40 },
+      oil: { stroki: 60, gunmetal: 40 },
     },
     // Mk levels per ore
     mk: {
       az: { 2: { az: 80, slogi: 30 } },
-      buki: { 2: { buki: 80, steel: 30 } },
-      stone: { 2: { stone: 80, steel: 30 } },
-      vedi: { 2: { vedi: 60, qziron: 40 }, 3: { vedi: 60, blackiron: 30 } },
-      coal: { 2: { fast: 40, steel: 40 }, 3: { coal: 60, qzsteel: 25 } },
-      oil: { 2: { oil: 60, blackiron: 30 }, 3: { oil: 60, gunmetal: 30 }, 4: { oil: 80, fast: 30 } },
+      buki: { 2: { buki: 80, gunmetal: 30 } },
+      stone: { 2: { stone: 80, gunmetal: 30 } },
+      vedi: { 2: { vedi: 60, slogi: 40 }, 3: { vedi: 60, qzbronze: 30 } },
+      coal: { 2: { fast: 40, brass: 40 }, 3: { coal: 60, glass: 25 } },
+      oil: { 2: { oil: 60, glass: 30 }, 3: { oil: 60, gunmetal: 30 }, 4: { oil: 80, fast: 30 } },
     },
     // Mk levels on a machine kind (the Fastener: punctuation keys) — its own
     // output, typed by hand right before the keys arrive, plus a tier good
     at: {
-      fastener: { 1: { fast: 30, blackiron: 30 }, 2: { fast: 40, gunmetal: 30 }, 3: { fast: 40, glass: 40 } },
+      fastener: { 1: { fast: 30, gunmetal: 30 }, 2: { fast: 40, gunmetal: 30 }, 3: { fast: 40, glass: 40 } },
     },
     // first instance of a kind at a plot — each asks for a material of the
     // tier the kind belongs to, which is the only pacing there is
     machine: {
       smelter: { az: 30, buki: 30, stone: 30 },
       foundry: { slova: 40, slogi: 40 },
-      constructor: { qziron: 40, castiron: 40 },
-      molder: { slova: 60, steel: 30 },
+      constructor: { slogi: 40, brass: 40 },
+      molder: { slova: 60, brass: 30 },
       assembler: { mold: 60, slova: 40 },
-      fastener: { blackiron: 40, stroki: 40 },
+      fastener: { gunmetal: 40, stroki: 40 },
       crane: { fast: 80, glass: 40 },
       manufacturer: { crate: 100, mold: 60, slova: 60 },
     },
@@ -204,16 +209,16 @@
       constructor: { slova: 60, qziron: 20 },
       molder: { mold: 40, stroki: 20 },
       assembler: { stroki: 40, fast: 20 },
-      fastener: { fast: 40, crate: 20 },
+      fastener: { fast: 40, glass: 20 },   // 2026-08-20: crates hid the whole Crane pyramid inside this price
       crane: { crate: 40, mold: 30 },   // never heavy: heavy modules are the finish counter
     },
     // repairing a closed crossing (The Frontier): paid in the goods of the
     // regions behind you
     crossing: {
-      x1: { slogi: 30, castiron: 30 },
+      x1: { slogi: 30, brass: 30 },
       x2: { slova: 40, qzbronze: 20 },
       x3: { slova: 40, brass: 20 },
-      x4: { caststeel: 30, slova: 40 },
+      x4: { gunmetal: 30, slova: 40 },
       x5: { blackiron: 40, slova: 60 },
     },
   };
