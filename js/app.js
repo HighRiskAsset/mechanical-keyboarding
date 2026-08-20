@@ -1502,6 +1502,11 @@
   $('btn-summary').onclick = () => { if (profile) showSessionSummary(); };
   $('btn-passport').onclick = () => { if (profile) showPassport(); };
 
+  // the colophon's year range extends itself: 2026 stands alone this year, and
+  // reads 2026–YYYY from the next one on
+  const thisYear = new Date().getFullYear();
+  if (thisYear > 2026) $('colophon-years').textContent = '2026–' + thisYear;
+
   const soundBtn = $('btn-sound');
   function refreshSoundBtn() { soundBtn.textContent = A.isEnabled() ? '🔊' : '🔇'; }
   soundBtn.onclick = () => { A.setEnabled(!A.isEnabled()); refreshSoundBtn(); soundBtn.blur(); };

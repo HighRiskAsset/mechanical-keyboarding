@@ -129,9 +129,17 @@
 
   </main>
 
+  <!-- the two links stay centred in the window; the colophon rides in the empty
+       space to their right, on the same line, so the footer keeps the height it
+       always had and takes nothing from the playfield above it -->
   <footer>
-    <button id="btn-passport" class="link-btn" data-i18n="btnPassport"></button>
-    <button id="btn-summary" class="link-btn" data-i18n="btnSummary"></button>
+    <div id="footer-links">
+      <button id="btn-passport" class="link-btn" data-i18n="btnPassport"></button>
+      <button id="btn-summary" class="link-btn" data-i18n="btnSummary"></button>
+    </div>
+    <small id="colophon">&copy; <span id="colophon-years">2026</span>
+      <a href="https://FoxForger.com" target="_blank" rel="noopener">Fox Forger</a>,
+      <a href="https://Digitalis.tech" target="_blank" rel="noopener">Digitalis LLC</a></small>
   </footer>
 
   <!-- overlays. The overlay opens ON the loading card: it is on screen from
