@@ -56,8 +56,8 @@
     molder:       { id: 'molder',       arity: 2, grammar: 'endings',   minAlpha: 14, perUnit: 6,  autoFrom: 3,  tier: 2, ready: true,  full: true },
     assembler:    { id: 'assembler',    arity: 2, grammar: 'phrases',   minAlpha: 16, perUnit: 8,  autoFrom: 3,  tier: 2, ready: true,  full: true },
     fastener:     { id: 'fastener',     arity: 2, grammar: 'punct',     minAlpha: 20, perUnit: 8,  autoFrom: 4,  tier: 3, ready: true,  full: true },
-    crane:        { id: 'crane',        arity: 2, grammar: 'capitals',  minAlpha: 30, perUnit: 8,  autoFrom: 6,  tier: 5, ready: false, full: true },
-    manufacturer: { id: 'manufacturer', arity: 3, grammar: 'pages',     minAlpha: 33, perUnit: 12, autoFrom: 99, tier: 6, ready: false, full: true },
+    crane:        { id: 'crane',        arity: 2, grammar: 'capitals',  minAlpha: 30, perUnit: 8,  autoFrom: 6,  tier: 5, ready: true,  full: true },
+    manufacturer: { id: 'manufacturer', arity: 3, grammar: 'pages',     minAlpha: 33, perUnit: 12, autoFrom: 99, tier: 6, ready: true,  full: true },
   };
   const KIND_IDS = Object.keys(KINDS);
 
@@ -153,13 +153,13 @@
     MIN_WORDS: 25,         // Constructor pool size before a recipe is offered
     RATIO_TILT_CAP: 3,     // ratio → sampling tilt, capped (variance only)
     RATIO_MIN_POOL: 25,    // below this many words the tilt is off
-    K_HEAVY: 200,          // heavy modules to finish (placeholder)
+    K_HEAVY: 150,          // heavy modules to finish (2026-08-20 bot log: 200 cost ~11 h)
     MACHINE_PRICE_STEP: 0.5, // nth instance of a kind costs ×(1 + step·(n−1))
     // PACE multiplies every price. With no skill gates, prices are the whole
     // pacing: a purchase should ask for about the keystrokes we want spent on
     // those keys. The base table below is written at ×1; 4 is the first-pass
     // guess for the ~30 h target — tune this one number from play logs.
-    PACE: 4,
+    PACE: 3,               // 2026-08-20: the bot log read 62 h at 4; 3 aims the ~30 h target — the human log has the last word
   };
 
   // ---- prices (placeholders, all in the pattern "own material + tier good") ----
@@ -176,13 +176,13 @@
       buki: { 2: { buki: 80, steel: 30 } },
       stone: { 2: { stone: 80, steel: 30 } },
       vedi: { 2: { vedi: 60, qziron: 40 }, 3: { vedi: 60, blackiron: 30 } },
-      coal: { 2: { fast: 60, steel: 40 }, 3: { coal: 60, qzsteel: 40 } },
-      oil: { 2: { oil: 60, blackiron: 30 }, 3: { oil: 60, gunmetal: 40 }, 4: { oil: 60, fast: 60 } },
+      coal: { 2: { fast: 40, steel: 40 }, 3: { coal: 60, qzsteel: 25 } },
+      oil: { 2: { oil: 60, blackiron: 30 }, 3: { oil: 60, gunmetal: 30 }, 4: { oil: 80, fast: 30 } },
     },
     // Mk levels on a machine kind (the Fastener: punctuation keys) — its own
     // output, typed by hand right before the keys arrive, plus a tier good
     at: {
-      fastener: { 1: { fast: 40, blackiron: 30 }, 2: { fast: 60, gunmetal: 40 }, 3: { fast: 60, glass: 40 } },
+      fastener: { 1: { fast: 30, blackiron: 30 }, 2: { fast: 40, gunmetal: 30 }, 3: { fast: 40, glass: 40 } },
     },
     // first instance of a kind at a plot — each asks for a material of the
     // tier the kind belongs to, which is the only pacing there is
@@ -205,7 +205,7 @@
       molder: { mold: 40, stroki: 20 },
       assembler: { stroki: 40, fast: 20 },
       fastener: { fast: 40, crate: 20 },
-      crane: { crate: 40, heavy: 10 },
+      crane: { crate: 40, mold: 30 },   // never heavy: heavy modules are the finish counter
     },
     // repairing a closed crossing (The Frontier): paid in the goods of the
     // regions behind you

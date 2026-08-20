@@ -212,6 +212,12 @@ body.night #factory-mount canvas { filter: brightness(0.45) saturate(0.8); }
   background: rgba(232, 200, 119, 1);
   box-shadow: 0 0 18px rgba(232, 200, 119, 0.7);
 }
+/* the tier-4 taper: the rescue still comes, but faint (hint-free from T5) */
+.keycap.hint.dim {
+  background: rgba(232, 200, 119, 0.45);
+  box-shadow: 0 0 8px rgba(232, 200, 119, 0.3);
+  color: var(--ink);
+}
 /* lesson lights: the docked bench's letters glow steadily on the keyboard */
 .keycap.lesson {
   box-shadow: inset 0 -3px 0 var(--brass);

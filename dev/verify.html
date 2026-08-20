@@ -191,6 +191,19 @@
   line(!famBad.length, 'ending families: an affix by 14 keys, words by 18 (oil family waits for its ore)', famBad.join('<br>'));
   // 17. word list size
   line(L.WORDS.length >= 1000, `word list ≥ 1000 (${L.WORDS.length})`);
+  // 17b. names are capitalized and typeable; pages use only the course's keys
+  const capBad = (L.NAMES || []).filter(([w]) => w[0] !== w[0].toUpperCase() || ![...w.toLowerCase()].every((c) => allKeys.has(c))).map(([w]) => w);
+  line((L.NAMES || []).length >= 20 && !capBad.length, `names (${(L.NAMES || []).length}): capitalized, letters on the course's keys`, capBad.join(' '));
+  const pageBad = [];
+  for (const [s] of (L.PAGES || [])) for (const c of s) if (c !== ' ' && !allKeys.has(c) && !allKeys.has(c.toLowerCase())) pageBad.push(`${c} in "${s.slice(0, 40)}…"`);
+  line((L.PAGES || []).length >= 10 && !pageBad.length, `pages (${(L.PAGES || []).length}): every character on the course's keys (capitals fold)`, pageBad.slice(0, 8).join('<br>'));
+  // 17c. the crane and manufacturer offer their recipes at full alphabet
+  const full = { pairsUnlocked: L.PAIRS.length, letters: {}, seen: {}, bag: {}, machines: [] };
+  line(C.offerableRecipes('crane', full).length >= 1 && C.offerableRecipes('manufacturer', full).length >= 1, 'the Crane and the Manufacturer offer recipes at the full alphabet');
+  // 17d. no automation price asks for heavy modules (the finish counter)
+  let autoHeavy = false;
+  for (const kind of C.KIND_IDS) { const pr = C.priceAuto({ kind }); if (pr && pr.heavy) autoHeavy = true; }
+  line(!autoHeavy, 'no automation price asks for heavy modules (the finish counter)');
   // 18. every plot and node stands on clear ground and is reachable from the spawn (crossings counted open)
   const placeBad = [];
   for (const mapId of C.MAP_IDS) {

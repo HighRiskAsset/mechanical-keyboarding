@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MK · simulated playtest (the pacing log)</title>
+<style>
+  body { font: 14px/1.5 Consolas, monospace; background: #14181b; color: #e4ece9; padding: 20px 28px; max-width: 1080px; }
+  h1 { font-size: 18px; margin: 0 0 6px; } p { color: #9aa9ab; margin: 0 0 14px; }
+  table { border-collapse: collapse; margin: 10px 0; }
+  td, th { border: 1px solid #2c3a40; padding: 3px 10px; text-align: right; }
+  th { color: #d4a94e; } td:first-child, th:first-child { text-align: left; }
+  .sum { margin-top: 14px; font-weight: bold; }
+  .ok { color: #6cc46c; } .warn { color: #f2c14e; } .fail { color: #ff8a70; }
+  pre { color: #9aa9ab; font-size: 12px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h1>Simulated playtest — hours per tier</h1>
+<p>A modelled learner plays a fresh save start to finish: typing speed ramps 12 → 40 WPM, accuracy improves, one machine is worked at a time, automation is bought when it pays for itself, automated machines run in parallel. The bot climbs the ladder greedily and then types heavy modules to the finish. Not a substitute for a human log — it prices the ladder, not the fun.</p>
+<div id="run"></div>
+<div class="sum" id="sum"></div>
+<pre id="log"></pre>
+<script src="../js/i18n.js"></script>
+<script src="../js/board-ansi.js"></script>
+<script src="../js/language-ru.js"></script>
+<script src="../js/layout-ru.js"></script>
+<script src="../js/layout-en.js"></script>
+<script src="../js/courses.js"></script>
+<script src="../js/chain.js"></script>
+<script src="../js/engine.js"></script>
+<script>
+(() => {
+  const C = window.CHAIN, L = window.LANG_RU;
+  C.useMap('range');   // flat map: pacing without geography
+
+  // ---- the learner model ----
+  // WPM ramps like a real adult beginner (hours of *practice*, not calendar);
+  // accuracy climbs shallowly. Errors cost time, not materials.
+  const wpmAt = (h) => 12 + 26 * (1 - Math.exp(-h / 14));
+  const accAt = (h) => 0.94 + 0.04 * (1 - Math.exp(-h / 10));
+  const UTIL = 0.8;   // share of a session actually typing (walking, menus, cards)
+
+  // ---- the world model ----
+  // Hand work: 1 correct keystroke = 1 ore at a mine; a processor consumes
+  // its recipe from the bag and emits after perUnit keystrokes. Automated
+  // machines run on the clock in parallel, consuming from / emitting to the
+  // bag (ideal logistics — belts are free and the bot lays them well).
+  const p = { pairsUnlocked: 3, letters: {}, bag: {}, seen: {}, machines: [], crossings: {}, nextMachineId: 1, unlockLog: [] };
+  const auto = {};        // kind or 'mine:ore' → count of automated instances
+  const built = { mine: {} };   // what stands: built[kind] = true, built.mine[ore] = true
+  built.mine.az = true; built.mine.buki = true; built.mine.stone = true;
+  const seenMat = (mat) => { p.seen[mat] = true; };
+  const add = (bag, cost, k) => { for (const [m, n] of Object.entries(cost || {})) bag[m] = (bag[m] || 0) + n * (k || 1); };
+  const canPay = (cost) => cost && Object.entries(cost).every(([m, n]) => (p.bag[m] || 0) >= n);
+  const pay = (cost) => { for (const [m, n] of Object.entries(cost)) p.bag[m] -= n; };
+
+  // the recipe used to hand-make a material (cheapest offered producing it).
+  // offerableRecipes measures word pools, so memoize per ladder position.
+  const recipeCache = {};
+  function recipeToMake(mat) {
+    const key = p.pairsUnlocked;
+    if (!recipeCache[key]) {
+      recipeCache[key] = {};
+      for (const kind of C.KIND_IDS) {
+        if (kind === 'mine') continue;
+        for (const r of C.offerableRecipes(kind, p)) if (!recipeCache[key][r.out]) recipeCache[key][r.out] = r;
+      }
+    }
+    return recipeCache[key][mat] || null;
+  }
+
+  // keystrokes spent hand-working each material (the automation trigger) —
+  // credited to the material actually produced, however deep the recursion
+  const workLog = {};
+  // one minute of hand work toward `mat`; returns keystrokes actually used.
+  // Recurses into missing inputs (serial: the operator is one person).
+  function handWork(mat, ks, depth) {
+    if ((depth = (depth || 0) + 1) > 8) return 0;   // a cycle in the wish-list: give the minute up
+    const spec = C.MATS[mat];
+    if (!spec) return 0;
+    if (spec.form === 'ore') {
+      if (!built.mine[mat]) return 0;
+      const got = Math.floor(ks);
+      p.bag[mat] = (p.bag[mat] || 0) + got; seenMat(mat);
+      workLog[mat] = (workLog[mat] || 0) + got;   // credit the material actually worked
+      return got;
+    }
+    const r = recipeToMake(mat);
+    if (!r) return 0;
+    // no machine of that kind yet: buy it if the bag covers it, else spend
+    // the minute working toward its price
+    if (!built[r.kind]) {
+      ensureKind(r.kind);
+      if (!built[r.kind]) {
+        const lackM = deficit(C.priceMachine(r.kind, 1)).find((m) => m !== mat && makeable(m));
+        return lackM ? handWork(lackM, ks, depth) : 0;
+      }
+    }
+    // inputs short? spend this minute on the scarcest input instead
+    for (const [im, need] of Object.entries(r.in)) {
+      if ((p.bag[im] || 0) < need * 3 && im !== mat) return handWork(im, ks, depth);
+    }
+    const kind = C.KINDS[r.kind];
+    let used = 0, made = 0;
+    while (used + kind.perUnit <= ks && canPay(r.in)) { pay(r.in); made++; used += kind.perUnit; }
+    if (made) { p.bag[mat] = (p.bag[mat] || 0) + made; seenMat(mat); workLog[mat] = (workLog[mat] || 0) + used; }
+    if (used) return used;
+    const im = Object.keys(r.in)[0];
+    return im === mat ? 0 : handWork(im, ks, depth);
+  }
+
+  // automated production for dt seconds (parallel, ideal belts). In the real
+  // game an automated consumer takes only what its belts bring it; here the
+  // bag stands in for the belts, so a reserve protects whatever the player
+  // is currently saving toward from being eaten by their own machines.
+  function autoRun(dt, reserve) {
+    reserve = reserve || {};
+    // an automated processor takes only clear surplus (+60): hands and
+    // machines never fight over the same intermediate, as belts prevent
+    const spare = (m, n) => (p.bag[m] || 0) - (reserve[m] || 0) - 60 >= n;
+    for (const [key, count] of Object.entries(auto)) {
+      if (!count) continue;
+      if (key.startsWith('mine:')) {
+        const ore = key.slice(5);
+        const got = Math.floor(count * dt / C.TUNING.RATE.mine);
+        p.bag[ore] = (p.bag[ore] || 0) + got; seenMat(ore);
+      } else {
+        const r = recipeToMake(autoRecipe[key] || '');
+        if (!r) continue;
+        const units = Math.floor(count * dt / C.TUNING.RATE[key]);
+        let made = 0;
+        for (let i = 0; i < units && Object.entries(r.in).every(([m, k]) => spare(m, k)); i++) { pay(r.in); made++; }
+        if (made) { p.bag[r.out] = (p.bag[r.out] || 0) + made; seenMat(r.out); }
+      }
+    }
+  }
+  const autoRecipe = {};   // kind → the material its automated instances make
+
+  // what the bot buys, in order: the ladder; machines when a needed recipe
+  // has no home; automation of the busiest producers when affordable twice over
+  function nextGoal() {
+    const np = C.nextPair(p);
+    if (np) {
+      if (np.at) return { kind: 'mk-at', price: C.priceAt(np.at, np.mk), needsKind: np.at };
+      if (np.mk === 1) return { kind: 'node', price: C.priceNode(np.ore) };
+      return { kind: 'mk', price: C.priceMk(np.ore, np.mk) };
+    }
+    return { kind: 'finish' };
+  }
+  function ensureKind(kind) {
+    if (kind === 'mine' || built[kind]) return true;
+    const price = C.priceMachine(kind, 1);
+    if (!price) return false;
+    if (!canPay(price)) return false;
+    pay(price); built[kind] = true;
+    return true;
+  }
+  // materials a price needs that the bag lacks
+  function deficit(price) {
+    const out = [];
+    for (const [m, n] of Object.entries(price || {})) if ((p.bag[m] || 0) < n) out.push(m);
+    return out;
+  }
+  // can the bot produce this material at all right now? Transitive: the
+  // recipe's machine must be built or buildable from makeable materials,
+  // and every input makeable — a cycle (the Foundry costs parts, parts
+  // need the Foundry) means "not yet".
+  const makeableCache = {};
+  function makeable(mat, seen) {
+    if (!seen) {
+      const key = p.pairsUnlocked + '|' + Object.keys(built).length + '|' + Object.keys(built.mine).length;
+      const c = makeableCache[key] || (makeableCache[key] = {});
+      if (mat in c) return c[mat];
+      return (c[mat] = makeable(mat, new Set()));
+    }
+    if (seen.has(mat)) return false;
+    seen.add(mat);
+    const spec = C.MATS[mat];
+    if (!spec) return false;
+    if (spec.form === 'ore') return !!built.mine[mat];
+    const r = recipeToMake(mat);
+    if (!r) return false;
+    if (!built[r.kind]) {
+      const price = C.priceMachine(r.kind, 1);
+      if (!price || !Object.keys(price).every((m) => makeable(m, new Set(seen)))) return false;
+    }
+    return Object.keys(r.in).every((m) => makeable(m, new Set(seen)));
+  }
+  // make sure the machine kinds behind a material exist (build greedily)
+  function ensureChain(mat) {
+    const spec = C.MATS[mat];
+    if (!spec || spec.form === 'ore') return;
+    const r = recipeToMake(mat);
+    if (!r) return;
+    ensureKind(r.kind);
+    for (const im of Object.keys(r.in)) ensureChain(im);
+  }
+
+  // ---- the run ----
+  const rows = [];
+  const t0Pairs = p.pairsUnlocked;
+  let hours = 0, lastHours = 0, guard = 0;
+  const STEP_MIN = 1;
+  const tierOf = () => C.currentTier(p);
+  const purchases = [];
+  const trace = [];
+  let done = false;
+  let minuteReserve = {}, finishHours = 0;
+  while (!done && guard++ < 600000) {
+    const goal = nextGoal();
+    minuteReserve = Object.assign({}, goal.price);
+    if (goal.kind === 'finish') {
+      // The endgame is not simulated: the shared-bag stand-in for belts
+      // misprices it (machines and hands fight over the same pool, which
+      // belts and buffers prevent). Computed instead, assuming what the map
+      // invites: the whole chain automated, extra mines and machine
+      // instances built until the single Crane is the bottleneck, the
+      // player typing pages at the Manufacturer in parallel.
+      const K = C.TUNING.K_HEAVY;
+      const typing = (K * C.KINDS.manufacturer.perUnit) / (wpmAt(hours) * 5 * accAt(hours) * UTIL) / 60;   // hours of page typing
+      const craneChain = (K * 2 * C.TUNING.RATE.crane) / 3600;                                             // hours of crate flow
+      finishHours = Math.max(typing, craneChain) + 0.5;                                                    // +overhead: laying it all out
+      hours += finishHours;
+      done = true;
+      break;
+    } else {
+      if (goal.needsKind) ensureKind(goal.needsKind);
+      const lack = deficit(goal.price);
+      if (!lack.length && goal.price) {
+        pay(goal.price);
+        const np = C.nextPair(p);
+        p.pairsUnlocked++;
+        if (np && np.ore && np.mk === 1) built.mine[np.ore] = true;
+        if (np && np.ore && np.mk > 1) { auto['mine:' + np.ore] = 0; }   // retool: automation drops
+        purchases.push(`${hours.toFixed(1)}h  ${np ? np.keys.join('') : '?'}`);
+        rows.push({ event: np ? np.keys.join(' ') : '?', tier: np ? np.tier : '?', hours: +(hours - lastHours).toFixed(2), at: +hours.toFixed(2) });
+        lastHours = hours;
+        continue;   // no time cost for the purchase itself
+      }
+      // automation as an investment: once a material has cost 500 hand
+      // keystrokes, buying its producer's engine becomes the current goal —
+      // the way a real player stops carrying water and builds the pipe
+      let target = lack[0];
+      let pending = null;
+      for (const [wm, spent] of Object.entries(workLog)) {
+        if (spent < 250) continue;
+        const spec = C.MATS[wm];
+        if (spec.form === 'ore') {
+          if (auto['mine:' + wm]) continue;
+          pending = { key: 'mine:' + wm, price: C.priceAuto({ kind: 'mine', ore: wm }), label: 'auto ' + wm };
+        } else {
+          const r = recipeToMake(wm);
+          if (!r || auto[r.kind] || !C.priceAuto({ kind: r.kind })) continue;
+          pending = { key: r.kind, price: C.priceAuto({ kind: r.kind }), mat: wm, label: 'auto ' + r.kind };
+        }
+        if (pending) break;
+      }
+      if (pending && pending.price && Object.keys(pending.price).every((m) => makeable(m))) {
+        if (canPay(pending.price)) {
+          pay(pending.price);
+          auto[pending.key] = 1;
+          if (pending.mat) autoRecipe[pending.key] = pending.mat;
+          purchases.push(`${hours.toFixed(1)}h  ${pending.label}`);
+          continue;
+        }
+        const lackA = deficit(pending.price).filter((m) => makeable(m));
+        if (lackA.length) {
+          target = lackA[0];
+          for (const [m, k] of Object.entries(pending.price)) minuteReserve[m] = Math.max(minuteReserve[m] || 0, k);
+        }
+      }
+      if (!makeable(target)) target = lack.find((m) => makeable(m)) || target;
+      ensureChain(target);
+      const ks = wpmAt(hours) * 5 * accAt(hours) * UTIL * STEP_MIN;
+      const used = handWork(target, ks);
+      if (Math.abs(hours * 60 % 60) < 1) trace.push(`${hours.toFixed(1)}h goal=${(C.nextPair(p) || {}).keys?.join('') || 'fin'} target=${target} used=${Math.round(used)} pending=${pending ? pending.label : '-'} bag={${Object.entries(p.bag).filter(([, v]) => v > 0).map(([k, v]) => k + ':' + Math.round(v)).join(',')}}`);
+    }
+    autoRun(STEP_MIN * 60, minuteReserve);
+    hours += STEP_MIN / 60;
+    if (hours > 200) break;   // runaway guard
+  }
+  rows.push({ event: 'the finish (' + C.TUNING.K_HEAVY + ' heavy, computed: crane-limited, chain automated)', tier: 6, hours: +finishHours.toFixed(2), at: +hours.toFixed(2) });
+
+  // ---- render ----
+  const byTier = {};
+  for (const r of rows) byTier[r.tier] = (byTier[r.tier] || 0) + r.hours;
+  let html = '<table><tr><th>event</th><th>tier</th><th>hours</th><th>at</th></tr>';
+  for (const r of rows) html += `<tr><td>${r.event}</td><td>${r.tier}</td><td>${r.hours}</td><td>${r.at}</td></tr>`;
+  html += '</table><table><tr><th>tier</th><th>hours</th></tr>';
+  for (const [t, h] of Object.entries(byTier)) html += `<tr><td>T${t}</td><td>${h.toFixed(1)}</td></tr>`;
+  html += `<tr><th>total</th><th>${hours.toFixed(1)}</th></tr></table>`;
+  document.getElementById('run').innerHTML = html;
+  const target = 30;
+  const verdict = hours > target * 1.5 ? 'fail' : hours < target * 0.5 ? 'warn' : 'ok';
+  document.getElementById('sum').innerHTML = `<span class="${verdict}">total ${hours.toFixed(1)} h against the ~${target} h target (PACE = ${C.TUNING.PACE})</span>`;
+  document.getElementById('log').textContent = 'purchases:\n' + purchases.join('\n');
+  window.PLAYTEST = { hours, rows, byTier, purchases, trace };
+})();
+</script>
+</body>
+</html>

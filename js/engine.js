@@ -257,7 +257,7 @@
   // Readiness ∈ [0, ~1.25] against a bar {wpm, acc}: min of speed score,
   // accuracy score, sample fill. Passes at ≥ 1.
   function readiness(p, ch, bar) {
-    const s = p.letters[ch];
+    const s = p.letters[statChar(ch)];
     if (!s || s.n === 0) return 0;
     bar = bar || C().targetBar(p) || DEFAULT_BAR;
     const targetLat = 12000 / bar.wpm;
@@ -267,8 +267,11 @@
     const fill = Math.min(1, s.n / MIN_SAMPLES);
     return Math.min(accScore, speedScore, fill);
   }
+  // a capital letter's skill lives on its lowercase stat — the reach is the
+  // same finger; Shift is the only addition
+  const statChar = (ch) => (typeof ch === 'string' ? ch.toLowerCase() : ch);
   function recordHit(p, ch, latencyMs) {
-    const s = p.letters[ch];
+    const s = p.letters[statChar(ch)];
     if (!s) return;
     s.n++;
     if (latencyMs !== null && latencyMs > 0 && latencyMs <= MAX_LATENCY) {
@@ -277,7 +280,7 @@
     s.ewErr = s.ewErr + EW_ALPHA_ERR * (0 - s.ewErr);
   }
   function recordMiss(p, ch) {
-    const s = p.letters[ch];
+    const s = p.letters[statChar(ch)];
     if (!s) return;
     s.misses++;
     s.ewErr = s.ewErr + EW_ALPHA_ERR * (1 - s.ewErr);
@@ -491,6 +494,24 @@
     if (out.length) out[out.length - 1].gloss = gloss || null;
     return out;
   }
+  // proper names (the Crane sprinkles them into capital drills): a name fits
+  // when its lowercase letters are unlocked — Shift arrives with the Crane
+  function namePool(alpha) {
+    const set = new Set(alpha);
+    return (L.NAMES || []).filter(([w]) => [...w.toLowerCase()].every((c) => set.has(c)));
+  }
+  // pages (the Manufacturer): real paragraphs, graded by length and mark
+  // density. A page fits when its letters (case-folded) and marks fit.
+  function pageGrade(s) {
+    let marks = 0;
+    for (const c of s) if (L.PUNCT.has(c)) marks++;
+    return s.length + marks * 12;
+  }
+  function pagePool(alpha) {
+    const set = new Set(alpha);
+    const fits = (s) => [...s].every((c) => c === ' ' || set.has(c) || set.has(c.toLowerCase()));
+    return (L.PAGES || []).filter(([s]) => fits(s)).sort((a, b) => pageGrade(a[0]) - pageGrade(b[0]));
+  }
   function textWeight(p, text, tilt) {
     let sum = 0, k = 0;
     for (const c of text) { if (c === ' ') continue; sum += letterWeight(p, c, tilt); k++; }
@@ -514,7 +535,14 @@
     const wordCount = opts.count || (mode === 'keys' ? 9 : mode === 'syllables' ? 8 : mode === 'phrases' ? 8 : mode === 'punct' ? 10 : 7);
     // phrases and sentences: whole texts from the course lists, filled out
     // with real words when the pool is thin
-    if (mode === 'phrases' || mode === 'punct') {
+    if (mode === 'pages') {
+      // one page per line, easiest fitting pages favoured
+      const pgs = pagePool(alpha);
+      if (!pgs.length) return generateLine(p, { ...opts, mode: 'punct' });
+      const pick = pgs[Math.floor(Math.random() * Math.min(5, pgs.length))];
+      return textEntries(pick[0], pick[1]);
+    }
+    if (mode === 'phrases' || mode === 'punct' || mode === 'capitals') {
       const texts = mode === 'phrases' ? phrasePool(alpha) : sentencePool(alpha);
       const out = [];
       let lastText = null, guard = 0;
@@ -532,7 +560,21 @@
         }
       }
       // sentences end in a mark; a fill-in run of words gets the period
-      if (mode === 'punct' && out.length && !out[out.length - 1].punct && alpha.includes('.')) out[out.length - 1].punct = '.';
+      if (mode !== 'phrases' && out.length && !out[out.length - 1].punct && alpha.includes('.')) out[out.length - 1].punct = '.';
+      // the Crane: sentence-initial capitals, and names where they fit
+      if (mode === 'capitals' && out.length) {
+        const names = namePool(letters);
+        const capFirst = (w) => w.charAt(0).toUpperCase() + w.slice(1);
+        let boundary = true;
+        for (const e of out) {
+          if (boundary) e.text = capFirst(e.text);
+          boundary = !!(e.punct && /[.!?]/.test(e.punct));
+          if (names.length && !boundary && Math.random() < 0.12) {
+            const nm = names[Math.floor(Math.random() * names.length)];
+            e.text = nm[0]; e.gloss = nm[1];
+          }
+        }
+      }
       return out;
     }
     const famPool = mode === 'endings' ? endingPool(letters, opts.family) : null;
@@ -598,6 +640,6 @@
     loadProfile, saveProfile, resetProfile, peekProfile, adoptProfile, getLastMap, setLastMap,
     unlockedLetters, nextPair, readiness, unlockNextPair, trainable,
     recordHit, recordMiss,
-    generateLine, realWordPool, endingPool, phrasePool, sentencePool,
+    generateLine, realWordPool, endingPool, phrasePool, sentencePool, namePool, pagePool,
   };
 })();

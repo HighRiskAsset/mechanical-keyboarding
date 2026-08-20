@@ -305,6 +305,25 @@ appearance.
 
 ### Phase 5 — Tiers 4, 5 and 6
 
+**Status (2026-08-20): built.** The Crane and Manufacturer are live with
+their grammars: `capitals` (sentences with sentence-initial capitals,
+`LANG_RU.NAMES` sprinkled in; a capital's stats fold onto its lowercase
+letter — same finger, Shift is the addition) and `pages`
+(`LANG_RU.PAGES`, real paragraphs the engine grades by length and mark
+density, easiest served first; 14 placeholders — the content slot the
+user fills later). Fastener Mk2 (`? ! -`) and Mk3 (`: ; " ( )`) ride the
+existing mk-at mechanism; layout-ru maps the number-row marks (Shift+1 2
+4 6 7 9 0, hyphen plain) and uppercase for every letter, and formerly
+inert keys wake when the course puts a glyph on them (the digit caps show
+their mark). Hint taper: from T4 the rescue waits twice as long and glows
+half as bright (`.hint.dim`); from T5 it never comes. The finish:
+`TUNING.K_HEAVY` heavy modules typed by hand at the Manufacturer (a count,
+never a lock — `profile.heavy`, the 🏁 card, free play continues). Crane
+and Manufacturer sprites in the animated steampunk kit. Verified headless:
+the whole ladder climbed through all 19 events, capitals and pages lines
+generated, the card fired at heavy #150. Not yet: NAMES beyond ~36, more
+pages, the human playtest log.
+
 **Goal.** The rare tail, punctuation Mk2/Mk3, capitals, pages, the finish.
 
 **Scope.**
@@ -330,6 +349,31 @@ appearance.
   (hours per tier vs. the estimate).
 
 ### Phase 6 — Content, art, sound, tuning
+
+**Status (2026-08-20): first pass done; open until the human log.**
+- **The log, simulated:** `dev/playtest.html` — a modelled learner (WPM
+  12 → 40, accuracy 94 → 98%, one machine worked at a time, automation
+  bought as an investment once a material has cost 250 hand keystrokes,
+  automated machines running in parallel with a surplus rule standing in
+  for belts) plays a fresh save to the finish and prints hours per event
+  and per tier. The endgame is computed, not simulated (fully automated
+  chain, crane-limited), because the shared-bag stand-in misprices it.
+- **Tuning from that log:** at PACE 4 the run read 62 h against the ~30 h
+  target, with 17.7 h on Oil Mk4 alone (its price asked for 240 fastened
+  modules at ~25 keystrokes a unit). Changes: PACE 4 → 3; the tail
+  prices trimmed (Coal Mk2 fast 60→40 · Coal Mk3 qzsteel 40→25 · Oil Mk3
+  gunmetal 40→30 · Oil Mk4 fast 60→30, oil 60→80 · Fastener Mk1/2/3 fast
+  40/60/60→30/40/40); K_HEAVY 200 → 150; the Crane's automation price no
+  longer asks for heavy modules (the finish counter) — crate + mold now.
+  The bot then reads **29.5 h**. Placeholders until the human log.
+- **Invariant-5 dry run:** `js/language-en.js` (a stub, `stub: true` keeps
+  the course greyed in the switch) + `dev/en.html` — chain and engine run
+  an EN T0 world with no edit: 6 checks green.
+- **PAGES organised:** placeholders in `language-ru.js` with the writing
+  rules in a comment (the course's keys only — no numbers, no em-dash, no
+  guillemets); the engine grades and orders them itself.
+- Still open: the tuning playtest by a human; belt-clatter sound; art
+  variants per mine ore/Mk; passport coverage of the grown word list.
 
 **Goal.** Make it good, not just complete.
 

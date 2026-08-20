@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MK · invariant 5 dry run (EN stub)</title>
+<style>
+  body { font: 14px/1.5 Consolas, monospace; background: #14181b; color: #e4ece9; padding: 20px 28px; max-width: 980px; }
+  h1 { font-size: 18px; margin: 0 0 6px; } p { color: #9aa9ab; margin: 0 0 14px; }
+  .ok { color: #6cc46c; } .fail { color: #ff8a70; }
+  li { margin: 2px 0; } .sum { margin-top: 14px; font-weight: bold; }
+  pre { color: #9aa9ab; font-size: 12px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h1>Invariant 5 dry run — the EN stub</h1>
+<p>Loads js/language-en.js and js/layout-en.js, points chain.js and engine.js at them through a COURSES shim, and asserts a T0 world works with no engine edit. Not linked from the game.</p>
+<ul id="out"></ul>
+<div class="sum" id="sum"></div>
+<pre id="log"></pre>
+<script src="../js/i18n.js"></script>
+<script src="../js/board-ansi.js"></script>
+<script src="../js/layout-en.js"></script>
+<script src="../js/language-en.js"></script>
+<script>
+  // the shim stands in for js/courses.js: the active course is the EN stub
+  window.COURSES = {
+    get: () => 'en-qwerty',
+    active: () => ({ id: 'en-qwerty', ready: true }),
+    layout: () => window.LAYOUT_EN,
+    course: () => window.LANG_EN,
+    saveTag: () => 'en-dryrun.',
+    list: () => [], set: () => false,
+  };
+</script>
+<script src="../js/chain.js"></script>
+<script src="../js/engine.js"></script>
+<script src="../js/sim.js"></script>
+<script>
+(() => {
+  const C = window.CHAIN, E = window.ENGINE, L = window.LANG_EN;
+  const out = document.getElementById('out'), log = document.getElementById('log');
+  let pass = 0, fail = 0;
+  const line = (ok, text) => {
+    const li = document.createElement('li');
+    li.className = ok ? 'ok' : 'fail';
+    li.textContent = (ok ? '✓ ' : '✗ ') + text;
+    out.appendChild(li);
+    if (ok) pass++; else fail++;
+  };
+  try {
+    C.useMap('range');
+    const p = { pairsUnlocked: 3, letters: {}, seen: {}, bag: {}, machines: [], belts: [], crossings: {}, nextMachineId: 1, unlockLog: [] };
+    for (const ch of L.UNLOCK_ORDER) p.letters[ch] = { n: 0, misses: 0, ewErr: 0.5, ewLat: null };
+    line(C.unlockedKeys(p).length === 6, `T0 alphabet is the six seed keys (${C.unlockedKeys(p).join(' ')})`);
+    const smelts = C.offerableRecipes('smelter', p);
+    line(smelts.length >= 1, `the smelter offers ${smelts.length} recipe(s) at T0 (${smelts.map((r) => r.out).join(' ')})`);
+    const lineOut = E.generateLine(p, { mode: 'syllables', alphabet: C.unlockedKeys(p), count: 8 });
+    const text = lineOut.map((w) => w.text).join(' ');
+    line(!!text.length && [...text.replace(/ /g, '')].every((c) => C.unlockedKeys(p).includes(c)), `a T0 syllable line generates inside the alphabet: "${text}"`);
+    const np = C.nextPair(p);
+    line(!!np && !!C.priceNode(np.ore), `the ladder continues (next: ${np ? np.keys.join(' ') : '—'} at ${np ? np.ore : '?'})`);
+    const m = { id: 'm1', kind: 'mine', ore: 'az', node: 0, auto: false };
+    p.machines.push(m); SIM.ensure(p);
+    line(SIM.outletsOf(m) === 1, 'the simulation reads the stub world (a mine has one outlet)');
+    const words = E.realWordPool(C.unlockedKeys(p).filter((c) => !L.PUNCT.has(c)));
+    log.textContent = `word pool at T0: ${words.map(([w]) => w).join(', ')}`;
+    line(words.length >= 5, `a measured word pool exists at T0 (${words.length})`);
+  } catch (e) {
+    line(false, 'threw: ' + e.message);
+  }
+  document.getElementById('sum').textContent = `${pass} passed · ${fail} failed`;
+})();
+</script>
+</body>
+</html>

@@ -646,13 +646,64 @@
     ['день прошёл; настала ночь.', 'The day passed; night came.'], ['я знаю одно: это не конец.', 'I know one thing: this is not the end.'],
   ];
 
+  // ---- proper names: the Crane's capitals (first letter is the drill) ----
+  const NAMES = [
+    ['Анна', 'Anna'], ['Иван', 'Ivan'], ['Мария', 'Maria'], ['Пётр', 'Pyotr'],
+    ['Оля', 'Olya'], ['Нина', 'Nina'], ['Вера', 'Vera'], ['Игорь', 'Igor'],
+    ['Дима', 'Dima'], ['Таня', 'Tanya'], ['Лена', 'Lena'], ['Саша', 'Sasha'],
+    ['Костя', 'Kostya'], ['Миша', 'Misha'], ['Боря', 'Borya'], ['Галя', 'Galya'],
+    ['Зоя', 'Zoya'], ['Юра', 'Yura'], ['Федя', 'Fedya'], ['Женя', 'Zhenya'],
+    ['Москва', 'Moscow'], ['Волга', 'the Volga'], ['Сибирь', 'Siberia'], ['Урал', 'the Urals'],
+    ['Байкал', 'Lake Baikal'], ['Нева', 'the Neva'], ['Дон', 'the Don'], ['Амур', 'the Amur'],
+    ['Россия', 'Russia'], ['Казань', 'Kazan'], ['Тула', 'Tula'], ['Омск', 'Omsk'],
+    ['Томск', 'Tomsk'], ['Крым', 'Crimea'], ['Алтай', 'Altai'], ['Енисей', 'the Yenisei'],
+  ];
+
+  // ---- pages: the Manufacturer's paragraphs — THE CONTENT SLOT ----
+  // Placeholders for now (2026-08-20, the user's call: any material will do;
+  // flavour comes later). Write real prose, trivia, easter eggs, the machines
+  // talking, a plot that turns — just keep to the course's keys: the 33
+  // letters, the ten marks, capitals. No numbers, no em-dash, no «guillemets».
+  // The engine grades pages itself by length and mark density and serves the
+  // easy ones first; order in this list does not matter.
+  const PAGES = [
+    ['Утром на фронтире тихо. Оператор идёт к железному руднику, и первый слиток дня ещё холодный. Работа начинается с одной буквы.',
+      'Morning on the frontier is quiet. The operator walks to the iron mine, and the first ingot of the day is still cold. The work begins with a single letter.'],
+    ['Плавильня не спит. Она ест руду и отдаёт бронзу, и так весь день. Если лента пуста, она ждёт; если сумка полна, она рада.',
+      'The smelter never sleeps. It eats ore and gives back bronze, all day long. If the belt is empty, it waits; if the bag is full, it is glad.'],
+    ['Медь любит компанию: одна она мягкая, а с оловом твёрдая. Наши машины знают это давно. Поэтому бронза была первой.',
+      'Copper loves company: alone it is soft, with tin it is hard. Our machines have long known this. That is why bronze came first.'],
+    ['Кто проложил первую ленту, тот знает: путь находит себя сам. Груз идёт от машины к машине, и никто его не несёт. Это и есть автоматика.',
+      'Whoever laid the first belt knows: the route finds itself. Goods go from machine to machine, and nobody carries them. That is what automation is.'],
+    ['Стол мастера прост: кувалда, ключ и банка с заклёпками. Всё остальное делает пар. Но без рук пар не знает, что делать.',
+      "The craftsman's table is simple: a sledgehammer, a wrench and a jar of rivets. Steam does all the rest. But without hands, steam does not know what to do."],
+    ['Вопрос: что тяжелее, тонна угля или тонна кварца? Ответ старого шахтёра: тяжелее всего пустая вагонетка, потому что её толкать некому.',
+      "A question: which is heavier, a ton of coal or a ton of quartz? The old miner's answer: heaviest of all is the empty cart, because there is no one to push it."],
+    ['Ночью над болотом горят огни нефтяной вышки. Она качает и качает, и чёрное железо к утру готово. Так фронтир получает свои чернила.',
+      'At night the oil derrick lights burn over the bog. It pumps and pumps, and by morning the black iron is ready. That is how the frontier gets its ink.'],
+    ['Говорят, что кран однажды поднял сам себя. Это, конечно, шутка; но с тех пор его табличка гласит: "Не проверять!"',
+      'They say the crane once lifted itself. That is a joke, of course; but ever since, its plaque has read: "Do not test!"'],
+    ['Первая мануфактура стояла у реки. Вода крутила колесо, колесо крутило вал, вал крутил всё остальное. Теперь всё крутит печать: буква за буквой, страница за страницей.',
+      'The first manufactory stood by the river. Water turned the wheel, the wheel turned the shaft, the shaft turned everything else. Now typing turns it all: letter by letter, page by page.'],
+    ['Экзамен на фронтире один: собери машину, запусти её и уйди спать. Если утром она работает, ты мастер. Если нет, ты ученик; это тоже хорошо.',
+      'The frontier has one exam: assemble the machine, start it, and go to bed. If it is running in the morning, you are a master. If not, you are an apprentice; that is also fine.'],
+    ['Что такое завод? Это буквы, ставшие делом. Каждая машина здесь помнит руку, которая её собрала, и каждая лента знает свой путь. Стучи ровно, и фронтир ответит.',
+      'What is a factory? Letters become deeds. Every machine here remembers the hand that assembled it, and every belt knows its way. Type steadily, and the frontier will answer.'],
+    ['Смена кончается, когда гаснет горн. Оператор вешает катушку на гвоздь, смотрит на карту и считает: три рудника, две плавильни, один пресс. Завтра будет больше.',
+      'The shift ends when the forge goes dark. The operator hangs the spool on a nail, looks at the map and counts: three mines, two smelters, one press. Tomorrow there will be more.'],
+    ['Осторожно: у сороконожки спросили, с какой ноги она ходит, и она разучилась ходить. Не думай о пальцах; думай о слове. Пальцы сами знают дорогу.',
+      'Careful: they asked the centipede which foot it starts with, and it forgot how to walk. Do not think about your fingers; think about the word. The fingers know the way themselves.'],
+    ['Инженер пишет: "Система проста (почти). Вход: руда; выход: страницы. Всё, что между ними, называется игрой; всё, что после, называется навыком."',
+      'The engineer writes: "The system is simple (almost). Input: ore; output: pages. Everything in between is called a game; everything after is called a skill."'],
+  ];
+
   // Deduplicate (keep first gloss).
   const seen = new Set();
   const WORD_LIST = WORDS.filter(([w]) => (seen.has(w) ? false : (seen.add(w), true)));
 
   window.LANG_RU = {
     LETTER_FREQ, PAIRS, UNLOCK_ORDER, LEGACY_ORDER, SEED_COUNT, ORE_OF, VOWELS, SEMIS, PUNCT, RARE_LETTERS, TOP_BIGRAMS,
-    SYLLABLES, CLUSTERS, ENDINGS, PHRASES, SENTENCES,
+    SYLLABLES, CLUSTERS, ENDINGS, PHRASES, SENTENCES, NAMES, PAGES,
     WORD_SETS, WORDS: WORD_LIST,
   };
 })();

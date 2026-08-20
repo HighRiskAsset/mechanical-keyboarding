@@ -55,7 +55,7 @@
   // The state is read off the world each tick, never stored in the save. A
   // band is the texture per frame of one (look, state); the art is in pixels.js.
   const WORK_BEAT = 9, IDLE_BEAT = 12;   // ticks per frame of the beat / the breath
-  const STATION_LOOK = { smelter: 'bigrams', foundry: 'foundry', constructor: 'words', molder: 'molder', fastener: 'fastener' };
+  const STATION_LOOK = { smelter: 'bigrams', foundry: 'foundry', constructor: 'words', molder: 'molder', fastener: 'fastener', crane: 'crane', manufacturer: 'manufacturer' };
   // an automated mine is a different machine to look at, not a different state
   const lookOf = (kind, auto) => kind === 'mine' ? (auto ? 3 : 1) : (STATION_LOOK[kind] || 'lines');
   function band(look, mode) {

@@ -77,10 +77,15 @@
         const finger = LAYOUT.FINGER[key.code];
         if (!isSpace) cap.classList.add(finger ? (finger[0] === 'l' ? 'hand-l' : 'hand-r') : (isRight ? 'hand-r' : 'hand-l'));
         if (LAYOUT.HOME_CODES.has(key.code)) cap.classList.add('home');
-        if (key.inert) cap.classList.add('inert');
+        const shifted = LAYOUT.SHIFTED_CODE_TO_CHAR[key.code];
+        const plain = LAYOUT.CODE_TO_CHAR[key.code];
+        // inert is the geometry's default; the course wakes a key by putting
+        // a glyph on it (the Fastener's marks live on the number row)
+        if (key.inert && plain === undefined && (shifted === undefined || L.PUNCT === undefined || !L.PUNCT.has(shifted))) cap.classList.add('inert');
         if (isSpace) cap.classList.add('space');
         if (key.code === 'Slash') cap.innerHTML = '<span class="cap-shift">,</span>.';
-        else cap.textContent = key.label ?? (LAYOUT.CODE_TO_CHAR[key.code] || '').toUpperCase();
+        else if (shifted !== undefined && L.PUNCT && L.PUNCT.has(shifted)) cap.innerHTML = `<span class="cap-shift">${shifted}</span>${key.label ?? plain ?? ''}`;
+        else cap.textContent = key.label ?? (plain || '').toUpperCase();
         cap.style.left = left + 'px';
         cap.style.top = (row.y * ROW_PITCH) + 'px';
         cap.style.width = (w * KEY_U - 5) + 'px';
@@ -100,10 +105,15 @@
   // so the board stays dark long enough that recall is always the cheaper
   // move and the picture is a rescue rather than a reading surface.
   const HINT_DELAY = 2000;
+  // the taper (phase 5): from tier 4 the hint waits twice as long and glows
+  // half as bright; from tier 5 it never comes — by then every key is known
+  // and the rescue would only teach the eye to drop. Presentation only:
+  // nothing is locked behind it.
+  const hintTier = () => (profile ? CHAIN.currentTier(profile) : 0);
   let hintTimer = null;
   function clearHint() {
     if (hintTimer) { clearTimeout(hintTimer); hintTimer = null; }
-    for (const cap of Object.values(keycapEls)) cap.classList.remove('hint');
+    for (const cap of Object.values(keycapEls)) cap.classList.remove('hint', 'dim');
   }
   function applyHint() {
     const expected = lineText[pos];
@@ -112,6 +122,7 @@
     const cap = keycapEls[code];
     if (!cap) return;
     cap.classList.add('hint');
+    if (hintTier() >= 4) cap.classList.add('dim');
     if (LAYOUT.NEEDS_SHIFT.has(expected)) {
       // the far shift: the hand that is not reaching for the letter
       const shiftCode = LAYOUT.FINGER[code]?.[0] === 'r' ? 'ShiftLeft' : 'ShiftRight';
@@ -121,7 +132,9 @@
   function scheduleHint() {
     clearHint();
     if (lineText[pos] === undefined) return;
-    hintTimer = setTimeout(applyHint, HINT_DELAY);
+    const tier = hintTier();
+    if (tier >= 5) return;                                  // hint-free
+    hintTimer = setTimeout(applyHint, tier >= 4 ? HINT_DELAY * 2 : HINT_DELAY);
   }
 
   // ---------- what the board is showing you ----------
@@ -145,7 +158,12 @@
     for (const [code, cap] of Object.entries(keycapEls)) {
       if (cap.classList.contains('inert')) continue;
       const isShift = code === 'ShiftLeft' || code === 'ShiftRight';
-      const ch = LAYOUT.CODE_TO_CHAR[code];
+      let ch = LAYOUT.CODE_TO_CHAR[code];
+      // a key whose only trainable glyph is shifted (the number-row marks)
+      if (ch === undefined) {
+        const sh = LAYOUT.SHIFTED_CODE_TO_CHAR[code];
+        if (sh !== undefined && L.PUNCT.has(sh)) ch = sh;
+      }
       if (!isShift && ch === undefined) continue;
       if (isShift) paintBand(cap, undefined, shiftReady);
       else paintBand(cap, ch, ch === ' ' || unlockedSet.has(ch));
@@ -295,6 +313,15 @@
     const where = SIM.emit(profile, m, mat, n);
     if (where === 'bag') { profile.seen[mat] = true; producedSinceFloat[mat] = (producedSinceFloat[mat] || 0) + n; }
     else { profile.seen[mat] = true; beltFloat[mat] = (beltFloat[mat] || 0) + n; }
+    // the finish: K heavy modules, hand-made here — a count, never a lock
+    if (mat === 'heavy') {
+      profile.heavy = (profile.heavy || 0) + n;
+      if (!profile.finishedAt && profile.heavy >= CHAIN.TUNING.K_HEAVY) {
+        profile.finishedAt = Date.now();
+        E.saveProfile(profile);
+        showFinishCard();
+      }
+    }
   }
   let beltFloat = {};
   function workKeystroke() {
@@ -1194,6 +1221,22 @@
       <h2>${T.t('benchAutoTitle', { name: m.kind === 'mine' ? (T.t('oreMineNames')[m.ore] || m.ore) : (T.t('kindNames')[m.kind] || m.kind) })}</h2>
       <p>${T.t(m.kind === 'mine' ? 'benchAutoNote' : 'autoNoteProcessor')}</p>
       <button id="ov-continue" class="btn-primary">${T.t('automationGo')}</button>
+    `);
+    $('ov-continue').onclick = () => { hideOverlay(); };
+    $('ov-continue').focus();
+  }
+  // the finish: the frontier is built. Free play continues — raised bars,
+  // hint-free by now, more pages — nothing shuts.
+  function showFinishCard() {
+    overlayRerender = showFinishCard;
+    A.fanfare();
+    const hours = profile.totalActiveMs ? (profile.totalActiveMs / 3600000).toFixed(1) : null;
+    showOverlay(`
+      <div class="card-station">${T.t('finishStation')}</div>
+      <h2>${T.t('finishTitle')}</h2>
+      <p>${T.t('finishNote', { k: CHAIN.TUNING.K_HEAVY })}</p>
+      ${hours ? `<p class="muted">${T.t('finishHours', { hours })}</p>` : ''}
+      <button id="ov-continue" class="btn-primary">${T.t('finishGo')}</button>
     `);
     $('ov-continue').onclick = () => { hideOverlay(); };
     $('ov-continue').focus();

@@ -131,6 +131,26 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   over automated machines: green running, red starved, gold full. Harness:
   `dev/sim.html`; the whole game runs headless in `dev/play.html` (a rAF
   shim) for automated checks.
+- **Tiers 4–6 (phase 5, 2026-08-20):** the Crane drills *capitals*
+  (sentence-initial, with `NAMES`; a capital's stats fold onto its
+  lowercase letter) and the Manufacturer drills *pages* (`PAGES`, real
+  paragraphs graded by length and mark density, easiest first — the
+  content slot). Fastener Mk2 `? ! -` and Mk3 `: ; " ( )` are bought at a
+  Fastener; layout-ru puts the marks on the number row (Shift) and an
+  uppercase on every letter key; a key the shared geometry marks inert
+  wakes when the course gives it a glyph. Hints taper: from T4 slower and
+  dimmer, from T5 gone (presentation only — nothing is locked). The
+  finish: `K_HEAVY` heavy modules typed by hand at the Manufacturer —
+  `profile.heavy` counts them, the 🏁 card celebrates, free play
+  continues. Nothing else changes at the finish.
+- **The pacing log (phase 6, 2026-08-20):** `dev/playtest.html` simulates
+  a learner playing a fresh save to the finish (WPM ramp, serial hand
+  work, automation as investment, parallel machines) and prints hours per
+  tier — the tuning instrument until a human log exists. First tuning
+  from it: PACE 4 → 3, tail prices trimmed, K_HEAVY 200 → 150, the
+  Crane's automation price freed of heavy modules; the bot reads ~30 h.
+  `dev/en.html` + `js/language-en.js` (stub) prove invariant 5: the
+  engine runs an EN world untouched.
 - **Tiers 2–3 (phase 4, 2026-08-20):** the Molder, Assembler and Fastener
   run. Molder → *endings*: the flux ore names the family
   (`LANG_RU.ENDINGS`, affixes in the course's dash notation), items are
