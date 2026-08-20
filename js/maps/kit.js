@@ -105,10 +105,51 @@
     return out;
   }
 
-  // a worn patch under a station: the plot's own dirt apron
-  const apron = (x, y, kind) => ({ kind: kind || 'dirt', x: x - 16, y: y - 18, w: 64, h: 32 });
+  // A worn patch under a station: the plot's own dirt apron. A plot is a 3x2
+  // pad anchored at its foot, so the patch is the two rows the body stands on
+  // and the row in front of it where its outlets are — three tiles by three,
+  // which is what a machine and its traffic actually wear away.
+  const apron = (x, y, kind) => ({ kind: kind || 'dirt', x, y: y - 32, w: 48, h: 48 });
   // the same for an ore node (the patch art is 36×16 at the node's corner)
   const nodeApron = (x, y, kind) => ({ kind: kind || 'dirt', x: x - 14, y: y - 16, w: 64, h: 48 });
+
+  // ---------- the ground a machine claims ----------
+  // A kind's size is [tiles across, tiles deep] and its anchor is the point a
+  // plot or a vein names. Turning that into tiles is arithmetic, and it lives
+  // here rather than in the renderer because three things need the same
+  // answer: factory.js to draw and route, dev/verify.html to check every plot
+  // on every map, and a map file to know how much room a pad wants.
+  //
+  // Anchors fall where the land allows and rarely line up with the grid, so
+  // of the windows of the right size the box takes the one the drawn body
+  // covers most — that keeps it under the art wherever the machine stands.
+  function bestWindow(lo, hi, n) {
+    const first = Math.floor(lo / T), last = Math.floor(hi / T);
+    const cover = (t) => Math.max(0, Math.min(hi, t * T + T - 1) - Math.max(lo, t * T) + 1);
+    let at = first, most = -1;
+    for (let s = Math.min(first, last - n + 1); s <= last; s++) {
+      let sum = 0;
+      for (let k = 0; k < n; k++) sum += cover(s + k);
+      if (sum > most) { most = sum; at = s; }
+    }
+    return at;
+  }
+  // the art each size is drawn at: a pixel shy of the tiles on every side but
+  // the foot, which is what the machine stands on
+  function bodyBox(x, y, w, h) {
+    const c0 = bestWindow(x, x + w * T - 3, w), r0 = bestWindow(y - (h * T - 4), y + 1, h);
+    return { c0, c1: c0 + w - 1, r0, r1: r0 + h - 1, w, h };
+  }
+  // one place on the ring: the front counts columns from the left, a side
+  // counts rows up from the one the machine stands on
+  const PORT_TILE = {
+    s: (b, slot) => [b.c0 + slot, b.r1 + 1],
+    e: (b, slot) => [b.c1 + 1, b.r1 - slot],
+    w: (b, slot) => [b.c0 - 1, b.r1 - slot],
+  };
+  // the step that leads away from the machine, as [dx, dy]
+  const PORT_AWAY = { s: [0, 1], e: [1, 0], w: [-1, 0] };
+  const portTile = (box, face, slot) => PORT_TILE[face](box, slot);
 
   // ---------- the registry ----------
   const MAPS = {};
@@ -123,6 +164,7 @@
   window.MAPKIT = {
     T, FOOT_W, sc, hash, noise, fbm, field, apron, nodeApron,
     blob, anyOf, box, path,
+    bodyBox, portTile, PORT_AWAY,
     register, MAPS, IDS,
     get DEFAULT() { return IDS[0]; },
   };

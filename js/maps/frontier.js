@@ -140,21 +140,33 @@
 
   // ======================================================================
   // plots — thirty in the open basin on an 80px grid, then a handful on the
-  // high ground and the island so every landmark is worth the walk
+  // high ground and the far shore so every landmark is worth the walk
+  //
+  // A plot is a 3x2 pad: the largest machine has to fit on any of them, and
+  // it wants five tiles across and four deep to keep all three of its turns
+  // legal (body, the places round it, and a tile beyond each place for the
+  // run to arrive on). Every anchor below is checked by dev/verify.html with
+  // the whole map built, so a plot can never be a place you walk to and find
+  // you cannot use. The basin lattice sits one tile down and one left of
+  // where it first went in: that clears the veins standing among it, and
+  // moving the whole rank keeps the ranks straight.
   // ======================================================================
-  const BASIN_COLS = [416, 496, 576, 656, 736, 816, 896, 976, 1056, 1136];
-  const BASIN_ROWS = [272, 352, 432];
+  const BASIN_COLS = [400, 480, 560, 640, 720, 800, 880, 960, 1040, 1120];
+  const BASIN_ROWS = [288, 368, 448];
   const PLOTS = [];
   const plot = (x, y, region) => PLOTS.push({ id: 'p' + (PLOTS.length + 1), x, y, region });
   for (const y of BASIN_ROWS) for (const x of BASIN_COLS) plot(x, y, 'basin');
-  plot(464, 144, 'quarry');    // the mesa top
-  plot(720, 128, 'quarry');
+  plot(464, 128, 'quarry');    // the mesa top
+  plot(752, 128, 'quarry');
   plot(112, 224, 'peaks');     // the peaks shelf
   plot(224, 208, 'peaks');
   plot(1392, 336, 'canyon');   // the canyon shelf
-  plot(1472, 368, 'canyon');
-  plot(1120, 600, 'bog');      // the island
-  plot(1216, 600, 'bog');
+  plot(1424, 368, 'canyon');
+  // the island holds its coal vein and nothing else: a mine is two tiles by
+  // one and fits, a 3x2 pad does not, and the water leaves nowhere to put
+  // one. Its two plots came ashore rather than shrink the rule for them.
+  plot(1088, 688, 'bog');      // the south shore, across the water from the island
+  plot(1216, 688, 'bog');
   plot(1472, 656, 'bog');      // past the boardwalk, the south-east shore
 
   // ======================================================================

@@ -968,12 +968,26 @@ demands a measured pool of ≥25 real words before a recipe is offered.
   **Crane and the Manufacturer are 3×2**: the Manufacturer needs its front's
   third place for a fifth port (3 in + 2 out), the Crane earns the width with
   its jib, and the last two kinds ought not to look like the first Smelter
-  you ever built. Bodies grow upward from the same foot, so plots stay points
-  and free placement later changes nothing here. Measured on both maps with
-  every plot and node built at once: 2×2 leaves every plot and node usable,
-  3×2 leaves 36/39 Frontier plots and 38/39 Range. Rejected: 3×3 (it starts
-  costing plots and buys no places), and one-deep processors (they would have
-  exactly one legal orientation, which is to say no turning at all).
+  you ever built. Bodies grow upward from the same foot, so a plot stays a
+  point and free placement later changes nothing here. Rejected: 3×3 (it
+  starts costing plots and buys no places), and one-deep processors (they
+  would have exactly one legal orientation, which is to say no turning at
+  all).
+- **A build plot is one size: 3×2 (user ruling 2026-08-20).** Machines vary;
+  plots do not. A plot has to take the largest kind there is, and a smaller
+  machine simply leaves slack on it — a Smelter on a 3×2 pad wears two thirds
+  of it. The alternative was plots that matched their machine, which would
+  make "which kinds can I build here?" a question you can only answer by
+  walking there and being told no. The pad is drawn as it is: 48×32 of
+  surveyed ground, taped and pegged, the same box a body will take.
+  A plot wants **five tiles across and four deep** — body, the places round
+  it, and a tile beyond each place for a run to arrive on — for all three of
+  its turns to be legal, and `dev/verify.html` asserts exactly that for every
+  plot on every map with the whole map built. Both worlds were re-laid to
+  pass it (2026-08-20): the Frontier's basin lattice moved a tile down and a
+  tile left to clear the veins standing among it, five landmark plots moved
+  one to three tiles, and the two on the bog island came ashore — a mine
+  fits an island, a 3×2 pad does not.
 - **Turning is free** (`⟳` on every machine's menu) and re-lays that
   machine's runs to follow; a run with no route left comes up and its goods
   roll back into the source, which the caption says before you press it.

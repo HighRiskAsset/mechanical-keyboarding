@@ -175,7 +175,7 @@
     }
     socketG.visible = true;
     const bounce = Math.round(Math.abs(Math.sin(frameClock * 0.12)) * 3);
-    socketG.position.set(st.def.x + 13 - 5, st.def.y - 32 - bounce);
+    socketG.position.set(midX(st.def) - 5, st.def.y - 32 - bounce);
     // the route preview pulses with it
     if (ghostG) ghostG.alpha = 0.7 + 0.3 * Math.abs(Math.sin(frameClock * 0.12));
   }
@@ -399,7 +399,7 @@
     if (!ready || !dockId || !rows || !rows.length) { drawMenu(); return; }
     const st = stations[dockId];
     if (!st) { drawMenu(); return; }
-    const cx = st.def.x + 13;
+    const cx = midX(st.def);
     let y = st.def.y - 46 - (rows.length - 1) * 16;
     // no room above (a place near the world's top edge): the rows stand
     // beside the place instead, right of it — or left near the east edge —
@@ -458,7 +458,7 @@
     const built = shown.map((r) => rowContainer(r));
     const w = Math.max(...built.map((c) => c._w)) + (n > win ? 16 : 10);
     const h = win * 16 + 6;
-    const cx = st.def.x + 13;
+    const cx = midX(st.def);
     let px = Math.round(cx - w / 2);
     // above the machine's own rows when it has any, else above the machine —
     // and always inside the window the player is looking at: a tall panel
@@ -594,35 +594,38 @@
       const root = new PIXI.Container();
       const sp = new PIXI.Sprite(PIXELS.plotTex());
       root.addChild(sp);
-      const glow = new PIXI.Graphics().rect(0, 15, 30, 2).fill(0xc9a24a);
+      // the pad is drawn on the ground it actually is: three tiles across and
+      // two deep, anchored at the plot's foot, the same box a body takes
+      const glow = new PIXI.Graphics().rect(0, 33, 48, 2).fill(0xc9a24a);
       glow.visible = false;
       root.addChild(glow);
-      root.position.set(p.x - 2, p.y - 13);
+      root.position.set(p.x, p.y - 32);
       root.zIndex = -700;
       cameraC.addChild(root);
-      sp.alpha = 0.75;
+      sp.alpha = 0.9;
       stations['plot:' + p.id] = {
-        def: { id: 'plot:' + p.id, x: p.x, y: p.y, kind: 'plot', plot: p },
+        def: { id: 'plot:' + p.id, x: p.x, y: p.y, kind: 'plot', plot: p, bw: 48 },
         root, sp, glow, built: false, auto: false, sqTtl: 0,
-        glowRect: { x: 0, y: 15, w: 30, h: 2 },
+        glowRect: { x: 0, y: 33, w: 48, h: 2 },
       };
     }
-    // unbuilt ore nodes: the vein, surveyed
+    // unbuilt ore nodes: the vein, surveyed. A vein takes a mine and a mine
+    // is two tiles by one, so its mark is that and not a build plot's pad.
     for (const n of CHAIN.unbuiltNodes(profile)) {
       const root = new PIXI.Container();
-      const sp = new PIXI.Sprite(PIXELS.plotTex());
+      const sp = new PIXI.Sprite(PIXELS.plotTex(32, 16));
       root.addChild(sp);
-      const glow = new PIXI.Graphics().rect(0, 15, 30, 2).fill(0xc9a24a);
+      const glow = new PIXI.Graphics().rect(0, 17, 32, 2).fill(0xc9a24a);
       glow.visible = false;
       root.addChild(glow);
-      root.position.set(n.x + 2, n.y - 1);
+      root.position.set(n.x + 4, n.y - 4);
       root.zIndex = -700;
       cameraC.addChild(root);
       sp.alpha = 0.6;
       stations['node:' + n.index] = {
-        def: { id: 'node:' + n.index, x: n.x + 4, y: n.y + 12, kind: 'node', node: n },
+        def: { id: 'node:' + n.index, x: n.x + 4, y: n.y + 12, kind: 'node', node: n, bw: 32 },
         root, sp, glow, built: false, auto: false, sqTtl: 0,
-        glowRect: { x: 0, y: 15, w: 30, h: 2 },
+        glowRect: { x: 0, y: 17, w: 32, h: 2 },
       };
     }
 
@@ -647,37 +650,13 @@
   const HALF_MAT = PIXELS.MAT_PX >> 1;   // a good is centred on the band
   const tileOf = (px, py) => [Math.floor(px / T16), Math.floor(py / T16)];
   // ---------- the ground a machine stands on ----------
-  // A kind's size (chain.js) says how many tiles across and deep its body
-  // is; this puts that box on the grid. Plots and ore nodes are points and
-  // fall where the land allows, so the body rarely lines up with the tiles:
-  // of the windows of the right size the box takes the one the drawn body
-  // covers most, which keeps it under the art wherever the machine stands.
-  //
   // The box is both the tiles no run may lie on and the frame the ports hang
   // off, so a port is never a tile the body covers and a run always meets
-  // the machine flush.
-  const bodyPx = (m) => {
-    const [w, h] = SIM.sizeOf(m), pos = CHAIN.machinePos(m);
-    // the art each size is drawn at: a pixel shy of the tiles on every side
-    // but the foot, which is what the machine stands on
-    return { x0: pos.x, x1: pos.x + w * T16 - 3, y0: pos.y - (h * T16 - 4), y1: pos.y + 1, w, h };
-  };
-  // the start of the `n` neighbouring tracks the span [lo, hi] covers most
-  const bestWindow = (lo, hi, n) => {
-    const first = Math.floor(lo / T16), last = Math.floor(hi / T16);
-    const cover = (t) => Math.max(0, Math.min(hi, t * T16 + T16 - 1) - Math.max(lo, t * T16) + 1);
-    let at = first, most = -1;
-    for (let s = Math.min(first, last - n + 1); s <= last; s++) {
-      let sum = 0;
-      for (let k = 0; k < n; k++) sum += cover(s + k);
-      if (sum > most) { most = sum; at = s; }
-    }
-    return at;
-  };
+  // the machine flush. The arithmetic is MAPKIT's: dev/verify.html checks
+  // every plot on every map against the same answer this draws from.
   function bodyBox(m) {
-    const b = bodyPx(m);
-    const c0 = bestWindow(b.x0, b.x1, b.w), r0 = bestWindow(b.y0, b.y1, b.h);
-    return { c0, c1: c0 + b.w - 1, r0, r1: r0 + b.h - 1 };
+    const [w, h] = SIM.sizeOf(m), pos = CHAIN.machinePos(m);
+    return MAPKIT.bodyBox(pos.x, pos.y, w, h);
   }
   function footprintTiles(m) {
     const b = bodyBox(m);
@@ -759,27 +738,21 @@
   // ---------- a machine's ports, on the ground ----------
   // sim.js names the places around a body — one per column across the front,
   // one per row down each side — and hands each inlet and outlet one of
-  // them. Here they become tiles, hung off the body box: the front row is
-  // the one below it, a side's places climb from the row the machine stands
-  // on toward its shoulder. None of them is ever a tile the body covers.
-  const PORT_TILE = {
-    s: (b, slot) => [b.c0 + slot, b.r1 + 1],
-    e: (b, slot) => [b.c1 + 1, b.r1 - slot],
-    w: (b, slot) => [b.c0 - 1, b.r1 - slot],
-  };
-  // the STEPS index that leads away from the machine, per side it stands on
-  const PORT_AWAY = { e: 0, w: 1, s: 2 };
+  // them. MAPKIT turns a place into a tile; what is added here is the heading
+  // it may be met on.
+  //
   // A run leaves an outlet, and reaches an inlet, along that one heading and
   // no other. It is what makes the drum face the machine and the run look
   // plugged in rather than merely finishing nearby — and it is why a port
   // with a rock right outside it is a port you cannot use until you turn the
   // machine.
+  const AWAY_STEP = { e: 0, w: 1, s: 2 };   // into STEPS, below
   function machinePorts(m) {
     const b = bodyBox(m);
     const plan = SIM.ports(m);
     const place = (q) => {
-      const [tx, ty] = PORT_TILE[q.face](b, q.slot);
-      const away = PORT_AWAY[q.face];
+      const [tx, ty] = MAPKIT.portTile(b, q.face, q.slot);
+      const away = AWAY_STEP[q.face];
       return { ...q, tx, ty, away, toward: away ^ 1 };
     };
     return { out: plan.out.map(place), in: plan.in.map(place) };
@@ -1219,12 +1192,17 @@
       p.zIndex = st.def.y + 1;
       cameraC.addChild(p);
       particles.push({
-        sp: p, x: st.def.x + 10 + Math.random() * 8, y: st.def.y - 32,
+        sp: p, x: midX(st.def) - 3 + Math.random() * 8, y: st.def.y - 32,
         vy: -0.8, ttl: 18,
       });
     }
   }
 
+  // the middle of whatever a place is: a body, a pad, a vein. Everything that
+  // points at a place — the caption's sparks, the socket marker, the walk
+  // that decides which place you are standing at — reads it from here, so a
+  // kind three tiles across is docked at and lit up on its own centre line.
+  const midX = (def) => def.x + ((def.bw || 26) >> 1);
   function posOf(dockId) {
     const st = stations[dockId || dockedId];
     return st ? st.def : null;
@@ -1235,13 +1213,13 @@
     if (!def) return;
     const css = cssColor(color || 0xeacc78);
     const t = new PIXI.Sprite(PIXELS.textTex(text, css));
-    floats.push({ t, ttl: 60, wx: def.x + 13, wy: def.y - 44 });
+    floats.push({ t, ttl: 60, wx: midX(def), wy: def.y - 44 });
     labelsC.addChild(t);
-    spawnSparks(def.x + 13, def.y - 22, 5, parseInt(css.slice(1), 16));
+    spawnSparks(midX(def), def.y - 22, 5, parseInt(css.slice(1), 16));
   }
   function stamp() {
     const def = posOf(dockedId);
-    if (def) spawnSparks(def.x + 13, def.y - 26, 6, 0xffe08a);
+    if (def) spawnSparks(midX(def), def.y - 26, 6, 0xffe08a);
   }
   function getDocked() { return dockedId; }
 
@@ -1333,7 +1311,7 @@
     let best = null, bestD = 1e9;
     for (const s of Object.values(stations)) {
       if (s.def.kind === 'belt') continue;          // a run yields to anything else in reach
-      const dx = playerX - (s.def.x + 13);
+      const dx = playerX - midX(s.def);
       const dy = playerY - (s.def.y + 6);
       const d = Math.hypot(dx, dy);
       if (d < DOCK_RANGE && d < bestD) { best = s.def.id; bestD = d; }

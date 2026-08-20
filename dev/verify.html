@@ -29,6 +29,7 @@
 <script src="../js/engine.js"></script>
 <script src="../js/pixels.js"></script>
 <script src="../js/tiles.js"></script>
+<script src="../js/sim.js"></script>
 <script>
 (async () => {
   const L = window.LANG_RU, LAY = window.LAYOUT_RU, C = window.CHAIN, E = window.ENGINE;
@@ -228,7 +229,7 @@
     const map = C.MAPS[mapId];
     const W = map.W, H = map.H;
     const grid = TILES.bake(C.MAP, W, H);
-    const spots = [...C.PLOTS.map((p) => ({ id: p.id, x: p.x, y: p.y })), ...C.MAP.NODES.filter((nd) => C.ORE_BY_NODE[nd.kind]).map((nd, i) => ({ id: nd.kind + '#' + i, x: nd.x + 4, y: nd.y + 12 }))];
+    const spots = [...C.PLOTS.map((p) => ({ id: p.id, kind: 'plot', x: p.x, y: p.y })), ...C.MAP.NODES.filter((nd) => C.ORE_BY_NODE[nd.kind]).map((nd, i) => ({ id: nd.kind + '#' + i, kind: 'vein', x: nd.x + 4, y: nd.y + 12 }))];
     const cross = C.MAP.CROSSINGS.map((cr) => ({ x: cr.x, y: cr.y, w: cr.w, h: cr.h }));
     const inRect = (r, x, y) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
     const solidAt = (x, y) => { const tl = TILES.tileAt(grid, x, y); return tl === null || !!(grid.flags[tl] & TILES.FL.SOLID); };
@@ -249,17 +250,60 @@
       }
     }
     const near = (x, y) => { for (let dx = -8; dx <= 8; dx += 4) for (let dy = -8; dy <= 8; dy += 4) if (seenT.has(key(Math.round((x + dx) / step) * step, Math.round((y + dy) / step) * step))) return true; return false; };
-    for (const s of spots) {
+    // What a spot has to hold: a build plot takes the largest kind there is,
+    // a vein takes a mine. Both are checked on the real geometry — the body
+    // box MAPKIT hands factory.js, and the places sim.js hangs off it — so a
+    // plot can never be a place you walk to and find you cannot build on.
+    const biggest = C.KIND_IDS.filter((k) => k !== 'mine')
+      .reduce((a, b) => (C.KINDS[b].size[0] * C.KINDS[b].size[1] > C.KINDS[a].size[0] * C.KINDS[a].size[1] ? b : a));
+    const bodies = spots.map((s) => {
+      const [w, h] = C.KINDS[s.kind === 'vein' ? 'mine' : biggest].size;
+      return MAPKIT.bodyBox(s.x, s.y, w, h);
+    });
+    const taken = new Set();
+    bodies.forEach((b) => { for (let ty = b.r0; ty <= b.r1; ty++) for (let tx = b.c0; tx <= b.c1; tx++) taken.add(tx + ',' + ty); });
+    const tileFree = (tx, ty, mine) => {
+      const cx = tx * 16 + 8, cy = ty * 16 + 8;
+      if (cx < 0 || cy < 0 || cx >= W || cy >= H) return false;
+      if (solidAt(cx, cy) || wallAt(cx, cy) || sceneryAt(cx, cy)) return false;
+      const k = tx + ',' + ty;
+      return !taken.has(k) || (mine && mine.has(k));
+    };
+    spots.forEach((s, i) => {
       const issues = new Set();
-      for (let px = s.x - 2; px <= s.x + 28; px += 6) for (let py = s.y - 12; py <= s.y + 1; py += 6) { if (solidAt(px, py)) issues.add('solid'); if (wallAt(px, py)) issues.add('wall'); if (sceneryAt(px, py)) issues.add('scenery'); }
-      if (solidAt(s.x + 13, s.y + 6)) issues.add('dock on solid');
-      if (!near(s.x + 13, s.y + 6)) issues.add('unreachable');
+      const b = bodies[i], own = new Set();
+      for (let ty = b.r0; ty <= b.r1; ty++) for (let tx = b.c0; tx <= b.c1; tx++) own.add(tx + ',' + ty);
+      for (let ty = b.r0; ty <= b.r1; ty++) for (let tx = b.c0; tx <= b.c1; tx++) {
+        const cx = tx * 16 + 8, cy = ty * 16 + 8;
+        if (solidAt(cx, cy)) issues.add('solid');
+        if (wallAt(cx, cy)) issues.add('wall');
+        if (sceneryAt(cx, cy)) issues.add('scenery');
+        if (taken.has(tx + ',' + ty) && !own.has(tx + ',' + ty)) issues.add('body over a neighbour');
+      }
+      // every turn has to be legal, or a plot is a trap you only find later
+      const probe = { kind: s.kind === 'vein' ? 'mine' : biggest, rot: 0 };
+      const turns = [];
+      for (let r = 0; r < 3; r++) {
+        probe.rot = r;
+        const ps = SIM.ports(probe);
+        const ok = ps.out.concat(ps.in).every((q) => {
+          const [tx, ty] = MAPKIT.portTile(b, q.face, q.slot);
+          const [dx, dy] = MAPKIT.PORT_AWAY[q.face];
+          return tileFree(tx, ty, own) && tileFree(tx + dx, ty + dy, own);
+        });
+        if (ok) turns.push(r);
+      }
+      if (!turns.length) issues.add(`no turn seats a ${probe.kind}`);
+      else if (turns.length < 3 && s.kind !== 'vein') issues.add(`only ${turns.length} of 3 turns`);
+      const mid = s.x + ((C.KINDS[probe.kind].size[0] * 16 - 2) >> 1);
+      if (solidAt(mid, s.y + 6)) issues.add('dock on solid');
+      if (!near(mid, s.y + 6)) issues.add('unreachable');
       if (issues.size) placeBad.push(`${mapId} ${s.id} @${s.x},${s.y}: ${[...issues].join(' ')}`);
-    }
+    });
   }
   C.useMap(C.DEFAULT_MAP);
   const placeReal = placeBad;
-  line(!placeReal.length, 'every plot and ore node stands on clear, reachable ground', placeReal.join('<br>'));
+  line(!placeReal.length, 'every build plot seats the largest machine every way up, on clear reachable ground', placeReal.join('<br>'));
 
   document.getElementById('sum').textContent = `${pass} passed · ${fail} failed · ${warn} to look at`;
 })();

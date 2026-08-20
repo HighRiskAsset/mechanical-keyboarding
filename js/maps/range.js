@@ -7,10 +7,17 @@
   const { sc, apron } = K;
 
   const COLS = Array.from({ length: 13 }, (_, k) => 112 + 80 * k);
-  const ROWS = [146, 226, 306];
+  // Ranks of plots below the veins. A plot is a 3x2 pad and wants five tiles
+  // across and four deep for all three of its turns to be legal, so the ranks
+  // are laid on their own lattice rather than under the vein columns: a tile
+  // left of each vein, and set clear of the vein row above and the treeline
+  // below, with the ranks far enough apart that their aprons stay separate
+  // patches instead of running together into one field.
+  const PLOT_COLS = Array.from({ length: 13 }, (_, k) => 96 + 80 * k);
+  const PLOT_ROWS = [144, 208, 272];
   const PLOTS = [];
   for (const x of COLS.slice(7, 13)) PLOTS.push({ id: 'p' + (PLOTS.length + 1), x, y: 66 });
-  for (const y of ROWS) for (const x of COLS) PLOTS.push({ id: 'p' + (PLOTS.length + 1), x, y });
+  for (const y of PLOT_ROWS) for (const x of PLOT_COLS) PLOTS.push({ id: 'p' + (PLOTS.length + 1), x, y });
 
   const SCENERY = [
     sc('tree', 5, 20), sc('tree2', 12, 21), sc('rock', 19, 20), sc('tree', 26, 21),
@@ -43,7 +50,7 @@
       { kind: 'dirt', x: 80, y: 112, w: 16, h: 16 },
       { kind: 'dirt', x: 128, y: 80, w: 16, h: 16 }, { kind: 'dirt', x: 208, y: 80, w: 16, h: 16 }, { kind: 'dirt', x: 288, y: 80, w: 16, h: 16 },
       { kind: 'dirt', x: 1088, y: 80, w: 16, h: 16 },
-      ...ROWS.flatMap((y) => COLS.map((x) => apron(x, y))),
+      ...PLOT_ROWS.flatMap((y) => PLOT_COLS.map((x) => apron(x, y))),
       { kind: 'sand', x: 1024, y: 320, w: 112, h: 64 },
       { kind: 'water', x: 1040, y: 336, w: 80, h: 32 },
     ],

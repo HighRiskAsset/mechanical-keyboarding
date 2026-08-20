@@ -1161,16 +1161,25 @@
 
   // ---------- buildable plot marker 30x14: bold survey outline ----------
   // Bright: translucent gold fill, thick dashes, red-and-white corner stakes.
-  function plotMarker() {
-    const [c, x] = canvas(30, 14);
-    x.fillStyle = 'rgba(242, 193, 78, 0.25)';
-    x.fillRect(1, 1, 28, 12);
-    for (let i = 3; i < 27; i += 6) { R(x, P.brass2, i, 0, 4, 2); R(x, P.brass2, i, 12, 4, 2); }
-    for (let i = 4; i < 10; i += 5) { R(x, P.brass2, 0, i, 2, 4); R(x, P.brass2, 28, i, 2, 4); }
-    for (const [sx, sy] of [[0, 0], [27, 0], [0, 11], [27, 11]]) {
+  // A surveyed pad: three tiles across, two deep — the ground the largest
+  // machine stands on, so what you see before you build is what you get
+  // after. Marked out in surveyor's tape with a peg at each corner.
+  function plotMarker(w, h) {
+    const W = w || 48, H = h || 32;
+    const [c, x] = canvas(W, H);
+    x.fillStyle = 'rgba(242, 193, 78, 0.28)';
+    x.fillRect(1, 1, W - 2, H - 2);
+    // tape right round, not a dotted suggestion of one: on worn dirt a pad
+    // marked only at intervals read as no pad at all
+    R(x, P.brass1, 0, 0, W, 1); R(x, P.brass1, 0, H - 1, W, 1);
+    R(x, P.brass1, 0, 0, 1, H); R(x, P.brass1, W - 1, 0, 1, H);
+    for (let i = 3; i < W - 3; i += 6) { R(x, P.brass2, i, 0, 3, 1); R(x, P.brass2, i, H - 1, 3, 1); }
+    for (let i = 3; i < H - 3; i += 6) { R(x, P.brass2, 0, i, 1, 3); R(x, P.brass2, W - 1, i, 1, 3); }
+    for (const [sx, sy] of [[0, 0], [W - 3, 0], [0, H - 3], [W - 3, H - 3]]) {
       R(x, P.white, sx, sy, 3, 3); R(x, P.red, sx, sy, 3, 1);
     }
-    R(x, P.brass3, 13, 6, 5, 1); R(x, P.brass3, 15, 4, 1, 5);
+    const cx = (W >> 1) - 1, cy = (H >> 1) - 1;
+    R(x, P.brass3, cx - 2, cy, 5, 1); R(x, P.brass3, cx, cy - 2, 1, 5);
     return c;
   }
 
@@ -1528,7 +1537,8 @@
     petalTex: (frame) => cachedTex('petal:' + frame, () => petal(frame)),
     glowHaloTex: () => cachedTex('halo', glowHalo),
     propTex: (kind) => cachedTex('prop:' + kind, PROP_DRAW[kind]),
-    plotTex: () => cachedTex('plot', plotMarker),
+    // a build plot is a 3x2 pad; an unbuilt vein is the 2x1 a mine stands on
+    plotTex: (w, h) => cachedTex('plot:' + (w || 48) + 'x' + (h || 32), () => plotMarker(w, h)),
     // scenery: the meadow set lives here; region sets (pine, boulder, reeds…) in tiles.js
     sceneryTex: (kind) => cachedTex('scenery:' + kind,
       SCENERY_DRAW[kind] || (() => window.TILES.scenery(kind))),
