@@ -37,6 +37,7 @@
   // phase 3: belts on the map, items riding them, the spool, the ghost route
   let simProfile = null;               // the save whose belts/items we draw (set by buildWorld)
   let beltViews = {};                  // belt id → {c, items:[sprite], pipe, b}
+  const beltTileIndex = new Map();      // "tx,ty" → belt ids on that tile (two where runs cross)
   let spoolSp = null, spoolOn = false;
   let ghostG = null;
   let stateDots = {};                  // machine dock id → sprite (automated machines)
@@ -504,6 +505,8 @@
     clearInfo(); clearMenu(); clearGhost();
     for (const v of Object.values(beltViews)) { cameraC.removeChild(v.c); v.c.destroy({ children: true }); }
     beltViews = {};
+    beltTileIndex.clear();
+    beltDockId = null;                 // its station goes with the rest, below
     for (const s of Object.values(stateDots)) { cameraC.removeChild(s); s.destroy(); }
     stateDots = {};
     for (const s of Object.values(stations)) { cameraC.removeChild(s.root); s.root.destroy({ children: true }); }
@@ -898,7 +901,54 @@
       c.addChild(itemsC);
       cameraC.addChild(c);
       beltViews[b.id] = { c, itemsC, items: [], pipe, b, geo };
+      for (const [tx, ty] of b.path) {
+        const k = key(tx, ty);
+        const l = beltTileIndex.get(k);
+        if (l) l.push(b.id); else beltTileIndex.set(k, [b.id]);
+      }
     });
+  }
+
+  // ---------- standing on a run ----------
+  // A run is a place like any other: step onto one of its tiles and it has
+  // its own menu, and taking the run up is a row in it. That belongs here
+  // rather than in the menu of a machine the run happens to reach — a busy
+  // machine has runs coming and going and no way to tell them apart in a
+  // list, so the wrong one came up too easily.
+  let beltDockId = null;
+  function clearBeltDock() {
+    if (!beltDockId) return;
+    const st = stations[beltDockId];
+    if (st) { cameraC.removeChild(st.root); st.root.destroy({ children: true }); delete stations[beltDockId]; }
+    beltDockId = null;
+  }
+  // the run under the operator's feet, if any — two ids where runs cross
+  function beltsUnderfoot() {
+    if (!simProfile) return null;
+    const [tx, ty] = tileOf(playerX, playerY - 2);
+    const ids = beltTileIndex.get(key(tx, ty));
+    return ids && ids.length ? { tx, ty, ids } : null;
+  }
+  // one station, moved to whichever tile of whichever run is underfoot, so
+  // the menu, the glow and the caption all work the way they do everywhere
+  function beltDock(tx, ty, ids) {
+    const id = 'belt:' + tx + ',' + ty;
+    if (beltDockId === id && stations[id]) { stations[id].def.belts = ids; return id; }
+    clearBeltDock();
+    const root = new PIXI.Container();
+    const glow = new PIXI.Graphics();
+    glow.visible = false;
+    root.addChild(glow);
+    const def = { id, x: tx * T16 - 5, y: ty * T16 + T16, kind: 'belt', tile: [tx, ty], belts: ids };
+    root.position.set(def.x, def.y - 36);
+    root.zIndex = ty * T16 + 8;
+    cameraC.addChild(root);
+    stations[id] = {
+      def, root, sp: null, glow, built: true, auto: false, sqTtl: 0,
+      glowRect: { x: 5, y: 34, w: T16, h: 2 },     // a bar along the tile's own foot
+    };
+    beltDockId = id;
+    return id;
   }
   // how the band crosses one tile: straight through its centre, or a quarter
   // turn of radius 8 about the corner the two sides share
@@ -1116,11 +1166,16 @@
     // docking: 2D proximity to the place's work spot (front-center)
     let best = null, bestD = 1e9;
     for (const s of Object.values(stations)) {
+      if (s.def.kind === 'belt') continue;          // a run yields to anything else in reach
       const dx = playerX - (s.def.x + 13);
       const dy = playerY - (s.def.y + 6);
       const d = Math.hypot(dx, dy);
       if (d < DOCK_RANGE && d < bestD) { best = s.def.id; bestD = d; }
     }
+    // nothing else claims you: the run you are standing on does
+    const onRun = best ? null : beltsUnderfoot();
+    if (onRun) best = beltDock(onRun.tx, onRun.ty, onRun.ids);
+    else if (beltDockId) clearBeltDock();
     if (best !== dockedId) {
       dockedId = best;
       workTtl = 0; working = false;

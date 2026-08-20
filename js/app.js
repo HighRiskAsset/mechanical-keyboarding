@@ -352,6 +352,20 @@
     } else if (d.kind === 'crossing') {
       const price = CHAIN.priceCrossing(d.crossing) || {};
       rows.push({ pre: '→', items: price, enabled: canPay(price), priced: true, caption: T.t('capRepair'), action: { type: 'repair', id: d.crossing.id, price } });
+    } else if (d.kind === 'belt') {
+      // the run underfoot — both of them where two cross. Its own menu, so
+      // taking one up is a hold and then a press, never a stray press.
+      for (const id of d.belts) {
+        const b = (profile.belts || []).find((x) => x.id === id);
+        if (!b) continue;
+        const from = SIM.machineById(profile, b.from), to = SIM.machineById(profile, b.to);
+        rows.push({
+          pre: '✗', kind: from ? from.kind : undefined, ore: from && from.kind === 'mine' ? from.ore : undefined,
+          enabled: true,
+          caption: T.t('capUnbelt', { from: machineName(from), to: machineName(to) }),
+          action: { type: 'unbelt', id },
+        });
+      }
     } else if (d.kind === 'node') {
       const ore = d.node.ore;
       if (CHAIN.oreOpen(profile, ore)) {
@@ -447,13 +461,9 @@
     if (!spool && SIM.beltsFrom(profile, m).length < SIM.outletsOf(m) && (m.kind === 'mine' || SIM.produces(profile, m).length)) {
       rows.push({ pre: '→', enabled: true, caption: T.t('capSpool', { mats: matList(SIM.produces(profile, m)) }), action: { type: 'spool', m } });
     }
-    // belts in and out of this machine: one row each, ✗ removes it
-    let k = 0;
-    for (const b of [...SIM.beltsTo(profile, m), ...SIM.beltsFrom(profile, m)]) {
-      if (k++ >= 3) break;
-      const other = SIM.machineById(profile, b.to === m.id ? b.from : b.to);
-      rows.push({ pre: b.to === m.id ? '✗→' : '✗←', kind: other ? other.kind : undefined, ore: other && other.kind === 'mine' ? other.ore : undefined, enabled: true, caption: T.t('capUnbelt', { dir: b.to === m.id ? 'in' : 'out', other: machineName(other) }), action: { type: 'unbelt', id: b.id } });
-    }
+    // taking a run up is not offered here. A machine with several runs
+    // coming and going gave a list of ✗ rows there was no reading, and the
+    // wrong one went too easily; you take a run up by standing on it.
     void mid;
   }
   const nonZero = (o) => Object.fromEntries(Object.entries(o || {}).filter(([, n]) => n > 0));
@@ -482,6 +492,7 @@
     if (d.kind === 'plot') return T.t('capPlot');
     if (d.kind === 'node') return (T.t('veinNames') || {})[d.node.ore] || d.node.ore;
     if (d.kind === 'crossing') return T.t('capCrossing');
+    if (d.kind === 'belt') return T.t(d.belts.length > 1 ? 'capOnCrossing' : 'capOnBelt');
     return '';
   }
   // the caption: the chosen row's meaning while a menu is open; the place
@@ -1089,6 +1100,9 @@
     } else if (id && id.startsWith('cross:')) {
       const crossing = CHAIN.closedCrossings(profile).find((c) => 'cross:' + c.id === id);
       if (crossing) dock = { id, kind: 'crossing', crossing };
+    } else if (id && id.startsWith('belt:')) {
+      const def = FACTORY.posOf(id);
+      if (def) dock = { id, kind: 'belt', tile: def.tile, belts: def.belts };
     }
     recipe = dock && dock.kind === 'machine' ? pickRecipe(dock.m) : null;
     unitAcc = 0; unitPaid = false; dryNow = false;

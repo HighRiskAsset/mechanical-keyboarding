@@ -119,15 +119,28 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   processors 2 — laid by **spool & socket** (hold Space at the source →
   spool on the back → walk → the route previews green/red at each machine →
   hold Space to lay; `FACTORY.routeBelt` is a breadth-first search over
-  free tiles: machines, scenery, solids and other belts block, ramps carry
-  elevation, open crossings override); a belt carries only what its
-  consumer's chosen recipe accepts, one item per tile at
+  states of (tile, heading): machines, scenery and solids block, ramps carry
+  elevation, open crossings override, and of the shortest routes it takes
+  one with the fewest corners. A machine claims a tile when its drawn body
+  covers six of that tile's sixteen pixels, so a run ends against it rather
+  than a tile short. Two runs may share a tile only by **crossing** it — one
+  on each axis, both straight through, neither turning or ending there —
+  which makes a crossing a single tile and never a shared length; the later
+  run bridges the earlier and throws a shadow on it. A belt carries only
+  what its consumer's chosen recipe accepts, one item per tile at
   `TUNING.BELT_SPEED`; a belt from an oil derrick draws as a pipe. Menus:
   feed (bag → an automated machine's inputs), collect (output buffer →
-  bag), spool / socket / put back, and one ✗ row per belt to remove it.
-  The clock is real time: a live tick every 120 ms, `SIM.catchUp` on load
-  and when the tab returns (bounded by buffers; at most six hours), saves
-  every 15 s. A Mk on an ore retools its mines (automation off). State dots
+  bag), spool / socket / put back. **A run is taken up from the run**, not
+  from a machine: stand on any of its tiles, hold Space for its own menu,
+  and the ✗ row there removes it (both rows where two cross). A machine
+  with runs coming and going gave a list there was no reading, and the
+  wrong one went too easily. The clock is real time and has two hands —
+  the animation frame while the page draws, a 250 ms timer while the tab is
+  in the background, both through one `SIM.tick` that reads the elapsed
+  time from a single `lastTick`, because this host stops delivering frames
+  to a tab that is not on top without ever marking the page hidden.
+  `SIM.catchUp` on load and when the tab returns (bounded by buffers; at
+  most six hours), saves every 15 s. A Mk on an ore retools its mines (automation off). State dots
   over automated machines: green running, red starved, gold full. Harness:
   `dev/sim.html`; the whole game runs headless in `dev/play.html` (a rAF
   shim) for automated checks.
