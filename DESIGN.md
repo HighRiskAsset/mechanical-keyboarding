@@ -325,8 +325,9 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   (`TILES.minimap`), the world's promise, its save's progress line, and
   Begin/Continue; the last-played world is focused so Enter resumes at once;
   ← → move, EN/РУ sits on the card. Two worlds today:
-  **The Frontier** (`frontier`, 1168×496) — the six-biome snake below, the
-  game proper: tests the environments and geographical progression. **Open
+  **The Frontier** (`frontier`, 1600×720) — the open basin below, the game
+  proper: one wide meadow to build in with all six biomes, every terrain and
+  every obstacle wrapped around its rim. **Open
   Range** (`range`, 1168×416, the frontier's width) — one flat meadow ringed
   by forest on a 13-column × 4-row station grid (80px pitch): row A holds
   the three mines and the four later nodes in a row by the hub, five free
@@ -335,8 +336,12 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   sits west, a worn road runs under row A hub→depot, nothing stands in any
   route, a pond in the SE corner for colour: tests the mechanics (build,
   deliver, automate, belt, edition) without walking or gating, with room for
-  the whole 14-machine tree and then some. Adding a world = a new entry in
-  `MAPS` + two i18n strings (name, tagline).
+  the whole 14-machine tree and then some. **A world is a file** (2026-08-20):
+  `js/maps/kit.js` holds the shared kit and the registry, and each world is
+  `js/maps/<id>.js` ending in `MAPKIT.register({...})`, loaded before
+  `js/chain.js` — which now owns only the chain. Adding a world = a new file
+  in `js/maps/`, a script tag, and two i18n strings (name, tagline);
+  registration order is the picker's order and the first one is the default.
 - **Dynamic viewport**: fills all space the drill + keyboard don't need, at
   the largest integer zoom that keeps ≥300×170 world px visible — bigger
   window means bigger pixels first, then more world. Never letterboxes more
@@ -357,6 +362,10 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   goods of the regions behind you (`PRICES.crossing`) — nothing is locked
   behind a tier number; the old BELTS list and per-keystroke autofeed are
   gone until phase 3 brings belts and machine buffers back properly.
+  (**User ruling 2026-08-20: nothing on The Frontier is gated at all.** Its
+  rebuilt geography has no closed crossing — every bridge and causeway
+  carries `free` and stands open from the first second. The repair mechanic
+  and `PRICES.crossing` remain in the code for a world that wants them.)
 - **The keyboard check (2026-08-20)**: the game is desktop-only and now says
   so instead of dying quietly. Everything it reads is a physical position
   (`e.code` through the layout tables) and two keys are *held* — space runs a
@@ -581,37 +590,65 @@ the meadow ✔ → 2 regions east + 4 ore patches + ~6 plots + closed crossings 
   `GROUND` rects (kind); `PLATEAUS` (raised ground within a biome: `elev`,
   face height, ramps S/W/E; the walkable top is the rect inset one tile on
   N/E/W — author with that in mind); `WALLS`; `CROSSINGS` (kind pass | drift
-  | bridge | boardwalk | stairs, rect, `opensAfter` edition id, style, `dir`
-  'h' walked E–W / 'v' walked N–S — stairs bake as a flight through a face);
-  `NODES` ×7. Elevation is multi-level: any drop shows a face on the row(s)
+  | bridge | boardwalk | stairs, rect, style, `dir` 'h' walked E–W / 'v'
+  walked N–S — stairs bake as a flight through a face — and `free`, which
+  means it was never broken and stands open from the first second);
+  `NODES` ×14. Elevation is multi-level: any drop shows a face on the row(s)
   below in the HIGH biome's cliff palette, any higher edge shows a rim.
-  `regionAt(x, y)`; `crossingOpen(profile, c)` — a crossing naming an
-  edition that doesn't exist yet is honestly closed. A new map = a new set of
-  rects — a `MAPS` entry (see Maps above; the second world, Open Range,
-  arrived 2026-08-18 and this layout became **The Frontier**).
-- **The world (this layout — a snake, 1168×496 = 73×31 tiles)**. North
-  row, high ground (elev 1): **Meadow** (grass, tan) with the pond + sand
-  shore, worn road hub→depot with spurs, cobble pads under hub/depot, a
-  knoll (plot p8, elev 2) with face + stairs, a tan wall with a gate (x1,
-  opens after Издание I) → **Quarry hills** (rock, tan): two terraces (p13
-  on top, the stone seam on the other), grass tufts on stone; a bridge (x2)
-  over the stream → **Crystal canyon** (shale, violet): stream with a sand
-  bank, north wall face, crystals, plot p15, and a **stairs crossing (x3)
-  down the two-row face** into the lowlands. South row (elev 0), running back
-  west under the north row: **Coal bog** under the canyon (marsh, grey):
-  pools, plank walks, reeds, dead trees, coal seam, p16; a grey wall with a
-  gap (x4) → **Oil flats** under the quarry (cracked earth, tan): tar pools,
-  scrub, a mesa with side stairs, oil seam, p17; a tan wall with a snowdrift
-  (x5) → **Titanium peaks** under the meadow (snow): frost patches, an ice
-  pond, snowpines, a shelf with a 2-row snow-capped face + stairs and the
-  titanium seam, p18. Existing stations untouched; the quartz node stays in
-  the meadow until tier 3 lands. Cliff faces along the whole north/south
-  drop wear each high biome's palette (tan under meadow/quarry, violet under
-  the canyon).
-- **`dev/tiles.html`** — proof sheet: bakes synthetic maps through the real
-  `bake()` and POSTs a 3× PNG to `/upload` for review. Not linked from the game.
-- Verified: no console errors; 17 passability probes (faces, water, walls,
-  stairs up/down, side stairs, lips) behave; bake ≈ 8 ms warm.
+  `regionAt(x, y)`; `crossingOpen(profile, c)`.
+- **`js/maps/kit.js` — the map kit (2026-08-20)**. A world file is data and
+  arithmetic only: no PIXI, no CHAIN. `sc()` places solid scenery; `hash` /
+  `noise` / `fbm` are deterministic value noise (never `Math.random` — the
+  save remembers where things were built, not what the ground looked like,
+  so a world must bake identically on every machine); `blob(cx,cy,rx,ry,seed,
+  wob)` is a noise-wobbled ellipse in tile space, wobbled in polar
+  coordinates so it closes on itself — two blobs sharing a seed wobble in
+  step, which is how a shore follows its water; `path()` is a wandering worn
+  track; `box()` is for the things somebody actually built; and `field(cols,
+  rows, pick)` turns a per-tile decision back into GROUND rects, run
+  together along each row. **The schema is still rects. The shapes are not.**
+- **The world — THE FRONTIER (rebuilt 2026-08-20, 1600×720 = 100×45 tiles)**.
+  A 60×20-tile grass **basin** in the middle holds the landing, a wandering
+  track, thirty plots on an 80px grid and the first vein of every ore.
+  Nothing solid stands in it — no cliff, no water, no boulder, not one rock.
+  **The landing cluster (user ruling 2026-08-20): the three mines the player
+  starts with must all be on screen when the world opens.** Iron, copper and
+  stone stand around the landing pad, authored against the worst case the
+  dynamic viewport allows — 300×170 world px, so 150 either side of the
+  spawn, 93 above and 77 below (`camY` leans 8px down) — and every one of
+  them clears that box by at least 13px. The basin's other four veins sit at
+  its corners and the deeper ones are away in the ring: those are a walk and
+  a look around, which is the point of them.
+  Six biomes ring it and none of them is a rectangle: **peaks** west (snow,
+  grey cliffs — a white cliff on white ground has no height to it), **quarry**
+  north-west (rock, tan), **canyon** north-east and east (shale, violet),
+  **bog** south-east (marsh, grey), **flats** south-west (cracked earth, tan).
+  Each fades into the basin along its own ramp of ground kinds — grass →
+  dirt → rock, grass → frost → snow, grass → sand → shale — over a front a
+  noise field drags back and forth by half a dozen tiles, with the wobble
+  faded out towards the middle so the meadow stays clean. Which biome a tile
+  belongs to is read at a domain-warped point, so the seams between
+  neighbours wander and each throws headlands across the other. High ground
+  reads further along its ramp than the lowland at its foot and its crown is
+  stripped to stone, so a plateau never wears the same coat as the ground
+  below it. Water, ice and tar are blobs with their own shores.
+  Landmarks: **THE GREAT MESA** (elev 2, north) is four blocks reaching
+  different distances south, so its front steps in and out; each step carries
+  a three-tile flight down and a cut through the rim gives a way up each
+  side. The **peaks shelf** and the **canyon shelf** are the same idea at
+  elev 1, three blocks each. The **island** in the south lake has two lobes
+  and six open crossings — a plank causeway west, a long bridge east, two
+  north and two south. The deeper vein of every ore sits out in the biome it
+  belongs to, so each landmark is worth the walk. Nothing is gated: every
+  crossing carries `free`.
+- **`dev/map.html`** — proof sheet: bakes a world through the real `bake()`,
+  plants its forest, nodes, scenery and crossings the way `factory.js` does,
+  outlines every plot and POSTs the PNG to `assets/inbox/`. This is how the
+  terrain gets reviewed. **`dev/tiles.html`** does the same for synthetic
+  tile samples. Neither is linked from the game.
+- Verified 2026-08-20: dev/verify.html passes 25/25 — every plot and ore node
+  stands on clear, reachable ground on both worlds; no console errors; bake ≈
+  70 ms cold for the 100×45 frontier.
 - Known follow-ups (steps 3–5): landmarks per region (waterfall at the
   stream head, summit), ambient life, tune cobble contrast, HUD rows for the
   four new materials when their machines exist.
@@ -1043,8 +1080,9 @@ RU course data · `js/layout-ru.js` ЙЦУКЕН glyphs · `js/layout-en.js` QWE
 glyphs (course data pending) · `js/board-ansi.js` the physical ANSI slab
 shared by both · `js/flags.js` drawn flags + `js/icons.js` the globe and
 keyboard marks that label the switches ·
-`js/chain.js` chain/economy data
-+ the `MAPS` registry (Frontier, Open Range) · `js/factory.js` Pixi world
+`js/chain.js` chain/economy data (the chain only) · `js/maps/kit.js`
+the map kit + world registry, `js/maps/frontier.js` + `js/maps/range.js`
+the two worlds · `js/factory.js` Pixi world
 (`loadMap` per world) · `js/pixels.js` sprite kit + the one palette, incl. the
 steampunk machinery parts kit `M` and the three machine animation states ·
 `js/tiles.js` terrain kit (fills, autotile spills, walls, faces, crossings,
@@ -1052,7 +1090,8 @@ region scenery, `bake`, `minimap`) · `js/app.js` orchestration + the map
 picker · `js/audio.js` synth ·
 `js/i18n.js` EN/РУ · `serve.ps1` dev server (+ POST /upload for QA frames) ·
 `js/sim.js` the factory simulation (buffers, jobs, belts, the clock) ·
-`dev/tiles.html` terrain proof sheet · `dev/machines.html` machinery proof
+`dev/map.html` + `dev/map-proof.js` world proof sheet · `dev/tiles.html`
+terrain proof sheet · `dev/machines.html` machinery proof
 sheet (rigs, works, belts, pipes, props, icons on real terrain, and every
 machine in its three animation states) ·
 `dev/verify.html` data checks ·

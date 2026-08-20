@@ -29,9 +29,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File serve.ps1
 
 then visit http://localhost:8123.
 
-Pick a **world** first — *The Frontier* (six lands, cliffs, closed
-crossings) or *Open Range* (one flat meadow, every node in reach, room to
-build) —
+Pick a **world** first — *The Frontier* (one wide meadow to build in, six
+lands around its rim) or *Open Range* (one flat plain, every node in reach,
+room to build) —
 each keeps its own save, so nothing mined, built or unlocked carries over.
 Then walk with the **arrow keys**, stand at a machine and **type** to run
 it, **hold Space** to open the menu of the place you stand at — build a
@@ -83,3 +83,10 @@ Adding a language or layout is meant to be purely additive — a
 `js/layout-<code>.js` (key geometry, shift rules, intrusion mapping). The
 engine is layout-pluggable and should need no changes; if it does, that's a
 bug against invariant 5 in DESIGN.md.
+
+Adding a **world** is additive the same way: a `js/maps/<id>.js` that ends in
+`MAPKIT.register({...})`, a script tag before `js/chain.js`, and a name and
+tagline in `js/i18n.js`. The shared kit (`js/maps/kit.js`) gives a world
+deterministic noise, blobs, wandering paths and the tile-field helper, so
+biomes and coastlines can be shaped rather than drawn as rectangles.
+`dev/map.html` renders any world to a PNG for review.

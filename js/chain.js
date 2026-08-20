@@ -1,6 +1,6 @@
-// The production chain and the maps (tech tree v3, DESIGN.md): ores, machine
-// kinds, recipes, prices, tier bars, plots, nodes, scenery. Walking IS the
-// menu; this file is the world's data. Global: CHAIN
+// The production chain (tech tree v3, DESIGN.md): ores, machine kinds,
+// recipes, prices, tier bars. Walking IS the menu; this file is the rules.
+// Global: CHAIN
 //
 // v3 rules this file encodes: an ore is a finger and a Mk is a reach (the
 // pairs live in language-ru.js); a material's alphabet is the union of the
@@ -9,10 +9,10 @@
 // bag at the place (no Hub, no kits, no contracts, no Depot); kinds are
 // templates — several instances may stand.
 //
-// Maps (2026-08-18): the chain is shared, the ground is not. MAPS is a
-// registry of worlds — each one its own terrain, plots, nodes, scenery,
-// props and spawn — and CHAIN.useMap(id) makes one of them current. Every
-// world keeps its own save (engine.js).
+// Maps (2026-08-18; split out of this file 2026-08-20): the chain is shared,
+// the ground is not. Each world is its own file in js/maps/ and registers
+// itself with MAPKIT before this file loads; CHAIN.useMap(id) makes one of
+// them current. Every world keeps its own save (engine.js).
 (function () {
   'use strict';
 
@@ -414,287 +414,15 @@
     });
   }
 
-  // ---- solid scenery ----
-  // Everything stands ON a tile — sc(kind, tx, ty) names the tile under its
-  // base; wide kinds (FOOT_W) span that many tiles to the east. The sprite is
-  // drawn centred on the footprint with its base on the tile bottom
-  // (factory.js); the collision box is the footprint, inset a hair.
-  const FOOT_W = { boulder: 2, tarpool: 2 };
-  const sc = (kind, tx, ty) => {
-    const fw = FOOT_W[kind.replace(/\d+$/, '')] || 1;
-    return { kind, tx, ty, fw, box: { x: tx * 16 + 2, y: ty * 16 + 3, w: fw * 16 - 4, h: 12 } };
-  };
-
-  // ======================================================================
-  // THE FRONTIER — the world proper: six biomes laid as a snake, cliffs,
-  // closed crossings, plots scattered where the land allows.
-  // ======================================================================
-
-  const FRONTIER_PLOTS = [
-    { id: 'p1', x: 96, y: 66 },        // (the iron mine stands here — filtered)
-    { id: 'p2', x: 176, y: 66 },
-    { id: 'p3', x: 136, y: 150 },      // (copper mine — filtered)
-    { id: 'p4', x: 256, y: 108 },
-    { id: 'p5', x: 256, y: 190 },      // (quartz node — filtered)
-    { id: 'p6', x: 356, y: 130 },
-    { id: 'p7', x: 446, y: 96 },
-    { id: 'p8', x: 340, y: 66 },       // on the meadow knoll (stairs at x=352)
-    { id: 'p9', x: 60, y: 150 },       // (stone mine — filtered)
-    { id: 'p10', x: 446, y: 190 },
-    { id: 'p11', x: 190, y: 210 },
-    { id: 'p12', x: 316, y: 190 },
-    { id: 'p13', x: 608, y: 82, region: 'quarry' },   // terrace top
-    { id: 'p14', x: 672, y: 210, region: 'quarry' },  // (copper #2 — filtered)
-    { id: 'p15', x: 1000, y: 130, region: 'canyon' }, // (quartz #2 — filtered)
-    { id: 'p16', x: 1044, y: 324, region: 'bog' },    // (coal #2 — filtered)
-    { id: 'p17', x: 740, y: 354, region: 'flats' },   // (oil #2 — filtered)
-    { id: 'p18', x: 92, y: 354, region: 'peaks' },    // (iron #3 — filtered)
-    // phase 4: the outer regions get plots of their own (the pyramid needs
-    // them once the T2–T3 nodes take the first ones)
-    { id: 'p19', x: 580, y: 200, region: 'quarry' },
-    { id: 'p20', x: 776, y: 226, region: 'quarry' },
-    { id: 'p21', x: 900, y: 196, region: 'canyon' },
-    { id: 'p22', x: 1100, y: 196, region: 'canyon' },
-    { id: 'p23', x: 930, y: 440, region: 'bog' },
-    { id: 'p24', x: 1110, y: 420, region: 'bog' },
-    { id: 'p25', x: 580, y: 360, region: 'flats' },
-    { id: 'p26', x: 800, y: 300, region: 'flats' },
-    { id: 'p27', x: 420, y: 300, region: 'peaks' },
-    { id: 'p28', x: 200, y: 440, region: 'peaks' },
-    { id: 'p29', x: 360, y: 440, region: 'peaks' },
-  ];
-
-  const FRONTIER_SCENERY = [
-    // meadow
-    sc('tree', 13, 8), sc('tree2', 19, 7), sc('tree', 29, 10), sc('tree2', 10, 13),
-    sc('rock', 9, 5), sc('rock2', 21, 13), sc('rock', 24, 4), sc('tree', 2, 10),
-    // quarry hills
-    sc('boulder', 35, 13), sc('boulder2', 43, 7), sc('spire', 50, 5), sc('rock', 46, 14),
-    sc('tree', 38, 14), sc('boulder', 40, 4),
-    // crystal canyon
-    sc('crystal', 59, 10), sc('crystal2', 68, 8), sc('crystal', 71, 12), sc('deadtree', 58, 7),
-    sc('spire', 70, 7), sc('rock2', 63, 11),
-    // coal bog (south row, under the canyon)
-    sc('reeds', 56, 21), sc('reeds2', 62, 26), sc('reeds', 70, 21), sc('reeds3', 58, 28),
-    sc('deadtree', 63, 19), sc('deadtree2', 71, 27), sc('deadtree', 69, 24),
-    // oil flats (under the quarry)
-    sc('scrub', 36, 20), sc('scrub2', 41, 27), sc('scrub', 50, 20), sc('boulder2', 49, 27),
-    sc('tarpool', 35, 27), sc('scrub3', 43, 18), sc('boulder', 40, 18),
-    // titanium peaks (under the meadow)
-    sc('snowpine', 3, 19), sc('snowpine2', 5, 28), sc('snowpine', 17, 25), sc('boulder2', 9, 28),
-    sc('spire2', 18, 19), sc('snowpine3', 13, 24), sc('snowpine', 24, 22), sc('spire', 28, 26),
-    sc('boulder', 22, 28), sc('snowpine2', 30, 20),
-  ];
-
-  // set dressing — cosmetic, walk-through (drawn by factory.js)
-  const FRONTIER_PROPS = [
-    { kind: 'lamppost', x: 62, y: 78, glow: true },
-    { kind: 'lamppost', x: 230, y: 128, glow: true },
-    { kind: 'lamppost', x: 420, y: 108, glow: true },
-    { kind: 'crate', x: 482, y: 156 },
-    { kind: 'crate2', x: 492, y: 168 },
-    { kind: 'drum', x: 18, y: 178 },
-    { kind: 'bush', x: 186, y: 84 },
-    { kind: 'bush', x: 498, y: 204 },
-    { kind: 'sign', x: 12, y: 126 },
-  ];
-
-  // The terrain. REGIONS are biome rects placed anywhere on the map. This
-  // layout is a snake: the high north row runs meadow → quarry → canyon,
-  // stairs drop into the low south row, which runs back west bog → flats →
-  // peaks. CROSSINGS open once the tier bar named in opensAfter is passed
-  // (v3 re-basing: quarry at T1, canyon + bog by T2, flats at T3, peaks at
-  // T4). Rects are 16px-grid aligned. tiles.js bakes all of this.
-  const FRONTIER_MAP = {
-    FOREST: { n: 48 },
-    REGIONS: [
-      { id: 'meadow', x: 0, y: 0, w: 528, h: 240, elev: 1, base: 'grass', cliff: 'tan', treeline: ['tree', 'tree2'] },
-      { id: 'quarry', x: 528, y: 0, w: 320, h: 240, elev: 1, base: 'rock', cliff: 'tan', treeline: ['spire', 'boulder', 'boulder2'] },
-      { id: 'canyon', x: 848, y: 0, w: 320, h: 240, elev: 1, base: 'shale', cliff: 'violet', treeline: ['spire', 'deadtree', 'spire2'] },
-      { id: 'peaks', x: 0, y: 240, w: 528, h: 256, elev: 0, base: 'snow', cliff: 'snow', treeline: ['snowpine', 'snowpine2', 'spire'] },
-      { id: 'flats', x: 528, y: 240, w: 320, h: 256, elev: 0, base: 'crack', cliff: 'tan', treeline: ['boulder', 'scrub', 'boulder2'] },
-      { id: 'bog', x: 848, y: 240, w: 320, h: 256, elev: 0, base: 'marsh', cliff: 'grey', treeline: ['deadtree', 'deadtree2', 'reeds'] },
-    ],
-    GROUND: [
-      // — meadow: worn aprons under mines/plots, a worn road with spurs, the pond
-      { kind: 'dirt', x: 80, y: 48, w: 64, h: 32 },    // iron mine
-      { kind: 'dirt', x: 160, y: 48, w: 64, h: 32 },   // p2
-      { kind: 'dirt', x: 112, y: 128, w: 64, h: 32 },  // copper mine
-      { kind: 'dirt', x: 48, y: 128, w: 64, h: 32 },   // stone mine (v3: a T0 ore, in the meadow)
-      { kind: 'dirt', x: 240, y: 176, w: 64, h: 32 },  // quartz node
-      { kind: 'dirt', x: 240, y: 96, w: 64, h: 32 },   // p4
-      { kind: 'dirt', x: 336, y: 112, w: 64, h: 32 },  // p6
-      { kind: 'dirt', x: 336, y: 48, w: 64, h: 32 },   // p8 (knoll)
-      { kind: 'pad', x: 432, y: 80, w: 64, h: 32 },    // p7 pad
-      { kind: 'pad', x: 16, y: 96, w: 48, h: 32 },     // the old hub pad (a landing now)
-      { kind: 'dirt', x: 64, y: 112, w: 368, h: 16 },  // the road
-      { kind: 'dirt', x: 96, y: 80, w: 16, h: 32 },    // spur north to the iron mine
-      { kind: 'dirt', x: 256, y: 128, w: 16, h: 48 },  // spur south to the quartz node
-      { kind: 'dirt', x: 480, y: 128, w: 48, h: 32 },  // the track east to the gate
-      { kind: 'sand', x: 0, y: 176, w: 112, h: 64 },
-      { kind: 'water', x: 0, y: 192, w: 96, h: 48 },   // the pond, southwest
-      // — quarry hills
-      { kind: 'grass', x: 560, y: 208, w: 64, h: 32 },
-      { kind: 'grass', x: 688, y: 96, w: 48, h: 32 },
-      { kind: 'dirt', x: 544, y: 128, w: 48, h: 32 },  // inside the gate
-      { kind: 'dirt', x: 592, y: 64, w: 64, h: 32 },   // p13 apron (terrace top)
-      { kind: 'dirt', x: 656, y: 192, w: 64, h: 32 },  // p14 apron
-      { kind: 'dirt', x: 736, y: 160, w: 64, h: 32 },  // stone seam apron (terrace interior)
-      // — crystal canyon
-      { kind: 'sand', x: 880, y: 48, w: 16, h: 192 },
-      { kind: 'water', x: 848, y: 48, w: 32, h: 192 },
-      { kind: 'dirt', x: 992, y: 112, w: 64, h: 32 },  // p15 apron
-      { kind: 'dirt', x: 928, y: 176, w: 96, h: 16 },
-      { kind: 'dirt', x: 960, y: 192, w: 32, h: 48 },  // track to the stairs down
-      // — coal bog
-      { kind: 'dirt', x: 960, y: 272, w: 32, h: 16 },  // foot of the stairs
-      { kind: 'water', x: 912, y: 288, w: 64, h: 32 },
-      { kind: 'water', x: 1024, y: 400, w: 80, h: 48 },
-      { kind: 'water', x: 1088, y: 288, w: 48, h: 32 },
-      { kind: 'board', x: 880, y: 384, w: 144, h: 16 },
-      { kind: 'board', x: 1024, y: 416, w: 80, h: 16 },
-      { kind: 'dirt', x: 960, y: 336, w: 64, h: 32 },  // coal seam apron
-      { kind: 'dirt', x: 1024, y: 304, w: 64, h: 32 }, // p16 apron
-      // — oil flats
-      { kind: 'tar', x: 592, y: 368, w: 48, h: 32 },
-      { kind: 'tar', x: 720, y: 288, w: 64, h: 32 },
-      { kind: 'tar', x: 768, y: 400, w: 48, h: 32 },
-      { kind: 'dirt', x: 640, y: 336, w: 64, h: 32 },  // oil derrick apron
-      { kind: 'dirt', x: 720, y: 336, w: 64, h: 32 },  // p17 apron
-      { kind: 'rock', x: 640, y: 400, w: 96, h: 48 },  // mesa top
-      // — titanium peaks
-      { kind: 'frost', x: 48, y: 320, w: 48, h: 32 },
-      { kind: 'frost', x: 272, y: 288, w: 64, h: 32 },
-      { kind: 'ice', x: 96, y: 400, w: 80, h: 48 },
-      { kind: 'dirt', x: 80, y: 336, w: 64, h: 32 },   // p18 apron
-      { kind: 'rock', x: 192, y: 320, w: 48, h: 32 },  // titanium seam apron (shelf interior)
-    ],
-    PLATEAUS: [
-      { x: 320, y: 48, w: 96, h: 48, elev: 2, face: 1, ramps: [{ x: 352, y: 96, side: 'S' }] },        // meadow knoll (p8)
-      { x: 592, y: 48, w: 96, h: 48, elev: 2, face: 2, ramps: [{ x: 624, y: 96, side: 'S' }] },        // quarry terrace A (p13)
-      { x: 720, y: 128, w: 112, h: 64, elev: 2, face: 1, ramps: [{ x: 768, y: 192, side: 'S' }] },     // quarry terrace B (stone #2)
-      { x: 912, y: 48, w: 128, h: 32, elev: 2, face: 1 },                                              // canyon north wall
-      { x: 640, y: 400, w: 96, h: 48, elev: 1, face: 1, ramps: [{ x: 640, y: 416, side: 'W' }] },      // flats mesa
-      { x: 160, y: 304, w: 96, h: 48, elev: 1, face: 2, ramps: [{ x: 192, y: 352, side: 'S' }] },      // peaks shelf (titanium)
-    ],
-    WALLS: [
-      { x: 528, y: 48, w: 16, h: 80 }, { x: 528, y: 160, w: 16, h: 80 },       // meadow|quarry, gap rows 8–9
-      { x: 848, y: 272, w: 16, h: 32 }, { x: 848, y: 336, w: 16, h: 160 },     // flats|bog, gap rows 19–20
-      { x: 528, y: 272, w: 16, h: 80 }, { x: 528, y: 384, w: 16, h: 112 },     // peaks|flats, gap rows 22–23
-    ],
-    // closed crossings are repaired at the place — hold Space, pay in the
-    // goods of the regions behind you (PRICES.crossing). No tier locks.
-    CROSSINGS: [
-      { id: 'x1', kind: 'pass', x: 528, y: 128, w: 16, h: 32, style: 'grey' },    // meadow → quarry hills
-      { id: 'x2', kind: 'bridge', x: 848, y: 96, w: 32, h: 32, dir: 'h' },        // over the canyon stream
-      { id: 'x3', kind: 'stairs', x: 960, y: 240, w: 32, h: 32, style: 'violet' }, // down into the bog
-      { id: 'x4', kind: 'pass', x: 848, y: 304, w: 16, h: 32, style: 'grey' },    // bog → flats
-      { id: 'x5', kind: 'drift', x: 528, y: 352, w: 16, h: 32 },                  // flats → peaks
-    ],
-    NODES: [
-      { kind: 'iron', x: 92, y: 54 },
-      { kind: 'copper', x: 130, y: 138 },
-      { kind: 'stone', x: 60, y: 138 },        // v3: stone is a T0 ore — the meadow gets its node
-      { kind: 'quartz', x: 250, y: 178 },      // the T1 node
-      { kind: 'stone', x: 752, y: 166 },       // stone #2, quarry hills
-      { kind: 'coal', x: 976, y: 342 },
-      { kind: 'oil', x: 656, y: 342 },
-      { kind: 'titan', x: 208, y: 326 },       // no ore in v3 — a landmark for now
-      // phase 4: the pyramid — iron 3, copper 2, quartz 2, coal 2, oil 2
-      // (each on a plot of its region, which becomes the node's)
-      { kind: 'iron', x: 312, y: 178 },        // iron #2, meadow (p12)
-      { kind: 'copper', x: 668, y: 198 },      // copper #2, quarry hills (p14)
-      { kind: 'quartz', x: 996, y: 118 },      // quartz #2, canyon (p15)
-      { kind: 'coal', x: 1040, y: 312 },       // coal #2, bog (p16)
-      { kind: 'oil', x: 736, y: 342 },         // oil #2, flats (p17)
-      { kind: 'iron', x: 88, y: 342 },         // iron #3, peaks (p18)
-    ],
-  };
-
-  // ======================================================================
-  // OPEN RANGE — one flat meadow the width of the frontier, every node in a
-  // row, ranks of plots below, nothing in the way. Tests the mechanics.
-  // ======================================================================
-
-  const RANGE_COLS = Array.from({ length: 13 }, (_, k) => 112 + 80 * k);
-  const RANGE_ROWS = [146, 226, 306];
-  const RANGE_PLOTS = [];
-  for (const x of RANGE_COLS.slice(7, 13)) RANGE_PLOTS.push({ id: 'p' + (RANGE_PLOTS.length + 1), x, y: 66 });
-  for (const y of RANGE_ROWS) for (const x of RANGE_COLS) RANGE_PLOTS.push({ id: 'p' + (RANGE_PLOTS.length + 1), x, y });
-  const apron = (kind, x, y) => ({ kind, x: x - 16, y: y - 18, w: 64, h: 32 });
-
-  const RANGE_SCENERY = [
-    sc('tree', 5, 20), sc('tree2', 12, 21), sc('rock', 19, 20), sc('tree', 26, 21),
-    sc('rock2', 33, 20), sc('tree2', 40, 21), sc('tree', 47, 20), sc('rock', 54, 21),
-    sc('tree2', 60, 20), sc('rock2', 63, 22), sc('tree', 68, 20),
-  ];
-
-  const RANGE_PROPS = [
-    { kind: 'lamppost', x: 92, y: 106, glow: true },
-    { kind: 'lamppost', x: 372, y: 106, glow: true },
-    { kind: 'lamppost', x: 652, y: 106, glow: true },
-    { kind: 'lamppost', x: 932, y: 106, glow: true },
-    { kind: 'crate', x: 1106, y: 90 },
-    { kind: 'crate2', x: 1116, y: 100 },
-    { kind: 'drum', x: 30, y: 178 },
-    { kind: 'sign', x: 84, y: 166 },
-    { kind: 'bush', x: 330, y: 84 },
-    { kind: 'bush', x: 740, y: 340 },
-  ];
-
-  const RANGE_MAP = {
-    FOREST: { n: 48, e: 32, s: 32, w: 32 },
-    REGIONS: [
-      { id: 'range', x: 0, y: 0, w: 1168, h: 416, elev: 0, base: 'grass', cliff: 'tan', treeline: ['tree', 'tree2'] },
-    ],
-    GROUND: [
-      ...RANGE_COLS.map((x) => apron('dirt', x, 66)),
-      { kind: 'pad', x: 32, y: 128, w: 48, h: 32 },
-      { kind: 'dirt', x: 80, y: 96, w: 1024, h: 16 },
-      { kind: 'dirt', x: 80, y: 112, w: 16, h: 16 },
-      { kind: 'dirt', x: 128, y: 80, w: 16, h: 16 }, { kind: 'dirt', x: 208, y: 80, w: 16, h: 16 }, { kind: 'dirt', x: 288, y: 80, w: 16, h: 16 },
-      { kind: 'dirt', x: 1088, y: 80, w: 16, h: 16 },
-      ...RANGE_ROWS.flatMap((y) => RANGE_COLS.map((x) => apron('dirt', x, y))),
-      { kind: 'sand', x: 1024, y: 320, w: 112, h: 64 },
-      { kind: 'water', x: 1040, y: 336, w: 80, h: 32 },
-    ],
-    PLATEAUS: [],
-    WALLS: [],
-    CROSSINGS: [],
-    NODES: [
-      { kind: 'iron', x: 108, y: 54 },
-      { kind: 'copper', x: 188, y: 54 },
-      { kind: 'stone', x: 268, y: 54 },
-      { kind: 'quartz', x: 348, y: 54 },
-      { kind: 'coal', x: 428, y: 54 },
-      { kind: 'oil', x: 508, y: 54 },
-      { kind: 'iron', x: 588, y: 54 },
-      // phase 4: the rest of the pyramid along row A
-      { kind: 'copper', x: 668, y: 54 },
-      { kind: 'stone', x: 748, y: 54 },
-      { kind: 'quartz', x: 828, y: 54 },
-      { kind: 'coal', x: 908, y: 54 },
-      { kind: 'oil', x: 988, y: 54 },
-      { kind: 'iron', x: 1068, y: 54 },
-    ],
-  };
-
-  // The registry. Per map: world size, the operator's spawn, then the ground,
-  // plots, scenery and props. LEGACY: where pre-plot saves' kit stations go.
-  const MAPS = {
-    frontier: {
-      id: 'frontier', W: 1168, H: 496, spawn: { x: 40, y: 90 },
-      LEGACY: { slogi: 'p2', slova: 'p4', stroki: 'p6' },
-      MAP: FRONTIER_MAP, PLOTS: FRONTIER_PLOTS, SCENERY: FRONTIER_SCENERY, PROPS: FRONTIER_PROPS,
-    },
-    range: {
-      id: 'range', W: 1168, H: 416, spawn: { x: 84, y: 154 },
-      LEGACY: {},
-      MAP: RANGE_MAP, PLOTS: RANGE_PLOTS, SCENERY: RANGE_SCENERY, PROPS: RANGE_PROPS,
-    },
-  };
-  const MAP_IDS = Object.keys(MAPS);
-  const DEFAULT_MAP = 'frontier';
+  // ---- the worlds ----
+  // The maps live in js/maps/ — one file per world, each ending in
+  // MAPKIT.register(...) — and load before this file. The chain is shared,
+  // the ground is not: a world brings its own terrain, plots, nodes, scenery,
+  // props and spawn, and keeps its own save (engine.js). Adding a world is a
+  // new file in js/maps/, a script tag, and two i18n strings.
+  const MAPS = MAPKIT.MAPS;
+  const MAP_IDS = MAPKIT.IDS;
+  const DEFAULT_MAP = MAPKIT.DEFAULT;
 
   // ---- the current map ----
   let cur = null;
@@ -731,7 +459,9 @@
   // a crossing is open once the player has paid to repair it (hold Space at
   // the closed pass / bridge / stairs; the price is that region's goods)
   function crossingOpen(profile, c) {
-    return !!(profile.crossings && profile.crossings[c.id]);
+    // a `free` crossing was never broken — it is built scenery you walk over
+    // (the bridges out to the Frontier's island), not a repair job
+    return !!c.free || !!(profile.crossings && profile.crossings[c.id]);
   }
   const closedCrossings = (profile) => (cur.MAP.CROSSINGS || []).filter((c) => !crossingOpen(profile, c));
   // the biome under a world point (later rects win, like the bake)

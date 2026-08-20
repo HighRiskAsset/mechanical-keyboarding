@@ -22,6 +22,9 @@
 <script src="../js/layout-ru.js"></script>
 <script src="../js/layout-en.js"></script>
 <script src="../js/courses.js"></script>
+<script src="../js/maps/kit.js"></script>
+<script src="../js/maps/frontier.js"></script>
+<script src="../js/maps/range.js"></script>
 <script src="../js/chain.js"></script>
 <script src="../js/engine.js"></script>
 <script src="../js/pixels.js"></script>
@@ -255,8 +258,7 @@
     }
   }
   C.useMap(C.DEFAULT_MAP);
-  // p13 stands on the quarry terrace top — its footprint touches the terrace edge by design
-  const placeReal = placeBad.filter((s) => !s.startsWith('frontier p13 '));
+  const placeReal = placeBad;
   line(!placeReal.length, 'every plot and ore node stands on clear, reachable ground', placeReal.join('<br>'));
 
   document.getElementById('sum').textContent = `${pass} passed · ${fail} failed · ${warn} to look at`;

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MK · map proof sheet</title>
+<style>
+  body { background: #0e1b21; color: #e8e2d4; font: 14px Georgia, serif; margin: 24px; }
+  h1 { font-size: 20px; margin: 0 0 6px; }
+  p { color: #8fa1a8; max-width: 62em; }
+  .bar { margin: 14px 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  select, button { font: inherit; padding: 4px 10px; background: #1a303a; color: #e8e2d4; border: 1px solid #2c4a58; border-radius: 6px; }
+  #out { image-rendering: pixelated; border: 1px solid #2c4a58; max-width: 100%; }
+  #msg { color: #d4a94e; }
+</style>
+</head>
+<body>
+<h1>Map proof sheet</h1>
+<p>Bakes a world through the real <code>TILES.bake()</code>, plants its border forest, nodes,
+scenery and crossings exactly as <code>factory.js</code> does, outlines every plot, and POSTs the
+PNG to <code>assets/inbox/</code> through the dev server's <code>/upload</code>. This is how the
+terrain gets reviewed at a glance. Not linked from the game.</p>
+
+<div class="bar">
+  <label>world <select id="map"></select></label>
+  <label>zoom <select id="zoom"><option>1</option><option>2</option><option selected>3</option><option>4</option></select></label>
+  <button id="go">Render + upload</button>
+  <span id="msg"></span>
+</div>
+<img id="out" alt="">
+
+<script src="../js/board-ansi.js"></script>
+<script src="../js/language-ru.js"></script>
+<script src="../js/language-en.js"></script>
+<script src="../js/layout-ru.js"></script>
+<script src="../js/layout-en.js"></script>
+<script src="../js/courses.js"></script>
+<script src="../js/maps/kit.js"></script>
+<script src="../js/maps/frontier.js"></script>
+<script src="../js/maps/range.js"></script>
+<script src="../js/chain.js"></script>
+<script src="../js/pixels.js"></script>
+<script src="../js/tiles.js"></script>
+<script src="map-proof.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  $('map').innerHTML = CHAIN.MAP_IDS.map((id) => `<option>${id}</option>`).join('');
+  $('go').onclick = async () => {
+    const id = $('map').value;
+    $('msg').textContent = 'baking…';
+    const m = CHAIN.MAPS[id];
+    const name = id + '-ground.png';
+    $('msg').textContent = await MAPPROOF(id, name, 0, 0, m.W, m.H, +$('zoom').value);
+    $('out').src = '../assets/inbox/' + name + '?t=' + performance.now();
+  };
+</script>
+</body>
+</html>

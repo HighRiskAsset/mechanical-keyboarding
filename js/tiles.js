@@ -48,6 +48,8 @@
     drift:  { A: P.white, B: P.nA, C: P.nB, D: P.nC, O: P.kB },   // a snowdrift, not rock
   };
   const STYLE_IDS = Object.keys(CLIFF);
+  // side bits, shared by the cliff band, the stairs and the side ramps
+  const N = 1, E = 2, S = 4, Wb = 8;
 
   // ---------- fills ----------
   // FF3 ground reads as a jittered lattice of 2px ticks: light '/' and dark '\'
@@ -379,7 +381,6 @@
     if (cliffCache.has(key)) return cliffCache.get(key);
     const [c, x] = canvas(CW, CH);
     const pal = CLIFF[style];
-    const N = 1, E = 2, S = 4, Wb = 8;
     const open = (b) => !(conn & b) && !(high & b);
     // mass: on connected / high sides the tile is filled to its edge; on open
     // sides the core is inset and the round stones themselves make the edge —
@@ -444,31 +445,58 @@
     cliffCache.set(key, c);
     return c;
   }
-  // stairs down a face (a south ramp): stone treads between dark rails
-  function stairs(part, style) {
+  // Stairs down a face (a south ramp): stone treads between dark rails. `run`
+  // says which of W/E carry a rail — a flight several tiles wide is authored
+  // as several ramp tiles side by side, and only its two outer tiles show a
+  // rail, so the run reads as one broad stair instead of a rank of narrow ones.
+  const stairCache = new Map();
+  function stairs(part, style, run, seed) {
+    const rails = run === undefined ? (Wb | E) : run;
+    const s = (seed || 0) % 4;
+    const key = part + ':' + style + ':' + rails + ':' + s;
+    if (stairCache.has(key)) return stairCache.get(key);
     const [c, x] = canvas(T, T);
     const pal = CLIFF[style];
     R(x, pal.C, 0, 0, T, T);
+    const x0 = (rails & Wb) ? 2 : 0, x1 = (rails & E) ? T - 2 : T;
+    // Treads run the whole width and straight on into the next tile: a flight
+    // authored several tiles wide is ONE broad stair, and any vertical line
+    // inside it would turn the whole thing into fence panels.
     for (let y = 0; y < T; y += 4) {
-      R(x, pal.A, 2, y, 12, 1); R(x, pal.B, 2, y + 1, 12, 2); R(x, pal.D, 2, y + 3, 12, 1);
+      R(x, pal.A, x0, y, x1 - x0, 1);           // the lit nosing
+      R(x, pal.B, x0, y + 1, x1 - x0, 2);       // the tread
+      R(x, pal.O, x0, y + 3, x1 - x0, 1);       // the riser, dark — this is what says step
+      // a worn stone here and there, offset per tile so the wear never repeats
+      const px = x0 + ((y >> 2) + s) % 4 * 3 + 2;
+      if (px < x1 - 2) { R(x, pal.C, px, y + 1, 2, 2); R(x, pal.B, px, y, 2, 1); }
     }
-    R(x, pal.D, 1, 0, 1, T); R(x, pal.O, 0, 0, 1, T);
-    R(x, pal.D, T - 2, 0, 1, T); R(x, pal.O, T - 1, 0, 1, T);
+    if (rails & Wb) { R(x, pal.D, 1, 0, 1, T); R(x, pal.O, 0, 0, 1, T); }
+    if (rails & E) { R(x, pal.D, T - 2, 0, 1, T); R(x, pal.O, T - 1, 0, 1, T); }
     if (part !== 'top') R(x, pal.O, 0, T - 1, T, 1);
+    stairCache.set(key, c);
     return c;
   }
-  // a side ramp (W/E): a short sideways stair cut through the plateau's rim
-  function slope(side, style, seed, topKind) {
+  // A side ramp (W/E): a sideways stair cut through the plateau's rim. `run`
+  // says which of N/S close the cut — stacked ramp tiles leave their shared
+  // edges open so a tall run reads as one wide way up.
+  function slope(side, style, seed, topKind, run) {
+    const ends = run === undefined ? (N | S) : run;
     const [c, x] = canvas(T, T);
     x.drawImage(fill(topKind || 'grass', seed), 0, 0);
     const pal = CLIFF[style];
-    R(x, pal.C, 0, 3, T, 10);
+    // The cut's floor runs the full tile except where the run ends, so a ramp
+    // several tiles tall is one wide way up rather than a stack of gateposts.
+    // Treads stand on end (you climb sideways) with a dark riser between them.
+    const y0 = (ends & N) ? 2 : 0, y1 = (ends & S) ? T - 2 : T;
+    R(x, pal.C, 0, y0, T, y1 - y0);
     for (let sx = 0; sx < T; sx += 4) {
-      const lit = side === 'W' ? sx : T - 1 - sx; // treads climb toward the plateau interior
-      R(x, pal.A, lit, 4, 1, 8); R(x, pal.B, side === 'W' ? sx + 1 : T - 3 - sx, 4, 2, 8); R(x, pal.D, side === 'W' ? sx + 3 : T - 4 - sx, 4, 1, 8);
+      const lit = side === 'W' ? sx : T - 1 - sx;   // treads climb toward the plateau interior
+      R(x, pal.A, lit, y0, 1, y1 - y0);
+      R(x, pal.B, side === 'W' ? sx + 1 : T - 3 - sx, y0, 2, y1 - y0);
+      R(x, pal.O, side === 'W' ? sx + 3 : T - 4 - sx, y0, 1, y1 - y0);
     }
-    R(x, pal.D, 0, 3, T, 1); R(x, pal.O, 0, 2, T, 1);
-    R(x, pal.D, 0, 12, T, 1); R(x, pal.O, 0, 13, T, 1);
+    if (ends & N) { R(x, pal.O, 0, 0, T, 1); R(x, pal.D, 0, 1, T, 1); }
+    if (ends & S) { R(x, pal.D, 0, T - 2, T, 1); R(x, pal.O, 0, T - 1, T, 1); }
     return c;
   }
   // cast shadow onto lower ground east of / below a cliff band (bits W=8 means
@@ -782,9 +810,14 @@
         let k = 1; while (inb(tx, ty - k) && (flags[idx(tx, ty - k)] & (FL.FACE | FL.RAMP)) && elev[idx(tx, ty - k)] === elev[i]) k++;
         const up = inb(tx, ty - k) ? idx(tx, ty - k) : i;
         const fh = faceH[up] || 1;
-        x.drawImage(stairs(fh > 1 && k < fh ? 'top' : 'bot', STYLE_IDS[style[up]]), px, py);
+        // a flight authored several tiles wide keeps its rails on the outside
+        const rails = (inb(tx - 1, ty) && ramp[idx(tx - 1, ty)] === 1 ? 0 : Wb)
+          | (inb(tx + 1, ty) && ramp[idx(tx + 1, ty)] === 1 ? 0 : E);
+        x.drawImage(stairs(fh > 1 && k < fh ? 'top' : 'bot', STYLE_IDS[style[up]], rails, tx + ty), px, py);
       } else if (ramp[i] === 2 || ramp[i] === 3) {
-        x.drawImage(slope(ramp[i] === 2 ? 'W' : 'E', st, seed, kn), px, py);
+        const ends = (inb(tx, ty - 1) && ramp[idx(tx, ty - 1)] === ramp[i] ? 0 : N)
+          | (inb(tx, ty + 1) && ramp[idx(tx, ty + 1)] === ramp[i] ? 0 : S);
+        x.drawImage(slope(ramp[i] === 2 ? 'W' : 'E', st, seed, kn, ends), px, py);
       } else if (!isBand(tx, ty)) {
         let sb = 0;
         if (isBand(tx - 1, ty)) sb |= 8;

@@ -43,7 +43,7 @@
       mapSelectBack: 'Back',
       mapNames: { frontier: 'The Frontier', range: 'Open Range' },
       mapTaglines: {
-        frontier: 'Six lands, cliffs and closed crossings. Earn your way east.',
+        frontier: 'One wide meadow, six lands around its rim. Room to build, and everything to go and see.',
         range: 'One wide plain, every vein in a row, room to build. Try everything.',
       },
       mapNew: 'Untouched',
@@ -262,7 +262,7 @@
       mapSelectBack: 'Назад',
       mapNames: { frontier: 'Фронтир', range: 'Вольная степь' },
       mapTaglines: {
-        frontier: 'Шесть земель, обрывы и закрытые переправы. Прокладывайте путь на восток.',
+        frontier: 'Один широкий луг, шесть земель по краям. Простор для стройки — и есть куда сходить.',
         range: 'Одна широкая равнина, все жилы в ряд, простор для стройки. Пробуйте всё.',
       },
       mapNew: 'Нетронутый',

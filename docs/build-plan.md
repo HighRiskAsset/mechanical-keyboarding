@@ -64,8 +64,10 @@ the gravy list.
   `auto[kind]` — all in the pattern "own material + a current-tier good".
 - `BARS`: per tier `{wpmEq, acc}`; `TUNING`: rates, buffer cap, K, overpass
   tier, ratio tilt cap, ⚙ lag, hint dimming/free tiers.
-- `MAPS[*]`: nodes per ore (several), plots, choke tiles, and crossings that
-  `opensAfter` a tier bar (was: an edition id).
+- The worlds (`js/maps/*.js` since 2026-08-20): nodes per ore (several),
+  plots, choke tiles, crossings. On The Frontier every crossing is `free`
+  (user ruling 2026-08-20 — nothing there is gated); the repair price stands
+  for a world that wants it.
 
 ### Profile v2 — `engine.js`
 
@@ -445,11 +447,16 @@ full run; data checks green; the EN stub loads.
 ## 5. Map work (with the environment owner)
 
 Nodes per ore ≈ iron 3, copper 2, stone 2, quartz 2, coal 2, oil 2; plots as
-many as the tree can use; The Frontier re-based per DESIGN "Map consequences"
-(stone node added to the meadow; quarry hills at T1; canyon + bog by T2;
-flats at T3; peaks at T4 as the finish site); crossings `opensAfter` a tier
-bar; choke tiles authored (bridges, gaps) — they are the congestion feature.
-Open Range row A carries the same node set.
+many as the tree can use. **Done 2026-08-20**: the worlds moved out of
+`chain.js` into `js/maps/` (kit + registry + one file per world), and The
+Frontier was rebuilt as an open basin — a 60×20-tile grass middle with
+thirty plots and the first vein of every ore, all six biomes wrapped around
+its rim as noise-shaped fronts rather than rects, and every terrain and
+obstacle demonstrated out at the edges. Elevation is three big stepped
+landmarks (the elev-2 Great Mesa, two elev-1 shelves) plus the island in the
+south lake, each with wide flights and side cuts on every approachable side.
+Nothing is gated (user ruling): every crossing carries `free`. Open Range
+row A carries the same node set and is unchanged.
 
 ## 6. Gravy (after the foundation, in no order)
 
