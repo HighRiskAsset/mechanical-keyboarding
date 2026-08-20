@@ -31,6 +31,11 @@
       importMeta: (p) => `Exported ${p.date} · ${p.map}`,
       importMap: (p) => `World: ${p.map}`,
       importConfirmGo: 'Load save',
+      // the keyboard check — put to a touch-primary device before the worlds
+      kbdStation: '⌨ Keyboard',
+      kbdTitle: 'Hey, does your device have a keyboard?',
+      kbdNote: 'Mechanical Keyboarding requires a physical keyboard to play and practice on. It won\'t work without it.',
+      kbdDismiss: 'Dismiss',
       // the map picker — one save per world
       mapSelectStation: '⛏ Worlds',
       mapSelectTitle: 'Choose a world',
@@ -241,6 +246,11 @@
       importMeta: (p) => `Экспортировано ${p.date} · ${p.map}`,
       importMap: (p) => `Мир: ${p.map}`,
       importConfirmGo: 'Загрузить',
+      // вопрос о клавиатуре — задаётся сенсорному устройству перед выбором мира
+      kbdStation: '⌨ Клавиатура',
+      kbdTitle: 'А есть ли у вашего устройства клавиатура?',
+      kbdNote: 'Для Mechanical Keyboarding нужна физическая клавиатура: играть и тренироваться без неё не получится.',
+      kbdDismiss: 'Закрыть',
       // выбор мира — у каждого своё сохранение
       mapSelectStation: '⛏ Миры',
       mapSelectTitle: 'Выберите мир',

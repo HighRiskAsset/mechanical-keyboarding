@@ -354,6 +354,21 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   goods of the regions behind you (`PRICES.crossing`) — nothing is locked
   behind a tier number; the old BELTS list and per-keystroke autofeed are
   gone until phase 3 brings belts and machine buffers back properly.
+- **The keyboard check (2026-08-20)**: the game is desktop-only and now says
+  so instead of dying quietly. Everything it reads is a physical position
+  (`e.code` through the layout tables) and two keys are *held* — space runs a
+  machine, arrows walk — none of which an on-screen keyboard sends, so a
+  phone would load the world, look playable, and never answer a keystroke. On
+  a touch-primary device (`(pointer: coarse)`) with no keystroke on record,
+  a card stands in front of the world picker and asks whether the device has
+  a keyboard, with one Dismiss button. **The question goes to the pointer,
+  never to the OS** — an Android tablet with a board plugged into it plays
+  fine, and a touchscreen laptop still reports a fine pointer first, so it is
+  never asked. One keydown carrying a real `code` — which no soft keyboard
+  emits — proves the input path works, clears the card if it is up, and is
+  remembered (`mk.keyboard`) so the device is never asked again. Dismissing
+  alone is not remembered: a device that truly cannot type still needs the
+  answer to "why is nothing happening" next time.
 
 ## The outdoor pivot — SHIPPED 2026-08-11
 

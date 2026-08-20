@@ -949,6 +949,7 @@
   }
 
   window.addEventListener('keydown', (e) => {
+    noteRealKeyboard(e);
     const overlayOpen = !overlay.classList.contains('hidden');
     const ARROWS = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
     if (((e.ctrlKey && e.altKey && e.code === 'KeyM') || (e.ctrlKey && e.shiftKey && e.code === 'KeyQ')) && !overlayOpen && profile) {
@@ -1658,6 +1659,55 @@
     if (profile) { rebuildWorld(); redock(); }
   }
 
+  // ---------- the keyboard check ----------
+  // Every keystroke this game reads is a physical position — `e.code` through
+  // the layout's tables — and two of them are held down: space runs a machine,
+  // arrows walk. A phone's on-screen keyboard sends neither a position nor a
+  // hold, so the game would load, look entirely playable, and then never
+  // answer a keystroke. Asking is kinder than failing silently.
+  //
+  // The question goes to the device's pointer, never to its OS: an Android
+  // tablet with a board plugged into it is a machine this game plays fine on,
+  // and a laptop with a touchscreen still reports a fine pointer first, so it
+  // is never asked. The asking is provisional either way — see below.
+  const KBD_SEEN_KEY = 'mk.keyboard';
+  let keyboardSeen = false;
+  try { keyboardSeen = localStorage.getItem(KBD_SEEN_KEY) === '1'; } catch { /* then ask */ }
+  let kbdCardUp = false;
+
+  // One real keydown settles it for good, whether it lands before the card or
+  // while the card is up. A soft keyboard reports no position — Android sends
+  // keyCode 229 with an empty `code`, iOS an empty `code` alone — so a code
+  // that survives this guard is one CODE_TO_CHAR could have looked up, which
+  // is exactly the capability in question. Nothing here is a brand check.
+  function noteRealKeyboard(e) {
+    if (keyboardSeen) return;
+    if (!e.code || e.code === 'Unidentified' || e.keyCode === 229 || e.isComposing) return;
+    keyboardSeen = true;
+    try { localStorage.setItem(KBD_SEEN_KEY, '1'); } catch { /* non-fatal */ }
+    if (kbdCardUp) dismissKeyboardCard();
+  }
+
+  const needsKeyboardCheck = () =>
+    !keyboardSeen && !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+
+  function dismissKeyboardCard() {
+    kbdCardUp = false;
+    showMapSelect();
+  }
+
+  function showKeyboardCard() {
+    kbdCardUp = true;
+    showOverlay(`
+      <div class="card-station">${T.t('kbdStation')}</div>
+      <h2>${T.t('kbdTitle')}</h2>
+      <p>${T.t('kbdNote')}</p>
+      <button id="ov-continue" class="btn-primary">${T.t('kbdDismiss')}</button>
+    `);
+    $('ov-continue').onclick = dismissKeyboardCard;
+    $('ov-continue').focus();
+  }
+
   // ---------- boot ----------
   function boot() {
     applyI18n();
@@ -1667,7 +1717,7 @@
     FACTORY.init(document.getElementById('factory-mount')).then(() => {
       if (loadingCard) loadingCard.classList.add('s3');
       clearLine();
-      setTimeout(showMapSelect, 30);
+      setTimeout(needsKeyboardCheck() ? showKeyboardCard : showMapSelect, 30);
     });
   }
   // The heavy work waits two frames: the first callback lands before a paint,
