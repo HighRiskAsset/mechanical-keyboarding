@@ -48,16 +48,25 @@
   // perUnit = correct keystrokes per unit of output when worked by hand.
   // autoFrom = the tier from which ⚙ is purchasable (mines: when keys are
   // sticky). ready = implemented in this build (phases 4–5 add the rest).
+  //
+  // `size` is [tiles across, tiles deep] — the ground the body stands on,
+  // and so the ports around it: the front holds one place per column, each
+  // side one per row (sim.js). How deep a machine stands is not decoration;
+  // it is set by how many belts leave it. A whole side discharges, and a
+  // side of a one-deep body is one tile, so only the mine — one outlet — can
+  // be one deep. Everything else is two, and the last two kinds are three
+  // across: the Crane's jib and the printing hall have the reach to earn it,
+  // and the Manufacturer needs the front's third place for its fifth port.
   const KINDS = {
-    mine:         { id: 'mine',         arity: 0, grammar: 'letters',   minAlpha: 2,  perUnit: 1,  autoFrom: 0,  tier: 0, ready: true },
-    smelter:      { id: 'smelter',      arity: 2, grammar: 'syllables', minAlpha: 4,  perUnit: 4,  autoFrom: 1,  tier: 0, ready: true, needsVC: true },
-    foundry:      { id: 'foundry',      arity: 2, grammar: 'clusters',  minAlpha: 8,  perUnit: 5,  autoFrom: 2,  tier: 1, ready: true },
-    constructor:  { id: 'constructor',  arity: 1, grammar: 'words',     minAlpha: 8,  perUnit: 6,  autoFrom: 2,  tier: 1, ready: true, minWords: 25 },
-    molder:       { id: 'molder',       arity: 2, grammar: 'endings',   minAlpha: 14, perUnit: 6,  autoFrom: 3,  tier: 2, ready: true,  full: true },
-    assembler:    { id: 'assembler',    arity: 2, grammar: 'phrases',   minAlpha: 16, perUnit: 8,  autoFrom: 3,  tier: 2, ready: true,  full: true },
-    fastener:     { id: 'fastener',     arity: 2, grammar: 'punct',     minAlpha: 20, perUnit: 8,  autoFrom: 4,  tier: 3, ready: true,  full: true },
-    crane:        { id: 'crane',        arity: 2, grammar: 'capitals',  minAlpha: 30, perUnit: 8,  autoFrom: 6,  tier: 5, ready: true,  full: true },
-    manufacturer: { id: 'manufacturer', arity: 3, grammar: 'pages',     minAlpha: 33, perUnit: 12, autoFrom: 99, tier: 6, ready: true,  full: true },
+    mine:         { id: 'mine',         arity: 0, grammar: 'letters',   minAlpha: 2,  perUnit: 1,  autoFrom: 0,  tier: 0, size: [2, 1], ready: true },
+    smelter:      { id: 'smelter',      arity: 2, grammar: 'syllables', minAlpha: 4,  perUnit: 4,  autoFrom: 1,  tier: 0, size: [2, 2], ready: true, needsVC: true },
+    foundry:      { id: 'foundry',      arity: 2, grammar: 'clusters',  minAlpha: 8,  perUnit: 5,  autoFrom: 2,  tier: 1, size: [2, 2], ready: true },
+    constructor:  { id: 'constructor',  arity: 1, grammar: 'words',     minAlpha: 8,  perUnit: 6,  autoFrom: 2,  tier: 1, size: [2, 2], ready: true, minWords: 25 },
+    molder:       { id: 'molder',       arity: 2, grammar: 'endings',   minAlpha: 14, perUnit: 6,  autoFrom: 3,  tier: 2, size: [2, 2], ready: true,  full: true },
+    assembler:    { id: 'assembler',    arity: 2, grammar: 'phrases',   minAlpha: 16, perUnit: 8,  autoFrom: 3,  tier: 2, size: [2, 2], ready: true,  full: true },
+    fastener:     { id: 'fastener',     arity: 2, grammar: 'punct',     minAlpha: 20, perUnit: 8,  autoFrom: 4,  tier: 3, size: [2, 2], ready: true,  full: true },
+    crane:        { id: 'crane',        arity: 2, grammar: 'capitals',  minAlpha: 30, perUnit: 8,  autoFrom: 6,  tier: 5, size: [3, 2], ready: true,  full: true },
+    manufacturer: { id: 'manufacturer', arity: 3, grammar: 'pages',     minAlpha: 33, perUnit: 12, autoFrom: 99, tier: 6, size: [3, 2], ready: true,  full: true },
   };
   const KIND_IDS = Object.keys(KINDS);
 

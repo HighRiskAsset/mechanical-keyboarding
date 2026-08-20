@@ -141,6 +141,17 @@
   S.turn(sm); S.turn(sm); S.turn(sm);
   line(sm.rot === 0 && S.facingOf(sm) === 's', 'three turns bring a machine back to facing front');
 
+  // sizes: a whole side discharges, and a side of a body `d` deep is `d`
+  // tiles, so a kind can only be one deep if it has one outlet. This is the
+  // rule that decides every size in chain.js — assert it rather than trust it.
+  const tooShallow = Object.keys(C.KINDS).filter((k) => {
+    const m = { kind: k }, [w, d] = S.sizeOf(m);
+    return S.outletsOf(m) > Math.min(w, d) || S.inletsOf(m) > w + d;
+  });
+  line(!tooShallow.length, `every kind is big enough to seat its ports${tooShallow.length ? ' — too small: ' + tooShallow.join(', ') : ''}`);
+  line(S.sizeOf({ kind: 'mine' })[1] === 1 && Object.keys(C.KINDS).every((k) => k === 'mine' || S.sizeOf({ kind: k })[1] > 1),
+    'the mine is the one kind one tile deep — it is the one kind with a single outlet');
+
   document.getElementById('sum').textContent = `${pass} passed · ${fail} failed · ${warn} to look at`;
 })();
 </script>

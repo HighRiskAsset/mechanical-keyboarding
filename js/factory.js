@@ -560,12 +560,14 @@
       const root = new PIXI.Container();
       const sp = new PIXI.Sprite(stationSpriteTex({ ...m, autoLive: live }));
       root.addChild(sp);
-      const glow = new PIXI.Graphics().rect(0, 36, 26, 2).fill(0xc9a24a);
+      // a kind three tiles across wears everything that hangs off it wider
+      const bw = SIM.sizeOf(m)[0] * T16 - 2;
+      const glow = new PIXI.Graphics().rect(0, 36, bw - 4, 2).fill(0xc9a24a);
       glow.visible = false;
       root.addChild(glow);
       // the belt mark: green = a belt from the carried spool can end here,
       // red = it cannot (shown only while carrying)
-      const mark = new PIXI.Graphics().rect(-2, 39, 30, 2).fill(0x6cc46c);
+      const mark = new PIXI.Graphics().rect(-2, 39, bw, 2).fill(0x6cc46c);
       mark.visible = false;
       root.addChild(mark);
       root.position.set(pos.x, pos.y - 36);
@@ -573,12 +575,12 @@
       cameraC.addChild(root);
       const id = 'm:' + m.id;
       stations[id] = {
-        def: { id, x: pos.x, y: pos.y, kind: m.kind, m }, root, sp, glow, mark, built: true, auto: live, sqTtl: 0,
+        def: { id, x: pos.x, y: pos.y, kind: m.kind, m, bw }, root, sp, glow, mark, built: true, auto: live, sqTtl: 0,
         simState: live && window.SIM ? SIM.state(profile, m) : 'off',
       };
       if (live) {
         const d = new PIXI.Sprite(PIXELS.stateDotTex('run'));
-        d.position.set(pos.x + 24, pos.y - 40);
+        d.position.set(pos.x + bw - 6, pos.y - 40);
         d.zIndex = pos.y + 1;
         cameraC.addChild(d);
         stateDots[id] = d;
@@ -644,27 +646,43 @@
   const T16 = 16;
   const HALF_MAT = PIXELS.MAT_PX >> 1;   // a good is centred on the band
   const tileOf = (px, py) => [Math.floor(px / T16), Math.floor(py / T16)];
-  // the tiles a machine's body covers (its collision box)
-  // The tiles a machine's body covers, and so the tiles no run may lie on.
+  // ---------- the ground a machine stands on ----------
+  // A kind's size (chain.js) says how many tiles across and deep its body
+  // is; this puts that box on the grid. Plots and ore nodes are points and
+  // fall where the land allows, so the body rarely lines up with the tiles:
+  // of the windows of the right size the box takes the one the drawn body
+  // covers most, which keeps it under the art wherever the machine stands.
   //
-  // A machine claims a tile when its body covers at least six of that tile's
-  // sixteen pixels. The walking box is three pixels wider than the machine
-  // on each side so the operator never clips it, and snapping that box out
-  // to whole tiles used to hand a machine a tile its sprite never touches:
-  // the run stopped on the far side of it and left a gap it had no way to
-  // close. Six is well under the twelve a belt's band is wide, so whatever
-  // sliver of machine hangs over a run's last tile is covered by the machine
-  // itself — it draws above the belt — and the run meets it flush.
-  const CLAIM = 6;
+  // The box is both the tiles no run may lie on and the frame the ports hang
+  // off, so a port is never a tile the body covers and a run always meets
+  // the machine flush.
+  const bodyPx = (m) => {
+    const [w, h] = SIM.sizeOf(m), pos = CHAIN.machinePos(m);
+    // the art each size is drawn at: a pixel shy of the tiles on every side
+    // but the foot, which is what the machine stands on
+    return { x0: pos.x, x1: pos.x + w * T16 - 3, y0: pos.y - (h * T16 - 4), y1: pos.y + 1, w, h };
+  };
+  // the start of the `n` neighbouring tracks the span [lo, hi] covers most
+  const bestWindow = (lo, hi, n) => {
+    const first = Math.floor(lo / T16), last = Math.floor(hi / T16);
+    const cover = (t) => Math.max(0, Math.min(hi, t * T16 + T16 - 1) - Math.max(lo, t * T16) + 1);
+    let at = first, most = -1;
+    for (let s = Math.min(first, last - n + 1); s <= last; s++) {
+      let sum = 0;
+      for (let k = 0; k < n; k++) sum += cover(s + k);
+      if (sum > most) { most = sum; at = s; }
+    }
+    return at;
+  };
+  function bodyBox(m) {
+    const b = bodyPx(m);
+    const c0 = bestWindow(b.x0, b.x1, b.w), r0 = bestWindow(b.y0, b.y1, b.h);
+    return { c0, c1: c0 + b.w - 1, r0, r1: r0 + b.h - 1 };
+  }
   function footprintTiles(m) {
-    const pos = CHAIN.machinePos(m);
-    const x0 = pos.x, x1 = pos.x + 25;            // the body as drawn, 26 wide
-    const y0 = pos.y - 14, y1 = pos.y + 1;        // it stands on its base; runs pass behind the rest
-    const covers = (lo, hi, t) => Math.min(hi, t * T16 + T16 - 1) - Math.max(lo, t * T16) + 1 >= CLAIM;
+    const b = bodyBox(m);
     const out = [];
-    for (let ty = Math.floor(y0 / T16); ty <= Math.floor(y1 / T16); ty++)
-      for (let tx = Math.floor(x0 / T16); tx <= Math.floor(x1 / T16); tx++)
-        if (covers(x0, x1, tx) && covers(y0, y1, ty)) out.push([tx, ty]);
+    for (let ty = b.r0; ty <= b.r1; ty++) for (let tx = b.c0; tx <= b.c1; tx++) out.push([tx, ty]);
     return out;
   }
   const key = (tx, ty) => tx + ',' + ty;
@@ -739,32 +757,13 @@
     return TILES.passable(grid, a[0], a[1], b[0], b[1]);
   }
   // ---------- a machine's ports, on the ground ----------
-  // sim.js names six places on the ring around a body and hands each inlet
-  // and outlet one of them. Here they become tiles.
-  //
-  // The two columns are the ones the body really stands on: 26 pixels can
-  // graze a third, and the thin edge of it is not a side of the machine.
-  // The sides take the row the machine's foot is on — the row the eye reads
-  // a run against — while back and front take the rows above and below
-  // whatever the body claims, so a port is never a tile the body covers.
-  function portBox(m) {
-    const pos = CHAIN.machinePos(m);
-    const x0 = pos.x, x1 = pos.x + 25;
-    let c0 = Math.floor(x0 / T16), c1 = Math.floor(x1 / T16);
-    while (c1 - c0 > 1) {
-      if ((c0 + 1) * T16 - x0 < x1 - c1 * T16 + 1) c0++; else c1--;
-    }
-    if (c1 === c0) c1 = c0 + 1;
-    const rows = footprintTiles(m).map(([, ty]) => ty);
-    const r0 = rows.length ? Math.min(...rows) : Math.floor((pos.y - 7) / T16);
-    const r1 = rows.length ? Math.max(...rows) : r0;
-    return { c0, c1, r0, r1 };
-  }
-  // The front's two places are the body's own columns; a side's two are the
-  // row the machine stands on and the row at its shoulder, both clear of the
-  // body whatever the body claims.
+  // sim.js names the places around a body — one per column across the front,
+  // one per row down each side — and hands each inlet and outlet one of
+  // them. Here they become tiles, hung off the body box: the front row is
+  // the one below it, a side's places climb from the row the machine stands
+  // on toward its shoulder. None of them is ever a tile the body covers.
   const PORT_TILE = {
-    s: (b, slot) => [slot ? b.c1 : b.c0, b.r1 + 1],
+    s: (b, slot) => [b.c0 + slot, b.r1 + 1],
     e: (b, slot) => [b.c1 + 1, b.r1 - slot],
     w: (b, slot) => [b.c0 - 1, b.r1 - slot],
   };
@@ -776,7 +775,7 @@
   // with a rock right outside it is a port you cannot use until you turn the
   // machine.
   function machinePorts(m) {
-    const b = portBox(m);
+    const b = bodyBox(m);
     const plan = SIM.ports(m);
     const place = (q) => {
       const [tx, ty] = PORT_TILE[q.face](b, q.slot);
@@ -955,9 +954,16 @@
   function reconcileBelts(profile) {
     const belts = profile.belts || [];
     const lift = [];
+    // a body that has grown since — a save from before the kinds had sizes —
+    // can be standing on a tile a run lies across. Such a run is plugged in
+    // at both ends and still has to move, so the bodies are checked as well
+    // as the ends.
+    const under = new Set();
+    for (const m of profile.machines) for (const [x, y] of footprintTiles(m)) under.add(key(x, y));
     belts.forEach((b, at) => {
       const from = SIM.machineById(profile, b.from), to = SIM.machineById(profile, b.to);
-      if (!from || !to || beltPlugged(b, from, to)) return;
+      if (!from || !to) return;
+      if (beltPlugged(b, from, to) && !b.path.some(([x, y]) => under.has(key(x, y)))) return;
       SIM.ensureMachine(from);
       for (const it of b.items) {
         if ((from.buf.out[it.mat] || 0) < CHAIN.TUNING.BUFFER_CAP) from.buf.out[it.mat] = (from.buf.out[it.mat] || 0) + 1;
@@ -1161,7 +1167,7 @@
       if (!st.mark) continue;
       const v = marks ? marks[st.def.id] : null;
       st.mark.visible = !!v;
-      if (v) st.mark.clear().rect(-2, 39, 30, 2).fill(v === 'ok' ? 0x6cc46c : 0xd84f4f);
+      if (v) st.mark.clear().rect(-2, 39, (st.def.bw || 26) + 4, 2).fill(v === 'ok' ? 0x6cc46c : 0xd84f4f);
     }
   }
   let spoolFrom = null, tetherG = null, tetherPhase = 0;
@@ -1272,7 +1278,9 @@
       for (const s of Object.values(stations)) {
         if (!s.built) continue;
         const d = s.def;
-        if (px > d.x - 3 && px < d.x + 29 && py > d.y - 14 && py < d.y + 2) return true;
+        // the base blocks, never the tower: the operator squeezes behind a
+        // machine as before, and a wider kind blocks a wider base
+        if (px > d.x - 3 && px < d.x + (d.bw || 26) + 3 && py > d.y - 14 && py < d.y + 2) return true;
       }
       for (const sc of CHAIN.SCENERY) {
         const b = sc.box;

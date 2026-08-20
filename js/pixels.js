@@ -466,10 +466,16 @@
   // Works buildings in the same idiom: a blast furnace, a crucible foundry,
   // a belt-driven machine shop, an assembly hall. Same kit, heavier iron —
   // each one gets a chimney on the roof, one fire, and one thing that moves.
+  // How wide a station is drawn. Two tiles of ground is 30 px of art, three
+  // is 46 — chain.js sets the size and this follows it, so the sprite and
+  // the tiles a kind claims can never drift apart.
+  const STATION_W = { crane: 46, manufacturer: 46 };
+  const stationW = (kind) => STATION_W[kind] || 30;
   function station(kind, frame, mode) {
-    const [c, x] = canvas(30, 30);
+    const W = stationW(kind);
+    const [c, x] = canvas(W, 30);
     const b = beat(mode === undefined ? 'work' : mode, frame);
-    R(x, P.ironO, 1, 28, 28, 2);
+    R(x, P.ironO, 1, 28, W - 2, 2);
     if (kind === 'bigrams') {
       // SMELTER: a blast furnace that tapers as it climbs, charged from the
       // hopper on top and tapped at the foot into a mould that still glows.
@@ -578,44 +584,57 @@
       M.lamp(x, 24, 16, b.lamp);
       M.flue(x, 12, 1, 8); M.puff(x, 13, 0, b.f);
     } else if (kind === 'crane') {
-      // CRANE: a slewing jib on a riveted tower — the hook rides the jib,
-      // a crate waits on the deck, the winch house burns coal at the foot.
-      M.plate(x, 3, 17, 24, 11);                                                             // winch house
-      R(x, P.ironO, 12, 2, 5, 16); R(x, P.iron2, 13, 3, 3, 15); R(x, P.iron, 13, 3, 1, 15);  // tower
-      M.rivets(x, 13, 6, 3, 2); M.rivets(x, 13, 12, 3, 2);
-      R(x, P.ironO, 4, 2, 20, 3); R(x, P.iron, 5, 3, 18, 1); R(x, P.ironL, 5, 3, 18, 1);     // jib
-      R(x, P.iron3, 6, 5, 1, 3); R(x, P.iron3, 22, 5, 1, 2);                                 // stays
-      const ride = b.run ? [2, 6, 10, 6][b.f] : 2;                                           // the trolley rides out
-      R(x, P.brass1, 5 + ride, 5, 3, 1);                                                     // trolley
-      R(x, P.steel, 6 + ride, 6, 1, 4 + (b.run ? [0, 1, 2, 1][b.f] : 0));                    // the fall
-      R(x, P.ironO, 5 + ride, 10 + (b.run ? [0, 1, 2, 1][b.f] : 0), 3, 2);                   // the hook block
-      R(x, P.ironO, 20, 12, 7, 5); R(x, P.bB, 21, 13, 5, 3); R(x, P.bA, 21, 13, 5, 1);       // the crate on deck
-      M.band(x, 4, 20, 22);
-      M.rivets(x, 5, 26, 20, 4);
-      M.gauge(x, 6, 21);
-      M.firebox(x, 17, 23, 6, 3, b.heat);
-      M.lamp(x, 24, 19, b.lamp);
-      M.flue(x, 5, 8, 9); M.puff(x, 6, 7, b.f);
+      // CRANE: three tiles of ground, and reach is what it spends them on. A
+      // lattice jib the full width of the deck on a riveted mast, the
+      // trolley running its whole length with the fall under it, and a crate
+      // landed at each end of the travel. The winch house burns coal beneath.
+      M.plate(x, 2, 17, 42, 11);                                                             // the deck / winch house
+      R(x, P.ironO, 19, 6, 8, 12); R(x, P.iron2, 20, 7, 6, 11); R(x, P.iron, 20, 7, 2, 11);  // the mast
+      M.rivets(x, 20, 9, 6, 2); M.rivets(x, 20, 14, 6, 2);
+      // the jib: two chords with a webbing of posts between them, so the
+      // boom reads as a girder and not as a bar laid over the machine
+      for (let k = 3; k < 43; k += 4) { R(x, P.iron3, k, 4, 1, 4); R(x, P.iron2, k + 2, 5, 1, 2); }
+      R(x, P.ironO, 1, 2, 44, 2); R(x, P.iron, 2, 2, 42, 1); R(x, P.ironL, 2, 2, 42, 1);     // top chord
+      R(x, P.ironO, 1, 8, 44, 2); R(x, P.iron3, 2, 8, 42, 1);                                // bottom chord
+      const ride = b.run ? [2, 12, 24, 12][b.f] : 2;                                         // the trolley rides the span
+      const drop = b.run ? [0, 1, 2, 1][b.f] : 0;
+      R(x, P.brass1, 4 + ride, 10, 5, 2); R(x, P.brass2, 4 + ride, 10, 3, 1);                // trolley
+      R(x, P.steel, 6 + ride, 12, 1, 2 + drop);                                              // the fall
+      R(x, P.ironO, 5 + ride, 14 + drop, 3, 2);                                              // the hook block
+      R(x, P.ironO, 3, 12, 9, 5); R(x, P.bB, 4, 13, 7, 3); R(x, P.bA, 4, 13, 7, 1);          // a crate landed
+      R(x, P.ironO, 33, 12, 9, 5); R(x, P.bB, 34, 13, 7, 3); R(x, P.bA, 34, 13, 7, 1);       // and one waiting
+      M.band(x, 3, 20, 40);
+      M.rivets(x, 4, 26, 38, 4);
+      M.gauge(x, 5, 21); M.gauge(x, 37, 21);
+      M.firebox(x, 20, 23, 6, 3, b.heat);
+      M.lamp(x, 14, 19, b.lamp);
+      M.flue(x, 15, 12, 5); M.puff(x, 16, 11, b.f);
     } else if (kind === 'manufacturer') {
       // MANUFACTURER: the printing house — a long press hall, the platen
       // rising and falling over the bed, a stack of finished pages growing
       // at the delivery end. The one station the factory exists to feed.
-      M.plate(x, 1, 12, 28, 16);
-      R(x, P.ironO, 0, 9, 30, 4); R(x, P.iron, 1, 10, 28, 2); R(x, P.ironL, 1, 10, 28, 1);   // roofline
-      R(x, P.ironO, 3, 2, 5, 8); R(x, P.iron2, 4, 3, 3, 7);                                  // the tower end
-      M.wheel(x, 24, 6, 3, b.f);                                                             // the drive wheel
-      R(x, P.iron3, 14, 5, 10, 1);                                                           // the shaft to it
-      const fall = b.run ? [0, 2, 4, 2][b.f] : 0;                                            // the platen strokes
-      R(x, P.ironO, 12, 3, 4, 3 + fall); R(x, P.steel, 13, 4, 2, 2 + fall);                  // platen ram
-      R(x, P.ironO, 10, 8, 8, 3); R(x, P.brass1, 11, 9, 6, 1);                               // the bed
-      M.band(x, 2, 15, 26);
-      M.rivets(x, 3, 25, 24, 5);
-      R(x, P.ironO, 19, 17, 9, 7); R(x, P.enamD, 20, 18, 7, 5); R(x, P.enam, 20, 18, 7, 2); R(x, P.enamL, 20, 18, 7, 1); // dial bank
-      M.gauge(x, 21, 19); M.gauge(x, 25, 19);
+      // Three tiles of ground, and the hall spends them on the run of the
+      // work: feed tower, two platens on one shaft, the bed between them,
+      // then the delivery end where the pages pile. The factory's last
+      // machine should look like the longest thing on the field.
+      M.plate(x, 1, 12, 44, 16);
+      R(x, P.ironO, 0, 9, 46, 4); R(x, P.iron, 1, 10, 44, 2); R(x, P.ironL, 1, 10, 44, 1);   // roofline
+      R(x, P.ironO, 3, 2, 5, 8); R(x, P.iron2, 4, 3, 3, 7);                                  // the feed tower
+      M.wheel(x, 40, 6, 3, b.f);                                                             // the drive wheel
+      R(x, P.iron3, 12, 5, 28, 1);                                                           // the line shaft down the hall
+      const fall = b.run ? [0, 2, 4, 2][b.f] : 0;                                            // the platens stroke
+      const lift = b.run ? [4, 2, 0, 2][b.f] : 4;                                            // in opposition, so the hall never rests
+      R(x, P.ironO, 12, 3, 4, 3 + fall); R(x, P.steel, 13, 4, 2, 2 + fall);                  // near platen ram
+      R(x, P.ironO, 26, 3, 4, 3 + lift); R(x, P.steel, 27, 4, 2, 2 + lift);                  // far platen ram
+      R(x, P.ironO, 10, 8, 22, 3); R(x, P.brass1, 11, 9, 20, 1);                             // the bed under both
+      M.band(x, 2, 15, 42);
+      M.rivets(x, 3, 25, 40, 5);
+      R(x, P.ironO, 33, 17, 9, 7); R(x, P.enamD, 34, 18, 7, 5); R(x, P.enam, 34, 18, 7, 2); R(x, P.enamL, 34, 18, 7, 1); // dial bank
+      M.gauge(x, 35, 19); M.gauge(x, 39, 19);
       const stack = b.run ? [2, 3, 4, 3][b.f] : 2;                                           // pages pile up
       R(x, P.ironO, 3, 25 - stack, 8, stack + 2); R(x, P.paper, 4, 26 - stack, 6, stack); R(x, P.paper2, 4, 26 - stack, 6, 1); // the delivery stack
-      M.gauge(x, 13, 20);
-      M.firebox(x, 12, 24, 6, 3, b.heat);
+      M.gauge(x, 13, 20); M.gauge(x, 27, 20);
+      M.firebox(x, 19, 24, 6, 3, b.heat);
       M.lamp(x, 6, 14, b.lamp);
       M.flue(x, 4, 1, 8); M.puff(x, 5, 0, b.f);
     } else {

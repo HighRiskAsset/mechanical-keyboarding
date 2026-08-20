@@ -49,35 +49,45 @@
   // arrive there. What a machine takes and what it gives is then something
   // you read off the ground before you lay anything.
   //
-  // A machine has three sides, not four. The body is two tiles across and
-  // one deep, but the operator sees it from the front and its tower stands a
-  // good two tiles above its base: anything on the row behind it is hidden
-  // by the machine itself, and a port nobody can see is no better than the
-  // old rule of ending a run wherever it fitted. So the places are
+  // A machine has three sides, not four. The operator sees it from the front
+  // and its tower stands above its base, so anything on the row behind it is
+  // hidden by the machine itself, and a port nobody can see is no better
+  // than the old rule of ending a run wherever it fitted. The places are one
+  // per column across the front and one per row down each side — a body two
+  // across and two deep gives six:
   //
-  //        [w1]  (behind: hidden)  [e1]      the row at its shoulders
-  //        [w0] [ B O D Y ] [e0]             the row it stands on
-  //             [s0] [s1]                    the row in front of it
+  //        [w1] [ B O D Y ] [e1]      (behind: hidden)
+  //        [w0] [ B O D Y ] [e0]      the row it stands on
+  //             [s0] [s1]             the row in front of it
   //
-  // One whole side discharges; the other two take deliveries. Turning a
-  // machine steps the discharge side round — front, right, left — and the
-  // inlets fill the two remaining sides in turn. Every kind fits: at most
-  // two outlets, which is one side, and at most three inlets, where two
-  // sides hold four.
+  // One whole side discharges; the other two take deliveries. Turning steps
+  // the discharge side round — front, right, left — and the inlets fill the
+  // two remaining sides in turn, the first to the brim before the second.
+  //
+  // This is what sets a kind's size (chain.js). A side of a one-deep body is
+  // a single tile, so a one-deep machine can only ever have one outlet: the
+  // mine, and nothing else. The Manufacturer's fifth port is why it is three
+  // across — its front holds three places.
   const OUT_SIDE = ['s', 'e', 'w'];                                  // what a turn steps through
   const IN_SIDES = { s: ['w', 'e'], e: ['s', 'w'], w: ['e', 's'] };  // and what is left to take in by
   const ROTS = OUT_SIDE.length;
+  const sizeOf = (m) => (C().KINDS[m.kind] || {}).size || [2, 2];
+  const placesOf = (m) => { const [w, h] = sizeOf(m); return { s: w, e: h, w: h }; };
   const rotOf = (m) => ((((m && m.rot) | 0) % ROTS) + ROTS) % ROTS;
   const facingOf = (m) => OUT_SIDE[rotOf(m)];   // the side the product leaves by
   const turn = (m) => { m.rot = (rotOf(m) + 1) % ROTS; return m.rot; };
   // every port of a machine, in order, as a side and a place on it.
   // factory.js turns these into tiles; nothing here knows where the machine
-  // stands.
+  // stands. A kind whose size cannot seat all its ports comes back short,
+  // and dev/sim.html says so rather than letting it reach the map.
   function ports(m) {
-    const face = facingOf(m), sides = IN_SIDES[face];
+    const face = facingOf(m), room = placesOf(m);
     const out = [], inn = [];
-    for (let i = 0; i < outletsOf(m) && i < 2; i++) out.push({ face, slot: i, dir: 'out', i });
-    for (let i = 0; i < inletsOf(m) && i < 4; i++) inn.push({ face: sides[i >> 1], slot: i & 1, dir: 'in', i });
+    for (let i = 0; i < outletsOf(m) && i < room[face]; i++) out.push({ face, slot: i, dir: 'out', i });
+    let i = 0;
+    for (const side of IN_SIDES[face]) {
+      for (let s = 0; s < room[side] && i < inletsOf(m); s++, i++) inn.push({ face: side, slot: s, dir: 'in', i });
+    }
     return { out, in: inn };
   }
 
@@ -291,7 +301,7 @@
 
   window.SIM = {
     ensure, ensureMachine, machineById, beltsFrom, beltsTo, outletsOf, inletsOf,
-    ports, rotOf, facingOf, turn,
+    ports, rotOf, facingOf, turn, sizeOf,
     recipeOf, accepts, produces, canLink, addBelt, removeBelt, hasExit,
     takeInput, canTake, emit, collect, feed, canFeed, hasOutput, state,
     step, catchUp, tick,
