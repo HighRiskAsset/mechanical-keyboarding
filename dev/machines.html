@@ -57,20 +57,10 @@
   const cy3 = 106;
   bed('dirt', 0, cy3 + 4, 19, 2);
   label('belts + pipes: a run that turns, ends, goods aboard — 4 of 8 walk frames', 2, cy3 + 2);
-  // one good on the band, drawn tinted core then untinted rim
-  const good = (gx, gy, tint) => {
-    const t = document.createElement('canvas'); t.width = 6; t.height = 6;
-    const tx2 = t.getContext('2d');
-    tx2.drawImage(PIXELS.itemDotCanvas(), 0, 0);
-    tx2.globalCompositeOperation = 'multiply';
-    tx2.fillStyle = tint; tx2.fillRect(0, 0, 6, 6);
-    tx2.globalCompositeOperation = 'destination-in';
-    tx2.drawImage(PIXELS.itemDotCanvas(), 0, 0);
-    tx2.globalCompositeOperation = 'source-over';
-    tx2.drawImage(PIXELS.itemRingCanvas(), 0, 0);
-    x.drawImage(t, gx, gy);
-  };
-  const LOAD = ['#8b93a3', '#d8814e', '#585868', '#e59ae0'];   // iron, copper, coal, quartz
+  // a good on the band is the material's own sprite, centred on it
+  const HM = PIXELS.MAT_PX >> 1;
+  const good = (gx, gy, mat) => x.drawImage(PIXELS.matCanvas(mat), gx - HM, gy - HM);
+  const LOAD = ['az', 'buki', 'coal', 'vedi'];
   for (let f = 0; f < 4; f++) {
     const ox = 4 + f * 56, oy = cy3 + 6;
     // a belt run: in from the west, a corner, then north
@@ -79,8 +69,8 @@
     x.drawImage(PIXELS.beltTileCanvas(f * 2, 'nw', true, false), ox + 16, oy + 16);
     x.drawImage(PIXELS.beltTileCanvas(f * 2, 'v', true, false), ox + 16, oy);
     x.drawImage(PIXELS.beltEndCanvas(f * 2, 'n', false), ox + 16, oy);
-    good(ox + 5, oy + 16 + 5, LOAD[f]);
-    good(ox + 16 + 5, oy + 5, LOAD[(f + 2) % 4]);
+    good(ox + 8, oy + 16 + 8, LOAD[f]);
+    good(ox + 16 + 8, oy + 8, LOAD[(f + 2) % 4]);
     // the same turn in copper pipe
     x.drawImage(PIXELS.beltTileCanvas(f * 2, 'h', false, true), ox + 32, oy + 16);
     x.drawImage(PIXELS.beltTileCanvas(f * 2, 'ne', true, true), ox + 48, oy + 16);
@@ -101,15 +91,15 @@
   x.drawImage(PIXELS.stationCanvas('bigrams'), px + 36, cy4 + 6);
   x.drawImage(PIXELS.boardCanvas(true), px + 72, cy4 + 0);
 
-  // 5. build-menu icons + material icons at 12px
+  // 5. build-menu icons (12px) + material sprites (10px)
   const cy5 = 194;
   label('kind icons: mine smelter foundry constructor molder assembler fastener crane', 2, cy5);
   ['mine', 'smelter', 'foundry', 'constructor', 'molder', 'assembler', 'fastener', 'crane'].forEach((k, i) => {
     x.drawImage(PIXELS.kindIconCanvas(k), 4 + i * 16, cy5 + 4);
   });
-  label('material icons', 2, cy5 + 26);
+  label('material sprites — the bag and the belt carry the same picture', 2, cy5 + 26);
   ['az', 'vedi', 'coal', 'oil', 'slogi', 'qzbronze', 'slova', 'mold', 'stroki', 'fast', 'crate', 'heavy', 'money'].forEach((k, i) => {
-    x.drawImage(PIXELS.matIconCanvas(k), 4 + i * 16, cy5 + 30);
+    x.drawImage(PIXELS.matCanvas(k), 4 + i * 16, cy5 + 30);
   });
   label('palette: iron ramp · brass · copper · enamel · soot/steam', 2, cy5 + 54);
   const P = PIXELS.P;

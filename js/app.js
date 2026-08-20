@@ -228,7 +228,7 @@
     if (keys.join() !== hudKeysShown.join()) {
       hudKeysShown = keys;
       FACTORY.setHudKeys(keys);
-      for (const k of keys) { if (!iconURLs[k]) iconURLs[k] = PIXELS.matIconURL(k); FACTORY.setInvValue(k, invPrev[k] === undefined ? invValue(k) : invPrev[k]); }
+      for (const k of keys) { if (!iconURLs[k]) iconURLs[k] = PIXELS.matURL(k); FACTORY.setInvValue(k, invPrev[k] === undefined ? invValue(k) : invPrev[k]); }
     }
     for (const k of keys) {
       const v = invValue(k);
@@ -251,10 +251,15 @@
     const tp = FACTORY.invScreenPos(mat);
     if (!tp) return;
     const tx = rect.left + tp.x * scale, ty = rect.top + tp.y * scale;
+    // the same size it will be when it lands: a world pixel is FACTORY.scale()
+    // device pixels, and `scale` turns those into the page's own
+    const px = PIXELS.MAT_PX * FACTORY.scale() * scale;
     for (let i = 0; i < Math.min(count, 5); i++) {
       const img = document.createElement('img');
       img.src = iconURLs[mat];
       img.className = 'fly-mat';
+      img.style.width = px + 'px';
+      img.style.height = px + 'px';
       img.style.left = sx + 'px';
       img.style.top = sy + 'px';
       document.body.appendChild(img);

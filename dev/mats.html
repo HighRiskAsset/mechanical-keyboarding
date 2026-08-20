@@ -1,0 +1,91 @@
+<!doctype html>
+<!-- Material proof sheet (dev only). Every material once: the sprite the bag
+     shows, the same sprite riding a straight run, and the same sprite round
+     a corner — which is where a good that is too big rides out over the
+     grass. Then a full run loaded with the whole ladder, to see whether
+     twenty-five goods going past can be told apart at speed.
+     Open: http://localhost:8123/dev/mats.html  (optionally ?name=x.png&s=4) -->
+<meta charset="utf-8">
+<title>material proof</title>
+<style>
+  body { margin: 0; background: #1a1a20; color: #ddd; font: 12px/1.4 monospace; }
+  #out { image-rendering: pixelated; display: block; margin: 8px; }
+  #log { padding: 8px; white-space: pre; }
+</style>
+<div id="log"></div>
+<canvas id="out"></canvas>
+<script src="../js/pixels.js"></script>
+<script src="../js/tiles.js"></script>
+<script src="../js/courses.js"></script>
+<script src="../js/language-ru.js"></script>
+<script src="../js/maps/kit.js"></script>
+<script src="../js/maps/frontier.js"></script>
+<script src="../js/maps/range.js"></script>
+<script src="../js/chain.js"></script>
+<script src="../js/sim.js"></script>
+<script>
+(async function () {
+  const Q = new URLSearchParams(location.search);
+  const SCALE = +(Q.get('s') || 4);
+  const IDS = CHAIN.MAT_IDS.concat(['money']);
+  const HM = PIXELS.MAT_PX >> 1;
+  const ROW = 18, W = 268, HH = 34 + IDS.length * ROW + 128;
+  const c = document.createElement('canvas'); c.width = W; c.height = HH;
+  const x = c.getContext('2d');
+  x.fillStyle = '#26262e'; x.fillRect(0, 0, W, HH);
+  const label = (s, px, py, col) => { x.fillStyle = col || '#fff4dc'; x.font = '6px monospace'; x.fillText(s, px, py); };
+  const bed = (kind, px, py, w, h) => {
+    for (let ty = 0; ty < h; ty++) for (let tx = 0; tx < w; tx++) {
+      x.drawImage(TILES.fill(kind, (tx * 7 + ty * 13) % 23), px + tx * 16, py + ty * 16);
+    }
+  };
+  const good = (mat, gx, gy) => x.drawImage(PIXELS.matCanvas(mat), gx - HM, gy - HM);
+
+  label('every material — in the bag, on a straight, round a corner. ' + PIXELS.MAT_PX + 'px', 4, 8);
+  label('form', 4, 18); label('id', 32, 18); label('bag', 80, 18); label('on the run', 108, 18);
+
+  IDS.forEach((id, i) => {
+    const y = 22 + i * ROW;
+    const spec = (CHAIN.MATS && CHAIN.MATS[id]) || { form: 'money' };
+    label(spec.form, 4, y + 11, '#c3ab84');
+    label(id, 32, y + 11);
+    // the bag: the HUD's own plate, at the HUD's own row height
+    x.fillStyle = 'rgba(34,29,41,0.74)'; x.fillRect(78, y, 24, 14);
+    x.drawImage(PIXELS.matCanvas(id), 80, y + 2);
+    // a run that goes straight and then turns, on grass, so an overhang shows
+    const bx = 108, by = y - 1;
+    bed('grass', bx, by, 4, 1);
+    x.drawImage(PIXELS.beltTileCanvas(0, 'h', false, false), bx, by);
+    x.drawImage(PIXELS.beltTileCanvas(4, 'h', false, false), bx + 16, by);
+    x.drawImage(PIXELS.beltTileCanvas(0, 'sw', false, false), bx + 32, by);
+    good(id, bx + 8, by + 8);
+    good(id, bx + 24, by + 8);
+    good(id, bx + 32 + 5.66, by + 10.34);      // the worst point of the turn: 45°
+    // and against the grass it flies over on its way to the bag
+    bed('grass', bx + 52, by, 1, 1);
+    good(id, bx + 60, by + 8);
+  });
+
+  // the whole ladder going past on one run — can you read it at speed?
+  const ly = 30 + IDS.length * ROW;
+  label('the whole ladder on one run, a tile apart, as it actually goes past', 4, ly - 4);
+  bed('dirt', 0, ly, 17, 6);
+  IDS.forEach((id, i) => {
+    const col = i % 13, rw = (i / 13) | 0;
+    const bx = 8 + col * 16, by = ly + 8 + rw * 40;
+    x.drawImage(PIXELS.beltTileCanvas((i * 3) % 8, 'h', false, false), bx, by);
+    good(id, bx + 8, by + 8);
+  });
+
+  const out = document.getElementById('out');
+  out.width = W * SCALE; out.height = HH * SCALE;
+  const ox = out.getContext('2d'); ox.imageSmoothingEnabled = false;
+  ox.drawImage(c, 0, 0, W, HH, 0, 0, W * SCALE, HH * SCALE);
+  const name = Q.get('name') || 'mats.png';
+  try {
+    const blob = await (await fetch(out.toDataURL('image/png'))).blob();
+    const res = await fetch('/upload?name=' + encodeURIComponent(name), { method: 'POST', body: blob });
+    document.getElementById('log').textContent = 'uploaded ' + name + ': ' + res.status + ' ' + await res.text();
+  } catch (e) { document.getElementById('log').textContent = 'upload failed: ' + e; }
+})().catch((e) => { document.getElementById('log').textContent = 'ERROR ' + (e.stack || e); });
+</script>

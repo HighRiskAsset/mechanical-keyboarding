@@ -129,7 +129,7 @@
       .fill({ color: 0x221d29, alpha: 0.74 });
     uiC.addChild(hudPanel);
     hudKeys.forEach((k, i) => {
-      const ic = new PIXI.Sprite(PIXELS.matIconTex(k));
+      const ic = new PIXI.Sprite(PIXELS.matTex(k));
       ic.position.set(3, 3 + i * HUD_ROW);
       uiC.addChild(ic);
       const t = new PIXI.Sprite(PIXELS.textTex(String(invValues[k] || 0), PIXELS.P.paper));
@@ -339,7 +339,7 @@
   }
 
   // ---------- icon rows and the place menu (pixel UI in labelsC) ----------
-  // A row: {pre?: text, kind?: kind id (12px icon), items?: {mat:n} icons+counts,
+  // A row: {pre?: text, kind?: kind id (12px icon), items?: {mat:n} sprites+counts,
   //         out?: mat, gauge?: 0..1, enabled?: bool, ok?: bool}
   function rowContainer(row, dimText) {
     const c = new PIXI.Container();
@@ -354,20 +354,20 @@
       put(ic, 0); ix += 14;
     }
     if (row.ore) {
-      const ic = new PIXI.Sprite(PIXELS.matIconTex(row.ore));
-      put(ic, 0); ix += 14;
+      const ic = new PIXI.Sprite(PIXELS.matTex(row.ore));
+      put(ic, 1); ix += 12;
     }
     for (const [mat, n] of Object.entries(row.items || {})) {
-      const ic = new PIXI.Sprite(PIXELS.matIconTex(mat));
-      put(ic, 0); ix += 13;
+      const ic = new PIXI.Sprite(PIXELS.matTex(mat));
+      put(ic, 1); ix += 11;
       const cnt = new PIXI.Sprite(PIXELS.textTex(String(n), PIXELS.P.paper));
       put(cnt, 3); ix += cnt.texture.width + 3;
     }
     if (row.out) {
       const arrow = new PIXI.Sprite(PIXELS.textTex('→', PIXELS.P.brass2));
       put(arrow, 3); ix += arrow.texture.width + 3;
-      const oc = new PIXI.Sprite(PIXELS.matIconTex(row.out));
-      put(oc, 0); ix += 12;
+      const oc = new PIXI.Sprite(PIXELS.matTex(row.out));
+      put(oc, 1); ix += 11;
     }
     if (row.ok === true) {
       const t = new PIXI.Sprite(PIXELS.textTex('✓', '#6cc46c'));
@@ -642,6 +642,7 @@
 
   // ---------- belts on the map (phase 3) ----------
   const T16 = 16;
+  const HALF_MAT = PIXELS.MAT_PX >> 1;   // a good is centred on the band
   const tileOf = (px, py) => [Math.floor(px / T16), Math.floor(py / T16)];
   // the tiles a machine's body covers (its collision box)
   // The tiles a machine's body covers, and so the tiles no run may lie on.
@@ -1367,21 +1368,19 @@
         const v = beltViews[b.id];
         if (!v) continue;
         while (v.items.length < b.items.length) {
-          // a tinted core under an ink ring: the ring keeps its own colour,
-          // so a dark material still reads against the dark band
-          const g = new PIXI.Container();
-          const core = new PIXI.Sprite(PIXELS.itemDotTex());
-          g.addChild(core);
-          g.addChild(new PIXI.Sprite(PIXELS.itemRingTex()));
+          // the good's own sprite, the same one the bag shows. The head of a
+          // run is delivered and the rest shift down a place, so the material
+          // under a given sprite changes — swap the texture when it does.
+          const g = new PIXI.Sprite(PIXELS.matTex('az'));
           v.itemsC.addChild(g);
-          v.items.push({ g, core });
+          v.items.push({ g, mat: 'az' });
         }
-        while (v.items.length > b.items.length) { const it = v.items.pop(); v.itemsC.removeChild(it.g); it.g.destroy({ children: true }); }
+        while (v.items.length > b.items.length) { const it = v.items.pop(); v.itemsC.removeChild(it.g); it.g.destroy(); }
         b.items.forEach((it, i) => {
           const sp = v.items[i];
           const [px, py] = pathPos(v.geo, it.pos);
-          sp.g.position.set(Math.round(px) - 3, Math.round(py) - 3);
-          sp.core.tint = PIXELS.matTint(it.mat);
+          sp.g.position.set(Math.round(px) - HALF_MAT, Math.round(py) - HALF_MAT);
+          if (sp.mat !== it.mat) { sp.mat = it.mat; sp.g.texture = PIXELS.matTex(it.mat); }
         });
       }
       // the sim's own answer for each machine, read on a slow beat: it drives
@@ -1487,6 +1486,7 @@
   window.FACTORY = {
     init, loadMap, buildWorld, setMove, castLetter, floatText, stamp, getDocked, posOf,
     playerPos: () => ({ x: playerX, y: playerY }),
+    scale: () => S,                    // device px per world px, so the DOM can match the canvas
     screenPos, setDockGlow, showInfo, clearInfo, showMenu, clearMenu, setAutoLook,
     routeBelt, beltReaches, machinePorts, portsOpen, showGhost, clearGhost, setSpool, markStations, setSocketTarget,
     setInvValue, invScreenPos, setHudKeys, setCharge,

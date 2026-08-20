@@ -1,0 +1,52 @@
+<!doctype html>
+<!-- Material sprites, large. Six across, on the two grounds that matter: the
+     belt band and the HUD plate. For judging the pixels themselves.
+     Open: http://localhost:8123/dev/mats-zoom.html -->
+<meta charset="utf-8">
+<title>material zoom</title>
+<style>
+  body { margin: 0; background: #1a1a20; color: #ddd; font: 12px/1.4 monospace; }
+  #out { image-rendering: pixelated; display: block; margin: 8px; }
+  #log { padding: 8px; white-space: pre; }
+</style>
+<div id="log"></div>
+<canvas id="out"></canvas>
+<script src="../js/pixels.js"></script>
+<script src="../js/tiles.js"></script>
+<script src="../js/courses.js"></script>
+<script src="../js/language-ru.js"></script>
+<script src="../js/maps/kit.js"></script>
+<script src="../js/maps/frontier.js"></script>
+<script src="../js/maps/range.js"></script>
+<script src="../js/chain.js"></script>
+<script src="../js/sim.js"></script>
+<script>
+(async function () {
+  const Q = new URLSearchParams(location.search);
+  const SCALE = +(Q.get('s') || 9);
+  const IDS = CHAIN.MAT_IDS.concat(['money']);
+  const COLS = 6, CELL = 20, ROWS = Math.ceil(IDS.length / COLS);
+  const W = COLS * CELL + 4, HH = ROWS * CELL + 4;
+  const c = document.createElement('canvas'); c.width = W; c.height = HH;
+  const x = c.getContext('2d');
+  x.fillStyle = '#221d29'; x.fillRect(0, 0, W, HH);
+  IDS.forEach((id, i) => {
+    const cx = 2 + (i % COLS) * CELL, cy = 2 + ((i / COLS) | 0) * CELL;
+    // left half of each cell on the belt band's tone, right half on the plate
+    x.fillStyle = '#1b1928'; x.fillRect(cx, cy, CELL, CELL);
+    x.fillStyle = '#2c2740'; x.fillRect(cx + CELL / 2, cy, CELL / 2, CELL);
+    x.drawImage(PIXELS.matCanvas(id), cx + 5, cy + 5);
+  });
+  const out = document.getElementById('out');
+  out.width = W * SCALE; out.height = HH * SCALE;
+  const ox = out.getContext('2d'); ox.imageSmoothingEnabled = false;
+  ox.drawImage(c, 0, 0, W, HH, 0, 0, W * SCALE, HH * SCALE);
+  const name = Q.get('name') || 'mats-zoom.png';
+  try {
+    const blob = await (await fetch(out.toDataURL('image/png'))).blob();
+    const res = await fetch('/upload?name=' + encodeURIComponent(name), { method: 'POST', body: blob });
+    document.getElementById('log').textContent = 'uploaded ' + name + ': ' + res.status + ' ' + await res.text()
+      + '\n' + IDS.join(' · ');
+  } catch (e) { document.getElementById('log').textContent = 'upload failed: ' + e; }
+})().catch((e) => { document.getElementById('log').textContent = 'ERROR ' + (e.stack || e); });
+</script>

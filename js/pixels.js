@@ -53,13 +53,28 @@
     nA: '#e8f0f8', nB: '#c8d8e8', nC: '#a0b8d0',                           // snow
     iA: '#a0d0e0', iB: '#c0e8f0', iC: '#70a8c0',                           // ice
     fA: '#6c9c6c', fB: '#d8e8dc', fC: '#4c7c50',                           // frost grass
-    // ores
-    ironore: '#8b93a3', ironore2: '#5f6674',
+    // ores. The six are pulled apart by hue on purpose: iron reads blue-cool
+    // and stone reads warm sand, because at ten pixels a grey is a grey and
+    // those two used to be the same rock. Veins in the ground (ORE_LOOK) and
+    // goods on the belt (MAT_DRAW) share these keys, so an ore looks the same
+    // where it is dug as it does where it is carried.
+    ironore: '#7d8aa5', ironore2: '#49526b', ironore3: '#bcc8dc',
     copper: '#d8814e', copper2: '#a85c32', copper3: '#f5ac77', copper4: '#7a4426',
-    quartz: '#e59ae0', quartz2: '#c470c9', quartz3: '#f5c9f2',
-    stoneore: '#a8a49c', stoneore2: '#6c6864',
-    coal: '#303038', coal2: '#181820', coal3: '#585868',
-    oil: '#2c2438', oil2: '#141418', oil3: '#5c4c78',
+    quartz: '#e59ae0', quartz2: '#b45cbc', quartz3: '#f9d4f5',
+    stoneore: '#b9ab8c', stoneore2: '#7a6c53', stoneore3: '#e2d6b6',
+    coal: '#3a3a4a', coal2: '#161620', coal3: '#5c5c72',
+    oil: '#4c3d70', oil2: '#1c1628', oil3: '#9b86c4',
+    // alloys — each is its own colour, not a blend of its two ores. Eight
+    // bars that differ only by a tone swap are eight of the same bar; these
+    // are eight materials.
+    bronze: '#c08a4a', bronzeD: '#7a4d1e', bronzeL: '#eec37e',
+    cIron: '#9a9488', cIronD: '#5b554a', cIronL: '#d4ccb6',
+    qIron: '#a79fc4', qIronD: '#655d86', qIronL: '#e0daf4',
+    stl: '#9db4d0', stlD: '#586c8a', stlL: '#e6f2ff',
+    brs: '#d8ac3e', brsD: '#8a6614', brsL: '#ffe488',
+    bIron: '#4a4358', bIronD: '#221d2e', bIronL: '#8b81a6',
+    gun: '#8a5e46', gunD: '#4c3122', gunL: '#c08a68',
+    gls: '#cfa8e4', glsD: '#6e4f8e', glsL: '#f6e8ff',
     titan: '#c8d0e0', titan2: '#8890a8', titan3: '#f0f4ff',
     // paper goods
     paper: '#f4ecd8', paper2: '#d8cba8',
@@ -1016,23 +1031,10 @@
     x.restore();
     return c;
   }
-  // What rides the belt: a 4x4 core the renderer tints per material, under a
-  // rim that keeps its own colour whatever the load is — lit brass along the
-  // top and left, ink down the shade side. An ink outline alone would vanish
-  // into a band this dark, and coal would go with it; the lit half is what
-  // makes a black material read as an object on the belt.
-  function itemDot() {
-    const [c, x] = canvas(6, 6);
-    R(x, P.white, 1, 1, 4, 4);
-    return c;
-  }
-  function itemRing() {
-    const [c, x] = canvas(6, 6);
-    R(x, P.cream2, 1, 0, 4, 1); R(x, P.cream2, 0, 1, 1, 4);
-    R(x, P.ink, 1, 5, 4, 1); R(x, P.ink, 5, 1, 1, 4);
-    R(x, P.cream, 1, 1, 1, 1);
-    return c;
-  }
+  // What rides the belt is the material's own sprite — see matSprite below.
+  // There is no separate belt token: a tinted square told the player only
+  // which ore a good started from, so every iron alloy was the same object
+  // going past.
   // a spool of belting carried on the operator's back, 8x8
   function spool() {
     const [c, x] = canvas(8, 8);
@@ -1155,91 +1157,254 @@
 
   const SCENERY_DRAW = { tree: () => tree(0), tree2: () => tree(1), rock: () => rock(0), rock2: () => rock(1) };
 
-  // ---------- material icons 12x12 (HUD, menus, rows) ----------
-  // Ore colours by material id (chain ore ids). Alloys are ore-colour stacks
-  // — two- or three-tone ingots — so they read as combinations.
-  const ORE_TONE = {
-    az: [P.ironore, P.ironore2, P.steel],
-    buki: [P.copper, P.copper2, P.brass3],
-    stone: [P.stoneore, P.stoneore2, P.cream2],
-    vedi: [P.quartz, P.quartz2, P.quartz3],
-    coal: [P.coal3, P.coal2, P.coal],
-    oil: [P.oil3, P.oil2, P.oil],
-  };
-  function matIcon(kind) {
-    const [c, x] = canvas(12, 12);
-    const spec = (window.CHAIN && window.CHAIN.MATS && window.CHAIN.MATS[kind]) || null;
-    const form = spec ? spec.form : (kind === 'money' ? 'money' : 'legacy');
-    const oreIcon = (main, dk, lt) => {
-      R(x, dk, 2, 6, 5, 4); R(x, main, 2, 5, 5, 4); R(x, lt, 3, 5, 1, 1);
-      R(x, dk, 7, 4, 4, 4); R(x, main, 7, 3, 4, 4); R(x, lt, 8, 3, 1, 1);
-      R(x, dk, 5, 9, 4, 2); R(x, main, 5, 8, 4, 2);
-    };
-    if (form === 'money') {
-      disc(x, P.brass2, 6, 6, 5);
-      R(x, P.brass3, 3, 3, 3, 1); R(x, P.brass1, 5, 5, 2, 4);
-    } else if (form === 'ore') {
-      const t = ORE_TONE[kind] || ORE_TONE.az;
-      if (kind === 'vedi') {
-        R(x, P.quartz2, 3, 4, 3, 7); R(x, P.quartz, 3, 3, 2, 7); R(x, P.quartz3, 3, 3, 1, 2);
-        R(x, P.quartz2, 7, 2, 3, 9); R(x, P.quartz, 7, 1, 2, 9); R(x, P.quartz3, 7, 1, 1, 3);
-        R(x, P.rock2, 2, 10, 9, 2);
-      } else if (kind === 'oil') {
-        R(x, P.iron2, 3, 2, 6, 9); R(x, P.iron, 3, 2, 6, 1);
-        R(x, P.oil, 4, 4, 4, 6); R(x, P.oil3, 4, 4, 1, 3);
-        R(x, P.iron, 5, 0, 2, 2);
-      } else {
-        oreIcon(t[0], t[1], t[2]);
-      }
-    } else if (form === 'ingot' || form === 'ingot3') {
-      // stacked ingots, one tone per ore in the alloy
-      const tones = spec.ores.map((o) => ORE_TONE[o] || ORE_TONE.az);
-      const bars = form === 'ingot3'
-        ? [[1, 7, 5], [6, 7, 5], [3, 3, 6]]
-        : [[1, 7, 6], [6, 7, 5], [3, 3, 6]];
-      bars.forEach(([bx, by, bw], i) => {
-        const t = tones[Math.min(i, tones.length - 1)];
-        R(x, t[1], bx, by, bw, 3); R(x, t[0], bx, by, bw, 1); R(x, t[2], bx + 1, by, 1, 1);
-      });
-    } else if (form === 'parts') {
-      // a brass gear
-      R(x, P.brass1, 5, 0, 2, 12); R(x, P.brass1, 0, 5, 12, 2);
-      R(x, P.brass1, 2, 2, 2, 2); R(x, P.brass1, 8, 2, 2, 2); R(x, P.brass1, 2, 8, 2, 2); R(x, P.brass1, 8, 8, 2, 2);
-      disc(x, P.brass1, 6, 6, 4); disc(x, P.brass2, 6, 6, 3);
-      disc(x, P.iron3, 6, 6, 1); R(x, P.brass3, 4, 3, 2, 1);
-    } else if (form === 'moldings') {
-      // a cast bracket, still warm at the edge
-      R(x, P.iron2, 2, 2, 8, 3); R(x, P.ironL, 2, 2, 8, 1);
-      R(x, P.iron2, 2, 5, 3, 5); R(x, P.iron2, 7, 5, 3, 5);
-      R(x, P.steel, 3, 5, 1, 5); R(x, P.steel, 8, 5, 1, 5);
-      R(x, P.brass2, 3, 8, 1, 1); R(x, P.brass2, 8, 8, 1, 1);
-    } else if (form === 'modules') {
-      // an instrument block: one brass dial, a copper coil, brass feet
-      R(x, P.iron2, 1, 2, 10, 8); R(x, P.iron, 1, 2, 10, 2);
-      R(x, P.brass1, 2, 4, 4, 4); R(x, P.brass2, 2, 4, 3, 1); R(x, P.steam, 3, 5, 2, 2);
-      R(x, P.copper2, 7, 4, 3, 5); R(x, P.copper, 7, 4, 3, 1); R(x, P.copper, 7, 6, 3, 1); R(x, P.copper, 7, 8, 3, 1);
-      R(x, P.brass1, 2, 10, 1, 2); R(x, P.brass1, 5, 10, 1, 2); R(x, P.brass1, 8, 10, 1, 2);
-    } else if (form === 'fastened') {
-      // a riveted plate with a brass boss
-      R(x, P.iron2, 1, 2, 10, 8); R(x, P.iron, 1, 2, 10, 3); R(x, P.ironL, 1, 2, 10, 1);
-      R(x, P.steel, 2, 3, 1, 1); R(x, P.steel, 9, 3, 1, 1); R(x, P.steel, 2, 8, 1, 1); R(x, P.steel, 9, 8, 1, 1);
-      R(x, P.brass1, 5, 5, 3, 3); R(x, P.brass2, 5, 5, 2, 1);
-    } else if (form === 'crates') {
-      R(x, P.trunk, 1, 2, 10, 9); R(x, '#8f6a44', 1, 2, 10, 1);
-      R(x, P.trunk2, 1, 10, 10, 1);
-      R(x, P.brass1, 1, 5, 10, 2);
-      R(x, P.paper2, 7, 3, 3, 2);
-    } else if (form === 'heavy') {
-      // a boiler assembly: iron shell, brass hoop, a lit firebox
-      R(x, P.iron2, 1, 1, 10, 10); R(x, P.iron, 1, 1, 10, 3); R(x, P.ironL, 1, 1, 10, 1);
-      R(x, P.brass1, 1, 5, 10, 1);
-      R(x, P.soot, 3, 7, 6, 4); R(x, P.orange, 4, 8, 4, 2); R(x, P.glow, 5, 9, 2, 1);
-    } else { // legacy cargo
-      R(x, P.trunk, 1, 2, 10, 9); R(x, '#8f6a44', 1, 2, 10, 1);
-      R(x, P.trunk2, 1, 10, 10, 1);
-      R(x, P.brass1, 1, 5, 10, 2);
+  // ---------- materials: one 10x10 sprite, the bag's and the belt's ----------
+  // A material is drawn once. What sits in the HUD is the same picture that
+  // rides the band — there is no smaller stand-in — and the belt is what sets
+  // the size. The trestle is twelve world pixels across; a good centred on
+  // the band with its corner cells left clear reaches 8 + 4·√2 ≈ 13.7 from
+  // the pivot at the worst point of a quarter turn, so it never rides out
+  // over the grass. Twelve would, on every corner. Goods sit a whole tile
+  // apart, so ten leaves six pixels of band between them and they still
+  // count as separate things.
+  const MAT_PX = 10;
+
+  // Masks are 8x8, laid at (1,1) so the rim has its pixel. A digit indexes
+  // the tone list, '.' is nothing. The rim is added around the silhouette
+  // afterwards and is identical on every material, because it is the light
+  // and not the material: a dim cream along the top and left, where this
+  // world's light comes from, ink down the shade side. That is what makes
+  // coal read as an object on a band this dark — an ink outline alone would
+  // sink into it — and it is the one thing the old tinted dot got right.
+  //
+  // Only a cell squarely above or left of the body takes the light. A
+  // diagonal step takes ink instead: let the staircases light up too and the
+  // cream stops being an edge and becomes a halo, which at ten pixels is a
+  // quarter of the sprite spent on nothing.
+  const RIM_LIT = '#9c9184', RIM_INK = P.ink;
+  function matMask(rows, tones) {
+    const [c, x] = canvas(MAT_PX, MAT_PX);
+    const on = (cx, cy) => cy >= 0 && cy < 8 && cx >= 0 && cx < 8 && rows[cy][cx] !== '.';
+    for (let cy = -1; cy <= 8; cy++) for (let cx = -1; cx <= 8; cx++) {
+      if (on(cx, cy)) continue;
+      let col = null;
+      if (on(cx, cy - 1) || on(cx - 1, cy)) col = RIM_INK;            // it is under or right of the body
+      else if (on(cx, cy + 1) || on(cx + 1, cy)) col = RIM_LIT;       // it is squarely over or left of it
+      else if (on(cx - 1, cy - 1) || on(cx + 1, cy - 1) || on(cx - 1, cy + 1) || on(cx + 1, cy + 1)) col = RIM_INK;
+      if (col) R(x, col, cx + 1, cy + 1, 1, 1);
+    }
+    for (let cy = 0; cy < 8; cy++) for (let cx = 0; cx < 8; cx++) {
+      const ch = rows[cy][cx];
+      if (ch !== '.') R(x, tones[+ch - 1], cx + 1, cy + 1, 1, 1);
     }
     return c;
+  }
+
+  // The six ores get six silhouettes, not six tints: an angular chunk, a
+  // round nugget and its pebble, a flat slab, twin crystals, a jagged lump,
+  // a stoppered flask. Told apart with the colour taken away.
+  const ORE_MASK = {
+    az: ['........',
+         '..33....',
+         '.3331...',
+         '.3311112',
+         '13111122',
+         '11112222',
+         '.1122...',
+         '........'],
+    buki: ['........',
+           '..3311..',
+           '.3311112',
+           '.3111112',
+           '.3111122',
+           '.1111222',
+           '..12222.',
+           '........'],
+    stone: ['........',
+            '........',
+            '..3333..',
+            '.3333112',
+            '.1111112',
+            '11111122',
+            '.222222.',
+            '........'],
+    vedi: ['.....3..',
+           '..3..31.',
+           '..3..312',
+           '.331.312',
+           '.3311312',
+           '.3311122',
+           '.1111122',
+           '..2222..'],
+    coal: ['........',
+           '..3..1..',
+           '.3311112',
+           '33111412',
+           '.1111122',
+           '.111222.',
+           '..12.2..',
+           '........'],
+    oil: ['...44...',
+          '...44...',
+          '..3113..',
+          '.331112.',
+          '.3111122',
+          '.3111122',
+          '..111122',
+          '..2222..'],
+  };
+  const ORE_TONE = {
+    az: [P.ironore, P.ironore2, P.ironore3],
+    buki: [P.copper, P.copper2, P.copper3],
+    stone: [P.stoneore, P.stoneore2, P.stoneore3],
+    vedi: [P.quartz, P.quartz2, P.quartz3],
+    coal: [P.coal, P.coal2, P.coal3],
+    oil: [P.oil, P.oil2, P.oil3],
+  };
+  // coal's one hard glint, and the flask's brass stopper, ride in slot 4
+  const ORE_EXTRA = { coal: P.white, oil: P.brass1 };
+
+  // An alloy is its own colour, not a mix of its ores' — bronze is bronze,
+  // brass is brass, steel is bright. Eight bars that differed only by a tone
+  // swap were eight of the same bar.
+  const ALLOY_TONE = {
+    slogi: [P.bronze, P.bronzeD, P.bronzeL],
+    castiron: [P.cIron, P.cIronD, P.cIronL],
+    qziron: [P.qIron, P.qIronD, P.qIronL],
+    steel: [P.stl, P.stlD, P.stlL],
+    brass: [P.brs, P.brsD, P.brsL],
+    blackiron: [P.bIron, P.bIronD, P.bIronL],
+    gunmetal: [P.gun, P.gunD, P.gunL],
+    glass: [P.gls, P.glsD, P.glsL],
+  };
+  // A two-ore bar is cast with the added ore left showing at one end, in that
+  // ore's own colour: bronze with a copper end, steel with a coal-black one.
+  // A stamped glyph was tried first and could not be seen — three pixels of
+  // pattern inside eight is not a mark, it is noise. Two columns of colour
+  // is a mark.
+  // Flat-topped and square-shouldered on purpose: a bar tapered at the top
+  // came out a loaf, and a loaf is the same silhouette as an ore chunk. Cast
+  // is cast — the ladder's whole point is that you can see when a thing has
+  // been through a furnace.
+  const BAR = ['........',
+               '........',
+               '.333333.',
+               '33333333',
+               '11111155',
+               '11111144',
+               '11111144',
+               '.222222.'];
+  // three ores is a stack of two: the bar below is the two-ore alloy it came
+  // from, the bar on top is the ore the foundry added. The player reads the
+  // recipe off the good.
+  const STACK = ['........',
+                 '..5555..',
+                 '.444444.',
+                 '.666666.',
+                 '.333333.',
+                 '11111111',
+                 '11111111',
+                 '.222222.'];
+  // az the ore is an angular chunk with a facet, buki a round nugget, stone a
+  // flat slab. Set against a flat-topped bar, none of the three can be
+  // mistaken for something that has been cast.
+  // glass is not a bar. It is the one material in the ladder that is not
+  // metal, so it does not get a metal's silhouette.
+  const PANE = ['..3333..',
+                '.311113.',
+                '.311131.',
+                '.311311.',
+                '.313111.',
+                '.331111.',
+                '.211112.',
+                '..2222..'];
+  // the deeper forms: a gear, a cast angle, an instrument block, a hex nut,
+  // a crate, a boiler that is still lit. Six silhouettes, no two alike.
+  const FORM_ART = {
+    parts: { m: ['..33.1..',
+                 '..3311..',
+                 '33311122',
+                 '.3144122',
+                 '.3144122',
+                 '33111222',
+                 '..1122..',
+                 '..11.2..'], t: [P.brass2, P.brass1, P.brass3, P.iron3] },
+    moldings: { m: ['.33..33.',
+                    '.11..11.',
+                    '.11..11.',
+                    '.11..11.',
+                    '.11..11.',
+                    '.111111.',
+                    '.141141.',
+                    '.222222.'], t: [P.iron, P.iron3, P.ironL, P.soot] },
+    modules: { m: ['.....3..',
+                   '.333333.',
+                   '31111113',
+                   '31544513',
+                   '31466413',
+                   '31111113',
+                   '.222222.',
+                   '.2....2.'], t: [P.iron2, P.iron3, P.iron, P.brass1, P.brass2, P.steam] },
+    fastened: { m: ['..3333..',
+                    '.311113.',
+                    '31144112',
+                    '31444412',
+                    '21444422',
+                    '21144222',
+                    '.211112.',
+                    '..2222..'], t: [P.iron, P.iron3, P.steel, P.soot] },
+    crates: { m: ['........',
+                  '.333333.',
+                  '.311113.',
+                  '.131131.',
+                  '.444444.',
+                  '.131131.',
+                  '.311113.',
+                  '.222222.'], t: [P.trunk, P.trunk2, '#8f6a44', P.brass1] },
+    heavy: { m: ['..3333..',
+                 '.311113.',
+                 '.111111.',
+                 '.444444.',
+                 '.155551.',
+                 '.166661.',
+                 '.167761.',
+                 '.222222.'], t: [P.iron2, P.iron3, P.iron, P.brass1, P.soot, P.orange, P.glow] },
+    money: { m: ['..3333..',
+                 '.331112.',
+                 '33111112',
+                 '31144112',
+                 '31144112',
+                 '33111122',
+                 '.211122.',
+                 '..2222..'], t: [P.brass2, P.brass1, P.brass3, P.brass1] },
+  };
+
+  function matSprite(kind) {
+    const spec = (window.CHAIN && window.CHAIN.MATS && window.CHAIN.MATS[kind]) || null;
+    const form = spec ? spec.form : (kind === 'money' ? 'money' : 'crates');
+    if (form === 'ore') {
+      const t = (ORE_TONE[kind] || ORE_TONE.az).concat(ORE_EXTRA[kind] || P.white);
+      return matMask(ORE_MASK[kind] || ORE_MASK.az, t);
+    }
+    if (form === 'ingot') {
+      const t = ALLOY_TONE[kind] || ALLOY_TONE.castiron;
+      if (kind === 'glass') return matMask(PANE, t);
+      const a = ORE_TONE[spec.ores[1]] || ORE_TONE.az;
+      return matMask(BAR, t.concat([a[0], a[2]]));
+    }
+    if (form === 'ingot3') {
+      // the parent is the two-ore alloy this one's first two ores make, so
+      // the art never has to be told a recipe chain.js already knows
+      const pair = spec.ores.slice(0, 2).join();
+      const parent = Object.keys(ALLOY_TONE).find((id) => {
+        const s = window.CHAIN.MATS[id];
+        return s && s.ores.join() === pair;
+      });
+      const t = ALLOY_TONE[parent] || ALLOY_TONE.castiron;
+      const a = ORE_TONE[spec.ores[2]] || ORE_TONE.vedi;
+      return matMask(STACK, t.concat([a[0], a[2], a[1]]));
+    }
+    const art = FORM_ART[form] || FORM_ART.crates;
+    return matMask(art.m, art.t);
   }
 
   // ---------- machine-kind icons 12x12 (build menus) ----------
@@ -1337,18 +1502,8 @@
     beltEndTex: (frame, side, pipe) => cachedTex('be:' + frame + side + (pipe ? 'p' : 'b'), () => beltEnd(frame, side, pipe)),
     portTex: (side, dir) => cachedTex('port:' + side + dir, () => portPlate(side, dir)),
     BELT_PITCH,                        // world px a slat travels before the next takes its place
-    itemDotTex: () => cachedTex('itemdot', itemDot),
-    itemRingTex: () => cachedTex('itemring', itemRing),
     spoolTex: () => cachedTex('spool', spool),
     stateDotTex: (kind) => cachedTex('state:' + kind, () => stateDot(kind)),
-    // a material's tint (its first ore's main tone) for item dots
-    matTint: (mat) => {
-      const spec = window.CHAIN && window.CHAIN.MATS && window.CHAIN.MATS[mat];
-      const ore = spec && spec.ores && spec.ores[0];
-      const tone = (ore && ORE_TONE[ore]) || null;
-      const hex = tone ? tone[0] : (spec && spec.form === 'parts' ? P.steel : P.brass2);
-      return parseInt(hex.slice(1), 16);
-    },
     sparkTex: () => cachedTex('spark', spark),
     paperScrapTex: (frame) => cachedTex('scrap:' + frame, () => paperScrap(frame)),
     petalTex: (frame) => cachedTex('petal:' + frame, () => petal(frame)),
@@ -1360,16 +1515,19 @@
       SCENERY_DRAW[kind] || (() => window.TILES.scenery(kind))),
     boardTex: (hasWork) => cachedTex('board:' + !!hasWork, () => noticeBoard(hasWork)),
     textTex: (str, fg) => cachedTex('t:' + fg + '|' + str, () => textCanvas(str, fg)),
-    matIconURL: (kind) => matIcon(kind).toDataURL(),
+    // materials: one sprite, three ways of asking for it. The HUD, the menu
+    // rows, the goods on the belt and the fly-to-bag image are all this.
+    MAT_PX,
+    matTex: (kind) => cachedTex('mat:' + kind, () => matSprite(kind)),
+    matCanvas: matSprite,
+    matURL: (kind) => matSprite(kind).toDataURL(),
     kindIconTex: (kind) => cachedTex('kind:' + kind, () => kindIcon(kind)),
     // raw canvases for the dev proof page (dev/tiles.html) — no PIXI needed
     nodeCanvas: nodePatch,
     sceneryCanvas: (kind) => SCENERY_DRAW[kind] ? SCENERY_DRAW[kind]() : window.TILES.scenery(kind),
     machineCanvas: machine, stationCanvas: station, characterCanvas: character, workCanvas: characterWork,
     pressCanvas: press, beltTileCanvas: beltTile, beltEndCanvas: beltEnd, portCanvas: portPlate, boardCanvas: noticeBoard,
-    itemDotCanvas: itemDot, itemRingCanvas: itemRing,
-    propCanvas: (kind) => PROP_DRAW[kind](), kindIconCanvas: kindIcon, matIconCanvas: matIcon,
-    matIconTex: (kind) => cachedTex('mat:' + kind, () => matIcon(kind)),
+    propCanvas: (kind) => PROP_DRAW[kind](), kindIconCanvas: kindIcon,
     pressTex: (frame, mode) => tex(press(frame, mode)),
     vignetteURL: () => vignette().toDataURL(),
   };

@@ -45,7 +45,7 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
    finish. Machines take 1–3 inputs with ratios, 1 output.
    IMPORTANT: internal save ids keep the legacy Slavic names
    (az/buki/vedi/slogi/slova/stroki/listy) — display names live in i18n
-   matNames/stationNames, looks in pixels.js matIcon. Renames never touch ids.
+   matNames/stationNames, looks in pixels.js matSprite. Renames never touch ids.
 4. **Automation is bought, and a new Mk takes it back.** The curriculum
    advances by purchase — the next key-pair is bought at its mine or vein,
    in the ladder's order, for a price that asks for that ore and a later
@@ -450,6 +450,51 @@ given), `M.flue`, `M.pipeH/pipeV`, `M.wheel` (spokes turn per frame), `M.puff`
 (steam rises and thins), `M.lamp` (a signal bead: dark, or breathing, or lit).
 **Any new machine, belt, prop or build-menu icon goes through that kit**, so the
 whole frontier reads as one workshop. Proof sheet: `dev/machines.html`.
+
+### Materials — one sprite, and the belt sets its size (ruling 2026-08-20)
+
+**A material is drawn once.** `PIXELS.matSprite(id)` is the picture in the bag,
+the picture in a recipe row, the picture that flies to the bag, and the picture
+that rides the belt. There is no smaller stand-in for the belt: a tinted square
+told the player only which ore a good *started* from, so every iron alloy was
+the same object going past, and the thing on the band had nothing to do with
+the thing in the HUD.
+
+**The belt sets the size, and the size is ten world pixels.** A run's trestle is
+twelve pixels across and its band is six. A good is centred on the band with its
+corner cells left clear, so at the worst point of a quarter turn it reaches
+8 + 4·√2 ≈ 13.7 from the pivot and never rides out over the grass; twelve would,
+on every corner. Goods sit a whole tile apart, so ten still leaves six pixels of
+band between them. `PIXELS.MAT_PX` is that number — read it, never repeat it.
+
+Three rules make twenty-five materials tell apart at ten pixels:
+
+- **Form is the silhouette.** An ore is an irregular lump (each of the six its
+  own: angular chunk, round nugget, flat slab, twin crystals, jagged lump,
+  stoppered flask). A two-ore alloy is a flat-topped, square-shouldered **bar**
+  with the added ore left showing as a cap at one end. A three-ore alloy is a
+  **stack of two** — the parent alloy below, the ore the foundry added on top,
+  so the recipe is legible off the good. Glass is the one non-metal and gets a
+  **pane**. Then a gear, a cast channel, an instrument block, a hex nut, a
+  crate, a lit boiler, a coin. Fifteen silhouettes, no two alike.
+- **An alloy has its own colour, not a blend of its ores'.** Bronze is bronze,
+  brass is brass, steel is bright. Eight bars separated only by a tone swap are
+  eight of the same bar. The six ore hues are pushed apart for the same reason —
+  iron reads blue-cool, stone warm sand, because at ten pixels a grey is a grey.
+- **The rim is the light, not the material.** Every sprite takes the same rim
+  after its mask is painted: dim cream squarely above and left of the body, ink
+  down the shade side. Every ground a good sits on is dark — the belt band, the
+  HUD plate, a menu row — so an ink outline alone would sink into it and take
+  coal with it. Only *square* neighbours take the light; let the diagonal
+  staircases light up too and the cream stops being an edge and becomes a halo,
+  which at ten pixels is a quarter of the sprite spent on nothing.
+
+Masks are 8×8 character grids laid at (1,1) in `pixels.js` (`ORE_MASK`, `BAR`,
+`STACK`, `PANE`, `FORM_ART`); a digit indexes a tone list. Keep the four corner
+cells of a mask empty — that is what keeps the good inside the trestle on a
+turn. Proof sheets: `dev/mats.html` (every material in the bag, on a straight,
+round a corner, and the whole ladder on one run) and `dev/mats-zoom.html` (the
+pixels themselves, on both the grounds that matter).
 
 ### Machine animation — the three states (ruling 2026-08-20)
 
@@ -1093,7 +1138,8 @@ picker · `js/audio.js` synth ·
 `dev/map.html` + `dev/map-proof.js` world proof sheet · `dev/tiles.html`
 terrain proof sheet · `dev/machines.html` machinery proof
 sheet (rigs, works, belts, pipes, props, icons on real terrain, and every
-machine in its three animation states) ·
+machine in its three animation states) · `dev/mats.html` + `dev/mats-zoom.html`
+material proof sheets (every material in the bag and on the band) ·
 `dev/verify.html` data checks ·
 `dev/sim.html` simulation harness · `dev/play.html` the game headless (rAF
 shim) · `libs/pixi.min.js` vendored Pixi 8 ·
