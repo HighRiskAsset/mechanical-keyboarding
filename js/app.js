@@ -193,6 +193,9 @@
     for (const [mat, n] of Object.entries(cost)) profile.bag[mat] = Math.max(0, (profile.bag[mat] || 0) - n);
   }
   const canPay = (cost) => CHAIN.affordable(profile.bag, cost);
+  // the materials of a price the bag falls short of — their counts print
+  // red in the menu rows, so an unaffordable row says which is the problem
+  const shortOf = (cost) => Object.keys(cost || {}).filter((mat) => (profile.bag[mat] || 0) < cost[mat]);
   function flushFloats() {
     const parts = Object.entries(producedSinceFloat).filter(([, n]) => n > 0);
     if (parts.length && dock) {
@@ -360,7 +363,7 @@
     const rows = [];
     if (d.kind === 'crossing') {
       const price = CHAIN.priceCrossing(d.crossing) || {};
-      rows.push({ pre: '→', items: price, enabled: canPay(price), priced: true, caption: T.t('capRepair'), action: { type: 'repair', id: d.crossing.id, price } });
+      rows.push({ pre: '→', items: price, enabled: canPay(price), priced: true, short: shortOf(price), caption: T.t('capRepair'), action: { type: 'repair', id: d.crossing.id, price } });
     } else if (d.kind === 'belt') {
       // the run underfoot — both of them where two cross. Its own menu, so
       // taking one up is a hold and then a press, never a stray press.
@@ -382,14 +385,14 @@
       if (mk < CHAIN.oreMaxMk(ore)) {
         const price = CHAIN.priceMk(ore, mk + 1) || {};
         if (np && np.ore === ore && np.mk === mk + 1) {
-          rows.push({ pre: 'MK' + (mk + 1), items: price, enabled: canPay(price), priced: true, caption: T.t('capMk', { level: mk + 1, name: mineName(ore), keys: pairKeys(np) }), action: { type: 'mk', ore, level: mk + 1, price } });
+          rows.push({ pre: 'MK' + (mk + 1), items: price, enabled: canPay(price), priced: true, short: shortOf(price), caption: T.t('capMk', { level: mk + 1, name: mineName(ore), keys: pairKeys(np) }), action: { type: 'mk', ore, level: mk + 1, price } });
         } else {
           rows.push({ pre: 'MK' + (mk + 1), items: price, ok: false, enabled: false, caption: T.t('capMkLater', { level: mk + 1 }), action: null });
         }
       }
       if (!m.auto) {
         const price = CHAIN.priceAuto(m);
-        rows.push({ pre: '⚙', items: price, enabled: canPay(price), priced: true, caption: T.t('capAuto'), action: { type: 'auto', m, price } });
+        rows.push({ pre: '⚙', items: price, enabled: canPay(price), priced: true, short: shortOf(price), caption: T.t('capAuto'), action: { type: 'auto', m, price } });
       }
       beltRows(m, rows);
       removeRow(m, rows);
@@ -409,7 +412,7 @@
       const np = CHAIN.nextPair(profile);
       if (np && np.at === m.kind) {
         const price = CHAIN.priceAt(m.kind, np.mk) || {};
-        rows.push({ pre: 'MK' + np.mk, items: price, enabled: canPay(price), priced: true, caption: T.t('capMkAt', { level: np.mk, name: kindName(m.kind), keys: pairKeys(np) }), action: { type: 'mk-at', kind: m.kind, level: np.mk, price } });
+        rows.push({ pre: 'MK' + np.mk, items: price, enabled: canPay(price), priced: true, short: shortOf(price), caption: T.t('capMkAt', { level: np.mk, name: kindName(m.kind), keys: pairKeys(np) }), action: { type: 'mk-at', kind: m.kind, level: np.mk, price } });
       } else {
         const mk = CHAIN.kindMk(profile, m.kind);
         const later = L.PAIRS.find((q) => q.at === m.kind && q.mk === mk + 1);
@@ -417,7 +420,7 @@
       }
       if (!m.auto) {
         const price = CHAIN.priceAuto(m);
-        if (price) rows.push({ pre: '⚙', items: price, enabled: canPay(price), priced: true, caption: T.t('capAuto'), action: { type: 'auto', m, price } });
+        if (price) rows.push({ pre: '⚙', items: price, enabled: canPay(price), priced: true, short: shortOf(price), caption: T.t('capAuto'), action: { type: 'auto', m, price } });
       }
       beltRows(m, rows);
       removeRow(m, rows);
@@ -524,9 +527,9 @@
     if (placing) {
       if (placing.kind === 'mine' && !placing.vein) { setCaption(T.t('capPlaceVein'), 'no'); return; }
       if (placing.later) { setCaption(T.t('capVeinLater', { name: mineName(placing.vein.ore) }), 'no'); return; }
-      if (!placing.ground) { setCaption(T.t('capPlaceBad'), 'no'); return; }
       const name = placing.kind === 'mine' ? mineName(placing.vein.ore) : kindName(placing.kind);
-      if (placing.price && !canPay(placing.price)) { setCaption(T.t('capPlacePoor', { name }), 'no'); return; }
+      if (placing.poor) { setCaption(T.t('capPlacePoor', { name }), 'no'); return; }
+      if (!placing.ground) { setCaption(T.t('capPlaceBad'), 'no'); return; }
       setCaption(T.t('capPlace', { name }), 'ok');
       return;
     }
@@ -592,12 +595,28 @@
   // ground. On bad ground — or over the open menu — the hold cancels
   // instead. Mines are rows in the same menu: their ghost asks to be stood
   // on a free vein, and prices itself off the vein under it.
+  // is there a free vein the bag could put a mine on right now? The mine's
+  // price lives on the vein — an open ore's extra-mine price, or the next
+  // rung's opening price — so the row only offers itself when some vein
+  // could actually be paid for. An unaffordable ghost never happens.
+  function mineBuildable() {
+    const np = CHAIN.nextPair(profile);
+    for (const n of CHAIN.unbuiltNodes(profile)) {
+      if (CHAIN.oreOpen(profile, n.ore)) {
+        if (canPay(CHAIN.priceExtraMine(n.ore))) return true;
+      } else if (np && np.ore === n.ore && np.mk === 1 && canPay(CHAIN.priceNode(n.ore) || {})) {
+        return true;
+      }
+    }
+    return false;
+  }
   function buildMenuRows() {
     const rows = [];
-    rows.push({ kind: 'mine', enabled: true, caption: T.t('capBuildMinePick'), action: { type: 'pick', kind: 'mine' } });
+    const mineOK = mineBuildable();
+    rows.push({ kind: 'mine', enabled: mineOK, caption: T.t(mineOK ? 'capBuildMinePick' : 'capBuildMineNone'), action: mineOK ? { type: 'pick', kind: 'mine' } : null });
     for (const k of CHAIN.buildableKinds(profile)) {
       const price = CHAIN.priceMachine(k, CHAIN.machinesOfKind(profile, k).length + 1);
-      rows.push({ kind: k, items: price, enabled: canPay(price), priced: true, caption: T.t('capBuild', { kind: kindName(k) }), action: { type: 'pick', kind: k } });
+      rows.push({ kind: k, items: price, enabled: canPay(price), priced: true, short: shortOf(price), caption: T.t('capBuild', { kind: kindName(k) }), action: { type: 'pick', kind: k } });
     }
     return rows;
   }
@@ -636,7 +655,6 @@
     if (!placing) return;
     placing = null;
     FACTORY.clearBuildGhost();
-    FACTORY.clearInfo();
     A.thud();
     redock();
   }
@@ -654,14 +672,21 @@
     }
     return padTiles;
   }
-  // the ghost follows the operator: the body's foot row is the row they
-  // stand on, its columns centred on them, snapped to the grid
+  // the ghost walks a step ahead of the operator, snapped to the grid: the
+  // body stands against the tile they are on, in the direction they face,
+  // centred across — so aiming is walking, and turning to face another way
+  // swings the ghost round without a key
   function updatePlacing(force) {
     if (!placing) return;
     const pp = FACTORY.playerPos();
+    const dir = FACTORY.playerDir();
     const fp = MAPKIT.footprint(CHAIN.KINDS[placing.kind].size, placing.face);
-    const c0 = Math.floor(pp.x / 16) - ((fp[0] - 1) >> 1);
-    const r0 = Math.floor((pp.y - 2) / 16) - (fp[1] - 1);
+    const ptx = Math.floor(pp.x / 16), pty = Math.floor((pp.y - 2) / 16);
+    let c0, r0;
+    if (dir === 's') { c0 = ptx - ((fp[0] - 1) >> 1); r0 = pty + 1; }
+    else if (dir === 'n') { c0 = ptx - ((fp[0] - 1) >> 1); r0 = pty - fp[1]; }
+    else if (dir === 'e') { c0 = ptx + 1; r0 = pty - ((fp[1] - 1) >> 1); }
+    else { c0 = ptx - fp[0]; r0 = pty - ((fp[1] - 1) >> 1); }
     if (!force && placing.at && placing.at[0] === c0 && placing.at[1] === r0) return;
     placing.at = [c0, r0];
     const phantom = { kind: placing.kind, at: [c0, r0], face: placing.face };
@@ -681,17 +706,12 @@
         if (box.c0 <= vb.c1 && box.c1 >= vb.c0 && box.r0 <= vb.r1 && box.r1 >= vb.r0) { vein = n; break; }
       }
     }
-    const tiles = [];
-    let ground = true;
-    for (let ty = box.r0; ty <= box.r1; ty++) for (let tx = box.c0; tx <= box.c1; tx++) {
-      const k = tx + ',' + ty;
-      const ok = !bodies.has(k) && (mine ? !!vein : zone.has(k));
-      if (!ok) ground = false;
-      tiles.push([tx, ty, ok]);
-    }
     // the price: a machine's is its kind's next instance; a mine prices
     // itself off the vein under it, and an unopened ore only when its keys
-    // are the next rung of the ladder
+    // are the next rung of the ladder. A vein the bag cannot cover is not
+    // a target at all — the whole footprint reads red, like any bad ground
+    // — and machines were gated at the build menu, so an unaffordable ghost
+    // never stands.
     let price = null, unlock = false, later = false;
     if (!mine) price = CHAIN.priceMachine(placing.kind, CHAIN.machinesOfKind(profile, placing.kind).length + 1);
     else if (vein) {
@@ -702,15 +722,25 @@
         else later = true;
       }
     }
+    const poor = !!price && !canPay(price);
+    const tiles = [];
+    let ground = true;
+    for (let ty = box.r0; ty <= box.r1; ty++) for (let tx = box.c0; tx <= box.c1; tx++) {
+      const k = tx + ',' + ty;
+      const ok = !bodies.has(k) && (mine ? !!vein : zone.has(k)) && !later && !poor;
+      if (!ok) ground = false;
+      tiles.push([tx, ty, ok]);
+    }
     placing.vein = vein;
     placing.price = price;
     placing.unlock = unlock;
     placing.later = later;
+    placing.poor = poor;
     placing.ground = ground;
-    placing.ok = ground && !later && (!mine || !!vein) && (!price || canPay(price));
+    placing.ok = ground && (!mine || !!vein);
+    // no price row over the ghost: the build menu already named it, and the
+    // caption still says so when the bag cannot cover it
     FACTORY.showBuildGhost(phantom, tiles, placing.ok);
-    const info = price ? [{ kind: placing.kind, ore: mine && vein ? vein.ore : undefined, items: price, enabled: canPay(price), priced: true }] : [];
-    FACTORY.showInfo(info.length ? '@player' : null, info);
     refreshCaption();
   }
   function placeNow() {
@@ -726,7 +756,6 @@
     profile.machines.push(m);
     placing = null;
     FACTORY.clearBuildGhost();
-    FACTORY.clearInfo();
     afterPurchase();
     if (pair) { pendingUnlock = pair; showUnlockCard(pair); }
   }

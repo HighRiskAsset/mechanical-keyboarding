@@ -171,6 +171,7 @@
       capHoldConfirm: 'Arrows choose · Space confirms · Escape closes',
       capBuild: (p) => `Build ${/^[aeiou]/i.test(p.kind) ? 'an' : 'a'} ${p.kind} — a tap of Space raises its ghost`,
       capBuildMinePick: 'Build a mine — its ghost asks for a free vein',
+      capBuildMineNone: 'Build a mine — no free vein you can pay for yet',
       capVeinLater: (p) => `A ${p.name} comes later on the ladder`,
       // the build ghost (rotation overhaul, 2026-08-21)
       capPlace: (p) => `${p.name} — walk to aim it · tap Space to turn it · hold Space to build`,
@@ -394,6 +395,7 @@
       capHoldConfirm: 'Стрелки выбирают · пробел подтверждает · Escape закрывает',
       capBuild: (p) => `Построить: ${p.kind} — короткий пробел поднимет призрак`,
       capBuildMinePick: 'Построить рудник — его призраку нужна свободная жила',
+      capBuildMineNone: 'Построить рудник — пока нет свободной жилы, которая вам по карману',
       capVeinLater: (p) => `${p.name} придёт позже по лестнице`,
       // призрак стройки (поворотный ремонт, 2026-08-21)
       capPlace: (p) => `${p.name} — идите, чтобы прицелиться · короткий пробел поворачивает · зажатый строит`,

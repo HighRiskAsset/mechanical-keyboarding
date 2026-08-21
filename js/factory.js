@@ -370,7 +370,10 @@
     for (const [mat, n] of Object.entries(row.items || {})) {
       const ic = new PIXI.Sprite(PIXELS.matTex(mat));
       put(ic, 1); ix += 11;
-      const cnt = new PIXI.Sprite(PIXELS.textTex(String(n), PIXELS.P.paper));
+      // a count the bag falls short of prints red (row.short lists them),
+      // so an unaffordable price says which material is the problem
+      const lack = row.short && row.short.includes(mat);
+      const cnt = new PIXI.Sprite(PIXELS.textTex(String(n), lack ? '#ff8a70' : PIXELS.P.paper));
       put(cnt, 3); ix += cnt.texture.width + 3;
     }
     if (row.out) {
@@ -1231,13 +1234,21 @@
   function showBuildGhost(m, tiles, ok) {
     clearBuildGhost();
     if (!ready) return;
-    // the ground half — tile marks and the plates-to-be — under the bodies
+    // the ground half — the validity grid and the plates-to-be — under the
+    // bodies. Every tile the body would take draws as a translucent cell,
+    // green where it may stand and red where it may not, each cell rimmed
+    // so the marks read as a surveyor's grid and not a stain.
     buildC = new PIXI.Container();
     buildC.zIndex = -498;
     const g = new PIXI.Graphics();
     for (const [tx, ty, tok] of tiles || []) {
-      g.rect(tx * T16 + 1, ty * T16 + 1, 14, 14).fill({ color: 0x17161a, alpha: 0.4 });
-      g.rect(tx * T16 + 2, ty * T16 + 2, 12, 12).fill({ color: tok ? 0xf2c14e : 0xd84f4f, alpha: 0.5 });
+      const col = tok ? 0x6cc46c : 0xd84f4f;
+      const px = tx * T16, py = ty * T16;
+      g.rect(px + 1, py + 1, 14, 14).fill({ color: col, alpha: 0.26 });
+      g.rect(px, py, T16, 1).fill({ color: col, alpha: 0.75 });
+      g.rect(px, py + T16 - 1, T16, 1).fill({ color: col, alpha: 0.75 });
+      g.rect(px, py + 1, 1, T16 - 2).fill({ color: col, alpha: 0.75 });
+      g.rect(px + T16 - 1, py + 1, 1, T16 - 2).fill({ color: col, alpha: 0.75 });
     }
     buildC.addChild(g);
     if (simProfile) {
@@ -1702,6 +1713,8 @@
   window.FACTORY = {
     init, loadMap, buildWorld, setMove, castLetter, floatText, stamp, getDocked, posOf, poof,
     playerPos: () => ({ x: playerX, y: playerY }),
+    // the way the operator faces, as a world side — the build ghost stands ahead
+    playerDir: () => (facing === 'down' ? 's' : facing === 'up' ? 'n' : faceSign > 0 ? 'e' : 'w'),
     scale: () => S,                    // device px per world px, so the DOM can match the canvas
     screenPos, setDockGlow, showInfo, clearInfo, showMenu, clearMenu, setAutoLook,
     routeBelt, beltReaches, machinePorts, portsOpen, showGhost, clearGhost, setSpool, markStations, setSocketTarget,

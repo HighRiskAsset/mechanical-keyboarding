@@ -103,15 +103,28 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   ground — anywhere a hold would not open something else — raises the
   **build menu on the operator**: the mine first, then every kind whose
   price's materials have been held (progressive reveal unchanged), priced
-  and greyed when unaffordable. Arrows choose; a **tap** of Space picks; a
-  **hold** over the open menu puts it away (this one menu answers the
-  release, because its hold means cancel). The pick becomes a **ghost on
-  the grid that walks with the operator** — body translucent in its facing,
-  every tile under it marked buildable or not, its port plates already on
-  the ground and faint where their way out is blocked, its price in a row
-  over the operator's head. A **tap** of Space turns it a quarter
-  clockwise; a **hold** builds it on good ground, and on bad ground the
-  same hold cancels; Escape cancels too. Valid ground **for now** is the
+  in its row. **Affordability is settled here, not at the ghost** (user
+  ruling 2026-08-21): an unaffordable kind cannot be picked — its row is
+  greyed and every count the bag falls short of prints red, so the row
+  says which material is the problem — and the mine's row only offers
+  itself while some free vein could actually be paid for (its price lives
+  on the vein). An unaffordable ghost never stands. Arrows choose; a
+  **tap** of Space picks; a **hold** over the open menu puts it away (this
+  one menu answers the release, because its hold means cancel). The pick
+  becomes a **ghost on
+  the grid, standing a step ahead of the operator** in the direction they
+  face — walking aims it, turning to face another way swings it round —
+  body translucent in its facing, its port plates already on the ground and
+  faint where their way out is blocked. Under it, a **translucent
+  surveyor's grid**: every tile the body would take draws as a green cell
+  where it may stand and a red one where it may not, so a bad placement
+  says which tiles are the problem. No price rides the ghost — the build
+  menu already named and gated it; the one price the menu cannot know is a
+  mine's per-vein one, and a vein the bag cannot cover simply reads red
+  like any bad ground, the caption saying why. A **tap** of Space turns it
+  a quarter clockwise; a **hold**
+  builds it on good ground, and on bad ground the same hold cancels;
+  Escape cancels too. Valid ground **for now** is the
   surveyed pads (mines: a free vein the body covers — the mine row prices
   itself off the vein under the ghost, and an unopened ore's first mine
   still unlocks its keys); free placement over open terrain is a later mode

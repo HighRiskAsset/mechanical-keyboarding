@@ -1370,13 +1370,19 @@
   // sits between the two and leads the foot, and the foot is its own
   // horizontal thing rather than the bottom of a bar — a walk is legible at
   // this size because of the ankle, not in spite of it.
-  function opLeg(x, hipX, fx, fy, profile, near) {
+  // `hipY` is where the leg hangs off the body THIS FRAME, and it has to
+  // follow the body's bob: the torso is drawn at oy+12, so a leg pinned to a
+  // constant hip row tears away from it by a pixel on every beat the body
+  // lifts. The foot stays anchored to the ground either way, which is what
+  // should happen — the hip rises and falls over a planted foot and the leg
+  // extends and compresses to meet it.
+  function opLeg(x, hipX, hipY, fx, fy, profile, near) {
     const boot = near ? P.boot : P.bootD;
     const footTop = 26 - fy;
     const kneeX = hipX + Math.round(fx * 0.45);
     const ankleX = hipX + fx;
-    limb(x, hipX, OP_HIP, kneeX, OP_HIP + 1, P.coatD);            // thigh
-    limb(x, kneeX, OP_HIP + 2, ankleX, footTop - 1, boot);        // shin
+    limb(x, hipX, hipY, kneeX, hipY + 1, P.coatD);                // thigh
+    limb(x, kneeX, hipY + 2, ankleX, footTop - 1, boot);          // shin
     if (profile) {
       // in profile the foot points the way he walks, and the toe leaves the
       // ground last: on the back half of the stride only the cap is down
@@ -1463,9 +1469,9 @@
     if (side) {
       // far limbs behind the body, near limbs in front of it — which is the
       // only reason a profile walk reads as one man and not two silhouettes
-      opLeg(x, 8, FOOT_X[g], FOOT_Y[g], true, false);
+      opLeg(x, 8, OP_HIP + oy, FOOT_X[g], FOOT_Y[g], true, false);
       opArm(x, 8, oy + 14, 8 + FOOT_X[g], oy + 19, false);
-      opLeg(x, 8, FOOT_X[f], FOOT_Y[f], true, true);
+      opLeg(x, 8, OP_HIP + oy, FOOT_X[f], FOOT_Y[f], true, true);
       opGrid(x, torso, 0, oy + 12);
       opGrid(x, head, 0, oy);
       // the near arm swings against the near leg, and the hand rises as it
@@ -1474,8 +1480,8 @@
       opArm(x, 8, oy + 14, hx, oy + 18 + (Math.abs(FOOT_X[f]) >= 2 ? 0 : 1), true);
     } else {
       const back = dir === 'up';
-      opLeg(x, 6, sway, FOOT_Y[f], false, true);
-      opLeg(x, 12, sway, FOOT_Y[g], false, true);
+      opLeg(x, 6, OP_HIP + oy, sway, FOOT_Y[f], false, true);
+      opLeg(x, 12, OP_HIP + oy, sway, FOOT_Y[g], false, true);
       opGrid(x, torso, 0, oy + 12);
       opGrid(x, head, 0, oy);
       // face-on, an arm swinging forward reads as the hand lifting and coming
@@ -1499,15 +1505,15 @@
     const head = dir === 'up' ? HEAD_U : side ? HEAD_S : HEAD_D;
     const torso = dir === 'up' ? TORSO_U : side ? TORSO_S : TORSO_D;
     if (side) {
-      opLeg(x, 8, -1, 0, true, false);
+      opLeg(x, 8, OP_HIP + rise, -1, 0, true, false);
       opArm(x, 8, 14 + rise, 7, 19 + rise, false);
-      opLeg(x, 8, 1, 0, true, true);
+      opLeg(x, 8, OP_HIP + rise, 1, 0, true, true);
       opGrid(x, torso, 0, 12 + rise);
       opGrid(x, head, 0, rise);
       opArm(x, 8, 14 + rise, 9, 19 + rise, true);
     } else {
-      opLeg(x, 6, 0, 0, false, true);
-      opLeg(x, 12, 0, 0, false, true);
+      opLeg(x, 6, OP_HIP + rise, 0, 0, false, true);
+      opLeg(x, 12, OP_HIP + rise, 0, 0, false, true);
       opGrid(x, torso, 0, 12 + rise);
       opGrid(x, head, 0, rise);
       opArm(x, 3, 14 + rise, 3, 19 + rise, false);
@@ -1529,8 +1535,8 @@
     // on one shared cadence frames 0 and 2 came out identical
     const nod = [0, 1, 1, 0][f];
     const lift = [0, 1, 0, -1][f];
-    opLeg(x, 6, 0, 0, false, true);
-    opLeg(x, 12, 0, 0, false, true);
+    opLeg(x, 6, OP_HIP, 0, 0, false, true);
+    opLeg(x, 12, OP_HIP, 0, 0, false, true);
     opGrid(x, TORSO_WORK, 0, 12);
     opGrid(x, HEAD_U, 0, nod);
     // Both arms go UP to the console: the upper arm out from the shoulder,
