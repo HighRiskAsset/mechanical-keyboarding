@@ -456,40 +456,15 @@
     if (!spool && SIM.beltsFrom(profile, m).length < SIM.outletsOf(m) && (m.kind === 'mine' || SIM.produces(profile, m).length)) {
       rows.push({ pre: '→', enabled: true, caption: T.t('capSpool', { mats: matList(SIM.produces(profile, m)) }), action: { type: 'spool', m } });
     }
-    // turning a machine costs nothing and turns the whole body a quarter
-    // clockwise — sprite, doors and ports together (rotation overhaul,
-    // 2026-08-21): it is how an intake is pointed at the line that feeds
-    // it. Its runs are re-laid to follow; any that no longer have a route
-    // come up, which is why the row says so before you press it. A turn
-    // whose footprint would land on another machine is refused.
-    if (!spool) {
-      const ok = turnFits(m);
-      rows.push({ pre: '⟳', enabled: ok, caption: T.t(ok ? 'capTurn' : 'capTurnBlocked', { side: sideName(SIM.nextFacing(m)) }), action: ok ? { type: 'turn', m } : null });
-    }
+    // There is no turn row (user ruling 2026-08-21): a machine's facing is
+    // chosen at the build ghost and it is final — turning a standing
+    // machine would silently re-lay every run plugged into it. To face it
+    // another way, take it down (everything comes back, on the ground) and
+    // build it again.
     // taking a run up is not offered here. A machine with several runs
     // coming and going gave a list of ✗ rows there was no reading, and the
     // wrong one went too easily; you take a run up by standing on it.
     void mid;
-  }
-  // where a body stands after a quarter turn: the facing steps clockwise,
-  // the footprint turns with it, and the foot-left corner holds still
-  function turnedPose(m) {
-    const face = SIM.nextFacing(m);
-    const fp = MAPKIT.footprint(SIM.sizeOf(m), face);
-    const b = CHAIN.machineBox(m);
-    return { face, at: [b.c0, b.r1 - (fp[1] - 1)] };
-  }
-  function boxHitsMachine(b, ignore) {
-    for (const om of profile.machines) {
-      if (om === ignore) continue;
-      const ob = CHAIN.machineBox(om);
-      if (b.c0 <= ob.c1 && b.c1 >= ob.c0 && b.r0 <= ob.r1 && b.r1 >= ob.r0) return true;
-    }
-    return false;
-  }
-  function turnFits(m) {
-    const pose = turnedPose(m);
-    return !boxHitsMachine(MAPKIT.boxAt(pose.at, SIM.sizeOf(m), pose.face), m);
   }
   const nonZero = (o) => Object.fromEntries(Object.entries(o || {}).filter(([, n]) => n > 0));
   function recipeInputsIcons(m) {
@@ -504,7 +479,6 @@
   const mineName = (ore) => (T.t('oreMineNames') || {})[ore] || ore;
   const matName = (mat) => (T.t('matNames') || {})[mat] || mat;
   const matList = (mats) => (mats || []).map(matName).join(' / ');
-  const sideName = (face) => (T.t('sideNames') || {})[face] || face;
   const machineName = (m) => (m ? (m.kind === 'mine' ? mineName(m.ore) : kindName(m.kind)) : '?');
   const pairKeys = (pair) => (pair && pair.keys ? pair.keys.map((c) => c.toUpperCase()).join(' ') : '');
   function beltWhy(why, from) {
@@ -869,21 +843,6 @@
       FACTORY.setSpool(false);
       FACTORY.setSocketTarget(null);
       afterPurchase();
-    } else if (act.type === 'turn') {
-      // the body turns rigidly: the facing steps clockwise and the
-      // footprint turns with it about its foot-left corner. The world is
-      // rebuilt first: re-laying the runs is part of turning, and what
-      // comes of it is what gets saved.
-      const pose = turnedPose(act.m);
-      act.m.face = pose.face;
-      act.m.at = pose.at;
-      const relaid = rebuildWorld();
-      E.saveProfile(profile);
-      refreshInventory();
-      refreshKeyboard();
-      redock();
-      A.build();
-      if (relaid && relaid.lost) flashCaption(T.t('capTurnLost', { n: relaid.lost }));
     } else if (act.type === 'unbelt') {
       const b = (profile.belts || []).find((x) => x.id === act.id);
       if (!b) return;

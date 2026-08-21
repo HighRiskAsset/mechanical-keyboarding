@@ -1,50 +1,97 @@
 <!doctype html>
-<!-- Operator sprite proof (dev only). Every walk frame per direction, the
-     work frames, side mirrored, at 8x on grass, next to a mine for scale.
-     POSTs a PNG to /upload. Open: http://localhost:8123/dev/operator.html -->
+<!-- Operator sprite proof (dev only). Every walk beat per direction, the idle
+     breath, the work frames, side mirrored, at a machine for scale, and a
+     magnified strip for the pixel work. POSTs two PNGs to /upload.
+     Open: http://localhost:8123/dev/operator.html -->
 <meta charset="utf-8">
 <title>operator proof</title>
 <style>
-  body { margin: 0; background: #1a1a20; color: #ddd; font: 12px/1.4 monospace; }
-  #out { image-rendering: pixelated; display: block; margin: 8px; }
+  body { margin: 0; background: #12141c; color: #ddd; font: 12px/1.5 monospace; }
+  canvas { image-rendering: pixelated; display: block; margin: 8px; }
   #log { padding: 8px; white-space: pre; }
 </style>
-<div id="log"></div>
+<div id="log">rendering…</div>
 <canvas id="out"></canvas>
+<canvas id="zoom"></canvas>
 <script src="../js/pixels.js"></script>
 <script src="../js/tiles.js"></script>
 <script>
 (async function () {
-  const SCALE = 5, W = 360, H = 150;
-  const c = document.createElement('canvas'); c.width = W; c.height = H;
-  const x = c.getContext('2d');
-  for (let ty = 0; ty < Math.ceil(H / 16); ty++) for (let tx = 0; tx < Math.ceil(W / 16); tx++) x.drawImage(TILES.fill('grass', (tx * 7 + ty * 13) % 23), tx * 16, ty * 16);
-  const label = (s, px, py) => { x.fillStyle = '#ffffff'; x.font = '6px monospace'; x.fillText(s, px, py); };
-  const put = (cv, px, py, flip) => {
+  const log = document.getElementById('log');
+  const upload = async (cv, name) => {
+    const blob = await (await fetch(cv.toDataURL('image/png'))).blob();
+    const res = await fetch('/upload?name=' + encodeURIComponent(name), { method: 'POST', body: blob });
+    return name + ': ' + res.status + ' ' + await res.text();
+  };
+  const grass = (x, w, h) => {
+    for (let ty = 0; ty < Math.ceil(h / 16); ty++)
+      for (let tx = 0; tx < Math.ceil(w / 16); tx++)
+        x.drawImage(TILES.fill('grass', (tx * 7 + ty * 13) % 23), tx * 16, ty * 16);
+  };
+  const put = (x, cv, px, py, flip) => {
     if (!flip) { x.drawImage(cv, px, py); return; }
     x.save(); x.translate(px + cv.width, py); x.scale(-1, 1); x.drawImage(cv, 0, 0); x.restore();
   };
-  const dirs = ['down', 'up', 'side'];
-  dirs.forEach((d, row) => {
-    label(d, 2, 10 + row * 34);
-    for (let f = 0; f < 8; f++) put(PIXELS.characterCanvas(d, f), 30 + f * 20, 2 + row * 34);
-    if (d === 'side') for (let f = 0; f < 8; f++) put(PIXELS.characterCanvas(d, f), 190 + f * 20, 2 + row * 34, true);
+  const upscale = (src, el, k) => {
+    el.width = src.width * k; el.height = src.height * k;
+    const ox = el.getContext('2d'); ox.imageSmoothingEnabled = false;
+    ox.drawImage(src, 0, 0, el.width, el.height);
+  };
+
+  // ---------- sheet: every frame, at 5x, on grass ----------
+  const W = 400, H = 232;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  grass(x, W, H);
+  const label = (s, px, py) => {
+    x.fillStyle = 'rgba(10,12,20,0.78)'; x.fillRect(px - 1, py - 6, s.length * 4 + 2, 8);
+    x.fillStyle = '#ffffff'; x.font = '6px monospace'; x.fillText(s, px, py);
+  };
+  const ROW = 32, COL = 22, X0 = 34;
+  const rows = [
+    ['down', (f) => PIXELS.characterCanvas('down', f), 8, false],
+    ['up',   (f) => PIXELS.characterCanvas('up', f),   8, false],
+    ['side', (f) => PIXELS.characterCanvas('side', f), 8, false],
+    ['side←', (f) => PIXELS.characterCanvas('side', f), 8, true],
+    ['idle', (f) => PIXELS.idleCanvas('down', f),      4, false],
+    ['work', (f) => PIXELS.workCanvas(f),              4, false],
+  ];
+  rows.forEach(([name, gen, n, flip], ri) => {
+    const py = 4 + ri * ROW;
+    label(name, 2, py + 14);
+    for (let f = 0; f < n; f++) put(x, gen(f), X0 + f * COL, py, flip);
   });
-  label('work', 2, 10 + 3 * 34);
-  for (let f = 0; f < 4; f++) put(PIXELS.workCanvas(f), 30 + f * 20, 2 + 3 * 34);
-  // scale check: the operator at a mine, docked (feet 6px below the machine foot)
-  x.drawImage(PIXELS.machineCanvas(1, 0), 130, 100);
-  put(PIXELS.workCanvas(0), 135, 130 - 25 + 6);
-  put(PIXELS.characterCanvas('down', 0), 160, 118);
-  const out = document.getElementById('out');
-  out.width = W * SCALE; out.height = H * SCALE;
-  const ox = out.getContext('2d'); ox.imageSmoothingEnabled = false;
-  ox.drawImage(c, 0, 0, W * SCALE, H * SCALE);
-  const name = new URLSearchParams(location.search).get('name') || 'operator.png';
+
+  // scale check: the operator at a mine and at a manufacturer, docked and not
+  const py = 4 + rows.length * ROW;
+  label('at scale', 2, py + 14);
+  put(x, PIXELS.idleCanvas('down', 0), X0, py);
+  put(x, PIXELS.idleCanvas('side', 0), X0 + 24, py);
+  x.drawImage(PIXELS.machineCanvas(1, 0), X0 + 60, py - 4);
+  put(x, PIXELS.workCanvas(0), X0 + 70, py + 2);
+  put(x, PIXELS.characterCanvas('side', 0), X0 + 106, py);
+  x.drawImage(PIXELS.machineCanvas(3, 0), X0 + 144, py - 4);
+  put(x, PIXELS.characterCanvas('down', 0), X0 + 196, py);
+  upscale(c, document.getElementById('out'), 5);
+
+  // ---------- zoom: the key poses at 14x, on grass and on ink ----------
+  const poses = [
+    PIXELS.idleCanvas('down', 1), PIXELS.idleCanvas('up', 1), PIXELS.idleCanvas('side', 1),
+    PIXELS.characterCanvas('side', 0), PIXELS.characterCanvas('side', 4), PIXELS.workCanvas(0),
+  ];
+  const ZW = poses.length * 24, ZH = 60;
+  const z = document.createElement('canvas'); z.width = ZW; z.height = ZH;
+  const zx = z.getContext('2d');
+  grass(zx, ZW, 30);
+  zx.fillStyle = '#12141c'; zx.fillRect(0, 30, ZW, 30);
+  poses.forEach((cv, i) => { put(zx, cv, i * 24 + 2, 1); put(zx, cv, i * 24 + 2, 31); });
+  upscale(z, document.getElementById('zoom'), 14);
+
+  const q = new URLSearchParams(location.search);
   try {
-    const blob = await (await fetch(out.toDataURL('image/png'))).blob();
-    const res = await fetch('/upload?name=' + encodeURIComponent(name), { method: 'POST', body: blob });
-    document.getElementById('log').textContent = 'uploaded ' + name + ': ' + res.status + ' ' + await res.text();
-  } catch (e) { document.getElementById('log').textContent = 'upload failed: ' + e; }
+    const a = await upload(document.getElementById('out'), q.get('name') || 'operator.png');
+    const b = await upload(document.getElementById('zoom'), q.get('zoom') || 'operator-zoom.png');
+    log.textContent = 'uploaded ' + a + '\nuploaded ' + b;
+  } catch (e) { log.textContent = 'upload failed: ' + e; }
 })().catch((e) => { document.getElementById('log').textContent = 'ERROR ' + (e.stack || e); });
 </script>

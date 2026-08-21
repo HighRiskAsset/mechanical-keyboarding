@@ -135,7 +135,7 @@
     const px = 4 + i * 84, py = cy + 2;
     sample(px, py, 5, 4, { base, cliff, GROUND: base === 'rock' ? [{ kind: 'grass', x: 3 * T, y: 2 * T, w: 2 * T, h: 2 * T }] : base === 'marsh' ? [{ kind: 'water', x: 3 * T, y: 0, w: 2 * T, h: 2 * T }] : base === 'crack' ? [{ kind: 'tar', x: 3 * T, y: 2 * T, w: 2 * T, h: 2 * T }] : base === 'snow' ? [{ kind: 'ice', x: 3 * T, y: 0, w: 2 * T, h: 2 * T }] : [] });
     x.drawImage(PIXELS.machineCanvas(1, 0), px + 4, py + 6);
-    x.drawImage(PIXELS.characterCanvas('side', 0), px + 36, py + 30);
+    x.drawImage(PIXELS.characterCanvas('side', 0), px + 36, py + 58 - PIXELS.CHAR_H);
     label(base, px, py + 64 + 6);
   });
   cy += 80;

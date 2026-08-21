@@ -119,7 +119,9 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   invalid, stairs invalid though belts may cross them). Machines are seated
   in the save as tiles (`m.at` + `m.face`), and pads and veins stopped
   being dockable places — their markers survey the ground, the menu came to
-  the operator.
+  the operator. **The ghost is the only place a machine turns** (user
+  ruling 2026-08-21): once built, the facing is final — take it down and
+  build it again to face it another way.
 - **Taking a machine down (2026-08-20):** the last row of every machine's
   menu. Its price comes back at the price of the newest one of its kind — so
   down-and-up again is even — with everything in its buffers, and its belts
@@ -177,7 +179,8 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   outlet to another's inlet — inlets = the kind's arity, outlets mines 1 /
   processors 2, and every one of them stands at a **port**: a named tile
   against one side of the body, marked on the ground (verdigris wedge in,
-  brass wedge out) and reached head-on or not at all — laid by
+  brass wedge out), the run ending on the plate — straight in, or turning
+  on it (the corner plug) — laid by
   **spool & socket** (hold Space at the source →
   spool on the back → walk → the route previews green/red at each machine →
   hold Space to lay; `FACTORY.routeBelt` is a breadth-first search over
@@ -305,15 +308,38 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   letterboxing (roundPixels, whole-pixel camera and sprite positions), bitmap
   pixel font for all in-world text (digits/arrows/₽, ink outline baked),
   pixel-pure circles, one named palette in pixels.js.
-- **The operator (redrawn 2026-08-18, SNES FF3 idiom)**: 16×25 hand-authored
-  pixel grids in `pixels.js` — big outlined head under the yellow hard hat,
-  2×2 eyes (highlight over dark), three tones per material, cream shirt under
-  blue overalls, tool belt, boots, a pack on the back; walk = stand / stride
-  / stand / stride per direction with a real leg scissor, a 1px body rise on
-  the strides and the near arm swinging in profile; work = back view at the
-  machine, hands tapping in alternation with a nod. `dev/operator.html` is
-  the proof sheet.
-- **Charm animation**: 4-frame directional walk (down/up/side) + working pose
+- **The operator (redrawn 2026-08-21, CrossCode idiom)**: **a fantasy
+  mechanic — the man who works on airships** (user ruling). 20×28 in
+  `pixels.js`: a leather flight cap with brass goggles strapped to it, an
+  aviator's scarf in verdigris, a long working coat, a leather rig across the
+  chest carrying a brass pressure gauge that still has a light in it, heavy
+  gloves, brass-capped boots. He is dressed out of the machines' own material
+  list — iron dark, brass, verdigris, one warm fire — because he is the man
+  who keeps them running. Not a builder in a hard hat, and nothing futuristic.
+  - **The value rule, measured off the CrossCode sheets in `assets/inbox`**
+    (12 and 21 colours per character): ~30% of a sprite is ONE near-black
+    tone doing both outline *and* shadow — and it is a saturated dark, not
+    black. Highlights are 3–5% of the pixels. One saturated accent hue
+    carries the eye; everything else is dark. The head is a third of the
+    height and the widest part of the sprite; the body is narrower than the
+    head. **The cap is what makes this work here** — drawn with bare hair, a
+    head-sized slab of mid-brown became the brightest thing on the sprite,
+    the exact inverse of the rule.
+  - **Animation**: walk = 8 beats per direction (contact / down / passing /
+    up, twice), and the gait is *spread and lift* — the two passing poses are
+    the same pose, which is correct. The body drops a pixel at contact and
+    lifts one at passing; in profile the coat's back hem and the scarf's tail
+    trail a beat behind the body, because cloth lagging is what makes a walk
+    read as a walk. **Idle = 4 slow beats of breath** (new): head and chest
+    ride together — a seam opens the moment they don't — and the chest gauge
+    burns brighter on beats offset from the rise, so the breath is four
+    distinct beats rather than a two-pose flicker. work = 4 beats, back to us
+    at the machine, a nod and the hands falling in alternation.
+  - Anything hung above him (the hold-to-interact charge bar) is positioned
+    off `PIXELS.CHAR_H`, not a literal, so it survives the next resize.
+    `dev/operator.html` is the proof sheet — every beat, plus a magnified
+    strip on grass and on ink, and the operator at a machine for scale.
+- **Charm animation**: 8-beat directional walk + idle breath + working pose
   at the bench; 1px machine cast dip; rolling belt links; spark fountains on
   production; paper flutter at the press; window light shafts, drifting dust
   motes, breathing lamp/stove glows; code-drawn props (crates, ink barrel,
@@ -1058,9 +1084,21 @@ demands a measured pool of ≥25 real words before a recipe is offered.
   a bolted plate — verdigris rim and a wedge pointing into the machine for
   an inlet, brass and a wedge pointing out for an outlet — drawn under the
   runs, so a port with a belt on it still shows its colour down either side
-  of the band. A port whose tile or whose one way out is blocked draws
-  faint: it is a port you cannot use where the machine stands and faces
-  now, and turning is the answer.
+  of the band.
+  **The corner plug (2026-08-21):** a run ends ON the plate with its drum
+  against the body — that is what plugged-in means — but it no longer has
+  to leave and arrive straight: it may **turn on the plate itself**, the
+  end tile a quarter-turn piece feeding the drum. This is what lets a run
+  hug a machine it approaches from the side instead of swinging a tile
+  wide to line up (two wasted tiles per such plug, deadly in tight
+  ground). The **cut-off rule** bounds it: a corner's first tile must not
+  lie on another port of either machine — a turn that blocked a
+  neighbouring plug would trade one port for another — and the router
+  never crosses the involved machines' ports at all (a port is a place a
+  run ends, never one it passes over). Ties between a straight plug and a
+  corner plug go to the straight one. A port whose tile or whose every way
+  out is blocked draws faint: it is a port you cannot use where the
+  machine stands and faces.
 - **Machine sizes (2026-08-20), `KINDS[kind].size = [across, deep]`:** how
   much ground a machine stands on is not decoration — it is what seats its
   ports, and it is the one place the tree's climb is visible in the world.
@@ -1094,24 +1132,28 @@ demands a measured pool of ≥25 real words before a recipe is offered.
   worklist of the **coming map rework** (both maps get moderately larger and
   re-laid; user ruling 2026-08-20). Until then the build ghost simply shows
   a facing that does not fit as invalid, and blocked ports draw faint.
-- **Turning is free** (`⟳` on every machine's menu) and turns the whole
-  body a quarter clockwise — sprite, doors, ports and footprint together,
-  about its foot-left corner (rotation overhaul, 2026-08-21; a turn whose
-  swung footprint would land on another machine is refused with a caption).
-  Its runs are re-laid to follow; a run that moves rolls its goods home into
-  the source, and a run with no route left comes apart like anything else
-  destroyed — a poof, the sound, and its goods on the ground where it lay
-  (see "Destruction, and loose materials on the ground"). The menu caption
-  says the runs are re-laid before you press it, and the flash caption after
-  counts the ones that came up and says where their goods went.
-  Saves from before ports have their runs re-laid once on load, on the same
-  rule; saves from before machines stood on tiles are seated once at their
-  old plot or vein (`m.at` = the body box's top-left tile, `m.face` the
-  facing — engine.js `normalize`). Superseded (2026-08-21): "no fourth port
-  side at the back" — rigid rotation reopened the back, and the readability
-  that ruling protected is carried by the art instead (the overhang cap and
-  the door fixtures, below). Still rejected: free-standing ports the player
-  places (a second placement puzzle on top of pads, for a machine two tiles
+- **The facing is final (user ruling 2026-08-21).** A machine is turned at
+  the build ghost — a tap of Space, a quarter clockwise per tap — and never
+  after: there is no turn row on a standing machine, because turning one
+  would silently re-lay every run plugged into it, and a layout is a thing
+  the player laid. To face a standing machine another way, take it down
+  (its price, its insides and its goods come back on the ground — the
+  demolish door) and build it again; taking down and rebuilding is even,
+  so the turn costs only the walk. The turn-in-place that shipped with the
+  rotation overhaul lasted a day.
+  The re-lay machinery stays for the cases that still need it: a save from
+  before ports has its runs re-laid once on load; a body built across a run
+  pushes it aside; a run that moves rolls its goods home into the source,
+  and one with no route left comes apart like anything else destroyed — a
+  poof, the sound, its goods on the ground where they lay (see
+  "Destruction, and loose materials on the ground"). Saves from before
+  machines stood on tiles are seated once at their old plot or vein
+  (`m.at` = the body box's top-left tile, `m.face` the facing — engine.js
+  `normalize`). Superseded (2026-08-21): "no fourth port side at the back"
+  — rigid rotation reopened the back, and the readability that ruling
+  protected is carried by the art instead (the overhang cap and the door
+  fixtures, below). Still rejected: free-standing ports the player places
+  (a second placement puzzle on top of pads, for a machine two tiles
   wide).
 - **Routing and congestion:** one belt per tile; the router takes the shortest
   free path. Choke points are authored into the map (bridges, gaps between

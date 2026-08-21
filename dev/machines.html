@@ -87,7 +87,7 @@
     const cv = PIXELS.propCanvas(k);
     x.drawImage(cv, px, cy4 + 36 - cv.height); px += cv.width + 8;
   }
-  x.drawImage(PIXELS.characterCanvas('side', 0), px + 4, cy4 + 11); px += 26;
+  x.drawImage(PIXELS.characterCanvas('side', 0), px + 2, cy4 + 36 - PIXELS.CHAR_H); px += 26;
   x.drawImage(PIXELS.machineCanvas(3, 0), px + 4, cy4 + 0);
   x.drawImage(PIXELS.stationCanvas('bigrams'), px + 36, cy4 + 6);
   x.drawImage(PIXELS.boardCanvas(true), px + 72, cy4 + 0);

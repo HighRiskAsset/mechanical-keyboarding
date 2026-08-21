@@ -78,10 +78,19 @@
     titan: '#c8d0e0', titan2: '#8890a8', titan3: '#f0f4ff',
     // paper goods
     paper: '#f4ecd8', paper2: '#d8cba8',
-    // the operator (SNES-style: 3 tones per material + one dark outline)
-    skin: '#f8cda4', skin2: '#cf946e', hair: '#5b3a35', hair2: '#9a6047',
-    suit: '#3e78c8', suit2: '#28508f', suit3: '#6ca9eb', hat: '#ffd05b', hat2: '#c88832',
-    iris: '#5a9ce0', eye: '#1a2440', boot: '#4a3220', boot2: '#2c1c10',
+    // the operator — a fantasy mechanic, the man who works on airships
+    // (user ruling, 2026-08-21). Dressed out of the machines' own material
+    // list, and built the way the CrossCode sheets are: one near-black tone
+    // doing both outline and shadow over about a third of the sprite, a
+    // single saturated accent, and highlights measured in single pixels.
+    coatN: '#0d1018', coatD: '#1e2540', coat: '#39457a', coatL: '#6b7ec0',
+    capD: '#170f0a', cap: '#3d2b1e', capL: '#63462c',   // the leather flight cap
+    hairD: '#4a2214', hair: '#a85a2c',                  // what escapes it, at the temples
+    skin: '#e8b184', skinD: '#a4674a',
+    eye: '#16121c', iris: '#2a2438',                    // dark, with one white glint
+    leathD: '#2c1a10', leath: '#6d4526',                // the chest rig and the gloves
+    bootD: '#141220', boot: '#3a3350',
+    brassD: '#6d4318',                                  // the dark side of a brass rim
     petal: '#f5b8d9',
   };
 
@@ -1191,192 +1200,288 @@
     return c;
   }
 
-  // ---------- the operator: frontier engineer, 16x25 (SNES FF3 idiom) ----------
-  // Hand-authored pixel grids: a big outlined head under a hard hat, 2x2
-  // eyes (highlight over dark), three tones per material, cream shirt under
-  // blue overalls, tool belt, boots, a small pack on the back. dir: 'down' |
-  // 'up' | 'side' (side faces RIGHT; factory mirrors for left). Eight walk
-  // beats add settle and pass poses between the two long strides. work(): four frames at
-  // the machine, back view, hands working.
-  const OP = {
-    '.': null, o: () => P.ink,
-    H: () => P.hat, h: () => P.hat2, L: () => P.brass3,
-    S: () => P.skin, s: () => P.skin2, A: () => P.hair, a: () => P.hair2,
-    W: () => P.white, I: () => P.iris, E: () => P.eye,
-    B: () => P.suit, b: () => P.suit2, l: () => P.suit3, C: () => P.cream, c: () => P.cream2,
-    G: () => P.brass2, T: () => P.trunk, t: () => P.trunk2, K: () => P.boot, k: () => P.boot2,
+  // ---------- the operator: a fantasy mechanic, 20x28 ----------
+  // WHO HE IS (user ruling, 2026-08-21): the man who works on airships. A
+  // leather flight cap with brass goggles strapped to it, an aviator's scarf
+  // in verdigris, a long working coat, a leather rig across the chest with a
+  // brass pressure gauge that still has a light in it, heavy gloves and
+  // boots. He is dressed out of the machines' own material list — iron dark,
+  // brass, verdigris, and one warm fire — because he is the man who keeps
+  // them running. Not a builder in a hard hat, and nothing futuristic.
+  //
+  // WHAT THE CROSSCODE REFERENCE TEACHES (measured off the sheets in
+  // assets/inbox — 12 and 21 colours, 32x32 and 32x40 cells):
+  //   · ~30% of a sprite is ONE near-black tone, and that tone is both the
+  //     outline and the shadow side. Nothing is outlined in neutral ink, and
+  //     the dark is a saturated dark — Lea's is #3f0412, not black.
+  //   · Highlights are 3-5% of the pixels, near-white, in three or four
+  //     places. One saturated accent hue carries the eye; the rest is dark.
+  //   · The head is a third of the height, and it is the widest part of the
+  //     sprite — the body is narrower than the head.
+  //   · The gait swings hard: leg spread nearly doubles between passing and
+  //     contact, and the silhouette's width changes by a third across a cycle.
+  //
+  // The cap is what makes that value structure work. Drawn with bare hair, a
+  // head-sized slab of mid-brown became the brightest thing on the sprite —
+  // the exact inverse of the rule. Dark leather takes that area back, and the
+  // brass on top of it is then the only bright thing above the belt.
+  //
+  // dir: 'down' | 'up' | 'side' (side faces RIGHT; factory mirrors for left).
+  const OPW = 20, OPH = 28;                   // the feet ride the last row
+  const OP_HIP = 21;                          // first row below the coat hem
+  const OP_KEY = {
+    '.': null,
+    n: P.coatN, b: P.coatD, B: P.coat, l: P.coatL,
+    p: P.capD, P: P.cap, Q: P.capL,
+    t: P.teal2, T: P.teal, V: P.teal3,
+    g: P.brassD, G: P.brass1, L: P.brass2,
+    a: P.hairD, A: P.hair,
+    s: P.skinD, S: P.skin,
+    E: P.eye, I: P.iris, W: P.white,
+    r: P.leathD, R: P.leath,
+    F: P.glow,
   };
-  const grid = (x, rows, ox, oy) => {
+  // every grid row is OPW wide; a short row is a bug, not a shrug
+  function opGrid(x, rows, ox, oy) {
     rows.forEach((row, ry) => {
-      for (let cx = 0; cx < row.length; cx++) {
-        const f = OP[row[cx]];
-        if (f) R(x, f(), ox + cx, oy + ry, 1, 1);
+      if (row.length !== OPW) throw new Error('operator row ' + ry + ' is ' + row.length + ' wide, want ' + OPW);
+      for (let cx = 0; cx < OPW; cx++) {
+        const col = OP_KEY[row[cx]];
+        if (col) R(x, col, ox + cx, oy + ry, 1, 1);
       }
     });
-  };
-  const mirror = (rows) => rows.map((r) => r.split('').reverse().join(''));
+  }
 
+  // ---- head, rows 0-11: cap (4), goggles (3), face (5) ----
+  // The goggles carry the whole read at ten pixels: a full-brass rim around
+  // verdigris glass, sitting on a strap darker than the cap. Drawn with a
+  // dark rim they vanished into the leather; drawn with a head-wide dark
+  // strap the sprite wore a blindfold. A tuft of copper hair escapes at each
+  // temple so he is a man and not a helmet.
   const HEAD_D = [
-    '......oooo......',
-    '....ooLLLHoo....',
-    '...oLLLHHHHHo...',
-    '..oLLHHHHHHHHo..',
-    '..oLHHHHHHHHho..',
-    '.oHHHHHHHHHHHho.',
-    '.ohhhhhhhhhhhho.',
-    '..oAAASSSSAAAo..',
-    '..oASSSSSSSsAo..',
-    '..oSSWISSWISso..',
-    '..oSSEESSEESso..',
-    '...oSSSSsSSso...',
+    '......pQQPPPPp......',
+    '.....pQQQPPPPPp.....',
+    '....pQQPPPPPPPPp....',
+    '....pPPPPPPPPPGp....',
+    '....pGLLGnnGLLGp....',
+    '....pGVtGnnGVtGp....',
+    '....pgGGgnngGGgp....',
+    '....pAssssssssAp....',
+    '....aSWESSSSWEsa....',
+    '....aSEESSSsEEsa....',
+    '....AsSSSSSSsssA....',
+    '.....asSSSSsssa.....',
   ];
   const HEAD_U = [
-    '......oooo......',
-    '....ooLLLHoo....',
-    '...oLLLHHHHHo...',
-    '..oLLHHHHHHHHo..',
-    '..oLHHHHHHHHho..',
-    '.oHHHHHHHHHHHho.',
-    '.ohhhhhhhhhhhho.',
-    '..oAAAAAAAAAAo..',
-    '..oAaAAAAAAaAo..',
-    '..oAAAAAAAAAAo..',
-    '...oAAAAAAAAo...',
-    '....oSSSSSSo....',
+    '......pQQPPPPp......',
+    '.....pQQQPPPPPp.....',
+    '....pQQPPPPPPPPp....',
+    '....pPPPPPPPPPGp....',
+    '....pnGGGnnGGGnp....',
+    '....pPPPPPPPPPPp....',
+    '....pPPPPPPPPPPp....',
+    '....pPPPPPPPPPPp....',
+    '....paAAAAAAAAap....',
+    '.....aAAAAAAAAa.....',
+    '.....asAAAAAAsa.....',
+    '.....asSSSSSSsa.....',
   ];
   const HEAD_S = [
-    '......oooo......',
-    '....ooLLHHoo....',
-    '...oLLHHHHHHo...',
-    '..oLLHHHHHHHHo..',
-    '..oLHHHHHHHHHo..',
-    '..oHHHHHHHHHHHo.',
-    '..ohhhhhhhhhhho.',
-    '...oAAAASSSSSo..',
-    '...oAAASSSSSSo..',
-    '...oAAASSSWISo..',
-    '...oAAASSSEESo..',
-    '....oAASSSSSo...',
-  ];
-  const TORSO_D = [
-    '....oCCBBCCo....',
-    '...oCCBBBBCCo...',
-    '..oCCcBGBBcCCo..',
-    '..oSoBBBBBboSo..',
-    '...ooBBBBBboo...',
-    '...oTTTGGTTTo...',
-  ];
-  const TORSO_U = [
-    '....oCCBBCCo....',
-    '...oCCBBBBCCo...',
-    '..oCCcTTTTcCCo..',
-    '..oSoBTtTtBoSo..',
-    '...ooBTTTTBoo...',
-    '...oTTTTTTTTo...',
-  ];
-  const TORSO_S = [
-    '.....oCBBBCo....',
-    '....oCCBBBBCo...',
-    '....oCcBBoCCo...',
-    '....oCBBBBoSo...',
-    '.....oBBBBoo....',
-    '.....oTTGTTo....',
-  ];
-  const TORSO_S_FWD = [
-    '.....oCBBBCo....',
-    '....oCCBBBBCo...',
-    '....oCcBBBoCCo..',
-    '....oCBBBBBoSo..',
-    '.....oBBBBoo....',
-    '.....oTTGTTo....',
-  ];
-  const TORSO_S_BACK = [
-    '.....oCBBBCo....',
-    '....oCCBBBBCo...',
-    '...oCoBBBBBo....',
-    '...oSoBBBBBo....',
-    '.....oBBBBoo....',
-    '.....oTTGTTo....',
-  ];
-  const LEGS_D = [
-    '...obbBBBBbbo...',
-    '...obbBooBbbo...',
-    '...obbBooBbbo...',
-    '...oKKKooKKKo...',
-    '...oKkKooKkKo...',
-    '....ooo..ooo....',
-  ];
-  const LEGS_D_STEP = [           // right leg forward (lower), left tucked up — a real scissor
-    '...obbBBBBbbo...',
-    '...obbBooBbbo...',
-    '...oKKKooBbbo...',
-    '...oKkKooBbbo...',
-    '....ooo.oKKKo...',
-    '........oKkKo...',
-    '.........ooo....',
-  ];
-  const LEGS_S = [
-    '.....obBBBo.....',
-    '.....obBoBo.....',
-    '.....obBoBo.....',
-    '.....oKKoKKo....',
-    '....oKkKoKkKo...',
-    '.....ooo.ooo....',
-  ];
-  const LEGS_S_STEP = [           // front leg forward (right), back leg back — a modest stride
-    '.....obBBBo.....',
-    '....obBBoBBo....',
-    '....obBo.oBBo...',
-    '...oKKKo.oKKo...',
-    '...oKkKo.oKkKo..',
-    '....ooo...ooo...',
-    '................',
-  ];
-  const TORSO_WORK = [            // back view, arms raised to the machine (hands added per frame)
-    '....oCCBBCCo....',
-    '..o.oCBBBBCo.o..',
-    '..oCoCTTTTCoCo..',
-    '...oCBTtTtBCo...',
-    '...ooBTTTTBoo...',
-    '...oTTTTTTTTo...',
+    '.....pQQPPPPp.......',
+    '....pQQQPPPPPp......',
+    '...pQQPPPPPPPp......',
+    '...pPPPPPPPPGp......',
+    '...pPPPPPnGLLGp.....',
+    '...pPPPPPnGVtGp.....',
+    '...pPPPPPngGGgp.....',
+    '...pPAAsssssssp.....',
+    '...pAAaSSWISSSs.....',
+    '...pAAaSSEESSSs.....',
+    '....pAaasSSSSs......',
+    '.....paasSSSs.......',
   ];
 
-  function character(dir, frame) {
-    const [c, x] = canvas(16, 25);
-    const phase = frame % 8;
-    const forward = phase === 2 || phase === 3;
-    const backward = phase === 6 || phase === 7;
-    const stride = forward || backward;
-    const settle = phase === 1 || phase === 5;
-    const oy = (stride || settle) ? 0 : 1;
-    if (dir === 'side') {
-      grid(x, HEAD_S, 0, oy);
-      grid(x, forward ? TORSO_S_FWD : backward ? TORSO_S_BACK : TORSO_S, 0, oy + 12);
-      grid(x, stride ? (forward ? LEGS_S_STEP : mirror(LEGS_S_STEP)) : LEGS_S, 0, oy + 18);
-      const arm = forward ? 1 : backward ? -1 : settle ? (phase === 1 ? 1 : -1) : 0;
-      R(x, P.ink, 13 + arm, 16 + (arm < 0 ? 1 : 0), 2, 3);
-      R(x, P.skin, 14 + arm, 16 + (arm < 0 ? 1 : 0), 1, 2);
+  // ---- torso, rows 12-20 ----
+  // Scarf, then the coat: near-black body lit only down the near lapel, a
+  // leather rig crossing the chest, and the gauge burning on it. The sleeves
+  // are part of the grid so the arms never read as blocks floating beside the
+  // coat — only the gloves move.
+  const TORSO_D = [
+    '....tVVTTTTTTttt....',
+    '..nlBBbtTTtbBBbbnn..',
+    '.nBbnRrBBbbgGgnnbbn.',
+    '.nBbnBRrBbbGFGnnbbn.',
+    '.nBbnBbRrbbgggnnbbn.',
+    '.nBbnrRRRLGRRRrnbbn.',
+    '.nBbnBbnbbnbBbnnbbn.',
+    '..nnbBbnnnnbBbnnnn..',
+    '.nnbBbnnnnnbBbnnnnn.',
+  ];
+  const TORSO_U = [
+    '....tVVTTTTTTttt....',
+    '..nlBBBBBBBBBBbbnn..',
+    '.nBbnRrBBBBBBbnnbbn.',
+    '.nBbnBRrgGLgBbnnbbn.',
+    '.nBbnBbRgGGgBbnnbbn.',
+    '.nBbnrRRRLGRRRrnbbn.',
+    '.nBbnBbnbbnbBbnnbbn.',
+    '..nnbBbnnnnbBbnnnn..',
+    '.nnbBbnnnnnbBbnnnnn.',
+  ];
+  const TORSO_S = [
+    '....tVVTTTTTtt......',
+    '...nnlBBTTBBbn......',
+    '...nnlBRrBBBbn......',
+    '...nnBBRrGFBbn......',
+    '...nnBBbRrggbn......',
+    '...nnrRRLGRRrn......',
+    '...nnBBbbbBBbn......',
+    '..nnnbBbnnbBbnn.....',
+    '..nnbBbnnnbBbnnn....',
+  ];
+  // at the machine: back to us, the belting spool and its strap on his back
+  const TORSO_WORK = [
+    '....tVVTTTTTTttt....',
+    '..nlBBBBBBBBBBbbnn..',
+    '...nBRrBBBBBBBbn....',
+    '...nBBRrgGLgBBbn....',
+    '...nBBbRgGGgBBbn....',
+    '...nrRRRLGRRRrrbn...',
+    '...nBbnbbnbBbnbbn...',
+    '..nnbBbnnnnbBbnnnn..',
+    '.nnbBbnnnnnbBbnnnnn.',
+  ];
+
+  // ---- legs, drawn not gridded ----
+  // A leg is a 4px column hung off the hip: two rows of trouser, the boot,
+  // then a brass toe cap on the ground row. `lift` shortens it, which is how
+  // a foot leaves the ground — the reference's whole gait is spread and lift,
+  // so those are the two things a frame gets to change.
+  function opLeg(x, lx, lift, near) {
+    const bot = OPH - 1 - lift;
+    if (bot < OP_HIP + 3) return;
+    R(x, P.coatN, lx, OP_HIP, 4, bot - OP_HIP + 1);
+    R(x, P.coatD, lx + 1, OP_HIP, 2, 2);
+    R(x, near ? P.boot : P.bootD, lx + 1, OP_HIP + 2, 2, bot - OP_HIP - 2);
+    if (near) R(x, P.bootD, lx + 2, OP_HIP + 2, 1, bot - OP_HIP - 2);
+    R(x, P.brass1, lx + 1, bot, 2, 1);
+    if (near) R(x, P.brass2, lx + 1, bot, 1, 1);
+  }
+
+  // one walk cycle, eight beats: contact, down, passing, up — twice, the
+  // second half the first mirrored. [dx, lift] for the near leg then the far.
+  const OP_GAIT = [
+    [-1, 0, 1, 2], [0, 0, 0, 1], [0, 0, 0, 0], [1, 1, -1, 0],
+    [1, 2, -1, 0], [0, 1, 0, 0], [0, 0, 0, 0], [-1, 0, 1, 1],
+  ];
+  const OP_GAIT_S = [                      // in profile the stride is fore/aft, so it is bigger
+    [-3, 0, 3, 1], [-2, 0, 2, 2], [0, 0, 0, 0], [2, 1, -2, 0],
+    [3, 0, -3, 1], [2, 0, -2, 2], [0, 0, 0, 0], [-2, 1, 2, 0],
+  ];
+  const OP_BOB = [1, 0, -1, 0, 1, 0, -1, 0];    // low at contact, high at passing
+  const OP_ARM = [-2, -1, 0, 1, 2, 1, 0, -1];   // the near arm, opposite the near leg
+  const OP_SWAY = [1, 1, 0, -1, -1, -1, 0, 1];  // the coat and the scarf lag a beat
+
+  // The coat's back hem and the scarf's tail. Cloth is what makes a walk look
+  // like a walk, so both trail the body instead of tracking it.
+  function opTrail(x, oy, sway, side) {
+    if (side) {
+      const bx = 1 - sway;
+      R(x, P.coatN, bx, oy + 17, 4, 5);
+      R(x, P.coatD, bx + 1, oy + 18, 2, 3);
+      // the tail leaves the collar and tapers away behind him — drawn as a
+      // free-floating bar it read as a stick, not cloth
+      R(x, P.teal2, bx + 1, oy + 12, 3, 2);
+      R(x, P.teal, bx + 2, oy + 12, 2, 1);
+      R(x, P.teal2, bx, oy + 13 - sway, 2, 1);
     } else {
-      grid(x, dir === 'up' ? HEAD_U : HEAD_D, 0, oy);
-      grid(x, dir === 'up' ? TORSO_U : TORSO_D, 0, oy + 12);
-      grid(x, stride ? (forward ? LEGS_D_STEP : mirror(LEGS_D_STEP)) : LEGS_D, 0, oy + 18);
-      const arm = forward ? 1 : backward ? -1 : 0;
-      if (arm) {
-        R(x, P.ink, arm > 0 ? 1 : 13, oy + 15, 2, 3);
-        R(x, P.skin, arm > 0 ? 2 : 13, oy + 16, 1, 1);
-      }
+      if (sway > 0) { R(x, P.coatN, 1, oy + 19, 2, 2); R(x, P.coatD, 1, oy + 19, 1, 1); }
+      if (sway < 0) { R(x, P.coatN, 17, oy + 19, 2, 2); R(x, P.coatD, 18, oy + 19, 1, 1); }
+    }
+  }
+
+  // a gloved hand at the end of a sleeve the grid already drew
+  function opGlove(x, gx, gy) {
+    R(x, P.coatN, gx, gy - 1, 3, 1);
+    R(x, P.leathD, gx, gy, 3, 2);
+    R(x, P.leath, gx + 1, gy, 1, 1);
+  }
+
+  function character(dir, frame) {
+    const [c, x] = canvas(OPW, OPH);
+    const f = frame % 8;
+    const oy = OP_BOB[f], sway = OP_SWAY[f], sw = OP_ARM[f];
+    const side = dir === 'side';
+    const g = side ? OP_GAIT_S[f] : OP_GAIT[f];
+    const head = dir === 'up' ? HEAD_U : side ? HEAD_S : HEAD_D;
+    const torso = dir === 'up' ? TORSO_U : side ? TORSO_S : TORSO_D;
+
+    opTrail(x, oy, sway, side);
+    if (side) {
+      opLeg(x, 7 - g[2], g[3], false);       // the far leg, behind and darker
+      opLeg(x, 7 + g[0], g[1], true);
+    } else {
+      opLeg(x, 5 + g[0], g[1], true);
+      opLeg(x, 11 + g[2], g[3], true);
+    }
+    opGrid(x, torso, 0, oy + 12);
+    opGrid(x, head, 0, oy);
+    if (side) {
+      // the near arm swings across the coat; the sleeve travels with it
+      const ax = 7 + Math.round(sw * 0.9);
+      R(x, P.coatN, ax, oy + 15, 3, 4);
+      R(x, sw > 0 ? P.coat : P.coatD, ax + 1, oy + 16, 1, 2);
+      opGlove(x, ax, oy + 19);
+    } else {
+      const near = dir === 'down' ? 1 : -1;
+      opGlove(x, 2, oy + 18 + (sw * near > 0 ? 1 : 0));
+      opGlove(x, 15, oy + 18 + (sw * near < 0 ? 1 : 0));
     }
     return c;
   }
-  // working at a machine: back view, arms up, hands tapping in alternation
+
+  // Standing still is not a still frame. Four slow beats of breath: the head
+  // and chest ride together (a seam opens the moment they don't), the legs
+  // stay planted, and the gauge on his chest rides with them.
+  function characterIdle(dir, frame) {
+    const [c, x] = canvas(OPW, OPH);
+    const f = frame % 4;
+    const rise = [1, 0, 0, 1][f];
+    const side = dir === 'side';
+    const head = dir === 'up' ? HEAD_U : side ? HEAD_S : HEAD_D;
+    const torso = dir === 'up' ? TORSO_U : side ? TORSO_S : TORSO_D;
+    if (side) { opLeg(x, 5, 0, false); opLeg(x, 8, 0, true); }
+    else { opLeg(x, 5, 0, true); opLeg(x, 11, 0, true); }
+    opGrid(x, torso, 0, 12 + rise);
+    opGrid(x, head, 0, rise);
+    if (side) opGlove(x, 8, 19 + rise);
+    else { opGlove(x, 2, 19 + rise); opGlove(x, 15, 19 + rise); }
+    // The gauge burns brighter on beats 2 and 3 — deliberately offset from
+    // the chest's rise, so the breath is four distinct beats and not a
+    // two-pose flicker. Run on the same beats as the rise it adds nothing.
+    if (dir !== 'up' && f >= 2) R(x, P.brass3, side ? 10 : 12, 15 + rise, 1, 1);
+    return c;
+  }
+
+  // at the machine: back to us, both hands up on the console, a nod on the
+  // off-beats and the hands falling in alternation
   function characterWork(frame) {
-    const [c, x] = canvas(16, 25);
-    grid(x, TORSO_WORK, 0, 13);
-    grid(x, LEGS_D, 0, 19);
-    grid(x, HEAD_U, 0, 1 + (frame % 2));   // a nod on the off-beats
-    const lift = [0, 1, 0, -1][frame % 4];
-    const hand = (hx, hy) => { R(x, P.ink, hx - 1, hy - 1, 3, 3); R(x, P.skin, hx, hy, 1, 1); R(x, P.skin, hx, hy + 1, 1, 1); };
-    hand(3, 13 - lift); hand(12, 13 + lift);
+    const [c, x] = canvas(OPW, OPH);
+    const f = frame % 4;
+    // nod and hand-lift run on different beats, so all four frames differ —
+    // on one shared cadence frames 0 and 2 came out identical
+    const nod = [0, 1, 1, 0][f];
+    opLeg(x, 5, 0, true); opLeg(x, 11, 0, true);
+    opGrid(x, TORSO_WORK, 0, 12);
+    opGrid(x, HEAD_U, 0, nod);
+    const lift = [0, 1, 0, -1][f];
+    const armUp = (ax, ay) => {
+      R(x, P.coatN, ax, ay, 3, 5);
+      R(x, P.coatD, ax + 1, ay + 1, 1, 3);
+      R(x, P.leathD, ax, ay - 2, 3, 2);
+      R(x, P.leath, ax + 1, ay - 2, 1, 1);
+    };
+    armUp(1, 15 - lift); armUp(16, 15 + lift);
     return c;
   }
 
@@ -2000,7 +2105,7 @@
     x.drawImage(tree(0), 2, 16);
     x.drawImage(propCrate(1), 80, 32);
     x.drawImage(press(1), 44, 6);
-    x.drawImage(character('side', 0), 26, 20);
+    x.drawImage(character('side', 0), 24, 48 - OPH - 3);   // feet on the grass, not the card's edge
     return c;
   }
 
@@ -2033,7 +2138,10 @@
     // facing: 's' (front, the default) | 'n' | 'e' | 'w' — w is e, flipped
     machineTex: (tier, frame, mode, facing) => tex(machine(tier, frame, mode, facing)),
     stationTex: (kind, frame, mode, facing) => tex(station(kind, frame, mode, facing)),
+    // walk is 8 beats, idle is 4 slow ones, work is 4 at the machine
+    CHAR_W: OPW, CHAR_H: OPH, WALK_BEATS: 8, IDLE_BEATS: 4,
     characterTex: (dir, frame) => cachedTex('ch:' + dir + frame, () => character(dir, frame)),
+    characterIdleTex: (dir, frame) => cachedTex('chi:' + dir + frame, () => characterIdle(dir, frame)),
     characterWorkTex: (frame) => cachedTex('chw:' + frame, () => characterWork(frame)),
     beltTex: (frame) => tex(belt(frame)),
     matDotTex: () => tex(matDot()),
@@ -2069,7 +2177,8 @@
     // raw canvases for the dev proof page (dev/tiles.html) — no PIXI needed
     nodeCanvas: nodePatch,
     sceneryCanvas: (kind) => SCENERY_DRAW[kind] ? SCENERY_DRAW[kind]() : window.TILES.scenery(kind),
-    machineCanvas: machine, stationCanvas: station, characterCanvas: character, workCanvas: characterWork,
+    machineCanvas: machine, stationCanvas: station, characterCanvas: character,
+    idleCanvas: characterIdle, workCanvas: characterWork,
     pressCanvas: press, beltTileCanvas: beltTile, beltEndCanvas: beltEnd, portCanvas: portPlate, boardCanvas: noticeBoard,
     propCanvas: (kind) => PROP_DRAW[kind](), kindIconCanvas: kindIcon,
     pressTex: (frame, mode) => tex(press(frame, mode)),
