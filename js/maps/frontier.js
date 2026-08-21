@@ -1,7 +1,8 @@
 // THE FRONTIER — the game proper. One wide open basin of meadow in the middle,
 // every biome wrapped around it as a ring, and nothing in the way.
 //
-// The shape of the world (2026-08-20 rebuild):
+// The shape of the world (2026-08-20 rebuild; works and seams re-laid
+// 2026-08-21):
 //   · A 60×20-tile grass BASIN sits in the centre. It holds the track, the
 //     landing, thirty plots and the first vein of every ore. Nothing solid
 //     stands in it — no cliff, no water, no boulder, not one rock.
@@ -10,6 +11,14 @@
 //     the moment the world opens, even at the smallest viewport the zoom
 //     will settle on. The basin's other four veins sit at its corners and
 //     the rest are away in the ring: those are found by looking around.
+//   · SIX WORKS ring the basin, one to a biome: quarry (3 pads on the mesa
+//     top), peaks (4 on the snowfield), canyon head (4), canyon flank (3),
+//     flats (4) and bog (4). Every one of them is a group you can belt
+//     together — no area gets fewer than three, because one pad on a
+//     headland is a pad no one has a reason to build on. Fifty-two plots in
+//     all, every one a full 3x3 with all four facings legal.
+//   · A SEAM LIES THE WAY THE LAND DOES: half the fourteen veins are bedded
+//     on end, so the mine that takes them stands 1x2 rather than 2x1.
 //   · Six biomes ring it — peaks west, quarry north-west, canyon north-east
 //     and east, bog south-east, flats south-west — and none of them is a
 //     rectangle. Each fades into the basin through its own ramp of ground
@@ -22,13 +31,15 @@
 //     four blocks reaching different distances south, so its front steps in
 //     and out; each step carries a wide flight down, and a cut through the
 //     rim gives a way up each side. The PEAKS SHELF and the CANYON SHELF are
-//     the same idea at elev 1, three blocks each. The ISLAND in the south
-//     lake has two lobes and six open crossings, on all four sides.
+//     the same idea at elev 1, three blocks each; they are seven tiles of
+//     top between their rims, which a pad and the air it needs cannot have,
+//     so they carry seams and views and no works. The ISLAND in the bog has
+//     two lobes and six open crossings, on all four sides.
 //   · Nothing is gated. Every crossing carries `free`, so the bridges and the
 //     west causeway stand built from the first second.
 //   · Every terrain and every obstacle is on show and all of it is out of the
 //     way: water, tar, ice, the three wall palettes and every piece of region
-//     scenery live in the ring, never in the basin.
+//     scenery live in the ring, never in the basin — and never on a works.
 //
 // MAPKIT.field turns the per-tile decision below back into GROUND rects — the
 // schema is still rects, the shapes are not.
@@ -139,35 +150,53 @@
   }
 
   // ======================================================================
-  // plots — thirty in the open basin on an 80px grid, then a handful on the
-  // high ground and the far shore so every landmark is worth the walk
+  // plots — thirty in the open basin on an 80px grid, then a WORKS in every
+  // biome of the ring, so a walk out there ends somewhere you can build a
+  // line rather than at one lonely square (user ruling 2026-08-21).
   //
-  // A plot is a 3x2 pad: the largest machine has to fit on any of them, and
-  // it wants five tiles across and four deep to keep all three of its turns
-  // legal (body, the places round it, and a tile beyond each place for the
-  // run to arrive on). Every anchor below is checked by dev/verify.html with
-  // the whole map built, so a plot can never be a place you walk to and find
-  // you cannot use. The basin lattice sits one tile down and one left of
-  // where it first went in: that clears the veins standing among it, and
-  // moving the whole rank keeps the ranks straight.
+  // A plot is a 3x3 pad and it owes the four-facing guarantee: the largest
+  // kind seatable every way up, with every port tile and the tile beyond it
+  // free. That costs the ground around a pad as much as the pad — two clear
+  // tiles off each side — so pads come on an 80px lattice (three tiles of
+  // pad, two of air) and never in a rank of their own out in the weeds.
+  // Every anchor below is checked by dev/verify.html with the whole map
+  // built, so a plot can never be a place you walk to and find you cannot
+  // use.
+  //
+  // The rule the ring follows: NO AREA GETS FEWER THAN THREE. A single pad
+  // on a headland is a place no one has a reason to build on — the belt has
+  // nowhere to go — so the outliers were gathered into six works of three
+  // and four, each within belting distance of itself and of the vein it was
+  // put there for. The two elev-1 shelves gave their pads up for it: they
+  // are seven tiles of walkable top between their rims, which a 3x3 pad and
+  // its air cannot have, and they keep their veins instead. High ground
+  // carries seams and views; the works stand on the flats. The mesa is the
+  // exception — elev 2 and wide enough on top to hold its own quarry works.
   // ======================================================================
   const BASIN_COLS = [400, 480, 560, 640, 720, 800, 880, 960, 1040, 1120];
   const BASIN_ROWS = [288, 368, 448];
   const PLOTS = [];
   const plot = (x, y, region) => PLOTS.push({ id: 'p' + (PLOTS.length + 1), x, y, region });
   for (const y of BASIN_ROWS) for (const x of BASIN_COLS) plot(x, y, 'basin');
-  plot(464, 128, 'quarry');    // the mesa top
-  plot(752, 128, 'quarry');
-  plot(112, 224, 'peaks');     // the peaks shelf
-  plot(224, 208, 'peaks');
-  plot(1392, 336, 'canyon');   // the canyon shelf
-  plot(1424, 368, 'canyon');
-  // the island holds its coal vein and nothing else: a mine is two tiles by
-  // one and fits, a 3x2 pad does not, and the water leaves nowhere to put
-  // one. Its two plots came ashore rather than shrink the rule for them.
-  plot(1088, 688, 'bog');      // the south shore, across the water from the island
-  plot(1216, 688, 'bog');
-  plot(1472, 656, 'bog');      // past the boardwalk, the south-east shore
+  // the quarry works — a rank of three across the mesa top, joined by the
+  // track that runs over it. Three and not four: a pad on high ground has
+  // to keep its whole port ring at its own elevation, because a run cannot
+  // step off a cliff, and the mesa's shallow notch (block 3) is two rows
+  // short of carrying a fourth.
+  for (const x of [448, 528, 608]) plot(x, 128, 'quarry');
+  // the peaks works — two ranks of two on the snowfield under the shelf
+  for (const y of [368, 464]) for (const x of [192, 272]) plot(x, y, 'peaks');
+  // the canyon head works — two ranks of two on the shale bench north of
+  // the basin, under the crystal country
+  for (const y of [128, 208]) for (const x of [896, 976]) plot(x, y, 'canyon');
+  // the canyon flank works — a rank of three at the foot of the east shelf
+  for (const x of [1328, 1408, 1488]) plot(x, 496, 'canyon');
+  // the tar flats works — a rank of four east of the oil seeps
+  for (const x of [464, 544, 624, 704]) plot(x, 624, 'flats');
+  // the bog works — two ranks of two on the west bank, where the causeway
+  // out to the island starts. The island itself still holds its coal vein
+  // and nothing else: a mine fits on it, a pad and its air do not.
+  for (const y of [576, 656]) for (const x of [864, 944]) plot(x, y, 'bog');
 
   // ======================================================================
   // ore nodes. Order matters: starterNodes() builds the FIRST node of each
@@ -184,21 +213,28 @@
   // Everything after the cluster is a walk: the basin's other veins sit out
   // at its corners, and the deeper ones are away in the biome they belong to.
   // ======================================================================
+  // A SEAM LIES THE WAY THE LAND DOES (user ruling 2026-08-21). A mine is
+  // two tiles by one, and it may stand across the seam or along it, so half
+  // the veins here are bedded on end: `vert` makes the patch 1x2, the
+  // surveyed mark 1x2, and the mine that takes it 1x2 (MAPKIT.veinBox, and
+  // the patch art in pixels.js, which has always cut both ways). Every
+  // anchor sits on a tile line, so a vein's two tiles are exactly the tiles
+  // you see, and every one of them is clear of the pad lattices above.
   const NODES = [
-    { kind: 'iron',   x: 448,  y: 296 },   // ── the landing cluster, all in shot from the spawn
-    { kind: 'copper', x: 528,  y: 400 },
-    { kind: 'stone',  x: 608,  y: 296 },
-    { kind: 'quartz', x: 336,  y: 232 },   // ── the basin's corners: found by looking around
-    { kind: 'coal',   x: 1216, y: 232 },
-    { kind: 'oil',    x: 336,  y: 424 },
-    { kind: 'iron',   x: 1216, y: 424 },
-    { kind: 'copper', x: 592,  y: 128 },   // ── out in the ring: a reason to climb each landmark
-    { kind: 'stone',  x: 1344, y: 272 },   // the canyon shelf
-    { kind: 'quartz', x: 1392, y: 96 },    // the canyon head, beside the creek
-    { kind: 'coal',   x: 1088, y: 560 },   // the island
-    { kind: 'oil',    x: 352,  y: 592 },   // the tar flats
-    { kind: 'iron',   x: 112,  y: 176 },   // the peaks shelf
-    { kind: 'titan',  x: 208,  y: 464 },   // no ore in v3 — a landmark on the snowfield
+    { kind: 'iron',   x: 448,  y: 288 },              // ── the landing cluster, all in shot from the spawn
+    { kind: 'copper', x: 528,  y: 368, vert: true },
+    { kind: 'stone',  x: 608,  y: 288 },
+    { kind: 'quartz', x: 336,  y: 224, vert: true },  // ── the basin's corners: found by looking around
+    { kind: 'coal',   x: 1200, y: 224 },
+    { kind: 'oil',    x: 352,  y: 416, vert: true },
+    { kind: 'iron',   x: 1200, y: 416 },
+    { kind: 'copper', x: 592,  y: 144, vert: true },  // ── out in the ring: a reason to walk to each landmark
+    { kind: 'stone',  x: 1360, y: 272, vert: true },  // the canyon shelf
+    { kind: 'quartz', x: 1392, y: 96 },               // the canyon head, beside the creek
+    { kind: 'coal',   x: 1168, y: 576 },              // the island
+    { kind: 'oil',    x: 352,  y: 592, vert: true },  // the tar flats
+    { kind: 'iron',   x: 112,  y: 176, vert: true },  // the peaks shelf
+    { kind: 'titan',  x: 64,   y: 336, vert: true },  // no ore in v3 — a landmark on the snowfield
   ];
 
   // ======================================================================
@@ -219,8 +255,12 @@
       ramps: [...flight(416, 160, 3), ...sideRamp(400, 80, 3, 'W')],
     },
     {
-      x: 528, y: 48, w: 128, h: 160, elev: 2, face: 2,       // cols 33–40, the deepest, down to row 12
-      ramps: [...flight(544, 208, 3)],
+      // cols 33–40, the deepest, down to row 11. It used to reach row 12,
+      // which put its cliff face on the two rows the basin's north rank
+      // needs behind it to face north — a pad is only as good as the air
+      // around it, so the mesa gave the row back (2026-08-21).
+      x: 528, y: 48, w: 128, h: 144, elev: 2, face: 2,
+      ramps: [...flight(544, 192, 3)],
     },
     {
       x: 656, y: 48, w: 96, h: 96, elev: 2, face: 2,         // cols 41–46, the shallow notch, row 8
@@ -266,7 +306,7 @@
   // through, so the wall art is on show without ever being a gate
   const WALLS = [
     { x: 176, y: 528, w: 16, h: 80 },    // flats, tan
-    { x: 880, y: 592, w: 16, h: 80 },    // bog, grey
+    { x: 1536, y: 576, w: 16, h: 80 },   // bog, grey — the east corner, past the long bridge
     { x: 1200, y: 64, w: 16, h: 96 },    // canyon, violet
   ];
 
@@ -275,12 +315,12 @@
   // scenery you walk over, not a repair job.
   // ======================================================================
   const CROSSINGS = [
-    { id: 'w1', kind: 'boardwalk', x: 880, y: 576, w: 144, h: 32, dir: 'h', free: true }, // the causeway in from the west
-    { id: 'b2', kind: 'bridge', x: 1344, y: 576, w: 144, h: 32, dir: 'h', free: true },   // the long bridge in from the east
-    { id: 'b3', kind: 'bridge', x: 1152, y: 512, w: 32, h: 32, dir: 'v', free: true },    // north, mid
-    { id: 'b4', kind: 'bridge', x: 1056, y: 512, w: 32, h: 32, dir: 'v', free: true },    // north, west
-    { id: 'b5', kind: 'bridge', x: 1152, y: 624, w: 32, h: 48, dir: 'v', free: true },    // south, mid
-    { id: 'b6', kind: 'bridge', x: 1248, y: 624, w: 32, h: 48, dir: 'v', free: true },    // south, east
+    { id: 'w1', kind: 'boardwalk', x: 1024, y: 576, w: 96, h: 32, dir: 'h', free: true },  // the causeway out from the west bank
+    { id: 'b2', kind: 'bridge', x: 1392, y: 576, w: 112, h: 32, dir: 'h', free: true },    // the long bridge in from the east
+    { id: 'b3', kind: 'bridge', x: 1232, y: 512, w: 32, h: 32, dir: 'v', free: true },     // north, mid
+    { id: 'b4', kind: 'bridge', x: 1136, y: 512, w: 32, h: 32, dir: 'v', free: true },     // north, west
+    { id: 'b5', kind: 'bridge', x: 1232, y: 624, w: 32, h: 48, dir: 'v', free: true },     // south, mid
+    { id: 'b6', kind: 'bridge', x: 1328, y: 624, w: 32, h: 48, dir: 'v', free: true },     // south, east
   ];
 
   // ======================================================================
@@ -302,11 +342,16 @@
 
   // — the bog: the lake, and the two-lobed island standing well out in it. The
   // lake and its beach share a seed, so the sand follows every bay the water
-  // cuts; the island's two lobes share theirs with their own shore.
-  lay('sand', blob(73, 37, 18.8, 4.8, 71, 0.15));
-  lay('water', blob(73, 37, 18, 4.2, 71, 0.15));
-  lay('sand', anyOf(blob(70, 36.5, 6, 2.15, 73, 0.2), blob(76, 36.5, 5.8, 2.15, 74, 0.2)));
-  lay('grass', anyOf(blob(70, 36.5, 5.4, 1.8, 73, 0.2), blob(76, 36.5, 5.2, 1.8, 74, 0.2)));
+  // cuts; the island's two lobes share theirs with their own shore. The lake
+  // was pulled five tiles east and shortened by as much in the 2026-08-21
+  // rework: it kept its east shore and its whole shape, and gave up the west
+  // end — fourteen columns of marsh the bog works stand on. Everything that
+  // rode on it (island, bridges, causeway, the island's pad, the coal seam)
+  // moved the same five tiles, so the crossings still meet what they met.
+  lay('sand', blob(78, 37, 13.8, 4.8, 71, 0.15));
+  lay('water', blob(78, 37, 13, 4.2, 71, 0.15));
+  lay('sand', anyOf(blob(75, 36.5, 6, 2.15, 73, 0.2), blob(81, 36.5, 5.8, 2.15, 74, 0.2)));
+  lay('grass', anyOf(blob(75, 36.5, 5.4, 1.8, 73, 0.2), blob(81, 36.5, 5.2, 1.8, 74, 0.2)));
 
   // — a marsh pool in the south-east corner, to walk around
   lay('sand', blob(94, 35, 4, 2.4, 79, 0.34));
@@ -317,19 +362,23 @@
   lay('tar', blob(22.5, 41, 3, 1.5, 43, 0.4));
 
   // — built: planking, pads, and the tracks that wander because feet made them
-  lay('board', box(816, 544, 80, 16));              // plank walks over the west marsh
-  lay('board', box(832, 560, 16, 80));
+  lay('board', box(816, 544, 48, 16));              // plank walks over the west marsh
+  lay('board', box(832, 560, 16, 48));
   lay('dirt', path('h', 26, 49, 7, 83, 2.4, 1));    // the track over the mesa top
-  lay('pad', box(640, 64, 96, 32));                 // the mesa lookout
+  lay('pad', box(752, 64, 64, 32));                 // the mesa lookout, on the east block
   lay('dirt', path('h', 21, 78, 18, 87, 3.2, 2));   // the basin track, east to west
   lay('dirt', path('v', 13, 17, 28, 91, 2, 1));     // a spur north to the mesa stairs
   lay('dirt', path('v', 19, 21, 34, 97, 1.4, 1));   // the step down from the track to the landing
   lay('dirt', path('v', 20, 29, 62, 93, 2.4, 1));   // and a spur south to the lake
   lay('pad', box(512, 336, 80, 48));                // the landing
-  lay('pad', box(1152, 576, 96, 32));               // the island's own pad
+  lay('pad', box(1232, 576, 96, 32));               // the island's own pad
 
-  // — every ore node sits in its own worn dish
-  for (const n of NODES) lay('dirt', blob((n.x + 18) / T, (n.y + 8) / T, 2.3, 1.6, n.x + n.y, 0.45));
+  // — every ore node sits in its own worn dish, lying the way the seam does
+  for (const n of NODES) {
+    lay('dirt', n.vert
+      ? blob((n.x + 8) / T, (n.y + 18) / T, 1.6, 2.3, n.x + n.y, 0.45)
+      : blob((n.x + 18) / T, (n.y + 8) / T, 2.3, 1.6, n.x + n.y, 0.45));
+  }
 
   // — a bridge always meets dry land: the two tiles past each end are shore
   for (const c of CROSSINGS) {
@@ -350,29 +399,35 @@
   // ======================================================================
   // scenery — solid, and every piece of it out in the ring
   // ======================================================================
+  // Scenery frames the works; it never stands in one. Where a piece fell
+  // inside a new pad's air it moved to the nearest edge of the same
+  // landmark rather than being dropped — the ring keeps every rock and tree
+  // it had (2026-08-21 rework).
   const SCENERY = [
     // the peaks
     sc('snowpine', 2, 5), sc('spire2', 18, 7), sc('snowpine2', 18, 17),
     sc('snowpine', 2, 30), sc('snowpine3', 6, 31), sc('boulder', 15, 30),
     sc('spire', 17, 24), sc('snowpine2', 3, 19), sc('boulder2', 9, 29),
-    // the quarry, all of it up on the mesa
-    sc('rock', 27, 4), sc('boulder', 32, 3), sc('rock2', 48, 5),
-    sc('pine', 34, 9), sc('boulder2', 44, 3), sc('spire', 51, 3),
+    // the quarry: the mesa top west of the notch is the works' ground now,
+    // so its rocks stand on the east blocks and on the apron below the west
+    // stair — the mesa keeps every piece it had
+    sc('rock', 22, 6), sc('boulder2', 22, 10), sc('pine', 45, 6),
+    sc('boulder', 48, 3), sc('rock2', 48, 10), sc('spire', 51, 3),
     // the canyon head
-    sc('crystal', 55, 5), sc('spire', 60, 3), sc('deadtree', 65, 9), sc('crystal2', 70, 6),
+    sc('crystal', 53, 3), sc('spire', 67, 3), sc('deadtree', 68, 9), sc('crystal2', 70, 6),
     sc('spire2', 78, 4), sc('deadtree2', 84, 8), sc('crystal', 88, 10), sc('rock2', 73, 10),
     // the canyon's east flank and shelf
-    sc('crystal', 81, 14), sc('spire', 97, 27), sc('deadtree', 81, 28), sc('crystal2', 97, 13),
+    sc('crystal', 81, 14), sc('spire', 97, 27), sc('deadtree', 81, 25), sc('crystal2', 97, 13),
     sc('rock', 80, 22), sc('crystal', 88, 24), sc('spire', 94, 20),
     // the oil flats
     sc('scrub', 4, 34), sc('boulder', 8, 41), sc('scrub2', 14, 38), sc('tarpool', 26, 34),
-    sc('boulder2', 30, 41), sc('scrub3', 34, 35), sc('scrub', 44, 41), sc('boulder', 46, 34),
+    sc('boulder2', 30, 41), sc('scrub3', 33, 33), sc('scrub', 44, 41), sc('boulder', 47, 34),
     sc('rock', 38, 42), sc('scrub2', 20, 36),
-    // the coal bog
-    sc('reeds', 54, 33), sc('deadtree', 55, 41), sc('reeds3', 56, 36),
+    // the coal bog — the west bank stays clear for the works
+    sc('reeds', 52, 32), sc('deadtree', 51, 41), sc('reeds3', 63, 41),
     sc('reeds2', 89, 39), sc('deadtree2', 91, 38), sc('deadtree', 96, 41), sc('reeds', 88, 32),
     // the island keeps its own little wood
-    sc('tree', 74, 35), sc('tree2', 80, 36), sc('rock', 67, 37),
+    sc('tree', 79, 35), sc('tree2', 85, 36), sc('rock', 72, 37),
   ];
 
   // set dressing — cosmetic, walk-through
@@ -380,7 +435,7 @@
     { kind: 'lamppost', x: 424, y: 278, glow: true },
     { kind: 'lamppost', x: 792, y: 278, glow: true },
     { kind: 'lamppost', x: 1160, y: 278, glow: true },
-    { kind: 'lamppost', x: 1192, y: 584, glow: true },
+    { kind: 'lamppost', x: 1272, y: 584, glow: true },   // on the island's pad, east with it
     { kind: 'sign', x: 520, y: 388 },
     { kind: 'crate', x: 578, y: 342 },
     { kind: 'crate2', x: 588, y: 354 },

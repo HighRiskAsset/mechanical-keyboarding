@@ -106,10 +106,10 @@
   }
 
   // A worn patch under a station: the plot's own dirt apron. A plot is a 3x3
-  // pad anchored at its foot, so the patch is the rows a body stands on and
-  // the row in front of it where its outlets are — what a machine and its
-  // traffic actually wear away.
-  const apron = (x, y, kind) => ({ kind: kind || 'dirt', x, y: y - 32, w: 48, h: 48 });
+  // pad anchored at its foot, so the patch is the three rows the pad zones
+  // and the row in front of them where the outlets are — what a machine and
+  // its traffic actually wear away, and exactly the ground padBox claims.
+  const apron = (x, y, kind) => ({ kind: kind || 'dirt', x, y: y - 48, w: 48, h: 64 });
   // the same for an ore node (the patch art is 36×16 at the node's corner)
   const nodeApron = (x, y, kind) => ({ kind: kind || 'dirt', x: x - 14, y: y - 16, w: 64, h: 48 });
 
@@ -180,6 +180,14 @@
   // kind whichever way it faces, anchored at the plot's foot
   const PAD = 3;
   const padBox = (p) => bodyBox(p.x, p.y, PAD, PAD);
+  // A vein's ground: a mine is two tiles by one, and a seam lies the way the
+  // land does — `vert` on a node says it is bedded on end, so the mine that
+  // takes it stands 1x2 and the patch art is cut to match (pixels.js). This
+  // is the one place that turns a node into tiles: the surveyed mark, the
+  // ghost's search for a free vein and dev/verify.html all read it here.
+  const veinBox = (n) => (n && n.vert
+    ? bodyBox(n.x + 4, n.y + 24, 1, 2)
+    : bodyBox(n.x + 4, n.y + 12, 2, 1));
 
   // ---------- the registry ----------
   const MAPS = {};
@@ -200,7 +208,7 @@
     T, FOOT_W, sc, hash, noise, fbm, field, apron, nodeApron,
     blob, anyOf, box, path,
     bodyBox, portTile, PORT_AWAY,
-    FACINGS, BODY_SIDE, footprint, boxAt, PAD, padBox,
+    FACINGS, BODY_SIDE, footprint, boxAt, PAD, padBox, veinBox,
     register, MAPS, IDS,
     get DEFAULT() { return IDS[0]; },
   };

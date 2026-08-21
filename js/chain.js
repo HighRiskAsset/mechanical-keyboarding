@@ -400,11 +400,18 @@
   function machineAnchor(m) {
     if (m.node !== undefined && m.node !== null) {
       const n = cur.MAP.NODES[m.node];
-      return n ? { x: n.x + 4, y: n.y + 12 } : { x: 0, y: 0 };
+      if (!n) return { x: 0, y: 0 };
+      // the vein's own foot — a seam bedded on end is anchored lower, so a
+      // mine seated from it lands on the two tiles the patch is drawn over
+      return n.vert ? { x: n.x + 4, y: n.y + 24 } : { x: n.x + 4, y: n.y + 12 };
     }
     const p = plotById(m.plot);
     return p ? { x: p.x, y: p.y } : { x: 0, y: 0 };
   }
+  // the way a mine stands on a vein it was not walked onto: a map that beds
+  // a seam on end gets a mine on end (the pre-built starters, and any mine
+  // re-homed when the map data changed under a save)
+  const nodeFace = (i) => ((cur.MAP.NODES[i] || {}).vert ? 'e' : 's');
   function machineBox(m) {
     const size = (KINDS[m.kind] || {}).size || [2, 2];
     const face = MAPKIT.FACINGS.includes(m.face) ? m.face : 's';
@@ -524,7 +531,7 @@
     priceNode, priceExtraMine, priceMk, priceAt, kindMk, priceMachine, priceAuto, priceCrossing, scaleCost, closedCrossings,
     oreMk, unlockedKeys, currentTier, nextPair, targetBar,
     alphabetOf, recipeAlphabet, recipeTilt, recipeFocus, wordPool, offerable, offerableRecipes, matExists, oreOpen, affordable,
-    machinePos, machineBox, machineAnchor, machinesOfKind, machinesOfOre, nodeBuilt, freePlots, unbuiltNodes, buildableKinds, starterNodes,
+    machinePos, machineBox, machineAnchor, nodeFace, machinesOfKind, machinesOfOre, nodeBuilt, freePlots, unbuiltNodes, buildableKinds, starterNodes,
     useMap, currentMap, plotById, crossingOpen, regionAt,
     // per-map fields (MAP, PLOTS, SCENERY, PROPS, WORLD_W, WORLD_H, SPAWN, LEGACY, MAP_ID) are set by useMap
   };

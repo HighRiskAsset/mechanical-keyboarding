@@ -450,15 +450,17 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   **The Frontier** (`frontier`, 1600×720) — the open basin below, the game
   proper: one wide meadow to build in with all six biomes, every terrain and
   every obstacle wrapped around its rim. **Open
-  Range** (`range`, 1168×416, the frontier's width) — one flat meadow ringed
-  by forest on a 13-column × 4-row station grid (80px pitch): row A holds
-  the three mines and the four later nodes in a row by the hub, five free
-  plots, and the depot at the east end; ranks B–D hold thirteen free plots
-  each (44 free plots in all, generated in code from the grid); the hub
-  sits west, a worn road runs under row A hub→depot, nothing stands in any
-  route, a pond in the SE corner for colour: tests the mechanics (build,
-  deliver, automate, belt, edition) without walking or gating, with room for
-  the whole 14-machine tree and then some. **A world is a file** (2026-08-20):
+  Range** (`range`, 1168×464 since 2026-08-21, the frontier's width) — one
+  flat meadow ringed by forest on a 13-column grid at an 80px pitch: the
+  vein row holds thirteen seams, alternating across and on end so both
+  seatings get walked into on the easy map; three ranks of thirteen plots
+  below it (39 in all, generated in code from the grid), each a full 3×3
+  with every facing legal; the landing sits west, a worn road runs under the
+  vein row, nothing stands in any route, a pond in the SE corner for colour.
+  The ranks are half a step off the seam columns so no pad ever stands
+  directly under a seam bedded on end. Tests the mechanics (build, deliver,
+  automate, belt, edition) without walking or gating, with room for the
+  whole 14-machine tree and then some. **A world is a file** (2026-08-20):
   `js/maps/kit.js` holds the shared kit and the registry, and each world is
   `js/maps/<id>.js` ending in `MAPKIT.register({...})`, loaded before
   `js/chain.js` — which now owns only the chain. Adding a world = a new file
@@ -845,7 +847,8 @@ the meadow ✔ → 2 regions east + 4 ore patches + ~6 plots + closed crossings 
   track; `box()` is for the things somebody actually built; and `field(cols,
   rows, pick)` turns a per-tile decision back into GROUND rects, run
   together along each row. **The schema is still rects. The shapes are not.**
-- **The world — THE FRONTIER (rebuilt 2026-08-20, 1600×720 = 100×45 tiles)**.
+- **The world — THE FRONTIER (rebuilt 2026-08-20, works and seams re-laid
+  2026-08-21; 1600×720 = 100×45 tiles)**.
   A 60×20-tile grass **basin** in the middle holds the landing, a wandering
   track, thirty plots on an 80px grid and the first vein of every ore.
   Nothing solid stands in it — no cliff, no water, no boulder, not one rock.
@@ -874,19 +877,53 @@ the meadow ✔ → 2 regions east + 4 ore patches + ~6 plots + closed crossings 
   different distances south, so its front steps in and out; each step carries
   a three-tile flight down and a cut through the rim gives a way up each
   side. The **peaks shelf** and the **canyon shelf** are the same idea at
-  elev 1, three blocks each. The **island** in the south lake has two lobes
+  elev 1, three blocks each. The **island** in the bog has two lobes
   and six open crossings — a plank causeway west, a long bridge east, two
   north and two south. The deeper vein of every ore sits out in the biome it
   belongs to, so each landmark is worth the walk. Nothing is gated: every
   crossing carries `free`.
+- **Six works ring the basin — no area gets fewer than three pads (user
+  ruling 2026-08-21).** The 2026-08-20 map scattered lone pads over the
+  landmarks: one on a mesa finger, two far apart on a shelf, one on a
+  headland in the bog. A single pad is a pad nobody builds on — a machine
+  wants neighbours to belt to, and a lone square out in the weeds offers
+  none — so the outliers were gathered into **six works**, one to a biome:
+  quarry 3 on the mesa top, peaks 4 on the snowfield, canyon head 4, canyon
+  flank 3, flats 4, bog 4. Fifty-two plots in all. Each works is a group
+  within belting distance of itself and of the vein it was put there for.
+  **Mines may be isolated; works may not** — ore can be belted or piped
+  home, so a seam on a shelf is a reason to walk, while a lone pad is only a
+  disappointment. The two elev-1 shelves gave their pads up for the rule:
+  seven tiles of walkable top between their rims cannot hold a 3×3 pad and
+  the air it needs, so they keep their seams and their view. The mesa (elev
+  2) is the one landmark broad enough on top to carry a works, and it takes
+  three, not four: **a pad on high ground has to keep its whole port ring at
+  its own elevation**, because a run cannot step off a cliff any more than a
+  walker can, and the mesa's shallow notch is two rows short of a fourth.
+  The bog was re-cut for its works: the lake and everything riding on it
+  (island, four bridges, causeway, the island's pad, the coal seam) moved
+  five tiles east and the lake lost five tiles of length, opening fourteen
+  columns of west bank — it kept its east shore and its whole shape.
+- **A seam lies the way the land does (user ruling 2026-08-21).** A mine is
+  two tiles by one, and it may stand across a seam or along it, so a node
+  carries `vert`: the ore patch is cut 1×2 instead of 2×1 (`pixels.js` has
+  always drawn both), the surveyed mark and the build ghost's target follow
+  (`MAPKIT.veinBox` — the one place a node becomes tiles), and a mine the
+  map pre-builds is stood at the seam's own facing (`CHAIN.nodeFace`). Eight
+  of the Frontier's fourteen veins and six of the Open Range's thirteen are
+  bedded on end; every ore appears both ways. A player-built mine still
+  turns however they like — the ghost only asks that its body cover a free
+  vein. A save whose seam moved under it re-seats the mine on the ore
+  (`engine.js`) rather than leaving a rig standing on bare ground.
 - **`dev/map.html`** — proof sheet: bakes a world through the real `bake()`,
   plants its forest, nodes, scenery and crossings the way `factory.js` does,
   outlines every plot and POSTs the PNG to `assets/inbox/`. This is how the
   terrain gets reviewed. **`dev/tiles.html`** does the same for synthetic
   tile samples. Neither is linked from the game.
-- Verified 2026-08-20: dev/verify.html passes 25/25 — every plot and ore node
-  stands on clear, reachable ground on both worlds; no console errors; bake ≈
-  70 ms cold for the 100×45 frontier.
+- Verified 2026-08-21: dev/verify.html passes 26/26 — every plot and ore node
+  stands on clear, reachable ground on both worlds AND clears the four-facing
+  guarantee (52 pads + 13 veins on the Frontier, 39 + 13 on the Open Range);
+  no console errors; bake ≈ 70 ms cold for the 100×45 frontier.
 - Known follow-ups (steps 3–5): landmarks per region (waterfall at the
   stream head, summit), ambient life, tune cobble contrast, HUD rows for the
   four new materials when their machines exist.
@@ -1223,12 +1260,19 @@ demands a measured pool of ≥25 real words before a recipe is offered.
   (`MAPKIT.padBox`), anchored at the plot's foot and grown upward.
   **The four-facing guarantee:** a pad wants every facing of the largest
   kind seatable with every port usable — some seat of the body inside the
-  pad, the port tiles and the tile beyond each free. `dev/verify.html`
-  asserts it for every pad on every map; the current maps were laid for the
-  old three-side rule, so today it reports the shortfalls as warnings — the
-  worklist of the **coming map rework** (both maps get moderately larger and
-  re-laid; user ruling 2026-08-20). Until then the build ghost simply shows
-  a facing that does not fit as invalid, and blocked ports draw faint.
+  pad, the port tiles and the tile beyond each free, **and a run able to
+  step between the two** (a belt cannot climb a cliff, so a port whose way
+  out is the drop off a plateau is no port at all). `dev/verify.html`
+  asserts it for every pad and every vein on every map, and it is a failure
+  now, not a warning: **both maps were re-laid to it on 2026-08-21** — the
+  Frontier's fifty-two plots into six works, the Open Range's ranks from a
+  64px pitch to 80px with the meadow grown three rows to take them. The
+  arithmetic that forces the lattice: three tiles of pad plus two of air on
+  every side, because a body seated at a pad's edge puts its flank port one
+  tile out and the run's arrival tile two. So pads come **80px apart in both
+  axes** and never in a rank of their own. Neither map grew wider or (the
+  Frontier) taller in the end: there was room once the pads stopped being
+  scattered.
 - **The facing is final (user ruling 2026-08-21).** A machine is turned at
   the build ghost — a tap of Space, a quarter clockwise per tap — and never
   after: there is no turn row on a standing machine, because turning one

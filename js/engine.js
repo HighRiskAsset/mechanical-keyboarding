@@ -46,7 +46,7 @@
   function starterMachines() {
     const machines = [];
     let id = 1;
-    for (const s of C().starterNodes()) machines.push({ id: 'm' + (id++), kind: 'mine', ore: s.ore, node: s.index, auto: false });
+    for (const s of C().starterNodes()) machines.push({ id: 'm' + (id++), kind: 'mine', ore: s.ore, node: s.index, face: C().nodeFace(s.index), auto: false });
     return { machines, nextId: id };
   }
   function tier0Pairs() {
@@ -116,7 +116,7 @@
     }
     if (C().oreOpen(q, 'vedi')) {
       const node = C().unbuiltNodes(q).find((nd) => nd.ore === 'vedi');
-      if (node) q.machines.push({ id: 'm' + (q.nextMachineId++), kind: 'mine', ore: 'vedi', node: node.index, auto: !!(p.autoBench && p.autoBench.vedi) });
+      if (node) q.machines.push({ id: 'm' + (q.nextMachineId++), kind: 'mine', ore: 'vedi', node: node.index, face: C().nodeFace(node.index), auto: !!(p.autoBench && p.autoBench.vedi) });
     }
     const built = p.built || {}, plots = p.plots || {};
     for (const [stId, kind] of Object.entries(V1_KIT_KIND)) {
@@ -155,12 +155,22 @@
       const n = C().MAP.NODES[m.node];
       if (n && C().ORE_BY_NODE[n.kind] === m.ore) continue;
       const alt = C().unbuiltNodes(p).find((nd) => nd.ore === m.ore);
-      if (alt) { m.node = alt.index; delete m.at; } else p.machines.splice(p.machines.indexOf(m), 1);
+      if (alt) { m.node = alt.index; m.face = C().nodeFace(alt.index); delete m.at; } else p.machines.splice(p.machines.indexOf(m), 1);
+    }
+    // a mine whose seam moved under it (the map was re-laid) is stood back
+    // on its vein: a mine only makes sense on the tiles the ore is in, so
+    // the seat goes and it is taken again from the node, at the facing the
+    // seam is bedded at
+    for (const m of p.machines) {
+      if (m.kind !== 'mine' || m.node === undefined || m.node === null || !Array.isArray(m.at)) continue;
+      const v = MAPKIT.veinBox(C().MAP.NODES[m.node]);
+      const b = C().machineBox(m);
+      if (b.c0 > v.c1 || b.c1 < v.c0 || b.r0 > v.r1 || b.r1 < v.r0) { m.face = C().nodeFace(m.node); delete m.at; }
     }
     // the starter ores always have their first mine
     for (const s of C().starterNodes()) {
       if (!p.machines.some((m) => m.kind === 'mine' && m.ore === s.ore)) {
-        p.machines.push({ id: 'm' + (p.nextMachineId++), kind: 'mine', ore: s.ore, node: s.index, auto: false });
+        p.machines.push({ id: 'm' + (p.nextMachineId++), kind: 'mine', ore: s.ore, node: s.index, face: C().nodeFace(s.index), auto: false });
       }
     }
     autoAdvance(p);

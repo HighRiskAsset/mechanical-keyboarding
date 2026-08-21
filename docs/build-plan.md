@@ -462,16 +462,25 @@ thirty plots and the first vein of every ore, all six biomes wrapped around
 its rim as noise-shaped fronts rather than rects, and every terrain and
 obstacle demonstrated out at the edges. Elevation is three big stepped
 landmarks (the elev-2 Great Mesa, two elev-1 shelves) plus the island in the
-south lake, each with wide flights and side cuts on every approachable side.
-Nothing is gated (user ruling): every crossing carries `free`. Open Range
-row A carries the same node set and is unchanged.
+bog, each with wide flights and side cuts on every approachable side.
+Nothing is gated (user ruling): every crossing carries `free`. Open Range's
+vein row carries the same node set.
 
-**Pending — the map rework (user ruling 2026-08-20, with the rotation
-overhaul):** both worlds get moderately larger and are re-laid to the
-four-facing guarantee — pads are 3×3 now and every facing of the largest
-kind must seat with its ports usable; `dev/verify.html`'s warning line lists
-the spots that fall short (52 at the time of the ruling). Re-space the
-grown pads while at it (3×3 pads on the old lattice run edge-to-edge).
+**Done 2026-08-21 — the map rework (user rulings 2026-08-20 / 08-21):** both
+worlds re-laid to the four-facing guarantee, which is a `dev/verify.html`
+failure now rather than a warning (it was 52 spots short at the ruling, and
+it now also asks that a run be able to *step* between a port and its way
+out, so a port hanging over a cliff no longer counts). Pads sit 80px apart
+in both axes — three tiles of pad, two of air. **The Frontier**: the ring's
+lone pads gathered into six works, one to a biome, none smaller than three
+(52 plots); the two elev-1 shelves gave up their pads and keep their seams;
+the bog's lake and everything on it moved five tiles east to open a west
+bank for its works. **The Open Range**: ranks from a 64px pitch to 80px and
+the meadow three rows taller (39 plots), the ranks half a step off the seam
+columns. **Mines are 2×1 or 1×2**: a node carries `vert`, `MAPKIT.veinBox`
+is the one place a node becomes tiles, and eight Frontier seams and six Open
+Range seams are bedded on end. Neither world needed to grow wider in the
+end — there was room once the pads stopped being scattered.
 
 ## 6. Gravy (after the foundation, in no order)
 

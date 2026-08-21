@@ -657,10 +657,11 @@
       padSprites.push(sp);
     }
     // a vein takes a mine and a mine is two tiles by one, so its mark is
-    // that and not a build pad's
+    // that and not a build pad's — laid across or bedded on end, whichever
+    // way the map seated the seam
     for (const n of CHAIN.unbuiltNodes(profile)) {
-      const b = MAPKIT.bodyBox(n.x + 4, n.y + 12, 2, 1);
-      const sp = new PIXI.Sprite(PIXELS.plotTex(32, 16));
+      const b = MAPKIT.veinBox(n);
+      const sp = new PIXI.Sprite(PIXELS.plotTex(b.w * T16, b.h * T16));
       sp.position.set(b.c0 * T16, b.r0 * T16);
       sp.zIndex = -700;
       sp.alpha = 0.6;

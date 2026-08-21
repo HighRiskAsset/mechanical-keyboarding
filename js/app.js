@@ -702,7 +702,7 @@
     let vein = null;
     if (mine) {
       for (const n of CHAIN.unbuiltNodes(profile)) {
-        const vb = MAPKIT.bodyBox(n.x + 4, n.y + 12, 2, 1);
+        const vb = MAPKIT.veinBox(n);
         if (box.c0 <= vb.c1 && box.c1 >= vb.c0 && box.r0 <= vb.r1 && box.r1 >= vb.r0) { vein = n; break; }
       }
     }

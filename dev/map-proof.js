@@ -22,7 +22,7 @@ window.MAPPROOF = async (mapId, name, sx, sy, sw, sh, scale) => {
     const art = TILES.crossing(cr.kind, cr.w / T, cr.h / T, open, cr.style, cr.x, cr.dir);
     if (art) late.push({ z: open ? -900 : cr.y, draw: () => x.drawImage(art.c, cr.x - (art.dx || 0), cr.y - (art.dy || 0)) });
   }
-  for (const n of m.MAP.NODES) late.push({ z: -960, draw: () => x.drawImage(PIXELS.nodeCanvas(n.kind), n.x, n.y) });
+  for (const n of m.MAP.NODES) late.push({ z: -960, draw: () => x.drawImage(PIXELS.nodeCanvas(n.kind, !!n.vert), n.x, n.y) });
 
   const F = m.MAP.FOREST || {}, cols = Math.ceil(m.W / T), rows = Math.ceil(m.H / T);
   const regionAt = (px, py) => {
@@ -48,10 +48,17 @@ window.MAPPROOF = async (mapId, name, sx, sy, sw, sh, scale) => {
   }
   late.sort((a, b) => a.z - b.z).forEach((o) => o.draw());
 
-  // every pad outlined on the tiles it actually zones (3×3, MAPKIT.padBox)
+  // every pad outlined on the tiles it actually zones (3×3, MAPKIT.padBox),
+  // and every vein on the two tiles its mine takes (MAPKIT.veinBox), so the
+  // sheet shows which seams lie across and which are bedded on end
   x.strokeStyle = 'rgba(255, 230, 140, 0.85)';
   for (const p of m.PLOTS) {
     const b = MAPKIT.padBox(p);
+    x.strokeRect(b.c0 * T + 0.5, b.r0 * T + 0.5, b.w * T - 1, b.h * T - 1);
+  }
+  x.strokeStyle = 'rgba(140, 220, 255, 0.85)';
+  for (const n of m.MAP.NODES) {
+    const b = MAPKIT.veinBox(n);
     x.strokeRect(b.c0 * T + 0.5, b.r0 * T + 0.5, b.w * T - 1, b.h * T - 1);
   }
 
