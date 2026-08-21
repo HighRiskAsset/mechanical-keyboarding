@@ -17,6 +17,7 @@
   const E = window.ENGINE;
   const T = window.I18N;
   const A = window.AUDIO;
+  const DEVMODE = window.DEV;
 
   const SOFT_STOP_MIN = 25;
 
@@ -183,11 +184,14 @@
   }
 
   // ---------- the bag ----------
+  // What the bag will not hold is not held anywhere: past CHAIN's per-material
+  // cap the surplus vanishes, and the float shows what actually landed.
   function gain(mat, n) {
     if (n <= 0) return;
-    profile.bag[mat] = (profile.bag[mat] || 0) + n;
     if (!profile.seen[mat]) { profile.seen[mat] = true; }
-    producedSinceFloat[mat] = (producedSinceFloat[mat] || 0) + n;
+    const got = CHAIN.bagAdd(profile.bag, mat, n);
+    if (!got) return;
+    producedSinceFloat[mat] = (producedSinceFloat[mat] || 0) + got;
   }
   function spend(cost) {
     for (const [mat, n] of Object.entries(cost)) profile.bag[mat] = Math.max(0, (profile.bag[mat] || 0) - n);
@@ -841,12 +845,13 @@
       afterPurchase();
       A.fanfare();
     } else if (act.type === 'collect') {
+      // the machine empties whether or not the bag can take it all; a stack
+      // already at the cap swallows nothing, and the surplus is gone
+      if (!SIM.hasOutput(act.m)) return;
       const got = SIM.collect(profile, act.m);
       const total = Object.values(got).reduce((a, b) => a + b, 0);
-      if (!total) return;
       for (const mat of Object.keys(got)) { profile.seen[mat] = true; flyMat(mat, dock.id, 3); }
-      FACTORY.floatText(`+${total}`, dock.id, 0x7fb98a);
-      A.ding();
+      if (total) { FACTORY.floatText(`+${total}`, dock.id, 0x7fb98a); A.ding(); }
       E.saveProfile(profile);
       refreshInventory();
       refreshStatus();
@@ -1128,28 +1133,22 @@
     }),
   };
 
-  // debug: Ctrl+Alt+M — 100 of every material that exists for this save
-  // (ores you've opened, and anything a ready machine could make from them)
+  // debug: Ctrl+Alt+M — 500 of every material in the tree, whether or not this
+  // save has opened its ore or built anything that makes it. Developer mode
+  // arms it; with the box unticked the combo does nothing.
+  const DEBUG_MATERIALS = 500;
   function debugMaterials() {
     let n = 0;
     for (const mat of CHAIN.MAT_IDS) {
-      const spec = CHAIN.MATS[mat];
-      let exists = false;
-      if (spec.form === 'ore') exists = CHAIN.oreOpen(profile, mat);
-      else {
-        const r = CHAIN.recipeFor(mat);
-        exists = !!(r && CHAIN.KINDS[r.kind].ready && CHAIN.matExists(profile, mat));
-      }
-      if (!exists) continue;
-      profile.bag[mat] = (profile.bag[mat] || 0) + 100;
+      if (!CHAIN.bagAdd(profile.bag, mat, DEBUG_MATERIALS)) continue;   // already at the cap
       profile.seen[mat] = true;
       n++;
     }
     E.saveProfile(profile);
     refreshInventory();
     refreshStatus();
-    if (dock) FACTORY.floatText(`+100×${n}`, dock.id, 0x7fb98a);
-    flashCaption(T.t('capCheat', { n }));
+    if (dock) FACTORY.floatText(`+${DEBUG_MATERIALS}×${n}`, dock.id, 0x7fb98a);
+    flashCaption(T.t('capCheat', { n, amount: DEBUG_MATERIALS }));
     A.fanfare();
   }
 
@@ -1157,7 +1156,7 @@
     noteRealKeyboard(e);
     const overlayOpen = !overlay.classList.contains('hidden');
     const ARROWS = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
-    if (((e.ctrlKey && e.altKey && e.code === 'KeyM') || (e.ctrlKey && e.shiftKey && e.code === 'KeyQ')) && !overlayOpen && profile) {
+    if (((e.ctrlKey && e.altKey && e.code === 'KeyM') || (e.ctrlKey && e.shiftKey && e.code === 'KeyQ')) && !overlayOpen && profile && DEVMODE.isEnabled()) {
       e.preventDefault();
       debugMaterials();
       return;
@@ -1353,9 +1352,10 @@
     const got = DROPS.tick(profile, dt, at.x, at.y);
     if (!got) return false;
     for (const g of got) {
-      profile.bag[g.mat] = (profile.bag[g.mat] || 0) + g.n;
+      const kept = CHAIN.bagAdd(profile.bag, g.mat, g.n);
       profile.seen[g.mat] = true;
-      flyFrom(g.mat, Math.min(g.n, 3), g.x, g.y);
+      if (!kept) continue;               // the bag is full of this one — it vanishes off the ground
+      flyFrom(g.mat, Math.min(kept, 3), g.x, g.y);
       A.pickup();
     }
     refreshInventory();
@@ -1768,6 +1768,7 @@
       profile,
       sound: A.isEnabled(),
       uilang: T.getLang(),
+      devmode: DEVMODE.isEnabled(),
     };
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
@@ -1826,6 +1827,7 @@
       E.setLastMap(data.map);
       if (typeof data.sound === 'boolean') A.setEnabled(data.sound);
       if (data.uilang) T.setLang(data.uilang);
+      if (typeof data.devmode === 'boolean') DEVMODE.setEnabled(data.devmode);
       profile = null;
       location.reload();
     };
@@ -1861,6 +1863,13 @@
           <p class="set-note">${T.t('tipNote')}</p>
           <div class="tip-btns">${tips}</div>
         </div>
+        <div class="set-dev-box">
+          <label class="set-dev" for="set-dev">
+            <input type="checkbox" id="set-dev"${DEVMODE.isEnabled() ? ' checked' : ''}>
+            <span>${T.t('setDevMode')}</span>
+          </label>
+          <p class="set-note set-dev-note" id="set-dev-note"${DEVMODE.isEnabled() ? '' : ' hidden'}>${T.t('setDevNote')}</p>
+        </div>
       </div>
       <button id="set-reset" class="link-btn danger">${T.t('btnReset')}</button>
       <div><button id="ov-continue" class="btn-primary">${T.t('passportClose')}</button></div>
@@ -1869,6 +1878,10 @@
     $('set-map').onclick = () => showMapSelect();
     $('set-export').onclick = () => exportSave();
     $('set-import').onclick = () => pickImportFile();
+    $('set-dev').onchange = (e) => {
+      DEVMODE.setEnabled(e.target.checked);
+      $('set-dev-note').hidden = !e.target.checked;
+    };
     $('set-reset').onclick = () => showResetConfirm();
     $('ov-continue').onclick = () => hideOverlay();
     $('ov-continue').focus();

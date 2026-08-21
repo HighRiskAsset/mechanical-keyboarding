@@ -142,7 +142,12 @@
     if (!p.bag) p.bag = {};
     if (!p.seen) p.seen = {};
     if (!p.crossings) p.crossings = {};
-    for (const [k, v] of Object.entries(p.bag)) if (v > 0) p.seen[k] = true;
+    // a save from before the cap (or one hand-edited) settles to it on load
+    const bagCap = C().TUNING.BAG_CAP;
+    for (const [k, v] of Object.entries(p.bag)) {
+      if (v > bagCap) p.bag[k] = bagCap;
+      if (v > 0) p.seen[k] = true;
+    }
     if (!Array.isArray(p.machines) || !p.machines.length) {
       const sm = starterMachines();
       p.machines = sm.machines; p.nextMachineId = sm.nextId;

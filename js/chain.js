@@ -159,6 +159,7 @@
     PICKUP_CAP: 100,       // (legacy) the old instant pickup; buffers cap below
     // the simulation (phase 3): buffers, rates, belts — real time
     BUFFER_CAP: 100,       // per material, input and output buffers
+    BAG_CAP: 9999,         // per material, what the operator can carry (see bagAdd)
     RATE: { mine: 2, smelter: 3, foundry: 4, constructor: 4, molder: 5, assembler: 6, fastener: 6, crane: 7, manufacturer: 10 }, // seconds per unit
     BELT_SPEED: 2,         // tiles per second, one item per tile
     OUTLETS: { mine: 1, processor: 2 }, // belts out of a machine; inlets = the kind's arity
@@ -391,6 +392,18 @@
     return !!cost && Object.entries(cost).every(([mat, n]) => (bag[mat] || 0) >= n);
   }
 
+  // The bag carries at most BAG_CAP of any one material, and everything that
+  // puts goods in it comes through here — typed output, ground pickups, a
+  // machine's collected buffer, a debug handout. Past the cap the surplus is
+  // not held back anywhere: it simply never arrives. Returns how many landed,
+  // so a caller can float the number the player actually got.
+  function bagAdd(bag, mat, n) {
+    const have = bag[mat] || 0;
+    const k = Math.max(0, Math.min(n, TUNING.BAG_CAP - have));
+    if (k > 0) bag[mat] = have + k;
+    return k;
+  }
+
   // ---- machines standing on the map ----
   // A machine stands where it was placed: `at` = [c0, r0], the top-left tile
   // of its body box, chosen with the build ghost (rotation overhaul,
@@ -530,7 +543,7 @@
     oreLetters, oreMaxMk, recipesFor, recipeFor, matTier,
     priceNode, priceExtraMine, priceMk, priceAt, kindMk, priceMachine, priceAuto, priceCrossing, scaleCost, closedCrossings,
     oreMk, unlockedKeys, currentTier, nextPair, targetBar,
-    alphabetOf, recipeAlphabet, recipeTilt, recipeFocus, wordPool, offerable, offerableRecipes, matExists, oreOpen, affordable,
+    alphabetOf, recipeAlphabet, recipeTilt, recipeFocus, wordPool, offerable, offerableRecipes, matExists, oreOpen, affordable, bagAdd,
     machinePos, machineBox, machineAnchor, nodeFace, machinesOfKind, machinesOfOre, nodeBuilt, freePlots, unbuiltNodes, buildableKinds, starterNodes,
     useMap, currentMap, plotById, crossingOpen, regionAt,
     // per-map fields (MAP, PLOTS, SCENERY, PROPS, WORLD_W, WORLD_H, SPAWN, LEGACY, MAP_ID) are set by useMap

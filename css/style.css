@@ -562,6 +562,25 @@ body.night .keycap.home::after { background: #23343d; }
 }
 #set-reset { margin-top: 16px; }
 
+/* Developer mode: the cheats' one switch, and it should read as a workshop
+   label rather than a setting anybody needs. Small type, dim ink, a hairline
+   above it, tucked under the tip box at the very bottom of the card. Its note
+   only appears once the box is ticked. */
+.set-dev-box { margin-top: 16px; border-top: 1px solid #223743; padding-top: 10px; }
+.set-dev {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  letter-spacing: 0.5px;
+  color: #5f7683;
+  cursor: pointer;
+  width: fit-content;
+}
+.set-dev:hover { color: var(--ink-dim); }
+.set-dev input { accent-color: var(--brass); width: 13px; height: 13px; margin: 0; cursor: pointer; }
+.set-dev-note { min-height: 0; margin: 6px 0 0; }
+
 /* ---------- passport ---------- */
 #passport-body {
   max-height: 46vh;

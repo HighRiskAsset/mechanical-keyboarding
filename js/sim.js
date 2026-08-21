@@ -175,20 +175,22 @@
       const room = CAP() - (m.buf.out[mat] || 0);
       const k = Math.min(room, n);
       m.buf.out[mat] = (m.buf.out[mat] || 0) + k;
-      if (n - k > 0) p.bag[mat] = (p.bag[mat] || 0) + (n - k);
+      if (n - k > 0) C().bagAdd(p.bag, mat, n - k);
       return 'belt';
     }
-    p.bag[mat] = (p.bag[mat] || 0) + n;
+    C().bagAdd(p.bag, mat, n);
     return 'bag';
   }
-  // collect a machine's output buffer into the bag; returns {mat: n}
+  // collect a machine's output buffer into the bag; returns {mat: n} of what
+  // actually landed. The buffer empties either way — what the bag has no room
+  // for is gone, not left behind in the machine.
   function collect(p, m) {
     ensureMachine(m);
     const got = {};
     for (const [mat, n] of Object.entries(m.buf.out)) {
       if (n <= 0) continue;
-      p.bag[mat] = (p.bag[mat] || 0) + n;
-      got[mat] = n;
+      const kept = C().bagAdd(p.bag, mat, n);
+      if (kept > 0) got[mat] = kept;
       m.buf.out[mat] = 0;
     }
     return got;

@@ -300,8 +300,13 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   the same hold **drops the spool** (charge bar red, caption "Spool
   dropped — no belt laid"), so aborting is one hold wherever you stand.
   Info rows that would run off the world's top edge stand beside the place
-  instead. Debug: **Ctrl+Alt+M** or **Ctrl+Shift+Q** give 100 of every
-  material that exists for the save (a caption confirms).
+  instead. The bag holds at most `TUNING.BAG_CAP` (9999) of any one material:
+  everything that puts goods in it goes through `CHAIN.bagAdd`, and past the
+  cap the surplus is not held anywhere — it never arrives. **Developer mode**
+  — a subdued tickbox at the foot of Settings, off by default and remembered
+  per device beside the interface language — arms the cheats; unticked, they
+  do nothing. Behind it: **Ctrl+Alt+M** or **Ctrl+Shift+Q** give 500 of every
+  material in the tree, opened or not (a caption confirms).
 - Learning engine: hesitation-gated hints (recall first), stop-on-error,
   per-letter EW latency/error stats; **v3 curriculum:** letters unlock in
   mirror key-pairs per ore Mk (`LANG_RU.PAIRS`), a pair is bought at the
@@ -315,7 +320,9 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   ore retools its mines (automation off until bought again). Every price is
   the base table × `TUNING.PACE` — the one pacing knob. Profile v2 with a v1
   migration; save files version 2 (v1 files import and migrate). Debug:
-  Ctrl+Alt+M (or Ctrl+Shift+Q) gives 100 of every material that exists for the save.
+  Ctrl+Alt+M (or Ctrl+Shift+Q) gives 500 of every material in the tree,
+  behind the developer-mode tickbox in Settings (off by default); the bag
+  caps every material at 9999 and drops the rest.
   `dev/verify.html` runs the data checks.
 - **One pixel grid, no exceptions**: integer device-pixel upscale with
   letterboxing (roundPixels, whole-pixel camera and sprite positions), bitmap
