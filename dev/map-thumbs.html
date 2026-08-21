@@ -1,0 +1,137 @@
+<!doctype html>
+<!-- Bakes the map picker's thumbnails to assets/maps/<id>.png.
+
+     THIS IS THE ONLY WAY THOSE FILES ARE MADE. The game never draws a
+     thumbnail at run time: js/app.js just points an <img> at assets/maps/.
+     Run this page whenever a map is created or its terrain is edited, and
+     commit the PNGs it writes alongside the map change.
+
+     It used to be otherwise. The picker called TILES.minimap on every world
+     as it opened, which meant baking each world's terrain in full before the
+     player had chosen one — eighteen seconds of frozen main thread to produce
+     two small images that only change when a map does.
+
+       1. start the local server:  powershell -File serve.ps1
+       2. open  http://localhost:8123/dev/map-thumbs.html
+       3. press Bake and save  (or open it with ?save=1 to do that on load)
+
+     Saving POSTs to serve.ps1's /upload?dir=maps, so the files land straight
+     in assets/maps/. Without the server running the previews still render and
+     each one offers a download link instead.
+
+     A new map needs its script tag added below — this page bakes exactly the
+     worlds it loads, and MAPKIT.IDS only knows about those. -->
+<meta charset="utf-8">
+<title>map thumbnails</title>
+<style>
+  body { margin: 0; background: #14202a; color: #e8e2d4; font: 13px/1.5 Georgia, serif; padding: 20px; }
+  h1 { font-size: 18px; margin: 0 0 4px; color: #d4a94e; }
+  p.note { color: #8fa1a8; margin: 0 0 16px; max-width: 70ch; }
+  button { font: inherit; background: #d4a94e; color: #221a08; border: 0; border-radius: 6px; padding: 7px 16px; cursor: pointer; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  #sheet { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 18px; }
+  .thumb { background: #0b151a; border: 1px solid #2c4a58; border-radius: 8px; padding: 10px; }
+  /* shown at the size the picker shows them, so what you see here is what the
+     player gets — the card's frame is 112px tall with 6px of padding */
+  .frame { height: 100px; display: flex; align-items: center; justify-content: center; }
+  .frame canvas { image-rendering: pixelated; max-width: 100%; max-height: 100%; }
+  .meta { margin-top: 8px; color: #8fa1a8; font-size: 12px; }
+  .meta b { color: #e8e2d4; font-size: 13px; }
+  .meta a { color: #d4a94e; }
+  #log { margin-top: 16px; white-space: pre-wrap; font: 12px/1.6 monospace; color: #8fa1a8; }
+</style>
+
+<h1>Map thumbnails</h1>
+<p class="note">
+  Bakes every registered world's minimap and writes it to <code>assets/maps/</code>.
+  Run this after creating or editing a map, then commit the PNGs with it.
+</p>
+<button id="go">Bake and save</button>
+
+<div id="sheet"></div>
+<div id="log"></div>
+
+<script src="../js/maps/kit.js"></script>
+<script src="../js/maps/frontier.js"></script>
+<script src="../js/maps/range.js"></script>
+<script src="../js/pixels.js"></script>
+<script src="../js/tiles.js"></script>
+<script>
+(function () {
+  const sheet = document.getElementById('sheet');
+  const logEl = document.getElementById('log');
+  const btn = document.getElementById('go');
+  const log = (s) => { logEl.textContent += s + '\n'; };
+
+  // The same rule the picker used when it drew these live: the widest world
+  // is held to 224px, and every map is baked at that one scale so the cards
+  // read as a set rather than each finding its own zoom.
+  function thumbScale() {
+    const widest = Math.max(...MAPKIT.IDS.map((k) => Math.ceil(MAPKIT.MAPS[k].W / 16)));
+    return Math.max(1, Math.min(4, Math.floor(224 / widest)));
+  }
+
+  const canvases = {};
+
+  function bakeAll() {
+    sheet.innerHTML = '';
+    logEl.textContent = '';
+    const s = thumbScale();
+    log('scale ' + s + ' — ' + MAPKIT.IDS.length + ' world(s)');
+    for (const id of MAPKIT.IDS) {
+      const m = MAPKIT.MAPS[id];
+      const t = performance.now();
+      const c = TILES.minimap(m.MAP, m.W, m.H, s);
+      const ms = Math.round(performance.now() - t);
+      canvases[id] = c;
+      const box = document.createElement('div');
+      box.className = 'thumb';
+      const frame = document.createElement('div');
+      frame.className = 'frame';
+      frame.appendChild(c);
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.innerHTML = `<b>${id}.png</b><br>${c.width}x${c.height} · world ${m.W}x${m.H} · baked in ${ms}ms`;
+      box.appendChild(frame);
+      box.appendChild(meta);
+      sheet.appendChild(box);
+      log(`  ${id}: ${c.width}x${c.height} (${ms}ms)`);
+    }
+  }
+
+  function blobOf(c) {
+    return new Promise((res) => c.toBlob(res, 'image/png'));
+  }
+
+  async function saveAll() {
+    for (const id of MAPKIT.IDS) {
+      const blob = await blobOf(canvases[id]);
+      try {
+        const r = await fetch('/upload?dir=maps&name=' + id + '.png', { method: 'POST', body: blob });
+        log(r.ok ? '  saved assets/maps/' + id + '.png (' + blob.size + ' bytes)'
+                 : '  FAILED ' + id + '.png — server said ' + r.status);
+      } catch (e) {
+        // No server, or it is the plain static one: fall back to a link the
+        // page can offer, so the bake is never wasted work.
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = id + '.png';
+        a.textContent = 'download ' + id + '.png';
+        sheet.querySelectorAll('.meta')[MAPKIT.IDS.indexOf(id)].append(document.createElement('br'), a);
+        log('  no server (' + e.message + ') — use the download link for ' + id + '.png');
+      }
+    }
+    log('done.');
+  }
+
+  btn.onclick = async () => {
+    btn.disabled = true;
+    bakeAll();
+    await saveAll();
+    btn.disabled = false;
+  };
+
+  bakeAll();
+  if (new URLSearchParams(location.search).has('save')) saveAll();
+})();
+</script>

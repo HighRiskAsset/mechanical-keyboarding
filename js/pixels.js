@@ -97,10 +97,20 @@
   // deterministic pseudo-random for texture grain
   const dr = (x, y, s) => ((x * 31 + y * 17 + s * 7) % 97) / 97;
 
+  // willReadFrequently is not a micro-optimisation here, it is the difference
+  // between a playable boot and a frozen one. Half the art in this file is
+  // drawn and then read straight back — TILES.spill masks its edges through
+  // getImageData/putImageData, and the minimap averages whole chunks the same
+  // way. On a GPU-backed canvas each of those readbacks is a synchronous stall:
+  // one 16x16 spill tile cost 12.8ms, and the first bake of a world spent
+  // sixteen seconds inside them. Asking for a CPU-backed canvas up front drops
+  // the same tile to 0.14ms and that bake to 0.5s. These canvases are small and
+  // procedural, and the ones that reach the screen are uploaded to the GPU once
+  // by pixi as textures, so nothing is given up by keeping them on the CPU.
   function canvas(w, h) {
     const c = document.createElement('canvas');
     c.width = w; c.height = h;
-    const x = c.getContext('2d');
+    const x = c.getContext('2d', { willReadFrequently: true });
     return [c, x];
   }
   const R = (x, c, px, py, w, h) => { x.fillStyle = c; x.fillRect(px, py, w, h); };

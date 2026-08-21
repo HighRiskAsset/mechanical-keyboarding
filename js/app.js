@@ -1538,20 +1538,15 @@
   }
 
   // ---------- the map picker: which world to play ----------
-  const thumbCache = {};
-  let thumbScale = 0;
-  function mapThumb(id) {
-    if (!thumbScale) {
-      const widest = Math.max(...CHAIN.MAP_IDS.map((k) => Math.ceil(CHAIN.MAPS[k].W / 16)));
-      thumbScale = Math.max(1, Math.min(4, Math.floor(224 / widest)));
-    }
-    if (!thumbCache[id]) {
-      const m = CHAIN.MAPS[id];
-      const c = TILES.minimap(m.MAP, m.W, m.H, thumbScale);
-      thumbCache[id] = { url: c.toDataURL(), w: c.width, h: c.height };
-    }
-    return thumbCache[id];
-  }
+  // The thumbnails are baked files, never drawn here. They used to come from
+  // TILES.minimap at load, which meant baking every world's terrain in full
+  // before the player had chosen one — eighteen seconds of frozen main thread
+  // on the picker, for two images that only change when a map does.
+  //
+  // Regenerate them with dev/map-thumbs.html after editing or adding a map.
+  // That is the only way these files are produced; nothing writes them at run
+  // time. A map whose PNG is missing shows an empty frame, not a stall.
+  const mapThumb = (id) => `assets/maps/${id}.png`;
   function fmtDay(ts) {
     const d = new Date(ts), now = new Date();
     const day = (x) => Math.floor((x - new Date(x).getTimezoneOffset() * 60000) / 86400000);
@@ -1623,7 +1618,7 @@
       const cur = id === mapId ? ' current' : '';
       return `
         <button class="map-card${cur}" data-map="${id}">
-          <span class="map-thumb"><img src="${th.url}" width="${th.w}" height="${th.h}" alt=""></span>
+          <span class="map-thumb"><img src="${th}" alt="" decoding="async"></span>
           <b>${T.t('mapNames')[id]}</b>
           <span class="map-tagline">${T.t('mapTaglines')[id]}</span>
           <span class="map-progress">${progress}</span>

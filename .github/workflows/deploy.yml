@@ -51,8 +51,12 @@ jobs:
           mkdir -p _site
           cp index.html favicon.svg _site/
           cp -r css js libs _site/
-          # Phase 6 bakes the art to PNG under assets/ — add `cp -r assets _site/`
-          # here when that lands, or the remastered sprites will not ship.
+          # Baked art, named folder by folder rather than `cp -r assets`: the
+          # working copy also holds assets/inbox and assets/ref, which are
+          # gitignored scratch and reference and have no business on the site.
+          # Phase 6's remastered sprites get their own line here when they land.
+          mkdir -p _site/assets
+          cp -r assets/maps _site/assets/
           cp deploy/htaccess _site/.htaccess
           echo "--- staged for upload ---"
           find _site -type f | sort

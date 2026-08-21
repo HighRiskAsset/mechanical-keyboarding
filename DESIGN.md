@@ -863,6 +863,38 @@ the meadow ✔ → 2 regions east + 4 ore patches + ~6 plots + closed crossings 
   stream head, summit), ambient life, tune cobble contrast, HUD rows for the
   four new materials when their machines exist.
 
+### Map thumbnails — baked to file, never drawn at run time (ruling 2026-08-21)
+
+The picker's thumbnails are **static PNGs in `assets/maps/<id>.png`**, and
+they are produced in exactly one place: **`dev/map-thumbs.html`**. Run it
+whenever a map is created or its terrain is edited, and commit the PNGs in
+the same change as the map. Nothing in the game writes them, and nothing in
+the game falls back to drawing one — a map whose PNG is missing shows an
+empty frame, which is a commit to fix, not a stall to sit through.
+
+This is a ruling because the alternative was measured. The picker used to
+call `TILES.minimap` per world as it opened, which bakes that world's terrain
+in full. That put an **18.8-second frozen main thread** between the loading
+card lighting its last cell and the picker appearing — the card sat there
+looking finished while the page was wedged. Two images that change only when
+a map does were costing every player twenty seconds of every cold start.
+
+Two things were wrong and both are fixed:
+
+- **Drawing at run time what only changes at edit time.** Now baked to file.
+- **`getImageData` on GPU-backed canvases.** `TILES.spill` masks each edge
+  tile by reading it straight back after drawing it, and `PIXELS.util.canvas`
+  asked for a plain 2D context, so every one of those readbacks was a
+  synchronous stall: **12.8 ms per 16×16 tile**, ~1,200 tiles, ≈16 s for the
+  first bake of a world. With `willReadFrequently: true` the same tile costs
+  **0.14 ms** and the bake **0.5 s** — a 92× and 31× difference from one
+  context flag. Any new canvas that is drawn and then read back belongs on
+  that same helper; do not hand-roll `getContext('2d')`.
+
+Measured after both changes: worst long task on a cold load **86 ms** (from
+18,831 ms), LCP **332 ms** (from 19,260 ms), and picking a world — which
+still bakes its terrain for real — **289 ms**.
+
 ## THE TECH TREE (v3, agreed 2026-08-18 — six ores, nine machine kinds, seven tiers)
 
 Supersedes v2 (2026-08-11) in full. The visual twin of this section is
@@ -1367,13 +1399,16 @@ sheet (rigs, works, belts, pipes, props, icons on real terrain, and every
 machine in its three animation states) · `dev/mats.html` + `dev/mats-zoom.html`
 material proof sheets (every material in the bag and on the band) ·
 `dev/verify.html` data checks ·
+`dev/map-thumbs.html` bakes the picker's thumbnails to `assets/maps/` — the
+only thing that writes them, run on every map edit ·
 `dev/sim.html` simulation harness · `dev/play.html` the game headless (rAF
 shim) · `libs/pixi.min.js` vendored Pixi 8 ·
 `docs/tech-tree-v3.html` the agreed tech-tree page (keyboard-by-ore, tier
 board, material ladder, simulation, transport) · `docs/build-plan.md` the
 phased build order for v3.
-`assets/inbox/` (upload target) and `assets/ref/` (style references, study
-only) are gitignored.
+`assets/maps/<id>.png` the picker's baked thumbnails — tracked, shipped, and
+written only by `dev/map-thumbs.html`. `assets/inbox/` (upload target) and
+`assets/ref/` (style references, study only) are gitignored.
 
 The `-ru` suffix is the convention, not an afterthought (invariant 5): a new
 course is a new `language-<code>.js` + `layout-<code>.js` pair and nothing

@@ -10,7 +10,7 @@ DirectoryIndex index.html
 # cache is the right trade: someone who saw last week's build and comes back to
 # a new link gets the new build, not a stale one out of their browser.
 <IfModule mod_headers.c>
-  <FilesMatch "\.(html|js|css|svg)$">
+  <FilesMatch "\.(html|js|css|svg|png)$">
     Header set Cache-Control "public, max-age=300, must-revalidate"
   </FilesMatch>
 </IfModule>

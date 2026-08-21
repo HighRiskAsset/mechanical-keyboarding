@@ -90,3 +90,11 @@ tagline in `js/i18n.js`. The shared kit (`js/maps/kit.js`) gives a world
 deterministic noise, blobs, wandering paths and the tile-field helper, so
 biomes and coastlines can be shaped rather than drawn as rectangles.
 `dev/map.html` renders any world to a PNG for review.
+
+**Every map edit ends with a thumbnail bake.** The picker's world thumbnails
+are static files in `assets/maps/`, never drawn at run time — drawing them
+live cost eighteen seconds of frozen main thread on every cold start. After
+creating or editing a map, start the dev server and open
+`dev/map-thumbs.html?save=1`; it writes `assets/maps/<id>.png` for every
+registered world. Commit those PNGs with the map change. A new world also
+needs its script tag added to that page.

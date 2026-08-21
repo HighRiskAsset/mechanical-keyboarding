@@ -184,6 +184,11 @@
   // ---------- the registry ----------
   const MAPS = {};
   const IDS = [];
+  // A registered world owes the picker a thumbnail: assets/maps/<id>.png,
+  // baked by dev/map-thumbs.html and committed with the map. Nothing draws
+  // one at run time — the picker used to, and it froze boot for eighteen
+  // seconds. Add a new world's script tag to that page as well as to
+  // index.html, or it will register here and bake nothing.
   function register(def) {
     if (!def || !def.id) throw new Error('a map needs an id');
     if (!MAPS[def.id]) IDS.push(def.id);

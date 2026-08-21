@@ -448,6 +448,12 @@ full run; data checks green; the EN stub loads.
 
 ## 5. Map work (with the environment owner)
 
+**Definition of done for any map change (ruling 2026-08-21):** re-bake the
+picker thumbnail. Open `dev/map-thumbs.html?save=1` against the local server
+and commit the `assets/maps/<id>.png` it writes alongside the map edit. The
+game never draws these — it did once, and it cost 18.8 s of frozen main
+thread on every cold start. See DESIGN.md, "Map thumbnails — baked to file".
+
 Nodes per ore ≈ iron 3, copper 2, stone 2, quartz 2, coal 2, oil 2; plots as
 many as the tree can use. **Done 2026-08-20**: the worlds moved out of
 `chain.js` into `js/maps/` (kit + registry + one file per world), and The

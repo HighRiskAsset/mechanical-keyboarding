@@ -32,17 +32,28 @@ while ($listener.IsListening) {
     continue
   }
 
-  # POST /upload?name=<file> — save request body into assets/inbox/
+  # POST /upload?name=<file>[&dir=inbox|maps] — save request body to disk.
+  #
+  #   inbox  assets/inbox, the concept-art drop target (gitignored)
+  #   maps   assets/maps, the baked map thumbnails, which ship with the game
+  #          and are written only by dev/map-thumbs.html
+  #
+  # `dir` selects a key from a fixed table rather than being joined onto the
+  # path, so a crafted value cannot walk out of the repo. `name` is still
+  # checked, so neither half of the destination comes from the caller intact.
   if ($ctx.Request.HttpMethod -eq 'POST' -and $path -eq '/upload') {
     try {
       $name = $ctx.Request.QueryString['name']
-      if ($name -and $name -match '^[A-Za-z0-9_.-]+$') {
-        $inbox = Join-Path $root 'assets\inbox'
-        if (-not (Test-Path $inbox)) { New-Item -ItemType Directory -Force $inbox | Out-Null }
+      $dirs = @{ 'inbox' = 'assets\inbox'; 'maps' = 'assets\maps' }
+      $which = $ctx.Request.QueryString['dir']
+      if (-not $which) { $which = 'inbox' }
+      if ($name -and $name -match '^[A-Za-z0-9_.-]+$' -and $dirs.ContainsKey($which)) {
+        $outDir = Join-Path $root $dirs[$which]
+        if (-not (Test-Path $outDir)) { New-Item -ItemType Directory -Force $outDir | Out-Null }
         $ms = New-Object System.IO.MemoryStream
         $ctx.Request.InputStream.CopyTo($ms)
-        [IO.File]::WriteAllBytes((Join-Path $inbox $name), $ms.ToArray())
-        $ok = [Text.Encoding]::UTF8.GetBytes('saved ' + $name + ' (' + $ms.Length + ' bytes)')
+        [IO.File]::WriteAllBytes((Join-Path $outDir $name), $ms.ToArray())
+        $ok = [Text.Encoding]::UTF8.GetBytes('saved ' + $dirs[$which] + '\' + $name + ' (' + $ms.Length + ' bytes)')
         $ctx.Response.OutputStream.Write($ok, 0, $ok.Length)
       } else {
         $ctx.Response.StatusCode = 400
