@@ -525,12 +525,12 @@
       return;
     }
     if (placing) {
-      if (placing.kind === 'mine' && !placing.vein) { setCaption(T.t('capPlaceVein'), 'no'); return; }
+      if (placing.kind === 'mine' && !placing.vein) { setCaption(T.t('capPlaceMine'), 'no'); return; }
       if (placing.later) { setCaption(T.t('capVeinLater', { name: mineName(placing.vein.ore) }), 'no'); return; }
       const name = placing.kind === 'mine' ? mineName(placing.vein.ore) : kindName(placing.kind);
       if (placing.poor) { setCaption(T.t('capPlacePoor', { name }), 'no'); return; }
       if (!placing.ground) { setCaption(T.t('capPlaceBad'), 'no'); return; }
-      setCaption(T.t('capPlace', { name }), 'ok');
+      setCaption(placing.kind === 'mine' ? T.t('capPlaceMine') : T.t('capPlace', { name }), 'ok');
       return;
     }
     if (spool && dock && dock.kind === 'machine' && dock.m.id !== spool.from) {
