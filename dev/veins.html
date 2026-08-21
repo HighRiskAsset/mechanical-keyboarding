@@ -1,0 +1,86 @@
+<!doctype html>
+<!-- Ore-vein art proof (dev only, now spliced into pixels.js).
+     Both seatings of every ore, old beside new, and a mine standing on each
+     for scale. POSTs two PNGs to /upload.
+     Open: http://localhost:PORT/dev/veins.html -->
+<meta charset="utf-8">
+<title>ore vein proof</title>
+<style>
+  body { margin: 0; background: #12141c; color: #ddd; font: 12px/1.5 monospace; }
+  canvas { image-rendering: pixelated; display: block; margin: 8px; }
+  #log { padding: 8px; white-space: pre; }
+</style>
+<div id="log">rendering…</div>
+<canvas id="out"></canvas>
+<canvas id="zoom"></canvas>
+<script src="../js/pixels.js"></script>
+<script src="../js/tiles.js"></script>
+<script>
+(async function () {
+  const log = document.getElementById('log');
+  const KINDS = ['iron', 'copper', 'stone', 'quartz', 'coal', 'oil'];
+  const upload = async (cv, name) => {
+    const blob = await (await fetch(cv.toDataURL('image/png'))).blob();
+    const res = await fetch('/upload?name=' + encodeURIComponent(name), { method: 'POST', body: blob });
+    return name + ': ' + res.status + ' ' + await res.text();
+  };
+  const grass = (x, w, h) => {
+    for (let ty = 0; ty < Math.ceil(h / 16); ty++)
+      for (let tx = 0; tx < Math.ceil(w / 16); tx++)
+        x.drawImage(TILES.fill('grass', (tx * 7 + ty * 13) % 23), tx * 16, ty * 16);
+  };
+  const upscale = (src, el, k) => {
+    el.width = src.width * k; el.height = src.height * k;
+    const ox = el.getContext('2d'); ox.imageSmoothingEnabled = false;
+    ox.drawImage(src, 0, 0, el.width, el.height);
+  };
+  const label = (x, s, px, py) => {
+    x.fillStyle = 'rgba(10,12,20,0.78)'; x.fillRect(px - 1, py - 6, s.length * 4 + 2, 8);
+    x.fillStyle = '#ffffff'; x.font = '6px monospace'; x.fillText(s, px, py);
+  };
+
+  // ---------- sheet: old / new 2x1 / new 1x2, per ore ----------
+  const COL = 56, W = KINDS.length * COL + 8, H = 76;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  grass(x, W, H);
+  label(x, '2x1', 2, 22);
+  label(x, '1x2', 2, 62);
+  KINDS.forEach((k, i) => {
+    const px = 34 + i * COL;
+    label(x, k, px, 8);
+    x.drawImage(PIXELS.nodeCanvas(k, false), px, 10);            // seated across
+    x.drawImage(PIXELS.nodeCanvas(k, true), px + 8, 32);         // seated down
+  });
+  upscale(c, document.getElementById('out'), 6);
+
+  // ---------- zoom: bare, then with a mine standing on it ----------
+  // The bare vein is what the player reads when choosing where to build, so
+  // it is the one that has to be identifiable; the built state is here to
+  // check the vein still shows around the machine that covers it.
+  const ZC = 60, ZW = KINDS.length * ZC, ZH = 150;
+  const z = document.createElement('canvas'); z.width = ZW; z.height = ZH;
+  const zx = z.getContext('2d');
+  grass(zx, ZW, ZH);
+  const mineH = PIXELS.machineCanvas(1, 0, 'still', 's');
+  const mineV = PIXELS.machineCanvas(1, 0, 'still', 'e');
+  KINDS.forEach((k, i) => {
+    const px = i * ZC + 6;
+    label(zx, k, px, 5);
+    zx.drawImage(PIXELS.nodeCanvas(k, false), px, 8);
+    zx.drawImage(PIXELS.nodeCanvas(k, true), px + 9, 30);
+    // built: the machine sits on the footprint, the vein spills past it
+    zx.drawImage(PIXELS.nodeCanvas(k, false), px, 76);
+    if (mineH) zx.drawImage(mineH, px + 2, 76 + 16 - mineH.height);
+    zx.drawImage(PIXELS.nodeCanvas(k, true), px + 9, 104);
+    if (mineV) zx.drawImage(mineV, px + 9, 104 + 32 - mineV.height);
+  });
+  upscale(z, document.getElementById('zoom'), 10);
+
+  try {
+    const a = await upload(document.getElementById('out'), 'veins.png');
+    const b = await upload(document.getElementById('zoom'), 'veins-zoom.png');
+    log.textContent = 'uploaded ' + a + '\nuploaded ' + b;
+  } catch (e) { log.textContent = 'upload failed: ' + e; }
+})().catch((e) => { document.getElementById('log').textContent = 'ERROR ' + (e.stack || e); });
+</script>

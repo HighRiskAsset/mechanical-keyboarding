@@ -512,6 +512,34 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   a treeline border, solid trees/rocks shaping routes. All data in chain.js
   `MAP` (DIRT/WATER/NODES rects, grid-aligned) + `SCENERY` — a new map is a
   new set of rects.
+- **Ore veins (redrawn 2026-08-21, user: identifiable "rather than just
+  various colours")**: the six were one silhouette in six hues — the same
+  oval of soil with the same six rectangles, tinted grey-blue for iron,
+  orange for copper, pink for quartz. Nothing about the *shape* said which
+  ore it was. Each is its own form now: **iron** cleaved plates with rust
+  across the face (rust only on the soil left six grey rocks that could have
+  been any metal); **copper** verdigris crusting the top with the metal
+  showing at the foot, because copper in the ground is green, not orange;
+  **stone** flat level bedding, no metal, no crystal; **quartz** standing
+  prisms, the one vein nameable from its outline alone; **coal** glossy black
+  shards with hard specular hits and live embers in a **pale ash bed** — the
+  one vein whose bed deliberately does *not* match its region, because black
+  ore on dark ground was invisible; **oil** not a rock at all but a seep with
+  an iridescent film. 5–9 colours each. Checked legible on all eight ground
+  types (grass/dirt/rock/marsh/sand/shale/snow/crack) — `dev/veins.html`.
+  - **Two seatings, because a mine rotates**: 36×16 across, 16×36 down.
+    Rotating the art 90° is not enough — quartz would lie on its side and
+    stone's bedding would run vertical — so each seating is laid out
+    deliberately and every feature is drawn world-up in both.
+  - **The 1×2 art is ready ahead of the layout** (user, 2026-08-21: every
+    patch in the game is 2×1 today; laying out mines that use the other
+    seating is a separate task). Nothing renders 1×2 yet — all fourteen veins
+    come out 36×16 on the current maps. Two hooks are in place for whoever
+    does that work, and both are meant to be overridden rather than treated
+    as settled: a vein reads `vert` off its own `NODES` entry, and
+    `reseatVeins` (factory.js) lets a mine standing on it override that with
+    its own facing — e/w means 1×2. It re-runs on every rebuild, because the
+    terrain pass that creates the vein sprites has no profile to ask.
 - Machine roster: hand drill rigs → powered mines (tier-1, on nodes, fixed);
   Smelter / Constructor / Assembler kits on chosen plots; Freight Depot with
   a working crane; the Hub (roofed contract board). Chibi engineer with hard

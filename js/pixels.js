@@ -55,7 +55,7 @@
     fA: '#6c9c6c', fB: '#d8e8dc', fC: '#4c7c50',                           // frost grass
     // ores. The six are pulled apart by hue on purpose: iron reads blue-cool
     // and stone reads warm sand, because at ten pixels a grey is a grey and
-    // those two used to be the same rock. Veins in the ground (ORE_LOOK) and
+    // those two used to be the same rock. Veins in the ground (VEIN_PIECE) and
     // goods on the belt (MAT_DRAW) share these keys, so an ore looks the same
     // where it is dug as it does where it is carried.
     ironore: '#7d8aa5', ironore2: '#49526b', ironore3: '#bcc8dc',
@@ -64,6 +64,10 @@
     stoneore: '#b9ab8c', stoneore2: '#7a6c53', stoneore3: '#e2d6b6',
     coal: '#3a3a4a', coal2: '#161620', coal3: '#5c5c72',
     oil: '#4c3d70', oil2: '#1c1628', oil3: '#9b86c4',
+    // what names a vein at a glance: rust on iron, a pale ash bed under coal
+    // (black ore on dark ground was invisible), and the soil each one stains
+    rust: '#a5502a', rustD: '#6d2f16', ash: '#8a8494', ashD: '#5c5668',
+    ironBed: '#8a5a34', copBed: '#9c7846', emberD: '#c9762a',
     // alloys — each is its own colour, not a blend of its two ores. Eight
     // bars that differ only by a tone swap are eight of the same bar; these
     // are eight materials.
@@ -230,30 +234,170 @@
     R(x, P.grass4, 0, 0, 4, 1); R(x, P.grass4, 8, 0, 5, 1);
     return c;
   }
-
-  // ---------- ore node patch 36x16 — one per mine tier ----------
-  // [main, dark, light, ground] — ground is the stained soil the ore sits in
-  const ORE_LOOK = {
-    iron:   [P.ironore, P.ironore2, P.steel, P.dirt2],
-    copper: [P.copper, P.copper2, P.steel, P.dirt2],
-    stone:  [P.stoneore, P.stoneore2, P.cream2, P.rC],
-    quartz: [P.quartz, P.quartz2, P.quartz3, P.vB],
-    coal:   [P.coal, P.coal2, P.coal3, P.mC],
-    oil:    [P.oil, P.oil2, P.oil3, P.xC],
-    titan:  [P.titan, P.titan2, P.titan3, P.kB],
+  // ---------- ore veins: 36x16 seated across, 16x36 seated down ----------
+  // Redrawn 2026-08-21 (user: the resources should be identifiable, "rather
+  // than just various colours"). They were one silhouette in six hues — the
+  // same oval of soil with the same six rectangles, tinted grey-blue for
+  // iron, orange for copper, pink for quartz. Nothing about the SHAPE said
+  // which ore it was. Each one is its own form now:
+  //
+  //   iron    cleaved plates with rust running across the face. Rust only on
+  //           the soil left six grey rocks that could have been any metal.
+  //   copper  copper in the ground is not orange, it is GREEN: verdigris
+  //           crusting the top with the metal showing through at the foot.
+  //   stone   flat level bedding. No metal, no crystal — the dull one.
+  //   quartz  standing prisms. The one vein you can name from its outline.
+  //   coal    glossy black shards with hard specular hits and live embers, in
+  //           a PALE ash bed. Black ore on dark ground was invisible before,
+  //           which is why this one bed does not match its region.
+  //   oil     not a rock at all: a seep, with an iridescent film on it.
+  //
+  // Building rotation means a mine is 2x1 or 1x2, so a vein must be both.
+  // Rotating the art ninety degrees is not enough — quartz would lie on its
+  // side and stone's bedding would run vertical. Each seating is laid out
+  // deliberately; only the material's vocabulary is shared, and every feature
+  // is drawn world-up in both.
+  const VEIN_BED = {
+    iron: P.ironBed, copper: P.copBed, stone: P.rC,
+    quartz: P.vB, coal: P.ash, oil: P.xC, titan: P.kB,
   };
-  function nodePatch(kind) {
-    const [c, x] = canvas(36, 16);
-    const [main, dk, lt, ground] = ORE_LOOK[kind] || ORE_LOOK.iron;
-    // soil oval, outlined below (SNES ground objects sit in a shadowed dish)
-    for (const [px, py, w, h] of [[4, 5, 28, 8], [8, 3, 20, 12], [2, 7, 32, 5]]) R(x, P.tOut, px, py, w, h);
-    for (const [px, py, w, h] of [[4, 4, 28, 8], [8, 2, 20, 12], [2, 6, 32, 5]]) R(x, ground, px, py, w, h);
-    const chunks = [[6, 6], [14, 3], [22, 7], [28, 4], [11, 10], [25, 11]];
-    for (const [px, py] of chunks) {
-      R(x, P.tOut, px - 1, py + 3, 6, 1); R(x, P.tOut, px + 4, py, 1, 3);
-      R(x, dk, px, py + 1, 4, 3);
-      R(x, main, px, py, 4, 3);
-      R(x, lt, px + 1, py, 1, 1);
+
+  // A plate of ore, bevelled and cleaved. `acc`/`accD` are what names the
+  // metal — rust for iron, a cool sheen for titanium, which does not rust.
+  function veinPlate(x, px, py, d, m, l, acc, accD) {
+    R(x, P.tOut, px - 1, py + 4, 9, 1);
+    R(x, d, px, py + 1, 7, 3);
+    R(x, m, px + 1, py, 6, 3);
+    R(x, l, px + 1, py, 3, 1);
+    R(x, P.white, px + 1, py, 1, 1);
+    R(x, acc, px + 3, py + 1, 3, 1);
+    R(x, accD, px + 2, py + 2, 4, 1);
+    R(x, acc, px + 1, py + 3, 2, 1);
+  }
+  function veinNodule(x, px, py) {
+    disc(x, P.tOut, px + 3, py + 3, 3);
+    disc(x, P.copper2, px + 3, py + 2, 3);
+    disc(x, P.copper, px + 3, py + 3, 2);
+    R(x, P.copper3, px + 3, py + 4, 2, 1);
+    R(x, P.teal2, px + 1, py, 5, 2);                 // the crust that names it
+    R(x, P.teal, px + 2, py, 3, 1);
+    R(x, P.teal3, px + 2, py, 1, 1);
+    R(x, P.teal2, px + 5, py + 2, 1, 1);
+  }
+  function veinBed(x, px, py) {
+    R(x, P.tOut, px - 1, py + 5, 10, 1);
+    R(x, P.stoneore2, px, py + 2, 8, 3);
+    R(x, P.stoneore, px, py + 1, 7, 2);
+    R(x, P.stoneore3, px + 1, py, 5, 1);
+    R(x, P.stoneore2, px + 2, py + 3, 6, 1);         // bedding, flat and level
+  }
+  function veinPrism(x, px, py) {
+    R(x, P.tOut, px, py + 1, 5, 8);
+    R(x, P.tOut, px + 1, py, 3, 2);
+    R(x, P.quartz2, px + 1, py + 2, 3, 6);
+    R(x, P.quartz, px + 1, py + 2, 2, 6);
+    R(x, P.quartz3, px + 2, py + 1, 1, 5);           // the facet, running its length
+    R(x, P.quartz3, px + 2, py, 1, 1);
+    R(x, P.white, px + 2, py + 2, 1, 1);
+  }
+  function veinShard(x, px, py) {
+    R(x, P.tOut, px - 1, py + 4, 8, 1);
+    R(x, P.coal2, px, py, 6, 4);
+    R(x, P.coal, px + 1, py + 1, 4, 2);
+    R(x, P.coal3, px + 1, py, 3, 1);                 // coal is glossy, not matt
+    R(x, P.white, px + 1, py, 2, 1);
+    R(x, P.coal2, px + 4, py + 1, 1, 2);
+  }
+
+  const VEIN_PIECE = {
+    iron: (x, px, py) => veinPlate(x, px, py, P.ironore2, P.ironore, P.ironore3, P.rust, P.rustD),
+    titan: (x, px, py) => veinPlate(x, px, py, P.titan2, P.titan, P.titan3, P.titan3, P.titan2),
+    copper: veinNodule, stone: veinBed, quartz: veinPrism, coal: veinShard,
+  };
+  // A piece is drawn from its left edge, so a spot has to be pulled back by
+  // half the piece's own width or the vein sits off-centre in its dish.
+  const VEIN_SPOTS_H = {
+    iron: [[5, 5], [14, 3], [22, 6], [26, 4], [10, 9], [23, 10]],
+    copper: [[4, 4], [13, 3], [20, 5], [26, 3], [9, 8], [22, 8]],
+    stone: [[4, 4], [14, 3], [23, 5], [10, 8], [21, 9]],
+    quartz: [[4, 2], [12, 1], [20, 3], [27, 2], [9, 5], [24, 5]],
+    coal: [[5, 5], [13, 3], [21, 6], [28, 5], [10, 9], [24, 10]],
+  };
+  const VEIN_SPOTS_V = {
+    iron: [[5, 4], [3, 12], [5, 20], [4, 27], [6, 8], [3, 24]],
+    copper: [[4, 4], [5, 12], [3, 20], [5, 27], [6, 8], [3, 24]],
+    stone: [[4, 4], [3, 12], [4, 20], [3, 27], [4, 9]],
+    quartz: [[4, 2], [7, 8], [3, 15], [6, 21], [2, 10], [5, 25]],
+    coal: [[5, 4], [3, 12], [5, 20], [4, 27], [6, 9], [3, 24]],
+  };
+  VEIN_SPOTS_H.titan = VEIN_SPOTS_H.iron;
+  VEIN_SPOTS_V.titan = VEIN_SPOTS_V.iron;
+
+  // Oil is a seep, not a rock. Drawn as chunks it was a purple stone, which
+  // is the one thing oil is not.
+  function veinSeep(x, vert) {
+    const W = vert ? 16 : 36, H = vert ? 36 : 16;
+    const cx = W >> 1, cy = H >> 1;
+    const rx = vert ? 5 : 15, ry = vert ? 15 : 5;
+    const ell = (col, ax, ay, dy) => {
+      x.fillStyle = col;
+      for (let y = -ay; y <= ay; y++) {
+        const s = Math.floor(ax * Math.sqrt(Math.max(0, 1 - (y * y) / (ay * ay))));
+        x.fillRect(cx - s, cy + y + dy, s * 2 + 1, 1);
+      }
+    };
+    ell(P.tOut, rx, ry, 1);
+    ell(P.oil2, rx, ry, 0);
+    ell(P.oil, rx - 2, ry - 2, 0);
+    // Two hues, not four — a rainbow at this size is noise. Each band is a
+    // SHORT arc cut to the pool's curve and slid along it, so the film reads
+    // as lying on a curved surface; run the full chord and it becomes one
+    // bright slash across the middle.
+    const hues = [P.teal3, P.copper3];
+    const rows = vert ? [[-11, -0.5], [-6, 0.2], [0, -0.6], [6, 0.3], [11, -0.2]]
+                      : [[-3, -0.5], [-1, 0.3], [1, -0.6], [3, 0.2]];
+    rows.forEach(([dy, slide], i) => {
+      const k = Math.max(0, 1 - (dy * dy) / ((ry - 2) * (ry - 2)));
+      const s = Math.floor((rx - 3) * Math.sqrt(k));
+      if (s < 2) return;
+      const w = Math.max(2, Math.round(s * 0.55));
+      R(x, hues[i % hues.length], cx + Math.round(slide * s) - (w >> 1), cy + dy, w, 1);
+    });
+    const bub = vert ? [[cx - 2, cy - 11], [cx + 1, cy - 1], [cx - 3, cy + 7]]
+                     : [[cx - 11, cy - 1], [cx - 1, cy + 1], [cx + 8, cy - 2]];
+    for (const [bx, by] of bub) {
+      disc(x, P.oil2, bx, by, 2);
+      disc(x, P.oil3, bx, by, 1);
+      R(x, P.white, bx - 1, by - 1, 1, 1);
+    }
+  }
+
+  // `vert` is the 1x2 a rotated mine sits on; false is the 2x1.
+  function nodePatch(kind, vert) {
+    const [c, x] = canvas(vert ? 16 : 36, vert ? 36 : 16);
+    // the stained dish: three stacked rects make a lozenge, the same three a
+    // pixel down make its shadow, so the vein reads as ground that has been
+    // dug at rather than a decal dropped on the grass
+    const bands = vert
+      ? [[6, 2, 5, 32], [4, 4, 8, 28], [2, 8, 12, 20]]
+      : [[2, 6, 32, 5], [4, 4, 28, 8], [8, 2, 20, 12]];
+    for (const [px, py, w, h] of bands) R(x, P.tOut, px, py + 1, w, h);
+    for (const [px, py, w, h] of bands) R(x, VEIN_BED[kind] || P.rC, px, py, w, h);
+    if (kind === 'oil') { veinSeep(x, vert); return c; }
+    const draw = VEIN_PIECE[kind] || VEIN_PIECE.stone;
+    for (const [px, py] of (vert ? VEIN_SPOTS_V : VEIN_SPOTS_H)[kind] || []) draw(x, px, py);
+    if (kind === 'coal') {
+      // ash is not one flat grey, or the bed reads as a cut-out behind the
+      // shards; and a couple of embers are still alive in the seam, because
+      // this is the fuel the machines two tiles away are burning
+      const f = vert ? [[4, 8], [10, 17], [3, 26], [9, 31]] : [[8, 5], [17, 10], [25, 4], [31, 9]];
+      for (const [fx, fy] of f) R(x, P.ashD, fx, fy, 2, 1);
+      const e = vert ? [[10, 15], [5, 29]] : [[17, 11], [31, 7]];
+      for (const [ex, ey] of e) { R(x, P.emberD, ex, ey, 2, 1); R(x, P.glow, ex, ey, 1, 1); }
+    }
+    if (kind === 'iron') {
+      const s = vert ? [[9, 8], [4, 19], [10, 30]] : [[9, 12], [19, 4], [31, 12]];
+      for (const [sx, sy] of s) R(x, P.rustD, sx, sy, 2, 1);
     }
     return c;
   }
@@ -2206,7 +2350,8 @@
     dirtTex: (s) => tex(tileDirt(s)),
     waterTex: (f) => cachedTex('water:' + f, () => tileWater(f)),
     shoreTex: () => cachedTex('shore', tileShore),
-    nodeTex: (kind) => cachedTex('node:' + kind, () => nodePatch(kind)),
+    // a vein is seated across (2x1) or down (1x2), to match the mine on it
+    nodeTex: (kind, vert) => cachedTex('node:' + kind + (vert ? 'v' : 'h'), () => nodePatch(kind, vert)),
     flowerTex: (s) => cachedTex('flower:' + (s % 4), () => flower(s)),
     // machines take a mode: 'still' | 'idle' | 'work' (DESIGN.md, 2026-08-20).
     // factory.js caches one band of these per (look, mode) and picks the mode

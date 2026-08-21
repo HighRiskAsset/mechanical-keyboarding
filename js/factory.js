@@ -31,7 +31,7 @@
   let dotTex = null;
   const particles = [], floats = [], flashes = [], sparks = [], puffs = [];
   const petals = [];
-  let ambient = [], waterSprites = [], terrain = [];
+  let ambient = [], waterSprites = [], terrain = [], nodeSprites = [];
   let waterTexes = [];
   let grid = null;
   let crossSprites = [], openRects = [], closedRects = [];
@@ -257,7 +257,7 @@
   function loadMap() {
     if (!ready) return;
     for (const s of terrain) { cameraC.removeChild(s); s.destroy(); }
-    terrain = []; ambient = []; waterSprites = [];
+    terrain = []; ambient = []; waterSprites = []; nodeSprites = [];
     for (const c of crossSprites) { cameraC.removeChild(c); c.destroy(); }
     crossSprites = []; openRects = []; closedRects = [];
     dockedId = null;
@@ -284,12 +284,17 @@
       s.position.set(w.x, w.y);
       s.zIndex = w.z;
     }
-    // ore nodes (the mines stand on them)
-    for (const n of CHAIN.MAP.NODES) {
-      const sp = keep(new PIXI.Sprite(PIXELS.nodeTex(n.kind)));
+    // Ore veins (the mines stand on them). A vein is seated across or down;
+    // the map may say which, and a mine built on it overrides that with its
+    // own facing — see reseatVeins, which runs once the save is known. The
+    // terrain pass cannot do it here because it has no profile.
+    nodeSprites = [];
+    CHAIN.MAP.NODES.forEach((n, i) => {
+      const sp = keep(new PIXI.Sprite(PIXELS.nodeTex(n.kind, !!n.vert)));
       sp.position.set(n.x, n.y);
       sp.zIndex = -960;
-    }
+      nodeSprites[i] = sp;
+    });
     const grassId = TILES.KIND_IDS.indexOf('grass');
     for (let i = 0; i < Math.floor(W / 20); i++) {
       const fx = (i * 97) % W, fy = 42 + (i * 61) % (H - 56);
@@ -520,9 +525,27 @@
   // Build the world from the save: machines on plots and nodes, free plots,
   // unbuilt nodes, crossings. `autoLive(m)` says whether a machine is running
   // by itself right now (⚙ bought and its letters sticky).
+  // A vein takes the seating of the mine standing on it: a mine faced east or
+  // west is 1x2, so its vein is too. An unbuilt vein keeps whatever the map
+  // gave it. Cheap enough to redo on every rebuild, and it is the only place
+  // that knows both the vein and the machine.
+  function reseatVeins(profile) {
+    if (!nodeSprites.length) return;
+    const face = [];
+    for (const m of profile.machines) if (m.node !== undefined && m.node !== null) face[m.node] = m.face;
+    CHAIN.MAP.NODES.forEach((n, i) => {
+      const sp = nodeSprites[i];
+      if (!sp) return;
+      const f = face[i];
+      const vert = f ? (f === 'e' || f === 'w') : !!n.vert;
+      sp.texture = PIXELS.nodeTex(n.kind, vert);
+    });
+  }
+
   function buildWorld(profile, autoLive) {
     if (!ready) return;
     simProfile = profile;
+    reseatVeins(profile);
     clearInfo(); clearMenu(); clearGhost(); clearBuildGhost();
     for (const v of Object.values(beltViews)) { cameraC.removeChild(v.c); v.c.destroy({ children: true }); }
     beltViews = {};
