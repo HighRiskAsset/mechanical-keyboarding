@@ -1303,92 +1303,136 @@
 
   // ---- torso, rows 12-20 ----
   // Scarf, then the coat: near-black body lit only down the near lapel, a
-  // leather rig crossing the chest, and the gauge burning on it. The sleeves
-  // are part of the grid so the arms never read as blocks floating beside the
-  // coat — only the gloves move.
+  // leather rig crossing the chest, and the gauge burning on it.
+  //
+  // These rows are the BODY ONLY. The sleeves used to be drawn into them,
+  // which is precisely why the arms could not move — an arm baked into the
+  // torso grid is an arm that is always in the same place, and the walk read
+  // as stiff no matter what the legs did. The arms are limbs now, drawn over
+  // the coat, and the grid stops at the shoulder.
   const TORSO_D = [
     '....tVVTTTTTTttt....',
-    '..nlBBbtTTtbBBbbnn..',
-    '.nBbnRrBBbbgGgnnbbn.',
-    '.nBbnBRrBbbGFGnnbbn.',
-    '.nBbnBbRrbbgggnnbbn.',
-    '.nBbnrRRRLGRRRrnbbn.',
-    '.nBbnBbnbbnbBbnnbbn.',
+    '....nlBtTTtBBbbn....',
+    '....nRrBBbbgGgbn....',
+    '....nBRrBbbGFGbn....',
+    '....nBbRrbbgggbn....',
+    '....nrRRLGRRRrrn....',
+    '....nBbnbbnbBbbn....',
+    '...nbBbnnnnbBbbnn...',
     '..nnbBbnnnnbBbnnnn..',
-    '.nnbBbnnnnnbBbnnnnn.',
   ];
   const TORSO_U = [
     '....tVVTTTTTTttt....',
-    '..nlBBBBBBBBBBbbnn..',
-    '.nBbnRrBBBBBBbnnbbn.',
-    '.nBbnBRrgGLgBbnnbbn.',
-    '.nBbnBbRgGGgBbnnbbn.',
-    '.nBbnrRRRLGRRRrnbbn.',
-    '.nBbnBbnbbnbBbnnbbn.',
+    '....nlBBBBBBBBbn....',
+    '....nRrBBBBBBBbn....',
+    '....nBRrgGLgBBbn....',
+    '....nBbRgGGgBBbn....',
+    '....nrRRLGRRRrrn....',
+    '....nBbnbbnbBbbn....',
+    '...nbBbnnnnbBbbnn...',
     '..nnbBbnnnnbBbnnnn..',
-    '.nnbBbnnnnnbBbnnnnn.',
   ];
   const TORSO_S = [
     '....tVVTTTTTtt......',
-    '...nnlBBTTBBbn......',
-    '...nnlBRrBBBbn......',
-    '...nnBBRrGFBbn......',
-    '...nnBBbRrggbn......',
-    '...nnrRRLGRRrn......',
-    '...nnBBbbbBBbn......',
-    '..nnnbBbnnbBbnn.....',
+    '....nlBBTTBBbn......',
+    '....nlBRrBBBbn......',
+    '....nBBRrGFBbn......',
+    '....nBBbRrggbn......',
+    '....nrRRLGRRrn......',
+    '....nBBbbbBBbn......',
+    '...nnbBbnnbBbnn.....',
     '..nnbBbnnnbBbnnn....',
   ];
   // at the machine: back to us, the belting spool and its strap on his back
-  const TORSO_WORK = [
-    '....tVVTTTTTTttt....',
-    '..nlBBBBBBBBBBbbnn..',
-    '...nBRrBBBBBBBbn....',
-    '...nBBRrgGLgBBbn....',
-    '...nBBbRgGGgBBbn....',
-    '...nrRRRLGRRRrrbn...',
-    '...nBbnbbnbBbnbbn...',
-    '..nnbBbnnnnbBbnnnn..',
-    '.nnbBbnnnnnbBbnnnnn.',
-  ];
+  const TORSO_WORK = TORSO_U;
 
-  // ---- legs, drawn not gridded ----
-  // A leg is a 4px column hung off the hip: two rows of trouser, the boot,
-  // then a brass toe cap on the ground row. `lift` shortens it, which is how
-  // a foot leaves the ground — the reference's whole gait is spread and lift,
-  // so those are the two things a frame gets to change.
-  function opLeg(x, lx, lift, near) {
-    const bot = OPH - 1 - lift;
-    if (bot < OP_HIP + 3) return;
-    R(x, P.coatN, lx, OP_HIP, 4, bot - OP_HIP + 1);
-    R(x, P.coatD, lx + 1, OP_HIP, 2, 2);
-    R(x, near ? P.boot : P.bootD, lx + 1, OP_HIP + 2, 2, bot - OP_HIP - 2);
-    if (near) R(x, P.bootD, lx + 2, OP_HIP + 2, 1, bot - OP_HIP - 2);
-    R(x, P.brass1, lx + 1, bot, 2, 1);
-    if (near) R(x, P.brass2, lx + 1, bot, 1, 1);
+  // ---- limbs, drawn not gridded ----
+  // A limb is two segments and a joint. `limb` walks a 2px-wide bar of fill
+  // between two points, dark-edged, so a thigh or a forearm can SLANT. That
+  // slant is the whole difference between a leg that steps and a bar that
+  // slides sideways and gets shorter, which is what the first pass drew.
+  // `w` is pixels of fill; the dark edge adds one each side. Legs are w=2
+  // (four across), arms w=1 (three). An arm drawn as wide as a leg is a slab,
+  // and next to a coat this dark it stops reading as an arm at all.
+  function limb(x, x0, y0, x1, y1, fill, w) {
+    if (y1 < y0) return;
+    w = w || 2;
+    const n = Math.max(1, y1 - y0);
+    for (let i = 0; i <= n; i++) {
+      const px = Math.round(x0 + (x1 - x0) * (i / n));
+      R(x, P.coatN, px - 1, y0 + i, w + 2, 1);
+      R(x, fill, px, y0 + i, w, 1);
+    }
   }
 
-  // one walk cycle, eight beats: contact, down, passing, up — twice, the
-  // second half the first mirrored. [dx, lift] for the near leg then the far.
-  const OP_GAIT = [
-    [-1, 0, 1, 2], [0, 0, 0, 1], [0, 0, 0, 0], [1, 1, -1, 0],
-    [1, 2, -1, 0], [0, 1, 0, 0], [0, 0, 0, 0], [-1, 0, 1, 1],
-  ];
-  const OP_GAIT_S = [                      // in profile the stride is fore/aft, so it is bigger
-    [-3, 0, 3, 1], [-2, 0, 2, 2], [0, 0, 0, 0], [2, 1, -2, 0],
-    [3, 0, -3, 1], [2, 0, -2, 2], [0, 0, 0, 0], [-2, 1, 2, 0],
-  ];
-  const OP_BOB = [1, 0, -1, 0, 1, 0, -1, 0];    // low at contact, high at passing
-  const OP_ARM = [-2, -1, 0, 1, 2, 1, 0, -1];   // the near arm, opposite the near leg
-  const OP_SWAY = [1, 1, 0, -1, -1, -1, 0, 1];  // the coat and the scarf lag a beat
+  // `hipX` is where the leg hangs off the body, `fx` how far the foot has
+  // travelled fore or aft of it, `fy` how far it is off the ground. The knee
+  // sits between the two and leads the foot, and the foot is its own
+  // horizontal thing rather than the bottom of a bar — a walk is legible at
+  // this size because of the ankle, not in spite of it.
+  function opLeg(x, hipX, fx, fy, profile, near) {
+    const boot = near ? P.boot : P.bootD;
+    const footTop = 26 - fy;
+    const kneeX = hipX + Math.round(fx * 0.45);
+    const ankleX = hipX + fx;
+    limb(x, hipX, OP_HIP, kneeX, OP_HIP + 1, P.coatD);            // thigh
+    limb(x, kneeX, OP_HIP + 2, ankleX, footTop - 1, boot);        // shin
+    if (profile) {
+      // in profile the foot points the way he walks, and the toe leaves the
+      // ground last: on the back half of the stride only the cap is down
+      R(x, P.coatN, ankleX - 1, footTop, 5, 2);
+      R(x, boot, ankleX, footTop, 3, 1);
+      R(x, P.brass1, ankleX + 2, footTop, 1, 1);
+      if (near) R(x, P.brass2, ankleX + 2, footTop, 1, 1);
+    } else {
+      R(x, P.coatN, ankleX - 1, footTop, 4, 2);
+      R(x, boot, ankleX, footTop, 2, 1);
+      R(x, P.brass1, ankleX, footTop + 1, 2, 1);
+      if (near) R(x, P.brass2, ankleX, footTop + 1, 1, 1);
+    }
+  }
+
+  // the shoulder holds still and the hand travels; the elbow is pulled
+  // three-fifths of the way to the hand so the arm bends instead of swinging
+  // as one stick
+  // `lit` is the near arm — it takes the coat's lit tone so it separates from
+  // the body it swings across. The far arm stays in the shadow tone.
+  function opArm(x, shX, shY, handX, handY, lit) {
+    const elbowX = Math.round(shX * 0.4 + handX * 0.6);
+    limb(x, shX, shY, elbowX, shY + 2, lit ? P.coat : P.coatD, 1);
+    limb(x, elbowX, shY + 3, handX, handY - 1, lit ? P.coat : P.coatD, 1);
+    opGlove(x, handX - 1, handY);
+  }
+
+  // One walk cycle, eight beats. Beats 0-4 are STANCE — the foot is planted
+  // and travels backward under him as the body passes over it. Beats 5-7 are
+  // SWING — it lifts clear and comes forward again to land. The far leg runs
+  // the same cycle half a turn later, which is what `(f + 4) % 8` is for.
+  // In profile: fore/aft of the hip. The passing beats are 1 and -1 rather
+  // than 0 and 0 — at dead centre both legs land on exactly the same pixels
+  // and the man reads as having one thick leg for two beats of every cycle.
+  const FOOT_X = [3, 2, 1, -1, -3, -2, -1, 2];
+  // Face-on there is no room to swing the feet past each other — hips six
+  // pixels apart and a four-wide boot means opposite strides collide in the
+  // middle and the legs cross. So face-on the feet SHIFT TOGETHER, a weight
+  // shift on the same beat the coat swings, and it is the lift that
+  // alternates. That is what a front-facing walk actually reads as.
+  const FOOT_Y = [0, 0, 0, 0, 0, 2, 2, 1];        // clear of the ground on the swing
+  const ARM_F = [-3, -2, 0, 2, 3, 2, 0, -2];      // face-on arm swing, opposite its leg
+  const OP_BOB = [1, 0, -1, 0, 1, 0, -1, 0];      // low at contact, high at passing
+  const OP_SWAY = [1, 1, 0, -1, -1, -1, 0, 1];    // the coat and the scarf lag a beat
 
   // The coat's back hem and the scarf's tail. Cloth is what makes a walk look
   // like a walk, so both trail the body instead of tracking it.
   function opTrail(x, oy, sway, side) {
     if (side) {
+      // a tapered coat tail. Squared off it read as luggage, not cloth.
       const bx = 1 - sway;
-      R(x, P.coatN, bx, oy + 17, 4, 5);
-      R(x, P.coatD, bx + 1, oy + 18, 2, 3);
+      R(x, P.coatN, bx + 2, oy + 17, 2, 1);
+      R(x, P.coatN, bx + 1, oy + 18, 3, 2);
+      R(x, P.coatN, bx, oy + 20, 3, 2);
+      R(x, P.coatD, bx + 2, oy + 18, 1, 2);
+      R(x, P.coatD, bx + 1, oy + 20, 1, 1);
       // the tail leaves the collar and tapers away behind him — drawn as a
       // free-floating bar it read as a stick, not cloth
       R(x, P.teal2, bx + 1, oy + 12, 3, 2);
@@ -1400,7 +1444,7 @@
     }
   }
 
-  // a gloved hand at the end of a sleeve the grid already drew
+  // a gloved hand
   function opGlove(x, gx, gy) {
     R(x, P.coatN, gx, gy - 1, 3, 1);
     R(x, P.leathD, gx, gy, 3, 2);
@@ -1409,40 +1453,44 @@
 
   function character(dir, frame) {
     const [c, x] = canvas(OPW, OPH);
-    const f = frame % 8;
-    const oy = OP_BOB[f], sway = OP_SWAY[f], sw = OP_ARM[f];
+    const f = frame % 8, g = (f + 4) % 8;         // the far limb, half a turn later
+    const oy = OP_BOB[f], sway = OP_SWAY[f];
     const side = dir === 'side';
-    const g = side ? OP_GAIT_S[f] : OP_GAIT[f];
     const head = dir === 'up' ? HEAD_U : side ? HEAD_S : HEAD_D;
     const torso = dir === 'up' ? TORSO_U : side ? TORSO_S : TORSO_D;
 
     opTrail(x, oy, sway, side);
     if (side) {
-      opLeg(x, 7 - g[2], g[3], false);       // the far leg, behind and darker
-      opLeg(x, 7 + g[0], g[1], true);
+      // far limbs behind the body, near limbs in front of it — which is the
+      // only reason a profile walk reads as one man and not two silhouettes
+      opLeg(x, 8, FOOT_X[g], FOOT_Y[g], true, false);
+      opArm(x, 8, oy + 14, 8 + FOOT_X[g], oy + 19, false);
+      opLeg(x, 8, FOOT_X[f], FOOT_Y[f], true, true);
+      opGrid(x, torso, 0, oy + 12);
+      opGrid(x, head, 0, oy);
+      // the near arm swings against the near leg, and the hand rises as it
+      // reaches either end of the swing
+      const hx = 8 - FOOT_X[f];
+      opArm(x, 8, oy + 14, hx, oy + 18 + (Math.abs(FOOT_X[f]) >= 2 ? 0 : 1), true);
     } else {
-      opLeg(x, 5 + g[0], g[1], true);
-      opLeg(x, 11 + g[2], g[3], true);
-    }
-    opGrid(x, torso, 0, oy + 12);
-    opGrid(x, head, 0, oy);
-    if (side) {
-      // the near arm swings across the coat; the sleeve travels with it
-      const ax = 7 + Math.round(sw * 0.9);
-      R(x, P.coatN, ax, oy + 15, 3, 4);
-      R(x, sw > 0 ? P.coat : P.coatD, ax + 1, oy + 16, 1, 2);
-      opGlove(x, ax, oy + 19);
-    } else {
-      const near = dir === 'down' ? 1 : -1;
-      opGlove(x, 2, oy + 18 + (sw * near > 0 ? 1 : 0));
-      opGlove(x, 15, oy + 18 + (sw * near < 0 ? 1 : 0));
+      const back = dir === 'up';
+      opLeg(x, 6, sway, FOOT_Y[f], false, true);
+      opLeg(x, 12, sway, FOOT_Y[g], false, true);
+      opGrid(x, torso, 0, oy + 12);
+      opGrid(x, head, 0, oy);
+      // face-on, an arm swinging forward reads as the hand lifting and coming
+      // in toward the body; swinging back, as dropping and going wide
+      const sL = back ? ARM_F[g] : ARM_F[f], sR = back ? ARM_F[f] : ARM_F[g];
+      const dL = Math.round(sL * 0.5), dR = Math.round(sR * 0.5);
+      opArm(x, 3, oy + 14, 3 + dL, oy + 19 - dL, false);
+      opArm(x, 16, oy + 14, 16 - dR, oy + 19 - dR, false);
     }
     return c;
   }
 
   // Standing still is not a still frame. Four slow beats of breath: the head
   // and chest ride together (a seam opens the moment they don't), the legs
-  // stay planted, and the gauge on his chest rides with them.
+  // stay planted, and the gauge on his chest keeps the time.
   function characterIdle(dir, frame) {
     const [c, x] = canvas(OPW, OPH);
     const f = frame % 4;
@@ -1450,12 +1498,21 @@
     const side = dir === 'side';
     const head = dir === 'up' ? HEAD_U : side ? HEAD_S : HEAD_D;
     const torso = dir === 'up' ? TORSO_U : side ? TORSO_S : TORSO_D;
-    if (side) { opLeg(x, 5, 0, false); opLeg(x, 8, 0, true); }
-    else { opLeg(x, 5, 0, true); opLeg(x, 11, 0, true); }
-    opGrid(x, torso, 0, 12 + rise);
-    opGrid(x, head, 0, rise);
-    if (side) opGlove(x, 8, 19 + rise);
-    else { opGlove(x, 2, 19 + rise); opGlove(x, 15, 19 + rise); }
+    if (side) {
+      opLeg(x, 8, -1, 0, true, false);
+      opArm(x, 8, 14 + rise, 7, 19 + rise, false);
+      opLeg(x, 8, 1, 0, true, true);
+      opGrid(x, torso, 0, 12 + rise);
+      opGrid(x, head, 0, rise);
+      opArm(x, 8, 14 + rise, 9, 19 + rise, true);
+    } else {
+      opLeg(x, 6, 0, 0, false, true);
+      opLeg(x, 12, 0, 0, false, true);
+      opGrid(x, torso, 0, 12 + rise);
+      opGrid(x, head, 0, rise);
+      opArm(x, 3, 14 + rise, 3, 19 + rise, false);
+      opArm(x, 16, 14 + rise, 16, 19 + rise, false);
+    }
     // The gauge burns brighter on beats 2 and 3 — deliberately offset from
     // the chest's rise, so the breath is four distinct beats and not a
     // two-pose flicker. Run on the same beats as the rise it adds nothing.
@@ -1471,20 +1528,24 @@
     // nod and hand-lift run on different beats, so all four frames differ —
     // on one shared cadence frames 0 and 2 came out identical
     const nod = [0, 1, 1, 0][f];
-    opLeg(x, 5, 0, true); opLeg(x, 11, 0, true);
+    const lift = [0, 1, 0, -1][f];
+    opLeg(x, 6, 0, 0, false, true);
+    opLeg(x, 12, 0, 0, false, true);
     opGrid(x, TORSO_WORK, 0, 12);
     opGrid(x, HEAD_U, 0, nod);
-    const lift = [0, 1, 0, -1][f];
-    const armUp = (ax, ay) => {
-      R(x, P.coatN, ax, ay, 3, 5);
-      R(x, P.coatD, ax + 1, ay + 1, 1, 3);
-      R(x, P.leathD, ax, ay - 2, 3, 2);
-      R(x, P.leath, ax + 1, ay - 2, 1, 1);
+    // Both arms go UP to the console: the upper arm out from the shoulder,
+    // the forearm standing straight up, the glove above it. Drawn hanging at
+    // his sides with a floating glove above, "working" read as standing.
+    const handUp = (shX, out, hy) => {
+      limb(x, shX, 15, shX + out, 16, P.coatD, 1);      // upper arm, out from the shoulder
+      R(x, P.coatN, shX + out - 1, 14 + hy, 3, 4);      // forearm, standing up
+      R(x, P.coat, shX + out, 15 + hy, 1, 3);
+      R(x, P.leathD, shX + out - 1, 13 + hy, 3, 2);     // the glove on the console
+      R(x, P.leath, shX + out, 13 + hy, 1, 1);
     };
-    armUp(1, 15 - lift); armUp(16, 15 + lift);
+    handUp(4, -2, -lift); handUp(15, 2, lift);
     return c;
   }
-
   // ---------- belt segment 12x8, 4 frames (rolling) ----------
   function belt(frame) {
     const [c, x] = canvas(12, 8);

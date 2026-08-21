@@ -325,16 +325,40 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
     head. **The cap is what makes this work here** — drawn with bare hair, a
     head-sized slab of mid-brown became the brightest thing on the sprite,
     the exact inverse of the rule.
-  - **Animation**: walk = 8 beats per direction (contact / down / passing /
-    up, twice), and the gait is *spread and lift* — the two passing poses are
-    the same pose, which is correct. The body drops a pixel at contact and
-    lifts one at passing; in profile the coat's back hem and the scarf's tail
-    trail a beat behind the body, because cloth lagging is what makes a walk
-    read as a walk. **Idle = 4 slow beats of breath** (new): head and chest
-    ride together — a seam opens the moment they don't — and the chest gauge
-    burns brighter on beats offset from the rise, so the breath is four
-    distinct beats rather than a two-pose flicker. work = 4 beats, back to us
-    at the machine, a nod and the hands falling in alternation.
+  - **Animation (reworked 2026-08-21 on user note: "the legs don't look or
+    move like legs, and there's no arm movement at all")**. Arms and legs are
+    **limbs, not grid rows**. The sleeves used to be drawn into the torso
+    grids, which is exactly why the arms could not move — an arm baked into
+    the torso is an arm that is always in the same place. The grids stop at
+    the shoulder now and `limb()` walks a slanting, dark-edged bar between two
+    points, so a thigh or a forearm can angle. Legs are `w=2` (four across),
+    arms `w=1` (three): an arm as wide as a leg is a slab, and against a coat
+    this dark it stops reading as an arm.
+    - **A leg is a thigh, a knee, a shin and a foot.** It was a vertical bar
+      that got shorter, which reads as a leg retracting into the body rather
+      than stepping. The knee sits between hip and ankle and leads the foot;
+      the foot is its own horizontal thing, and in profile it points the way
+      he walks.
+    - **Walk = 8 beats.** Beats 0–4 are STANCE: the foot is planted and
+      travels backward under him as the body passes over it. Beats 5–7 are
+      SWING: it lifts clear and comes forward to land. The far limb runs the
+      same cycle half a turn later. The passing beats are ±1, not 0 — at dead
+      centre both legs land on the same pixels and he reads as having one
+      thick leg for two beats of every cycle.
+    - **Face-on there is no room to swing the feet past each other** — hips
+      six pixels apart and a four-wide boot means opposite strides collide.
+      So face-on the feet shift *together*, a weight shift on the beat the
+      coat swings, and it is the lift that alternates. The arms carry the
+      stride instead: hand ±2 across and ±2 up, elbow bending with them.
+    - The body drops a pixel at contact and lifts one at passing; in profile
+      the coat's tail and the scarf's trail a beat behind, because cloth
+      lagging is what makes a walk read as a walk. All 8 beats differ in
+      every direction.
+    - **Idle = 4 slow beats of breath**: head and chest ride together — a
+      seam opens the moment they don't — and the chest gauge burns brighter
+      on beats offset from the rise, so it is four distinct beats and not a
+      two-pose flicker. work = 4 beats, back to us, both hands up on the
+      console with a nod and the hands falling in alternation.
   - Anything hung above him (the hold-to-interact charge bar) is positioned
     off `PIXELS.CHAR_H`, not a literal, so it survives the next resize.
     `dev/operator.html` is the proof sheet — every beat, plus a magnified
