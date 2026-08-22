@@ -7,9 +7,9 @@
 #                      (hPanel -> Advanced -> SSH Access)
 #     SSH_PRIVATE_KEY  the whole private key file, BEGIN and END lines included
 #
-#   ...same page -> "Variables" tab
-#     REMOTE_DIR       where the site lives, relative to the SSH landing dir,
-#                      e.g. domains/mechanical-keyboarding.digitalis.tech/public_html
+#   Nothing else. The upload path was a repository variable once and is written
+#   out below instead: a variable is exactly the thing that gets left pointing
+#   at last year's domain, and it points there silently.
 #
 # The matching public key goes in hPanel -> Advanced -> SSH Access -> Add key.
 #
@@ -31,14 +31,16 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  SSH_HOST: mechanical-keyboarding.digitalis.tech
+  SSH_HOST: mechanical-keyboarding.foxforger.com
   SSH_PORT: '65002'
+  # Spelled out rather than read from settings. The path is only a domain name,
+  # so keeping it off in a repository variable hid nothing — while a variable
+  # still naming a retired domain sends a green build into a directory nothing
+  # serves. Moving the site is now one commit, and it is this line.
+  REMOTE_DIR: domains/mechanical-keyboarding.foxforger.com/public_html
 
 jobs:
   deploy:
-    # Dormant until REMOTE_DIR exists, so the workflow can sit on main without
-    # reddening every push while the settings are still being filled in.
-    if: vars.REMOTE_DIR != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -103,9 +105,11 @@ jobs:
       - name: Probe 3 - the host key matches the pin
         run: |
           set -eu
-          # Pinned from the server on 2026-08-20. If Hostinger moves the account
-          # to another machine this step goes red, which is correct: a deploy
-          # that re-pins whatever answers the port is not pinned at all.
+          # Pinned from the server on 2026-08-20 and re-checked against the
+          # foxforger.com hostname on 2026-08-23, unchanged: the site moved
+          # domains, not machines. If Hostinger moves the account to another
+          # machine this step goes red, which is correct: a deploy that re-pins
+          # whatever answers the port is not pinned at all.
           # Re-pin with: ssh-keyscan -p 65002 -t ed25519 <host>
           PIN='AAAAC3NzaC1lZDI1NTE5AAAAIEBHZ2ZU+Yu9F0YBxaZwkWLM5WNIEiAvzv8zBrxpiA1R'
           {
@@ -128,7 +132,6 @@ jobs:
       - name: Probe 4 - the key authenticates and REMOTE_DIR exists
         env:
           SSH_USER: ${{ secrets.SSH_USER }}
-          REMOTE_DIR: ${{ vars.REMOTE_DIR }}
         run: |
           set -eu
           # Batch sftp rather than a shell command: it works even where the
@@ -142,7 +145,6 @@ jobs:
       - name: Upload over SFTP
         env:
           SSH_USER: ${{ secrets.SSH_USER }}
-          REMOTE_DIR: ${{ vars.REMOTE_DIR }}
         run: |
           set -eu
           # A generated batch script, not a sync tool. openssh-client is already
@@ -172,5 +174,5 @@ jobs:
 # The batch uploads and overwrites; it never removes. A file dropped from the
 # site outlives the deploy that dropped it, until someone deletes it by hand.
 # Pruning would mean generating rm lines against a remote listing, and that is
-# worth the care rather than the convenience: this account also carries five
-# other domains, and a REMOTE_DIR aimed one level too high would reach them.
+# worth the care rather than the convenience: this account also carries several
+# other sites, and a REMOTE_DIR aimed one level too high would reach them.

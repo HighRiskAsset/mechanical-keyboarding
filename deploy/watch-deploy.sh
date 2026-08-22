@@ -12,7 +12,7 @@
 set -u
 
 REPO="HighRiskAsset/mechanical-keyboarding"
-SITE="https://mechanical-keyboarding.digitalis.tech"
+SITE="https://mechanical-keyboarding.foxforger.com"
 # Expanded, not taken as given: the head_sha filter matches only the full forty
 # characters, and an abbreviated one returns zero runs rather than an error —
 # which reads exactly like a deploy that has not started yet, and waits forever.

@@ -60,7 +60,7 @@ itself, so you can drill a foreign alphabet without switching your OS layout.
 ## Deploying
 
 Every push to `main` publishes the game to
-https://mechanical-keyboarding.digitalis.tech via
+https://mechanical-keyboarding.foxforger.com via
 [.github/workflows/deploy.yml](.github/workflows/deploy.yml). Only what the game
 loads is uploaded: `dev/`, `docs/`, DESIGN.md and `serve.ps1` stay out of the
 published site.
@@ -68,9 +68,10 @@ published site.
 The transport is SFTP with the server's host key pinned in the workflow, not
 FTP — the host serves a certificate valid for `*.hstgr.io` only, which can never
 verify against this domain. Credentials live in the repository's Actions
-secrets (`SSH_USER`, `SSH_PRIVATE_KEY`) and variables (`REMOTE_DIR`); the
-workflow header documents them, and the job skips rather than fails while they
-are unset.
+secrets (`SSH_USER`, `SSH_PRIVATE_KEY`) and the workflow header documents
+them; the upload path is written into the workflow itself, so moving the site
+to another domain is a commit rather than a settings page nobody remembers to
+change.
 
 ## Development
 
@@ -98,3 +99,12 @@ creating or editing a map, start the dev server and open
 `dev/map-thumbs.html?save=1`; it writes `assets/maps/<id>.png` for every
 registered world. Commit those PNGs with the map change. A new world also
 needs its script tag added to that page.
+
+## License
+
+All rights reserved. © 2026 Fox Forger, Digitalis LLC.
+
+The repository is public to read, but nothing in it is licensed for reuse:
+how this gets distributed is a decision still to be made rather than one
+already taken. The vendored copy of PixiJS in `libs/` is not ours to withhold
+and keeps its own MIT license, which travels with the file.
