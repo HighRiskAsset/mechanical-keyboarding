@@ -420,6 +420,14 @@ full run; data checks green; the EN stub loads.
   the sentence pool at 20 letters ≥ 100; prices reference existing materials
   the player can hold by that tier; `KINDS` arity matches recipe inputs;
   outlets/inlets are consistent; no Cyrillic literal in `engine.js`.
+- **`dev/ladder-walk.js`** (2026-08-22, the branch) — walks every Mk table
+  a course can reach from the pre-built mines (RU 98 states, EN 59) and
+  returns what holds at each: deadlocks, kinds for sale with nothing to
+  make and no nameable fix, purchases that break the finger order, rungs
+  for sale two eras ahead of the lowest unbought one, the widest moment.
+  `dev/verify.html` and `dev/en.html` both run it; the one-line "ladder is
+  traversable" check it replaced could not see a machine-price cycle (the
+  Foundry costing parts deadlocked EN at oil and the check passed).
 - **`dev/sim.html`** — headless factory simulation at accelerated time:
   scripted T1 and T3 factories; asserts no clog, caps respected, throughput
   bands, retool starvation and recovery, fast-forward correctness.
@@ -446,7 +454,10 @@ full run; data checks green; the EN stub loads.
 | Ratio tilt cap | 3:1, off when pool < 25 | variance only |
 | Overpass | tier 4 | |
 | Hints | dimmed from T4, off from T5 | |
-| Prices | pattern: own material + a current-tier good | see the tier table in DESIGN.md |
+| Prices | pattern: own material + a current-tier good | see the tier table in DESIGN.md; since 2026-08-22 prices are also the only order between places — a rung's price names the good of the rung it must follow (coal ← quartz, oil ← modules, the last two rungs ← crates), and a machine's price names the ore its recipes live on |
+| Assembler floor | 18 keys | the whole first three eras, so modules (the derrick's price) leave no early rung behind |
+| `whatUnlocks` depth | 4 purchases | past it a build row says "after deeper mines" |
+| Kind in view | half its price goods held | same rule for the summary's "keys for sale" list |
 
 ## 5. Map work (with the environment owner)
 

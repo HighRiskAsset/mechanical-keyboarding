@@ -54,6 +54,10 @@
     while (n < L.PAIRS.length && L.PAIRS[n].tier === 0) n++;
     return n;
   }
+  // a fresh save's Mk table: the pre-built mines' keys, nothing else
+  function tier0Mk() {
+    return C().mkTable({ pairsUnlocked: tier0Pairs() });
+  }
   function defaultProfile(mapId) {
     const letters = {};
     for (const ch of L.UNLOCK_ORDER) letters[ch] = newLetterStats();
@@ -63,7 +67,7 @@
       map: mapId,
       createdAt: Date.now(),
       savedAt: null,
-      pairsUnlocked: tier0Pairs(),
+      mk: tier0Mk(),     // place (ore or key-selling kind) → Mk level bought there
       letters,
       totalActiveMs: 0,
       totalChars: 0,
@@ -99,7 +103,7 @@
     const had = new Set(V1_ORDER.slice(0, p.unlockedCount || 0));
     let n = 0;
     while (n < L.PAIRS.length && L.PAIRS[n].keys.every((k) => had.has(k) || (L.PAIRS[n].at && !C().KINDS[L.PAIRS[n].at].ready))) n++;
-    q.pairsUnlocked = Math.max(tier0Pairs(), n);
+    q.mk = C().mkTable({ pairsUnlocked: Math.max(tier0Pairs(), n) });
     for (const k of ['totalActiveMs', 'totalChars', 'totalErrors', 'km', 'nightBlocks']) q[k] = typeof p[k] === 'number' ? p[k] : 0;
     q.unlockLog = Array.isArray(p.unlockLog) ? p.unlockLog : [];
     q.collected = p.collected || {};
@@ -135,7 +139,12 @@
     p.map = mapId;
     if (typeof p.savedAt !== 'number') p.savedAt = null;
     for (const ch of L.UNLOCK_ORDER) if (!p.letters[ch]) p.letters[ch] = newLetterStats();
-    if (typeof p.pairsUnlocked !== 'number') p.pairsUnlocked = tier0Pairs();
+    // the ladder branched (2026-08-22): a save from before carries a count
+    // along the course order; it becomes a Mk level per place, once
+    if (!p.mk || typeof p.mk !== 'object') p.mk = C().mkTable(typeof p.pairsUnlocked === 'number' ? { pairsUnlocked: p.pairsUnlocked } : { pairsUnlocked: tier0Pairs() });
+    const t0 = tier0Mk();
+    for (const pl of C().PLACES) if (typeof p.mk[pl] !== 'number') p.mk[pl] = t0[pl] || 0;
+    delete p.pairsUnlocked;
     for (const k of ['totalActiveMs', 'totalChars', 'totalErrors', 'km', 'nightBlocks', 'heavy']) if (typeof p[k] !== 'number') p[k] = 0;
     if (!Array.isArray(p.unlockLog)) p.unlockLog = [];
     if (!p.collected) p.collected = {};
@@ -178,7 +187,6 @@
         p.machines.push({ id: 'm' + (p.nextMachineId++), kind: 'mine', ore: s.ore, node: s.index, face: C().nodeFace(s.index), auto: false });
       }
     }
-    autoAdvance(p);
     if (window.SIM) SIM.ensure(p);   // buffers, belts, the clock, the facing (phase 3)
     if (window.DROPS) DROPS.ensure(p);   // goods lying on the ground; they never expire
     // machines stand on tiles now (rotation overhaul, 2026-08-21): a machine
@@ -190,18 +198,6 @@
       m.at = [b.c0, b.r0];
     }
     return p;
-  }
-
-  // key events at machines that don't exist in this build unlock as they are
-  // reached (transitional; phases 4–5 give them their machines)
-  function autoAdvance(p) {
-    let guard = 0;
-    while (guard++ < 20) {
-      const np = L.PAIRS[p.pairsUnlocked];
-      if (!np || !np.at || C().KINDS[np.at].ready) break;
-      p.pairsUnlocked++;
-      p.unlockLog.push({ keys: np.keys, at: Date.now(), auto: true });
-    }
   }
 
   function rawFor(mapId) {
@@ -246,8 +242,7 @@
         return { letters: p.unlockedCount || 0, machines: 3 + Object.keys(p.built || {}).length, totalChars: p.totalChars || 0, savedAt: typeof p.savedAt === 'number' ? p.savedAt : null };
       }
       if (p.version !== 2) return null;
-      let letters = 0;
-      for (let i = 0; i < (p.pairsUnlocked || 0) && i < L.PAIRS.length; i++) letters += L.PAIRS[i].keys.length;
+      const letters = C().unlockedKeys({ mk: p.mk, pairsUnlocked: p.pairsUnlocked }).length;
       return {
         letters, machines: (p.machines || []).length,
         totalChars: p.totalChars || 0,
@@ -311,17 +306,20 @@
     s.misses++;
     s.ewErr = s.ewErr + EW_ALPHA_ERR * (1 - s.ewErr);
   }
-  // unlock the next pair — the purchase that pays for it is the only gate
+  // unlock a rung — the purchase that pays for it is the only gate
   // (progress is what you type and spend; accuracy and speed are measured
-  // for the player, never a lock)
-  function unlockNextPair(p) {
-    const np = nextPair(p);
-    if (!np) return null;
-    p.pairsUnlocked++;
-    p.unlockLog.push({ keys: np.keys, at: Date.now() });
-    autoAdvance(p);
-    return np;
+  // for the player, never a lock). The rung must be the next level at its
+  // place; the ladder branches between places, never within one.
+  function unlockPair(p, pair) {
+    if (!pair) return null;
+    const place = C().placeOf(pair);
+    if ((p.mk[place] || 0) + 1 !== pair.mk) return null;
+    p.mk[place] = pair.mk;
+    p.unlockLog.push({ keys: pair.keys, at: Date.now() });
+    return pair;
   }
+  // older callers: the course-order next rung
+  const unlockNextPair = (p) => unlockPair(p, nextPair(p));
 
   // ---------- content generation ----------
   function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
@@ -332,7 +330,7 @@
     const weak = 1 - clamp(readiness(p, ch), 0, 1);
     let w = (L.LETTER_FREQ[ch] || 0.5) * (1 + WEAKNESS_BOOST * weak);
     const s = p.letters[ch];
-    const last = L.PAIRS[p.pairsUnlocked - 1];
+    const last = C().newestPair(p);
     if (last && last.keys.includes(ch) && s && s.n < NEW_LETTER_SAMPLES) w *= 4;
     if (tilt && tilt[ch]) w *= tilt[ch];
     return w;
@@ -664,7 +662,7 @@
   window.ENGINE = {
     MIN_SAMPLES, MAX_LATENCY,
     loadProfile, saveProfile, resetProfile, peekProfile, adoptProfile, getLastMap, setLastMap,
-    unlockedLetters, nextPair, readiness, unlockNextPair, trainable,
+    unlockedLetters, nextPair, readiness, unlockPair, unlockNextPair, trainable,
     recordHit, recordMiss,
     generateLine, realWordPool, endingPool, phrasePool, sentencePool, namePool, pagePool,
   };

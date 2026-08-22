@@ -47,9 +47,10 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
    (az/buki/vedi/slogi/slova/stroki/listy) — display names live in i18n
    matNames/stationNames, looks in pixels.js matSprite. Renames never touch ids.
 4. **Automation is bought, and a new Mk takes it back.** The curriculum
-   advances by purchase — the next key-pair is bought at its mine or vein,
-   in the ladder's order, for a price that asks for that ore and a later
-   good. Automation is bought the same way; buying a Mk on an ore retools
+   advances by purchase — a key-pair is bought at its mine or vein, each
+   place selling its next level, for a price that asks for that ore and a
+   later good; what the prices are made of is the only order between
+   places (the ladder branches, 2026-08-22). Automation is bought the same way; buying a Mk on an ore retools
    every mine of that ore (automation off — the new keys are worked by hand
    until its automation is bought again). A machine runs a recipe by itself
    iff it has its automation upgrade and (phase 3) its input buffers hold a
@@ -1038,12 +1039,16 @@ If a recipe or a tier disagrees with a rule, the recipe is wrong.
    not, its ⚙ and its removal; a closed pass or bridge lists its repair. A
    machine wears only the recipe it is running now; the choices live behind
    the hold (2026-08-20). Tiers organise the
-   design and pace it — they are never a check: order comes only from the
-   letter ladder (the next key-pair is always the next one) and pacing from
-   prices that ask for later materials plus the readiness bar. Each row shows
-   a price and nothing else — accuracy and speed are shown, never a gate.
-   The ladder decides order (the next key-pair is the next one), the price
-   decides pace.
+   design and pace it — they are never a check: order comes only from what
+   the prices are made of, and pacing from how much they ask for plus the
+   readiness bar. Each row shows a price and nothing else — accuracy and
+   speed are shown, never a gate. **The ladder branches (2026-08-22):** a
+   save holds a Mk level per place (each ore, and the Fastener), every
+   place always sells its next level at its real price, and no counter or
+   key total is ever consulted — see *The ladder branches* below. A build
+   row for a machine that would have nothing to make is dimmed and names
+   the upgrade that gives it a recipe ("after Coal seam"); it cannot be
+   built until then, so no machine is ever born dead.
 7. **Automation runs on the clock. Skill never does.** What is mastered works
    without you: automated machines and belts run in real time — while you
    walk, build, or have the tab hidden (fast-forward on return). Idle
@@ -1084,7 +1089,69 @@ capitals (Crane, T5) · : ; " ( ) (Fastener Mk3, T5). Numbers stay out (a
 bonus tier later). Prices are placeholders showing the pattern: the ore's own
 material, typed by hand right before its new keys arrive, plus a good from the
 current tier. Extra mines of an ore are bought at unbuilt nodes and inherit
-the ore's Mk.
+the ore's Mk. The "comes after" column is the course order — one branch of
+the ladder, the one the summary and the pacing bot follow; the live prices
+are `PRICES` in `chain.js`, and since 2026-08-22 they are the only thing
+that orders one place against another (below).
+
+### The ladder branches (2026-08-22 — the Molder problem)
+
+**What was wrong.** Five machine kinds were gated by a hidden key count
+(`minAlpha` on a full-alphabet kind): a Molder bought at 12 keys stood dead
+with no message, and the only "ladder" was one counter, so the coal seam
+could not be opened before Quartz Mk2 whatever you held. A key total is not
+a mechanic; progress is what you type and spend.
+
+**The rules now.**
+- **A save holds a Mk level per place** — `profile.mk = {iron, copper,
+  stone, quartz, coal, oil, fastener}` — and every place always sells its
+  next level at its real price, enabled when the bag covers it. "Comes
+  later on the ladder" rows are gone. A save from before carries
+  `pairsUnlocked` and is read as the same table once (`CHAIN.mkTable`).
+- **Prices are the only cross-place order.** The quartz vein and Iron Mk2
+  are both for sale from the first smelt (the first branch). The coal seam
+  asks for raw quartz, so the ring finger follows the middle. Copper Mk2 and
+  Stone Mk2 ask for gunmetal, so they follow coal — and open together. The
+  oil derrick asks for modules, Quartz Mk3 for modules, Oil Mk3 for
+  fastened goods, and the last two rungs (Oil Mk4, Fastener Mk3) for a few
+  crates — the Crane's existence, not its volume. The Assembler's floor is
+  18 keys (the v3 table's own row), so modules imply every rung of the
+  first three eras: nothing early can be left behind when the pinky comes.
+- **A machine's price names the ore its recipes live on**, so a kind is
+  only for sale where it can run: Constructor ← quartz + bronze · Foundry ←
+  quartz + brass (never parts — EN's two-ore alloys never field 25 words,
+  so its first parts come from three-ore alloys, and the Foundry stands
+  first) · Molder ← parts + gunmetal · Fastener ← oil + modules. Quartz
+  iron, steel and black iron are never price goods: EN has no vowel on them.
+- **Where a price cannot say it, the row names the upgrade.** Mk2 upgrades
+  mint no new good, but content floors are real (endings want 14 keys,
+  phrases 18, sentences 20, capitals 30, pages 33). `CHAIN.whatUnlocks`
+  tries the next level at every place, then pairs, triples and quads, and
+  returns the earliest-era set that gives the kind a recipe; the build row
+  shows the price dimmed with "— after Quartz vein + Iron mine Mk2", or
+  "— after deeper mines" past four purchases. A kind appears in the menu
+  once half the goods its price names have been held. A standing machine
+  with nothing to make (a cheat, an old save) says so in its caption with
+  the same tail. The content floors stay in the engine as the truth the
+  captions read — never as a silent lock.
+- **Verified on every branch.** `dev/ladder-walk.js` walks every reachable
+  Mk table (RU: 98 states, EN: 59) and `dev/verify.html` / `dev/en.html`
+  assert: no deadlock; no kind for sale without a nameable fix (or one that
+  never comes alive); coal after quartz, oil after coal, the Fastener's
+  keys after oil; and report any rung for sale two eras past the lowest
+  unbought one (RU: 11 cases, all the last two rungs with one T3 rung — the
+  comma or у ш — outstanding; EN: none). Up to four rungs are for sale and
+  producible at once. The walk exposed a pre-existing EN deadlock (the
+  Foundry costing parts) that the old one-line check could not see.
+- **Pacing** (bot, PACE 3, Open Range): 23.9 h against the accepted ~20 —
+  T1 2.5 · T2 1.1 · T3 10.1 · T4 4.7 · T5 4.5 · finish 1.1. No price was
+  raised; the difference is the Crane's real cost now standing before the
+  last rungs (the old log deferred it into the computed finish) and Oil Mk3
+  sitting in the Fastener era by price. The human log has the last word.
+- **What stays loose, on purpose.** Within an era the order is the player's:
+  quartz or iron first, copper or stone first, side upgrades whenever they
+  pay. Between eras the slack is one rung at the tail. "Unlock two at once"
+  on the spine itself is now a price question, not a refactor.
 
 ### Machine kinds
 
@@ -1098,7 +1165,7 @@ factory wants; arity is fixed per kind so the icon row always reads the same.
 | Foundry | ingot + ore → 3-ore ingot | clusters (ст пр вл сн in 2-syllable pseudo-words + real bigrams) | 8 | T1 · T2 | third ore widens the union |
 | Constructor | ingot → parts | words (real, glossed, strict union) | 8 & pool ≥25 | T1 · T2 | one alloy = one word pool; vowel-poor alloys skip it until enriched |
 | Molder | parts + ore → moldings | endings (prefixes/suffixes/inflections in frames) | 14, full set | T2 · T3 | flux ore picks the family (stone -ть -ить -ом; copper -ение -ник; coal -ция -щик; oil -ся -ый -ой) |
-| Assembler | parts + ingot → modules | phrases (collocations → short sentences, no punct.) | 16, full set | T2 · T3 | flux ingot's ores are the focus |
+| Assembler | parts + ingot → modules | phrases (collocations → short sentences, no punct.) | 18, full set (2026-08-22: the whole first three eras, so the oil derrick's modules leave nothing behind) | T2 · T3 | flux ingot's ores are the focus |
 | Fastener | modules + ore → fastened · adds keys | punct (, Mk1 · ? ! - Mk2 · : ; " ( ) Mk3) | 20 | T3 · T4 | Mk levels add keys like ores add letters |
 | Crane | fastened + oil → crates · adds ⇧ | capitals (sentence-initial, names) | 30 | T5 · T6 | oil is the pinky ore; Shift is a pinky key |
 | Manufacturer | crates + moldings + parts → heavy modules | pages (real paragraphs; the content slot) | all | T6 · after the finish | reaches every earlier form; the one station the factory exists to feed |

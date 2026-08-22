@@ -9,6 +9,18 @@
 // bag at the place (no Hub, no kits, no contracts, no Depot); kinds are
 // templates — several instances may stand.
 //
+// The ladder branches (2026-08-22). A save holds a Mk level per PLACE —
+// each ore and each machine kind that sells keys (the Fastener) — and every
+// place always offers its next level at its real price. Nothing orders one
+// place against another except what the prices are made of: the coal seam
+// asks for quartz, so the ring finger follows the middle finger; the oil
+// derrick asks for modules, so the pinky waits for the Assembler. A price a
+// course cannot produce when its rung appears is a bug dev/verify.html and
+// dev/en.html catch by walking every reachable state. Where a machine kind
+// would have nothing to make — its content floor wants keys no good can
+// name — the build row names the upgrade that fixes it (`whatUnlocks`), and
+// the machine cannot be built until then: no machine is ever born dead.
+//
 // Maps (2026-08-18; split out of this file 2026-08-20): the chain is shared,
 // the ground is not. Each world is its own file in js/maps/ and registers
 // itself with MAPKIT before this file loads; CHAIN.useMap(id) makes one of
@@ -66,7 +78,10 @@
     foundry:      { id: 'foundry',      arity: 2, grammar: 'clusters',  minAlpha: 8,  perUnit: 5,  autoFrom: 2,  tier: 1, size: [2, 2], ready: true },
     constructor:  { id: 'constructor',  arity: 1, grammar: 'words',     minAlpha: 8,  perUnit: 6,  autoFrom: 2,  tier: 1, size: [2, 2], ready: true, minWords: 25 },
     molder:       { id: 'molder',       arity: 2, grammar: 'endings',   minAlpha: 14, perUnit: 6,  autoFrom: 3,  tier: 2, size: [2, 2], ready: true,  full: true },
-    assembler:    { id: 'assembler',    arity: 2, grammar: 'phrases',   minAlpha: 16, perUnit: 8,  autoFrom: 3,  tier: 2, size: [2, 2], ready: true,  full: true },
+    // the Assembler wants every key of the first three eras (18): the oil
+    // derrick is priced in its modules, so no early rung can be left behind
+    // when the pinky arrives (2026-08-22, the branch)
+    assembler:    { id: 'assembler',    arity: 2, grammar: 'phrases',   minAlpha: 18, perUnit: 8,  autoFrom: 3,  tier: 2, size: [2, 2], ready: true,  full: true },
     fastener:     { id: 'fastener',     arity: 2, grammar: 'punct',     minAlpha: 20, perUnit: 8,  autoFrom: 4,  tier: 3, size: [2, 2], ready: true,  full: true },
     crane:        { id: 'crane',        arity: 2, grammar: 'capitals',  minAlpha: 30, perUnit: 8,  autoFrom: 6,  tier: 5, size: [3, 2], ready: true,  full: true },
     manufacturer: { id: 'manufacturer', arity: 3, grammar: 'pages',     minAlpha: 33, perUnit: 12, autoFrom: 99, tier: 6, size: [3, 2], ready: true,  full: true },
@@ -185,7 +200,8 @@
       vedi: { slogi: 40, brass: 40 },
       // never slova here: the Constructor's 25-word gate is course-dependent
       // and the EN ladder can't field 25 words this early (2026-08-20)
-      coal: { brass: 60, slogi: 40 },
+      // quartz in the price: the seam (ring finger) follows the vein (middle)
+      coal: { vedi: 40, brass: 60 },
       oil: { stroki: 60, gunmetal: 40 },
     },
     // Mk levels per ore
@@ -193,24 +209,38 @@
       az: { 2: { az: 80, slogi: 30 } },
       buki: { 2: { buki: 80, gunmetal: 30 } },
       stone: { 2: { stone: 80, gunmetal: 30 } },
-      vedi: { 2: { vedi: 60, slogi: 40 }, 3: { vedi: 60, qzbronze: 30 } },
+      vedi: { 2: { vedi: 60, slogi: 40 }, 3: { vedi: 60, stroki: 30 } },   // Mk3 in modules: the middle finger's top row waits for the Assembler's era
       coal: { 2: { fast: 40, brass: 40 }, 3: { coal: 60, glass: 25 } },
-      oil: { 2: { oil: 60, glass: 30 }, 3: { oil: 60, gunmetal: 30 }, 4: { oil: 80, fast: 30 } },
+      // Mk3 in fastened goods: the Fastener era, not a sprint from Mk2. Mk4 in
+      // crates: the outer pinky is the last era, after the Crane stands
+      // — a few crates, not a stack: a crate hides a whole pyramid of
+      // fastened goods, and the Crane's existence is the gate, not its volume
+      oil: { 2: { oil: 60, glass: 30 }, 3: { oil: 60, fast: 30 }, 4: { oil: 80, crate: 6 } },
     },
     // Mk levels on a machine kind (the Fastener: punctuation keys) — its own
     // output, typed by hand right before the keys arrive, plus a tier good
     at: {
-      fastener: { 1: { fast: 30, gunmetal: 30 }, 2: { fast: 40, gunmetal: 30 }, 3: { fast: 40, glass: 40 } },
+      // Mk3 after the Crane, as the course intends — glass beside the crates,
+      // not fastened goods, which the crates themselves are made of
+      fastener: { 1: { fast: 30, gunmetal: 30 }, 2: { fast: 40, gunmetal: 30 }, 3: { glass: 40, crate: 6 } },
     },
     // first instance of a kind at a plot — each asks for a material of the
-    // tier the kind belongs to, which is the only pacing there is
+    // era the kind belongs to, which is the only pacing there is. A price
+    // names the ore a kind's recipes live on (2026-08-22): the Constructor
+    // asks for quartz, the Molder for a coal alloy, the Fastener for oil
+    // itself — so a kind is only ever built where its recipes can exist.
+    // Raw ores and bronze / brass / gunmetal / moldings / modules / fastened
+    // goods are the price goods every course can make when the rung appears;
+    // quartz iron, steel and black iron are not (EN has no vowel on them).
     machine: {
       smelter: { az: 30, buki: 30, stone: 30 },
-      foundry: { slova: 40, slogi: 40 },
-      constructor: { slogi: 40, brass: 40 },
-      molder: { slova: 60, brass: 30 },
+      // never parts here: EN's two-ore alloys never field 25 words, so its
+      // first parts come from three-ore alloys — the Foundry stands first
+      foundry: { vedi: 40, brass: 40 },
+      constructor: { vedi: 40, slogi: 40 },
+      molder: { slova: 60, gunmetal: 30 },
       assembler: { mold: 60, slova: 40 },
-      fastener: { gunmetal: 40, stroki: 40 },
+      fastener: { oil: 40, stroki: 40 },
       crane: { fast: 80, glass: 40 },
       manufacturer: { crate: 100, mold: 60, slova: 60 },
     },
@@ -254,15 +284,6 @@
   function priceAt(kind, level) {
     return paced((PRICES.at[kind] && PRICES.at[kind][level]) || null);
   }
-  // the Mk a machine kind stands at (pairs bought at it, in order)
-  function kindMk(profile, kind) {
-    let mk = 0;
-    for (let i = 0; i < profile.pairsUnlocked && i < L.PAIRS.length; i++) {
-      const p = L.PAIRS[i];
-      if (p.at === kind) mk = Math.max(mk, p.mk);
-    }
-    return mk;
-  }
   function priceMachine(kind, nth) {
     const base = PRICES.machine[kind];
     if (!base) return null;
@@ -276,27 +297,68 @@
   const priceCrossing = (c) => paced(PRICES.crossing[c.id] || null);
 
   // ---- the curriculum position, from the save ----
-  // pairsUnlocked counts L.PAIRS unlocked in order; ore Mk levels derive.
-  function oreMk(profile, ore) {
-    let mk = 0;
-    for (let i = 0; i < profile.pairsUnlocked && i < L.PAIRS.length; i++) {
+  // A place is an ore (keys bought at its mines) or a machine kind that
+  // sells keys (the Fastener). The save carries a Mk level per place
+  // (`profile.mk`); a save from before the branch (2026-08-22) carries
+  // `pairsUnlocked`, a count along the course order, and reads the same.
+  const AT_KINDS = [...new Set(L.PAIRS.filter((p) => p.at).map((p) => p.at))];
+  const PLACES = [...ORE_IDS, ...AT_KINDS];
+  const placeOf = (p) => p.ore || p.at;
+  function mkTable(profile) {
+    if (profile.mk) return profile.mk;
+    const t = {};
+    for (const pl of PLACES) t[pl] = 0;
+    for (let i = 0; i < (profile.pairsUnlocked || 0) && i < L.PAIRS.length; i++) {
       const p = L.PAIRS[i];
-      if (p.ore === ore) mk = Math.max(mk, p.mk);
+      t[placeOf(p)] = Math.max(t[placeOf(p)] || 0, p.mk);
     }
-    return mk;
+    return t;
   }
+  const pairOf = (place, level) => L.PAIRS.find((p) => placeOf(p) === place && p.mk === level) || null;
+  const pairBought = (profile, p) => (mkTable(profile)[placeOf(p)] || 0) >= p.mk;
+  const boughtPairs = (profile) => L.PAIRS.filter((p) => pairBought(profile, p));
+  const oreMk = (profile, ore) => mkTable(profile)[ore] || 0;
+  // the Mk a machine kind stands at (keys bought at it)
+  const kindMk = (profile, kind) => mkTable(profile)[kind] || 0;
   function unlockedKeys(profile) {
     const out = [];
-    for (let i = 0; i < profile.pairsUnlocked && i < L.PAIRS.length; i++) out.push(...L.PAIRS[i].keys);
+    for (const p of boughtPairs(profile)) out.push(...p.keys);
     return out;
   }
   function currentTier(profile) {
     let t = 0;
-    for (let i = 0; i < profile.pairsUnlocked && i < L.PAIRS.length; i++) t = Math.max(t, L.PAIRS[i].tier);
+    for (const p of boughtPairs(profile)) t = Math.max(t, p.tier);
     return t;
   }
+  // the rungs for sale right now: at every place, its next level
+  function nextPairs(profile) {
+    const t = mkTable(profile);
+    const out = [];
+    for (const pl of PLACES) {
+      const p = pairOf(pl, (t[pl] || 0) + 1);
+      if (p) out.push(p);
+    }
+    return out;
+  }
+  // the rung the course would take first — the lowest tier for sale, ties
+  // in course order. What the summary and the tier bar read.
   function nextPair(profile) {
-    return L.PAIRS[profile.pairsUnlocked] || null;
+    const ps = nextPairs(profile);
+    if (!ps.length) return null;
+    return ps.reduce((a, b) => (b.tier < a.tier || (b.tier === a.tier && L.PAIRS.indexOf(b) < L.PAIRS.indexOf(a)) ? b : a));
+  }
+  // what a rung costs: a vein's opening, a mine's Mk, a machine's Mk
+  function pricePair(p) {
+    if (!p) return null;
+    if (p.at) return priceAt(p.at, p.mk);
+    return p.mk === 1 ? priceNode(p.ore) : priceMk(p.ore, p.mk);
+  }
+  // the keys that arrived last — the drills lean on them while they are new
+  function newestPair(profile) {
+    const log = profile.unlockLog || [];
+    const last = log[log.length - 1];
+    if (!last || !Array.isArray(last.keys)) return null;
+    return L.PAIRS.find((p) => p.keys.length === last.keys.length && p.keys.every((k, i) => k === last.keys[i])) || null;
   }
   // the tier.s speed/accuracy target — shown to the player and used to weight
   // weak letters in the drills; never a lock (progress is what you type and
@@ -366,10 +428,19 @@
     if (m.ores.length) return m.ores.every((o) => oreOpen(profile, o));
     return true;
   }
-  // real words typeable with an alphabet
+  // real words typeable with an alphabet — memoized by the alphabet, since
+  // every menu refresh and every state the verify walker visits asks again
+  const poolMemo = new Map();
   function wordPool(alpha) {
-    const set = new Set(alpha);
-    return L.WORDS.filter(([w]) => [...w].every((c) => set.has(c)));
+    const key = [...alpha].sort().join('');
+    let pool = poolMemo.get(key);
+    if (!pool) {
+      const set = new Set(alpha);
+      pool = L.WORDS.filter(([w]) => [...w].every((c) => set.has(c)));
+      if (poolMemo.size > 4096) poolMemo.clear();
+      poolMemo.set(key, pool);
+    }
+    return pool;
   }
   // is a recipe offered now: kind ready, inputs exist, alphabet clears the
   // minimum (and V+C / word-pool rules). Nothing is locked behind a tier
@@ -464,16 +535,79 @@
     });
     return out;
   }
-  // machine kinds a plot could hold now: ready, and the player has held
-  // every material the price asks for (progressive reveal — the price is
-  // the only pacing)
-  function buildableKinds(profile) {
+  // A kind with nothing to make is not for sale. Which purchase would give
+  // it a recipe? Try the next level at every place, then pairs of them, then
+  // triples — the smallest set that makes any recipe offerable, in course
+  // order. Null when none does within reach (the row then says so). Pure
+  // and course-agnostic: it reads the same content floors the drills read,
+  // so what it names is exactly what is missing. Returns [] when the kind
+  // already has a recipe.
+  function whatUnlocks(kind, profile, depth) {
+    depth = depth || 4;
+    if (offerableRecipes(kind, profile).length) return [];
+    const base = Object.assign({}, mkTable(profile));
+    // the earliest-era fix among the smallest: lowest top tier, then lowest
+    // tiers in all, then course order
+    const rank = (set) => [Math.max(...set.map((p) => p.tier)), set.reduce((a, p) => a + p.tier, 0), Math.max(...set.map((p) => L.PAIRS.indexOf(p)))];
+    const better = (a, b) => { const ra = rank(a), rb = rank(b); for (let i = 0; i < ra.length; i++) if (ra[i] !== rb[i]) return ra[i] < rb[i]; return false; };
+    let frontier = [[]];
+    for (let d = 1; d <= depth; d++) {
+      const next = [];
+      let best = null;
+      for (const set of frontier) {
+        const t = Object.assign({}, base);
+        for (const p of set) t[placeOf(p)] = p.mk;
+        const lastIdx = set.length ? L.PAIRS.indexOf(set[set.length - 1]) : -1;
+        for (const p of nextPairs({ mk: t })) {
+          // each set once: grow only in course order, except along one place
+          if (L.PAIRS.indexOf(p) < lastIdx && placeOf(p) !== placeOf(set[set.length - 1])) continue;
+          const t2 = Object.assign({}, t);
+          t2[placeOf(p)] = p.mk;
+          const grown = set.concat([p]);
+          if (offerableRecipes(kind, { mk: t2 }).length) { if (!best || better(grown, best)) best = grown; }
+          else next.push(grown);
+        }
+      }
+      if (best) return best.slice().sort((a, b) => L.PAIRS.indexOf(a) - L.PAIRS.indexOf(b));
+      frontier = next;
+    }
+    return null;
+  }
+  // the rungs the summary names: for sale, and the player has held at least
+  // half of the goods the price asks for (the same rule as the build menu)
+  function rungsInView(profile) {
+    return nextPairs(profile).filter((p) => {
+      const mats = Object.keys(pricePair(p) || {});
+      const held = mats.filter((mat) => profile.seen[mat]).length;
+      return mats.length && held * 2 >= mats.length;
+    });
+  }
+  // machine kinds the build menu lists: ready, and the player has held at
+  // least half of the goods the price asks for — the next machine is always
+  // in view with its price, and the goods it names are the way to it
+  function visibleKinds(profile) {
     return KIND_IDS.filter((k) => {
       const kind = KINDS[k];
       if (k === 'mine' || !kind.ready) return false;
       const price = priceMachine(k, machinesOfKind(profile, k).length + 1);
-      return price && Object.keys(price).every((mat) => profile.seen[mat]);
+      if (!price) return false;
+      const mats = Object.keys(price);
+      const held = mats.filter((mat) => profile.seen[mat]).length;
+      return held * 2 >= mats.length;
     });
+  }
+  // can this kind run a recipe now — the build row is only live when it can
+  const kindLive = (kind, profile) => offerableRecipes(kind, profile).length > 0;
+  // can it ever: at the whole course's keys (an authoring check)
+  function kindEverLive(kind) {
+    const t = {};
+    for (const pl of PLACES) t[pl] = 0;
+    for (const p of L.PAIRS) t[placeOf(p)] = Math.max(t[placeOf(p)], p.mk);
+    return kindLive(kind, { mk: t });
+  }
+  // the kinds whose price goods have all been held (older callers)
+  function buildableKinds(profile) {
+    return visibleKinds(profile).filter((k) => Object.keys(priceMachine(k, machinesOfKind(profile, k).length + 1)).every((mat) => profile.seen[mat]));
   }
 
   // ---- the worlds ----
@@ -542,9 +676,9 @@
     MAPS, MAP_IDS, DEFAULT_MAP,
     oreLetters, oreMaxMk, recipesFor, recipeFor, matTier,
     priceNode, priceExtraMine, priceMk, priceAt, kindMk, priceMachine, priceAuto, priceCrossing, scaleCost, closedCrossings,
-    oreMk, unlockedKeys, currentTier, nextPair, targetBar,
+    AT_KINDS, PLACES, placeOf, mkTable, pairOf, pairBought, boughtPairs, oreMk, unlockedKeys, currentTier, nextPairs, nextPair, pricePair, newestPair, targetBar,
     alphabetOf, recipeAlphabet, recipeTilt, recipeFocus, wordPool, offerable, offerableRecipes, matExists, oreOpen, affordable, bagAdd,
-    machinePos, machineBox, machineAnchor, nodeFace, machinesOfKind, machinesOfOre, nodeBuilt, freePlots, unbuiltNodes, buildableKinds, starterNodes,
+    machinePos, machineBox, machineAnchor, nodeFace, machinesOfKind, machinesOfOre, nodeBuilt, freePlots, unbuiltNodes, visibleKinds, buildableKinds, kindLive, kindEverLive, whatUnlocks, rungsInView, starterNodes,
     useMap, currentMap, plotById, crossingOpen, regionAt,
     // per-map fields (MAP, PLOTS, SCENERY, PROPS, WORLD_W, WORLD_H, SPAWN, LEGACY, MAP_ID) are set by useMap
   };

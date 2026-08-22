@@ -48,7 +48,8 @@
   // its recipe from the bag and emits after perUnit keystrokes. Automated
   // machines run on the clock in parallel, consuming from / emitting to the
   // bag (ideal logistics — belts are free and the bot lays them well).
-  const p = { pairsUnlocked: 3, letters: {}, bag: {}, seen: {}, machines: [], crossings: {}, nextMachineId: 1, unlockLog: [] };
+  const p = { mk: C.mkTable({ pairsUnlocked: 3 }), letters: {}, bag: {}, seen: {}, machines: [], crossings: {}, nextMachineId: 1, unlockLog: [] };
+  const ladderKey = () => C.PLACES.map((pl) => p.mk[pl] || 0).join(',');
   const auto = {};        // kind or 'mine:ore' → count of automated instances
   const built = { mine: {} };   // what stands: built[kind] = true, built.mine[ore] = true
   built.mine.az = true; built.mine.buki = true; built.mine.stone = true;
@@ -61,7 +62,7 @@
   // offerableRecipes measures word pools, so memoize per ladder position.
   const recipeCache = {};
   function recipeToMake(mat) {
-    const key = p.pairsUnlocked;
+    const key = ladderKey();
     if (!recipeCache[key]) {
       recipeCache[key] = {};
       for (const kind of C.KIND_IDS) {
@@ -139,16 +140,20 @@
   }
   const autoRecipe = {};   // kind → the material its automated instances make
 
-  // what the bot buys, in order: the ladder; machines when a needed recipe
-  // has no home; automation of the busiest producers when affordable twice over
+  // what the bot buys, in order: the ladder — on a branching ladder (2026-08-22)
+  // the lowest-era rung whose price it can make, else the lowest-era rung at
+  // all and it works toward that; machines when a needed recipe has no home;
+  // automation of the busiest producers when affordable twice over
   function nextGoal() {
-    const np = C.nextPair(p);
-    if (np) {
-      if (np.at) return { kind: 'mk-at', price: C.priceAt(np.at, np.mk), needsKind: np.at };
-      if (np.mk === 1) return { kind: 'node', price: C.priceNode(np.ore) };
-      return { kind: 'mk', price: C.priceMk(np.ore, np.mk) };
-    }
-    return { kind: 'finish' };
+    const forSale = C.nextPairs(p);
+    if (!forSale.length) return { kind: 'finish' };
+    const byEra = (a, b) => a.tier - b.tier || L.PAIRS.indexOf(a) - L.PAIRS.indexOf(b);
+    const ready = forSale.filter((q) => Object.keys(C.pricePair(q) || {}).every((m) => makeable(m))).sort(byEra);
+    const np = ready[0] || forSale.slice().sort(byEra)[0];
+    const goal = { pair: np, price: C.pricePair(np) };
+    if (np.at) { goal.kind = 'mk-at'; goal.needsKind = np.at; }
+    else goal.kind = np.mk === 1 ? 'node' : 'mk';
+    return goal;
   }
   function ensureKind(kind) {
     if (kind === 'mine' || built[kind]) return true;
@@ -171,7 +176,7 @@
   const makeableCache = {};
   function makeable(mat, seen) {
     if (!seen) {
-      const key = p.pairsUnlocked + '|' + Object.keys(built).length + '|' + Object.keys(built.mine).length;
+      const key = ladderKey() + '|' + Object.keys(built).length + '|' + Object.keys(built.mine).length;
       const c = makeableCache[key] || (makeableCache[key] = {});
       if (mat in c) return c[mat];
       return (c[mat] = makeable(mat, new Set()));
@@ -201,7 +206,6 @@
 
   // ---- the run ----
   const rows = [];
-  const t0Pairs = p.pairsUnlocked;
   let hours = 0, lastHours = 0, guard = 0;
   const STEP_MIN = 1;
   const tierOf = () => C.currentTier(p);
@@ -231,8 +235,9 @@
       const lack = deficit(goal.price);
       if (!lack.length && goal.price) {
         pay(goal.price);
-        const np = C.nextPair(p);
-        p.pairsUnlocked++;
+        const np = goal.pair;
+        p.mk[C.placeOf(np)] = np.mk;
+        p.unlockLog.push({ keys: np.keys, at: 0 });
         if (np && np.ore && np.mk === 1) built.mine[np.ore] = true;
         if (np && np.ore && np.mk > 1) { auto['mine:' + np.ore] = 0; }   // retool: automation drops
         purchases.push(`${hours.toFixed(1)}h  ${np ? np.keys.join('') : '?'}`);
@@ -276,7 +281,7 @@
       ensureChain(target);
       const ks = wpmAt(hours) * 5 * accAt(hours) * UTIL * STEP_MIN;
       const used = handWork(target, ks);
-      if (Math.abs(hours * 60 % 60) < 1) trace.push(`${hours.toFixed(1)}h goal=${(C.nextPair(p) || {}).keys?.join('') || 'fin'} target=${target} used=${Math.round(used)} pending=${pending ? pending.label : '-'} bag={${Object.entries(p.bag).filter(([, v]) => v > 0).map(([k, v]) => k + ':' + Math.round(v)).join(',')}}`);
+      if (Math.abs(hours * 60 % 60) < 1) trace.push(`${hours.toFixed(1)}h goal=${(goal.pair || {}).keys?.join('') || 'fin'} target=${target} used=${Math.round(used)} pending=${pending ? pending.label : '-'} bag={${Object.entries(p.bag).filter(([, v]) => v > 0).map(([k, v]) => k + ':' + Math.round(v)).join(',')}}`);
     }
     autoRun(STEP_MIN * 60, minuteReserve);
     hours += STEP_MIN / 60;

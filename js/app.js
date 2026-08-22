@@ -385,14 +385,13 @@
     } else if (d.kind === 'machine' && d.m.kind === 'mine') {
       const m = d.m, ore = m.ore;
       const mk = CHAIN.oreMk(profile, ore);
-      const np = CHAIN.nextPair(profile);
-      if (mk < CHAIN.oreMaxMk(ore)) {
-        const price = CHAIN.priceMk(ore, mk + 1) || {};
-        if (np && np.ore === ore && np.mk === mk + 1) {
-          rows.push({ pre: 'MK' + (mk + 1), items: price, enabled: canPay(price), priced: true, short: shortOf(price), caption: T.t('capMk', { level: mk + 1, name: mineName(ore), keys: pairKeys(np) }), action: { type: 'mk', ore, level: mk + 1, price } });
-        } else {
-          rows.push({ pre: 'MK' + (mk + 1), items: price, ok: false, enabled: false, caption: T.t('capMkLater', { level: mk + 1 }), action: null });
-        }
+      // the next Mk of this ore is always for sale here at its real price —
+      // the ladder branches between places; what orders them is the goods
+      // the price asks for
+      const np = CHAIN.pairOf(ore, mk + 1);
+      if (np) {
+        const price = CHAIN.pricePair(np) || {};
+        rows.push({ pre: 'MK' + np.mk, items: price, enabled: canPay(price), priced: true, short: shortOf(price), caption: T.t('capMk', { level: np.mk, name: mineName(ore), keys: pairKeys(np) }), action: { type: 'mk', ore, level: np.mk, price } });
       }
       if (!m.auto) {
         const price = CHAIN.priceAuto(m);
@@ -412,15 +411,11 @@
         rows.push({ items: r.in, out: r.out, ok: SIM.canTake(profile, m, r.in) ? undefined : false, enabled: true, caption: T.t('capRecipe', { out: matName(r.out), inputs: Object.entries(r.in).map(([mat, k]) => `${k} ${matName(mat)}`).join(' + ') }), action: { type: 'recipe', m, r } });
       }
       // keys bought at this kind of machine (the Fastener's punctuation):
-      // the next rung of the ladder when it stands here
-      const np = CHAIN.nextPair(profile);
-      if (np && np.at === m.kind) {
-        const price = CHAIN.priceAt(m.kind, np.mk) || {};
+      // its next level, always for sale here at its price
+      const np = CHAIN.pairOf(m.kind, CHAIN.kindMk(profile, m.kind) + 1);
+      if (np) {
+        const price = CHAIN.pricePair(np) || {};
         rows.push({ pre: 'MK' + np.mk, items: price, enabled: canPay(price), priced: true, short: shortOf(price), caption: T.t('capMkAt', { level: np.mk, name: kindName(m.kind), keys: pairKeys(np) }), action: { type: 'mk-at', kind: m.kind, level: np.mk, price } });
-      } else {
-        const mk = CHAIN.kindMk(profile, m.kind);
-        const later = L.PAIRS.find((q) => q.at === m.kind && q.mk === mk + 1);
-        if (later) rows.push({ pre: 'MK' + (mk + 1), items: CHAIN.priceAt(m.kind, mk + 1) || {}, ok: false, enabled: false, caption: T.t('capMkLater', { level: mk + 1 }), action: null });
       }
       if (!m.auto) {
         const price = CHAIN.priceAuto(m);
@@ -488,6 +483,15 @@
   const matList = (mats) => (mats || []).map(matName).join(' / ');
   const machineName = (m) => (m ? (m.kind === 'mine' ? mineName(m.ore) : kindName(m.kind)) : '?');
   const pairKeys = (pair) => (pair && pair.keys ? pair.keys.map((c) => c.toUpperCase()).join(' ') : '');
+  // a rung named as a purchase: "Quartz vein" (opening it), "Quartz mine Mk2", "Fastener Mk1"
+  const placeName_ = (pair) => (pair.ore ? (pair.mk === 1 ? ((T.t('veinNames') || {})[pair.ore] || mineName(pair.ore)) : mineName(pair.ore)) : kindName(pair.at));
+  const rungName = (pair) => (pair.ore && pair.mk === 1 ? placeName_(pair) : T.t('capAtPlace', { name: placeName_(pair), level: pair.mk }));
+  // what a kind with nothing to make is waiting for, as a caption tail
+  function afterTail(kind) {
+    const need = CHAIN.whatUnlocks(kind, profile);
+    if (!need || !need.length) return need ? '' : T.t('capAfterDeeper');
+    return T.t('capAfter', { list: need.map(rungName).join(' + ') });
+  }
   function beltWhy(why, from) {
     const table = T.t('beltWhy') || {};
     const v = table[why] || table.path;
@@ -550,6 +554,11 @@
       setCaption(T.t('capCarrying', { from: machineName(from), mats: matList(from ? SIM.produces(profile, from) : []) }), '');
       return;
     }
+    // a machine with nothing to make says so, and names what would change it
+    if (dock && dock.kind === 'machine' && dock.m.kind !== 'mine' && !CHAIN.kindLive(dock.m.kind, profile)) {
+      setCaption(T.t('capNothingToMake', { name: machineName(dock.m) }) + afterTail(dock.m.kind), 'no');
+      return;
+    }
     if (dock && menuRowsFor(dock).length) { setCaption(T.t('capHold', { place: placeName(dock) }), 'dim'); return; }
     setCaption('');
   }
@@ -604,23 +613,27 @@
   // rung's opening price — so the row only offers itself when some vein
   // could actually be paid for. An unaffordable ghost never happens.
   function mineBuildable() {
-    const np = CHAIN.nextPair(profile);
     for (const n of CHAIN.unbuiltNodes(profile)) {
       if (CHAIN.oreOpen(profile, n.ore)) {
         if (canPay(CHAIN.priceExtraMine(n.ore))) return true;
-      } else if (np && np.ore === n.ore && np.mk === 1 && canPay(CHAIN.priceNode(n.ore) || {})) {
+      } else if (CHAIN.priceNode(n.ore) && canPay(CHAIN.priceNode(n.ore))) {
         return true;
       }
     }
     return false;
   }
+  // every kind in view stands in the menu with its price — dimmed while the
+  // bag cannot cover it, and dimmed with the upgrade it waits for while it
+  // would have nothing to make (a machine is never born dead)
   function buildMenuRows() {
     const rows = [];
     const mineOK = mineBuildable();
     rows.push({ kind: 'mine', enabled: mineOK, caption: T.t(mineOK ? 'capBuildMinePick' : 'capBuildMineNone'), action: mineOK ? { type: 'pick', kind: 'mine' } : null });
-    for (const k of CHAIN.buildableKinds(profile)) {
+    for (const k of CHAIN.visibleKinds(profile)) {
       const price = CHAIN.priceMachine(k, CHAIN.machinesOfKind(profile, k).length + 1);
-      rows.push({ kind: k, items: price, enabled: canPay(price), priced: true, short: shortOf(price), caption: T.t('capBuild', { kind: kindName(k) }), action: { type: 'pick', kind: k } });
+      const live = CHAIN.kindLive(k, profile);
+      const caption = T.t('capBuild', { kind: kindName(k) }) + (live ? '' : afterTail(k));
+      rows.push({ kind: k, items: price, enabled: live && canPay(price), priced: live, short: shortOf(price), caption, action: live ? { type: 'pick', kind: k } : null });
     }
     return rows;
   }
@@ -711,8 +724,9 @@
       }
     }
     // the price: a machine's is its kind's next instance; a mine prices
-    // itself off the vein under it, and an unopened ore only when its keys
-    // are the next rung of the ladder. A vein the bag cannot cover is not
+    // itself off the vein under it — an open ore's extra-mine price, or the
+    // vein's opening price, which is the only thing that orders the ores
+    // (the coal seam asks for quartz). A vein the bag cannot cover is not
     // a target at all — the whole footprint reads red, like any bad ground
     // — and machines were gated at the build menu, so an unaffordable ghost
     // never stands.
@@ -720,11 +734,8 @@
     if (!mine) price = CHAIN.priceMachine(placing.kind, CHAIN.machinesOfKind(profile, placing.kind).length + 1);
     else if (vein) {
       if (CHAIN.oreOpen(profile, vein.ore)) price = CHAIN.priceExtraMine(vein.ore);
-      else {
-        const np = CHAIN.nextPair(profile);
-        if (np && np.ore === vein.ore && np.mk === 1) { price = CHAIN.priceNode(vein.ore) || {}; unlock = true; }
-        else later = true;
-      }
+      else if (CHAIN.priceNode(vein.ore)) { price = CHAIN.priceNode(vein.ore); unlock = true; }
+      else later = true;
     }
     const poor = !!price && !canPay(price);
     const tiles = [];
@@ -753,7 +764,7 @@
     if (!placing.ok) { cancelPlacing(); return; }
     const { kind, face, at, price, vein, unlock } = placing;
     let pair = null;
-    if (unlock) pair = E.unlockNextPair(profile);
+    if (unlock) pair = E.unlockPair(profile, CHAIN.pairOf(vein.ore, 1));
     if (price) spend(price);
     const m = { id: 'm' + (profile.nextMachineId++), kind, at: at.slice(), face, auto: false };
     if (kind === 'mine') { m.ore = vein.ore; m.node = vein.index; }
@@ -805,10 +816,10 @@
   function performAction(act) {
     if (act.type === 'mk') {
       if (!canPay(act.price)) return;
-      const np = CHAIN.nextPair(profile);
-      if (!np || np.ore !== act.ore || np.mk !== act.level) return;
+      const np = CHAIN.pairOf(act.ore, act.level);
+      if (!np || CHAIN.oreMk(profile, act.ore) + 1 !== act.level) return;
       spend(act.price);
-      const pair = E.unlockNextPair(profile);
+      const pair = E.unlockPair(profile, np);
       // a Mk retools every mine of this ore: the new keys are worked by hand
       // until its automation is bought again
       const retooled = CHAIN.machinesOfOre(profile, act.ore).some((m) => m.auto);
@@ -817,10 +828,10 @@
       if (pair) { pendingUnlock = pair; showUnlockCard(pair, retooled); }
     } else if (act.type === 'mk-at') {
       if (!canPay(act.price)) return;
-      const np = CHAIN.nextPair(profile);
-      if (!np || np.at !== act.kind || np.mk !== act.level) return;
+      const np = CHAIN.pairOf(act.kind, act.level);
+      if (!np || CHAIN.kindMk(profile, act.kind) + 1 !== act.level) return;
       spend(act.price);
-      const pair = E.unlockNextPair(profile);
+      const pair = E.unlockPair(profile, np);
       afterPurchase();
       if (pair) { pendingUnlock = pair; showUnlockCard(pair, false); }
     } else if (act.type === 'auto') {
@@ -1504,7 +1515,8 @@
     const weakest = weakestLetters(3)
       .map((x) => `<span class="weak-chip">${x.ch} <small>${Math.round(Math.min(1, x.r) * 100)}%</small></span>`)
       .join(' ');
-    const next = E.nextPair(profile);
+    const nexts = CHAIN.rungsInView(profile);
+    const next = CHAIN.nextPairs(profile).length ? { list: (nexts.length ? nexts : [CHAIN.nextPair(profile)]).map((p) => T.t('nextKeyAt', { ch: p.keys.join(' '), place: placeName_(p).toLowerCase() })).join(' · ') } : null;
     const bar = CHAIN.targetBar(profile);
     showOverlay(`
       <div class="card-station">${T.t('blockStation')}</div>
@@ -1515,7 +1527,7 @@
         <div><span class="sum-val">${session.bestStreak}</span><span class="sum-label">${T.t('sumStreak')}</span></div>
       </div>
       <p class="muted">${T.t('weakLetters')} ${weakest || '—'}</p>
-      ${next ? `<p class="muted">${T.t('nextKeys', { ch: next.keys.join(' '), wpm: bar.wpm, acc: Math.round(bar.acc * 100) })}</p>` : `<p class="muted">${T.t('allUnlocked')}</p>`}
+      ${next ? `<p class="muted">${T.t('nextKeys', { list: next.list, wpm: bar.wpm, acc: Math.round(bar.acc * 100) })}</p>` : `<p class="muted">${T.t('allUnlocked')}</p>`}
       <button id="ov-continue" class="btn-primary">${T.t('blockGo')}</button>
     `);
     $('ov-continue').onclick = () => { hideOverlay(); };

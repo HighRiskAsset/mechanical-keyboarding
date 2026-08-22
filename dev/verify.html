@@ -31,6 +31,7 @@
 <script src="../js/tiles.js"></script>
 <script src="../js/sim.js"></script>
 <script src="../js/drops.js"></script>
+<script src="ladder-walk.js"></script>
 <script>
 (async () => {
   const L = window.LANG_RU, LAY = window.LAYOUT_RU, C = window.CHAIN, E = window.ENGINE;
@@ -129,33 +130,34 @@
   const clBad = L.CLUSTERS.filter((c) => [...c].some((x) => !RU.includes(x) || isVowel(x)));
   line(!clBad.length, `cluster list (${L.CLUSTERS.length}) is consonants only`, clBad.join(' '));
 
-  // 9. every price is producible when its rung appears — measured against
-  // the live recipe graph, not the tier labels (a label says when a recipe
-  // tends to arrive; producibility is what a player can actually pay).
-  function producible(mat, prof, seen) {
-    seen = seen || new Set();
-    if (seen.has(mat)) return false;
-    seen.add(mat);
-    const spec = C.MATS[mat];
-    if (!spec) return false;
-    if (spec.form === 'ore') return C.oreOpen(prof, mat);
-    for (const kind of C.KIND_IDS) {
-      if (kind === 'mine') continue;
-      for (const r of C.recipesFor(kind)) {
-        if (r.out !== mat || !C.offerable(r, prof)) continue;
-        if (Object.keys(r.in).every((m) => producible(m, prof, new Set(seen)))) return true;
-      }
-    }
-    return false;
-  }
+  // 9. the ladder branches (2026-08-22): walk every Mk table the course can
+  // reach from the pre-built mines and hold the rules at each. Prices are
+  // the only thing that orders one place against another, so the order the
+  // course intends — ring finger after middle, pinky after ring, the
+  // Fastener's keys after oil — has to fall out of what the prices ask for.
+  const WALK = LADDERWALK.walk(C, L, {
+    after: [
+      [['coal', 1], ['vedi', 1]],       // the seam asks for quartz
+      [['oil', 1], ['coal', 1]],        // the derrick asks for a coal alloy
+      [['fastener', 1], ['oil', 1]],    // the Fastener's keys need the Fastener, which needs oil
+    ],
+  });
+  line(WALK.states > 1 && !WALK.deadlocks.length, `the ladder is traversable on every branch: ${WALK.states} reachable states, none deadlocked`, WALK.deadlocks.join('<br>'));
+  line(!WALK.deadRows.length, 'a kind whose price you can pay but which has nothing to make can always name the upgrade it waits for, or comes alive later on the course', WALK.deadRows.join('<br>'));
+  line(WALK.farRows.length ? null : true, `kinds for sale more than four purchases before they have anything to make ("after deeper mines"): ${WALK.farRows.length} state·kind pairs`, WALK.farRows.slice(0, 12).join('<br>'));
+  line(!WALK.orderBad.length, 'the prices keep the finger order: coal after quartz, oil after coal, the Fastener\'s keys after oil — on every branch', WALK.orderBad.join('<br>'));
+  line(WALK.lookahead.length ? null : true, `no rung goes on sale two eras ahead of the lowest one still unbought${WALK.lookahead.length ? ' — ' + WALK.lookahead.length + ' to look at' : ''}`, WALK.lookahead.slice(0, 20).join('<br>'));
+  line(WALK.width >= 2, `the ladder branches: up to ${WALK.width} rungs for sale and producible at once (at ${WALK.widthAt})`);
+  // the course order is one of the branches: stepping the rungs in file
+  // order, every price is producible when its rung appears
   const priceBad = [];
   for (let i = 3; i < L.PAIRS.length; i++) {
     const prof = { pairsUnlocked: i, letters: {}, seen: {}, bag: {}, machines: [] };
     const ev = L.PAIRS[i];
-    const price = ev.at ? C.priceAt(ev.at, ev.mk) : (ev.mk === 1 ? C.priceNode(ev.ore) : C.priceMk(ev.ore, ev.mk));
-    for (const m of Object.keys(price || {})) if (!producible(m, prof)) priceBad.push(`pair ${i + 1} (${ev.keys.join(' ')}): ${m} not producible`);
+    const price = C.pricePair(ev);
+    for (const m of Object.keys(price || {})) if (!WALK.producible(m, { mk: C.mkTable(prof), letters: {}, seen: {}, bag: {}, machines: [] })) priceBad.push(`pair ${i + 1} (${ev.keys.join(' ')}): ${m} not producible`);
   }
-  line(!priceBad.length, 'the ladder is traversable: every price is producible when its rung appears', priceBad.join('<br>'));
+  line(!priceBad.length, 'stepping the course order, every price is producible when its rung appears', priceBad.join('<br>'));
 
   // 10. arity matches recipe inputs
   const arBad = C.RECIPES.filter((r) => Object.keys(r.in).length !== C.KINDS[r.kind].arity).map((r) => `${r.kind} → ${r.out}: ${Object.keys(r.in).length} inputs, arity ${C.KINDS[r.kind].arity}`);
@@ -193,10 +195,10 @@
   const strayChars = [];
   for (const [s] of [...(L.PHRASES || []), ...(L.SENTENCES || [])]) for (const c of s) if (c !== ' ' && !allKeys.has(c)) strayChars.push(`${s} — ${c}`);
   line(!strayChars.length, `phrases (${(L.PHRASES || []).length}) and sentences (${(L.SENTENCES || []).length}) use only the course's keys`, strayChars.slice(0, 10).join('<br>'));
-  // 15. the Assembler has phrases when it opens (16 keys), the Fastener sentences (20–21)
+  // 15. the Assembler has phrases when it opens (18 keys), the Fastener sentences (20–21)
   const at = (n) => ladder.find((a) => a.length >= n) || ladder[ladder.length - 1];
-  const ph16 = E.phrasePool(at(16)).length, se20 = E.sentencePool(at(20)).length, se21 = E.sentencePool(at(21)).length;
-  line(ph16 >= 30, `phrase pool at 16 keys ≥ 30 (${ph16})`);
+  const ph18 = E.phrasePool(at(C.KINDS.assembler.minAlpha)).length, se20 = E.sentencePool(at(20)).length, se21 = E.sentencePool(at(21)).length;
+  line(ph18 >= 30, `phrase pool at ${C.KINDS.assembler.minAlpha} keys ≥ 30 (${ph18})`);
   line(se20 >= 60 && se21 >= 100, `sentence pool at 20 keys ≥ 60 (${se20}), at 21 ≥ 100 (${se21})`);
   // 16. every ending family has an affix the Molder can use at 14 keys, and a real pool by 18
   const famBad = [];

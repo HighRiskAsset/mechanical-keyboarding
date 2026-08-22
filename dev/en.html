@@ -39,6 +39,7 @@
 <script src="../js/engine.js"></script>
 <script src="../js/sim.js"></script>
 <script src="../js/drops.js"></script>
+<script src="ladder-walk.js"></script>
 <script>
 (() => {
   const C = window.CHAIN, E = window.ENGINE, L = window.LANG_EN;
@@ -69,34 +70,30 @@
     const words = E.realWordPool(C.unlockedKeys(p).filter((c) => !L.PUNCT.has(c)));
     log.textContent = `word pool at T0: ${words.map(([w]) => w).join(', ') || '(none — syllables carry the tutorial)'}`;
     line(true, `T0 word pool noted (${words.length}) — 'y' is the only early vowel; syllables carry T0–T1`);
-    // the ladder is traversable: at each event, every material its price
-    // asks for is producible with the alphabet already unlocked (the coal
-    // node deadlock of 2026-08-20 — a price asking for parts before the
-    // 25-word gate could clear — is what this guards against)
-    function producible(mat, prof, seen) {
-      seen = seen || new Set();
-      if (seen.has(mat)) return false;
-      seen.add(mat);
-      const spec = C.MATS[mat];
-      if (!spec) return false;
-      if (spec.form === 'ore') return C.oreOpen(prof, mat);
-      for (const kind of C.KIND_IDS) {
-        if (kind === 'mine') continue;
-        for (const r of C.offerableRecipes(kind, prof)) {
-          if (r.out !== mat) continue;
-          if (Object.keys(r.in).every((m) => producible(m, prof, new Set(seen)))) return true;
-        }
-      }
-      return false;
-    }
+    // the ladder branches (2026-08-22): walk every Mk table the EN course
+    // can reach and hold the rules at each — no deadlock (the coal node
+    // deadlock of 2026-08-20, a price asking for parts before the 25-word
+    // gate could clear, is what this guards against), no kind for sale
+    // that cannot name what it waits for, the finger order kept by prices
+    const WALK = LADDERWALK.walk(C, L, {
+      after: [
+        [['coal', 1], ['vedi', 1]],
+        [['oil', 1], ['coal', 1]],
+        [['fastener', 1], ['oil', 1]],
+      ],
+    });
+    line(WALK.states > 1 && !WALK.deadlocks.length, `the ladder is traversable on every branch: ${WALK.states} reachable states, none deadlocked${WALK.deadlocks.length ? ' — ' + WALK.deadlocks.slice(0, 5).join(' ; ') : ''}`);
+    line(!WALK.deadRows.length, `a kind whose price you can pay but which has nothing to make can always name its fix${WALK.deadRows.length ? ' — ' + WALK.deadRows.slice(0, 5).join(' ; ') : ''}`);
+    line(!WALK.orderBad.length, `the prices keep the finger order on every branch${WALK.orderBad.length ? ' — ' + WALK.orderBad.slice(0, 5).join(' ; ') : ''}`);
+    line(true, `${WALK.lookahead.length} purchases would run two eras ahead (reported, not failed); up to ${WALK.width} rungs for sale at once`);
+    log.textContent += WALK.lookahead.length ? '\nlookahead: ' + WALK.lookahead.slice(0, 12).join('\n  ') : '';
     const ladderBad = [];
     for (let i = 3; i < L.PAIRS.length; i++) {
-      const prof = { pairsUnlocked: i, letters: {}, seen: {}, bag: {}, machines: [] };
+      const prof = { mk: C.mkTable({ pairsUnlocked: i }), letters: {}, seen: {}, bag: {}, machines: [] };
       const ev = L.PAIRS[i];
-      const price = ev.at ? C.priceAt(ev.at, ev.mk) : (ev.mk === 1 ? C.priceNode(ev.ore) : C.priceMk(ev.ore, ev.mk));
-      for (const m of Object.keys(price || {})) if (!producible(m, prof)) ladderBad.push(`pair ${i + 1} (${ev.keys.join(' ')}): ${m} not producible`);
+      for (const m of Object.keys(C.pricePair(ev) || {})) if (!WALK.producible(m, prof)) ladderBad.push(`pair ${i + 1} (${ev.keys.join(' ')}): ${m} not producible`);
     }
-    line(!ladderBad.length, 'the ladder is traversable: every price is producible when it appears', ladderBad.join('<br>'));
+    line(!ladderBad.length, `stepping the course order, every price is producible when it appears${ladderBad.length ? ' — ' + ladderBad.join(' ; ') : ''}`);
     // the full-course checks (mirroring dev/verify.html for the RU course)
     const letters = 'abcdefghijklmnopqrstuvwxyz';
     const seenK = {};
