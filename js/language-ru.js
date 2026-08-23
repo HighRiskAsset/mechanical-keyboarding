@@ -27,8 +27,21 @@
   // are the chain's material ids (az = iron, buki = copper, vedi = quartz —
   // legacy names, never renamed; stone / coal / oil are additive).
   // Entries with `at` are key events at a machine (comma at the Fastener…):
-  // they unlock when that machine's Mk is bought. Until those machines exist
-  // in the build (phases 4–5) they unlock as they are reached — see engine.
+  // they unlock when that machine's Mk is bought.
+  //
+  // COURSE EXCEPTION (user ruling 2026-08-22): no place goes past Mk3.
+  // Russian's 33 letters over six ores leave a rare tail on the pinky, so
+  // the oil rig's last two rungs carry four keys each instead of a mirror
+  // pair — Mk2 sweeps the pinky's top row (й з + х ъ, Q P [ ]), Mk3 its
+  // home row (ф ж + э, A ; ') with ё riding along on the corner key (`),
+  // the one off-finger key of the course. Combined weight of the four tail
+  // letters: ~1.5% of running text. And the dash key (Minus) rides Oil Mk1
+  // beside the period (user ruling 2026-08-22): Russian leans hard on the
+  // dash — дефис inside words, тире between clauses — and the derrick opens
+  // right as phrases begin, which is the first place a dash belongs; the
+  // Minus key is a right-pinky reach, oil's own finger. Every layout will
+  // carry a few such documented deviations (see DESIGN.md, Course
+  // exceptions); the EN course keeps its dash at Fastener Mk2.
   const PAIRS = [
     { keys: ['а', 'о'], ore: 'az', mk: 1, tier: 0 },     // F J — index home
     { keys: ['е', 'н'], ore: 'buki', mk: 1, tier: 0 },   // T Y — index top
@@ -39,15 +52,14 @@
     { keys: ['ы', 'д'], ore: 'coal', mk: 1, tier: 2 },   // S L — ring home
     { keys: ['к', 'г'], ore: 'buki', mk: 2, tier: 2 },   // R U — index inner top
     { keys: ['м', 'ь'], ore: 'stone', mk: 2, tier: 2 },  // V M — index inner bottom
-    { keys: ['я', '.'], ore: 'oil', mk: 1, tier: 3 },    // Z / — pinky bottom
+    { keys: ['я', '.', '-'], ore: 'oil', mk: 1, tier: 3 },   // Z / and the Minus key — pinky bottom + the dash (see the exception note)
     { keys: [','], at: 'fastener', mk: 1, tier: 3 },      // Shift+/ — the signature hurdle
     { keys: ['у', 'ш'], ore: 'vedi', mk: 3, tier: 3 },   // E I — middle top
-    { keys: ['й', 'з'], ore: 'oil', mk: 2, tier: 3 },    // Q P — pinky top
+    { keys: ['й', 'з', 'х', 'ъ'], ore: 'oil', mk: 2, tier: 3 },  // Q P [ ] — the pinky's top-row sweep (the tail fold)
     { keys: ['ч', 'ю'], ore: 'coal', mk: 2, tier: 4 },   // X . — ring bottom
-    { keys: ['?', '!', '-'], at: 'fastener', mk: 2, tier: 4 },
-    { keys: ['ф', 'ж'], ore: 'oil', mk: 3, tier: 4 },    // A ; — pinky home
+    { keys: ['?', '!'], at: 'fastener', mk: 2, tier: 4 },
+    { keys: ['ф', 'ж', 'э', 'ё'], ore: 'oil', mk: 3, tier: 4 },  // A ; ' ` — the pinky's home-row sweep; ё on the corner key
     { keys: ['ц', 'щ'], ore: 'coal', mk: 3, tier: 4 },   // W O — ring top
-    { keys: ['э', 'х', 'ё', 'ъ'], ore: 'oil', mk: 4, tier: 5 }, // outer pinky
     { keys: [':', ';', '"', '(', ')'], at: 'fastener', mk: 3, tier: 5 },
   ];
 
@@ -517,7 +529,7 @@
   // are [text, gloss]; a text fits a lesson when every letter — and every
   // mark — is unlocked, so the lists are written across the ladder: the
   // earliest ones use only а о е н и т в л п р с б ы д к г, later ones add
-  // м ь · я · у ш · й з · ч ю · ? ! - · ф ж · ц щ · э х ё ъ · : ; " ( ).
+  // м ь · я · у ш · й з х ъ · ч ю · ? ! - · ф ж э ё · ц щ · : ; " ( ).
   const PHRASES = [
     ['он не один', 'he is not alone'], ['вот и все', "that's all"], ['так и так', 'one way or another'], ['нет воды', 'no water'],
     ['один в поле', 'alone in the field'], ['вода и лед', 'water and ice'], ['она не одна', 'she is not alone'], ['никто не видел', 'nobody saw'],

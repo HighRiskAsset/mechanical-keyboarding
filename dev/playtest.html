@@ -35,6 +35,7 @@
 (() => {
   const C = window.CHAIN, L = window.LANG_RU;
   C.useMap('range');   // flat map: pacing without geography
+  const CASCADE = /[?&]cascade=1/.test(location.search);   // model the cascade retool (proposal, see below)
 
   // ---- the learner model ----
   // WPM ramps like a real adult beginner (hours of *practice*, not calendar);
@@ -239,7 +240,21 @@
         p.mk[C.placeOf(np)] = np.mk;
         p.unlockLog.push({ keys: np.keys, at: 0 });
         if (np && np.ore && np.mk === 1) built.mine[np.ore] = true;
-        if (np && np.ore && np.mk > 1) { auto['mine:' + np.ore] = 0; }   // retool: automation drops
+        if (np && np.ore && np.mk > 1) {
+          auto['mine:' + np.ore] = 0;   // retool: automation drops
+          // ?cascade=1 — the proposed rule (2026-08-22, not in the game): a Mk
+          // also retools every Smelter / Foundry / Constructor whose recipe
+          // carries that ore, so syllables, clusters and words are re-done
+          // by hand with the new keys until ⚙ is bought again
+          if (CASCADE) for (const kind of ['smelter', 'foundry', 'constructor']) {
+            const mat = autoRecipe[kind];
+            if (!auto[kind] || !mat) continue;
+            const r = recipeToMake(mat);
+            const ores = new Set((C.MATS[mat] || {}).ores || []);
+            if (r) for (const im of Object.keys(r.in)) for (const o of ((C.MATS[im] || {}).ores || [])) ores.add(o);
+            if (ores.has(np.ore)) { auto[kind] = 0; purchases.push(`${hours.toFixed(1)}h  retool ${kind}`); }
+          }
+        }
         purchases.push(`${hours.toFixed(1)}h  ${np ? np.keys.join('') : '?'}`);
         rows.push({ event: np ? np.keys.join(' ') : '?', tier: np ? np.tier : '?', hours: +(hours - lastHours).toFixed(2), at: +hours.toFixed(2) });
         lastHours = hours;

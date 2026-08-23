@@ -39,7 +39,7 @@
   // the letters the generator can produce today — the readiness gate only
   // looks at these (comma and the deeper punctuation arrive with their
   // machines in later build phases)
-  const TRAINABLE_PUNCT = new Set(['.']);
+  const TRAINABLE_PUNCT = new Set(['.', '-']);   // marks a course may seat on a mine rung (RU: both ride the oil derrick)
   const trainable = (ch) => !L.PUNCT.has(ch) || TRAINABLE_PUNCT.has(ch);
 
   // ---------- profile ----------
@@ -645,6 +645,16 @@
       const pMid = Math.min(0.3, 0.1 * (1 + 2 * weaknessOf('.')));
       for (let i = 0; i < words.length - 1; i++) if (!words[i].punct && Math.random() < pMid) words[i].punct = '.';
       if (Math.random() < 0.85) words[words.length - 1].punct = '.';
+    }
+    // the dash stands alone between words, a space each side (the Russian
+    // clause dash; the glyph rides the Minus key — see DESIGN.md, Course
+    // exceptions). Only where prose would carry one: words and endings,
+    // never syllables.
+    if (alpha.includes('-') && (mode === 'words' || mode === 'endings')) {
+      const pDash = Math.min(0.18, 0.06 * (1 + 2 * weaknessOf('-')));
+      for (let i = words.length - 2; i >= 1; i--) {
+        if (!words[i - 1].punct && words[i - 1].text !== '-' && Math.random() < pDash) words.splice(i, 0, { text: '-', gloss: null });
+      }
     }
     return words;
   }

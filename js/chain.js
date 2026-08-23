@@ -211,11 +211,10 @@
       stone: { 2: { stone: 80, gunmetal: 30 } },
       vedi: { 2: { vedi: 60, slogi: 40 }, 3: { vedi: 60, stroki: 30 } },   // Mk3 in modules: the middle finger's top row waits for the Assembler's era
       coal: { 2: { fast: 40, brass: 40 }, 3: { coal: 60, glass: 25 } },
-      // Mk3 in fastened goods: the Fastener era, not a sprint from Mk2. Mk4 in
-      // crates: the outer pinky is the last era, after the Crane stands
-      // — a few crates, not a stack: a crate hides a whole pyramid of
-      // fastened goods, and the Crane's existence is the gate, not its volume
-      oil: { 2: { oil: 60, glass: 30 }, 3: { oil: 60, fast: 30 }, 4: { oil: 80, crate: 6 } },
+      // Mk3 in fastened goods: the Fastener era, not a sprint from Mk2. No
+      // place goes past Mk3 (user ruling 2026-08-22): RU's rare pinky tail
+      // folded into Mk2/Mk3 as four-key sweeps — see language-ru.js
+      oil: { 2: { oil: 60, glass: 30 }, 3: { oil: 60, fast: 30 } },
     },
     // Mk levels on a machine kind (the Fastener: punctuation keys) — its own
     // output, typed by hand right before the keys arrive, plus a tier good

@@ -982,7 +982,7 @@ what machines make; by the end everything mastered works without you while
 everything new still needs your hands.
 
 **Targets:** ~32 h to the finish (a floor set by skill gates, not a schedule);
-20 key introductions; ~47 distinct lessons; ~110 unlock moments (one every
+19 key introductions; ~47 distinct lessons; ~110 unlock moments (one every
 ~17 min); a typical full build ≈ 13 mines, 12 processors, 40 belts.
 
 ### The seven rules that generate the tree
@@ -1060,9 +1060,13 @@ If a recipe or a tier disagrees with a rule, the recipe is wrong.
 
 ### RU course — pairs, ores, tiers (LOCKED)
 
-Sixteen mine events (key-pairs) + four key events at machines = twenty key
+Fifteen mine events + four key events at machines = nineteen key
 introductions. Coverage of running Russian text: T0 47% · T1 71% · T2 86% ·
-T3 95% · T4 99% · T5 100%. All six T0 keys are index-finger keys.
+T3 96% · T4 100% of letters · T5 adds the deep punctuation. All six T0 keys
+are index-finger keys. **No place goes past Mk3 (user ruling 2026-08-22):**
+Russian's rare pinky tail (э х ё ъ, ~1.5% of text together) folds into the
+oil rig's last two rungs as four-key row sweeps — see Course exceptions
+below.
 
 | # | Tier | Event | Keys | Comes after (the ladder) | Price at the place (pattern, ×PACE) | Opens |
 |---|---|---|---|---|---|---|
@@ -1075,18 +1079,58 @@ T3 95% · T4 99% · T5 100%. All six T0 keys are index-finger keys.
 | 7 | T2 | Coal node | ы д (S L) | с б | 60 parts + 40 quartz iron | ring finger; steel; alphabet ≥14 → Molder |
 | 8 | T2 | Copper Mk2 | к г (R U) | ы д | 80 copper + 30 steel | copper retools; -ник -ение family |
 | 9 | T2 | Stone Mk2 | м ь (V M) | к г | 80 stone + 30 steel | stone retools; brass; -ть verbs; ≥16 → Assembler |
-| 10 | T3 | Oil node | я . (Z /) | м ь | 60 modules + 40 steel | pinky and the period; black iron; Fastener Mk1 (comma = Shift+/) right after |
+| 10 | T3 | Oil node | я . - (Z / Minus) | м ь | 60 modules + 40 steel | pinky, the period and the dash key (phrases just began — see Course exceptions); black iron; Fastener Mk1 (comma = Shift+/) right after |
 | 11 | T3 | Quartz Mk3 | у ш (E I) | я . , | 60 quartz + 30 black iron | quartz retools; T1 stations refresh (суп шум шов) |
-| 12 | T3 | Oil Mk2 | й з (Q P) | у ш | 60 oil + 30 black iron | oil retools; black brass; -ый -ий -ой |
-| 13 | T4 | Coal Mk2 | ч ю (X .) | й з | 60 fastened + 40 steel | coal retools; gunmetal; Fastener Mk2 (? ! -) |
-| 14 | T4 | Oil Mk3 | ф ж (A ;) | ? ! - | 60 oil + 40 gunmetal | oil retools; black iron widens |
-| 15 | T4 | Coal Mk3 | ц щ (W O) | ф ж | 60 coal + 40 quartz steel | coal retools; quartz steel; -ция -щик |
-| 16 | T5 | Oil Mk4 | э х ё ъ (' [ ` ]) | ц щ | 60 oil + 60 fastened | glass, coke iron; then Crane (Shift), then Fastener Mk3 (: ; " ( )) |
+| 12 | T3 | Oil Mk2 | й з х ъ (Q P [ ]) | у ш | 60 oil + 30 glass | oil retools; the pinky's top-row sweep (tail fold); black brass; -ый -ий -ой |
+| 13 | T4 | Coal Mk2 | ч ю (X .) | й з х ъ | 40 fastened + 40 brass | coal retools; Fastener Mk2 (? ! -) |
+| 14 | T4 | Oil Mk3 | ф ж э ё (A ; ' `) | ? ! - | 60 oil + 30 fastened | oil retools; the pinky's home-row sweep, ё on the corner key; all 33 letters in |
+| 15 | T4 | Coal Mk3 | ц щ (W O) | ф ж э ё | 60 coal + 25 glass | coal retools; quartz steel; -ция -щик; then Crane (Shift), then Fastener Mk3 (: ; " ( )) |
 
 Key events at machines: comma (Fastener Mk1, T3 — Shift's first appearance,
-the layout's signature hurdle) · ? ! - (Fastener Mk2, T4) · Shift as
-capitals (Crane, T5) · : ; " ( ) (Fastener Mk3, T5). Numbers stay out (a
-bonus tier later). Prices are placeholders showing the pattern: the ore's own
+the layout's signature hurdle) · ? ! (Fastener Mk2, T4 — RU's dash moved to
+the derrick) · Shift as capitals (Crane, T5) · : ; " ( ) (Fastener Mk3, T5).
+Numbers stay out (a bonus tier later — the user wants them added for the
+late game eventually, 2026-08-22).
+
+### Course exceptions (user ruling 2026-08-22)
+
+**No place goes past Mk3, ever — three reaches is the shape of the game.**
+Where a language's alphabet doesn't divide evenly into mirror pairs over six
+ores, the course folds the remainder into existing rungs and documents the
+deviation here and in its own course file. Every layout will carry a few of
+these; they are data, never engine rules (invariant 5).
+
+- **RU (ЙЦУКЕН):** 33 letters leave a rare tail on the pinky. Oil Mk2 is a
+  four-key top-row sweep (й з х ъ — Q P [ ]) and Mk3 a four-key home-row
+  sweep (ф ж э ё — A ; ' `), with ё on the corner key the course's one
+  off-finger stroke. The four tail letters together are ~1.5% of text.
+- **EN (QWERTY):** 26 letters end at Oil Mk3 naturally; the period rides
+  the Period key and the apostrophe the Quote key (marks where RU has
+  letters); '?' is Shift+Slash, the same stroke as the Russian comma.
+- **RU: the dash key rides the oil derrick (Oil Mk1 = я . -).** Russian
+  leans on the dash the way English leans on the comma, and phrases — the
+  first content a dash belongs in — begin right before the derrick opens
+  (its price is the Assembler's modules). The Minus key is a right-pinky
+  reach and oil is the pinky's ore, so even the finger stays honest.
+  Generated word and ending lines seat it standalone with a space each
+  side, the way тире stands; drills never put it inside syllables. The EN
+  course keeps its dash at Fastener Mk2 — a mark on a mine rung is a
+  per-course seating, exactly like the period.
+- **Punctuation is a course decision, both the set and the glyph.** Russian
+  prose leans hard on the em dash (тире: «Москва — столица») — and the
+  standard ЙЦУКЕН layout has **no em dash key**: real typists get «—» from
+  editor autocorrect, Alt+0151, or enthusiast layouts. Same story for the
+  typographic quotes «». The course therefore teaches the *stroke* and maps
+  the *glyph*: the Minus key is the dash — drills display and accept «—»
+  for it in sentence content — and the Quote-role key carries the quote
+  glyph the language actually prints. The glyph map lives in the course
+  file next to the pair table.
+- **Expected later, same pattern:** Spanish (ñ on its own key on ES
+  layouts, dead-key accents), Polish (AltGr diacritics — a new modifier
+  taught like Shift), French (AZERTY moves the home fingers), CJK (an IME
+  sits between keys and text — a different course model, out of scope until
+  scoped). None of these bend the engine; each is a pair table, a glyph
+  map, and a documented exception list. Prices are placeholders showing the pattern: the ore's own
 material, typed by hand right before its new keys arrive, plus a good from the
 current tier. Extra mines of an ore are bought at unbuilt nodes and inherit
 the ore's Mk. The "comes after" column is the course order — one branch of
@@ -1112,8 +1156,9 @@ a mechanic; progress is what you type and spend.
   are both for sale from the first smelt (the first branch). The coal seam
   asks for raw quartz, so the ring finger follows the middle. Copper Mk2 and
   Stone Mk2 ask for gunmetal, so they follow coal — and open together. The
-  oil derrick asks for modules, Quartz Mk3 for modules, Oil Mk3 for
-  fastened goods, and the last two rungs (Oil Mk4, Fastener Mk3) for a few
+  oil derrick asks for modules, Quartz Mk3 for modules, Oil Mk3 (the last
+  letters) for
+  fastened goods, and the last rung (Fastener Mk3) for a few
   crates — the Crane's existence, not its volume. The Assembler's floor is
   18 keys (the v3 table's own row), so modules imply every rung of the
   first three eras: nothing early can be left behind when the pinky comes.
