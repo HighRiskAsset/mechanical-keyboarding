@@ -142,6 +142,9 @@
     ['strung', '', 'verbs'], ['dry', '', 'adj'], ['try', '', 'verbs'], ['cry', '', 'verbs'],
     ['fry', '', 'verbs'], ['sty', '', 'place'], ['guy', '', 'people'], ['buy', '', 'verbs'],
     ['truly', '', 'func'], ['ugly', '', 'adj'], ['dryly', '', 'adj'], ['curtly', '', 'adj'],
+    ['nub', '', 'things'], ['bunt', '', 'verbs'], ['brunt', '', 'things'], ['burnt', '', 'adj'],
+    ['bunny', '', 'nature'], ['runny', '', 'adj'], ['nutty', '', 'adj'], ['ruby', '', 'things'],
+    ['bury', '', 'verbs'],
     // --- pair 9 adds v m ---
     ['mud', '', 'nature'], ['hum', '', 'verbs'], ['sum', '', 'things'], ['gum', '', 'things'],
     ['rum', '', 'things'], ['mug', '', 'things'], ['smug', '', 'adj'], ['drum', '', 'things'],
@@ -149,6 +152,8 @@
     ['mum', '', 'people'], ['musk', '', 'nature'], ['murky', '', 'adj'], ['myth', '', 'life'],
     ['gym', '', 'place'], ['hymn', '', 'life'], ['much', '', 'func'], ['must', '', 'func'],
     ['muddy', '', 'adj'], ['mutt', '', 'nature'], ['munch', '', 'verbs'], ['brunch', '', 'home'],
+    ['my', '', 'func'], ['numb', '', 'adj'], ['tummy', '', 'people'], ['yummy', '', 'adj'],
+    ['murmur', '', 'verbs'],
     ['bunch', '', 'things'], ['lunch', '', 'home'], ['crunch', '', 'verbs'], ['hunch', '', 'life'],
     ['muggy', '', 'adj'], ['mushy', '', 'adj'],
     // --- pair 10 adds z (and the period) ---
