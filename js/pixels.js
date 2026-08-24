@@ -2139,6 +2139,15 @@
     blackiron: [P.bIron, P.bIronD, P.bIronL],
     gunmetal: [P.gun, P.gunD, P.gunL],
     glass: [P.gls, P.glsD, P.glsL],
+    // the deep rungs' signature alloys (ledger 2026-08-22) borrow their
+    // nearest kin's tones until the Phase 6 art pass names their own; the
+    // added ore's end-columns keep them apart on the belt
+    rivetiron: [P.bronze, P.bronzeD, P.bronzeL],
+    bellquartz: [P.qIron, P.qIronD, P.qIronL],
+    naphtha: [P.bronze, P.bronzeD, P.bronzeL],
+    cokebrass: [P.gun, P.gunD, P.gunL],
+    petrolglass: [P.gls, P.glsD, P.glsL],
+    flashcopper: [P.brs, P.brsD, P.brsL],
   };
   // A two-ore bar is cast with the added ore left showing at one end, in that
   // ore's own colour: bronze with a copper end, steel with a coal-black one.
@@ -2216,6 +2225,24 @@
                     '21144222',
                     '.211112.',
                     '..2222..'], t: [P.iron, P.iron3, P.steel, P.soot] },
+    // the Fastener's product line (ledger 2026-08-22): the same cased good,
+    // sealed in brass, then bound in glass-green — read apart at a glance
+    sealed: { m: ['..3333..',
+                  '.311113.',
+                  '31144112',
+                  '31444412',
+                  '21444422',
+                  '21144222',
+                  '.211112.',
+                  '..2222..'], t: [P.iron, P.brass2, P.brass1, P.soot] },
+    bound: { m: ['..3333..',
+                 '.311113.',
+                 '31144112',
+                 '31444412',
+                 '21444422',
+                 '21144222',
+                 '.211112.',
+                 '..2222..'], t: [P.iron, P.gls, P.glsL, P.soot] },
     crates: { m: ['........',
                   '.333333.',
                   '.311113.',
@@ -2246,13 +2273,24 @@
     const spec = (window.CHAIN && window.CHAIN.MATS && window.CHAIN.MATS[kind]) || null;
     const form = spec ? spec.form : (kind === 'money' ? 'money' : 'crates');
     if (form === 'ore') {
-      const t = (ORE_TONE[kind] || ORE_TONE.az).concat(ORE_EXTRA[kind] || P.white);
-      return matMask(ORE_MASK[kind] || ORE_MASK.az, t);
+      // a deep ore wears its family's art with depth pips along the top —
+      // one bright fleck per reach past the first (Phase 6 gives each its
+      // own chunk; until then the pips are the mark)
+      const fam = (spec && spec.ores[0]) || kind;
+      const t = (ORE_TONE[fam] || ORE_TONE.az).concat(ORE_EXTRA[fam] || P.white);
+      const c = matMask(ORE_MASK[fam] || ORE_MASK.az, t);
+      const depth = (spec && spec.depth) || 1;
+      if (depth > 1) {
+        const x = c.getContext('2d');
+        x.fillStyle = P.white;
+        for (let i = 0; i < depth - 1; i++) x.fillRect(1 + i * 2, 0, 1, 1);
+      }
+      return c;
     }
     if (form === 'ingot') {
       const t = ALLOY_TONE[kind] || ALLOY_TONE.castiron;
-      if (kind === 'glass') return matMask(PANE, t);
-      const a = ORE_TONE[spec.ores[1]] || ORE_TONE.az;
+      if (kind === 'glass' || kind === 'petrolglass') return matMask(PANE, t);
+      const a = ORE_TONE[(spec.ores && spec.ores[1]) || 'az'] || ORE_TONE.az;
       return matMask(BAR, t.concat([a[0], a[2]]));
     }
     if (form === 'ingot3') {

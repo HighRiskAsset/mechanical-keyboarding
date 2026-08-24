@@ -17,7 +17,7 @@
     'ь': 1.84, 'г': 1.72, 'з': 1.48, 'ч': 1.40, 'й': 1.21, 'ж': 1.01,
     'х': 0.95, 'ш': 0.72, 'ю': 0.47, 'ц': 0.39, 'э': 0.36, 'щ': 0.30,
     'ф': 0.21, 'ё': 0.20, 'ъ': 0.02,
-    '.': 1.20, ',': 1.60, '-': 0.30, '?': 0.12, '!': 0.10,
+    '.': 1.20, ',': 1.60, '-': 1.00, '?': 0.12, '!': 0.10,   // the dash carries дефис AND тире — Russian leans on it harder than on ? (2026-08-22)
     ':': 0.10, ';': 0.05, '"': 0.20, '(': 0.05, ')': 0.05,
   };
 
@@ -162,12 +162,23 @@
     for (const [s, w] of MORE_SYLLABLES) if (!have.has(s)) { SYLLABLES.push([s, Math.max(1, Math.round(w / 3))]); have.add(s); }
   }
 
+  // Grown 50 → 108 with the deep-ore ledger (2026-08-22, "larger than you
+  // think you need"): every real onset and medial cluster the drills can
+  // seat, with the late letters' clusters (ч щ ж ц х ш) pulled in so a
+  // third Foundry visit never repeats itself. Consonants only (verify).
   const CLUSTERS = [
     'ст', 'ск', 'сп', 'ср', 'сн', 'сл', 'св', 'см', 'сб', 'сд',
     'пр', 'пл', 'тр', 'тв', 'кр', 'кл', 'вл', 'вр', 'вс', 'вн',
     'бр', 'бл', 'гр', 'гл', 'др', 'дв', 'дн', 'зн', 'зд', 'зв',
     'нт', 'нд', 'нк', 'рт', 'рм', 'рн', 'рк', 'лк', 'лн', 'мн',
     'стр', 'вст', 'здр', 'ств', 'скр', 'спр', 'чт', 'шк', 'жд', 'щн',
+    'тл', 'тн', 'тк', 'пт', 'пс', 'пн', 'кв', 'кт', 'кн', 'гн',
+    'гд', 'бн', 'вд', 'вт', 'вк', 'дл', 'дм', 'зл', 'зм', 'зр',
+    'сг', 'сх', 'сц', 'рв', 'рг', 'рд', 'рж', 'рб', 'рс', 'рп',
+    'лб', 'лг', 'лд', 'лм', 'лт', 'мк', 'мл', 'мр', 'нг', 'нц',
+    'чк', 'чн', 'шн', 'шл', 'шт', 'шр', 'жн', 'жг', 'жк', 'цв',
+    'хв', 'хл', 'хр', 'хм', 'щб', 'ткн', 'ткр', 'спл', 'скл',
+    'взгл', 'вздр', 'встр', 'нстр', 'льн', 'тьс', 'ждн', 'жств',
   ];
 
   // ---- ending families: the Molder's grammar, keyed by ore (flux) ----
@@ -522,6 +533,44 @@
     ['своё', "one's own (n.)", 'func'], ['моё', 'my (n.)', 'func'], ['живёт', 'lives', 'verbs'], ['идёт', 'goes', 'verbs'],
     ['поёт', 'sings', 'verbs'], ['объём', 'volume', 'things'], ['объект', 'object', 'things'], ['съезд', 'congress', 'life'],
     ['подъезд', 'entrance (building)', 'home'], ['въезд', 'entry (vehicle)', 'place'], ['объявление', 'announcement', 'work'],
+    // --- the deep-ore pass (2026-08-22): the pinned alloys' thin sets, and
+    // the workshop's own vocabulary — the frontier talks like a foundry ---
+    ['пар', 'steam', 'nature'], ['пора', 'time (to go)', 'time'], ['опора', 'support / pillar', 'things'],
+    ['парад', 'parade', 'life'], ['радар', 'radar', 'things'], ['дар', 'gift', 'life'], ['ряд', 'row', 'things'],
+    ['ряды', 'rows / ranks', 'things'], ['дыра', 'hole', 'place'], ['чары', 'charms / spells', 'life'],
+    ['тень', 'shadow', 'nature'], ['нить', 'thread', 'things'], ['гнить', 'to rot', 'verbs'],
+    ['гимн', 'anthem', 'life'], ['миг', 'instant', 'time'],
+    ['рудник', 'mine (the works)', 'work'], ['забой', 'coalface', 'work'], ['кузнец', 'blacksmith', 'people'],
+    ['кузница', 'smithy', 'work'], ['наковальня', 'anvil', 'things'], ['болванка', 'blank / billet', 'things'],
+    ['заклёпка', 'rivet', 'things'], ['клапан', 'valve', 'things'], ['вентиль', 'stop valve', 'things'],
+    ['шайба', 'washer (part)', 'things'], ['гайка', 'nut (bolt’s)', 'things'], ['болт', 'bolt', 'things'],
+    ['винт', 'screw', 'things'], ['рычаг', 'lever', 'things'], ['шкив', 'pulley', 'things'],
+    ['лебёдка', 'winch', 'things'], ['домна', 'blast furnace', 'work'], ['кокс', 'coke (fuel)', 'things'],
+    ['слиток', 'ingot', 'things'], ['зола', 'ash', 'nature'], ['сажа', 'soot', 'nature'],
+    ['копоть', 'grime / soot film', 'nature'], ['дым', 'smoke', 'nature'], ['гарь', 'burnt smell', 'nature'],
+    ['шахта', 'mine shaft', 'work'], ['штольня', 'adit / gallery', 'work'], ['вагонетка', 'mine cart', 'things'],
+    ['рельс', 'rail', 'things'], ['шпала', 'sleeper / tie', 'things'], ['стрелка', 'switch / arrow', 'things'],
+    ['котельная', 'boiler room', 'work'], ['котёл', 'boiler', 'things'], ['топка', 'firebox', 'things'],
+    ['уголёк', 'small coal', 'things'], ['искра', 'spark', 'nature'], ['пламя', 'flame', 'nature'],
+    ['жар', 'heat / embers', 'nature'], ['окалина', 'mill scale', 'things'], ['шлак', 'slag', 'things'],
+    ['прокат', 'rolled stock', 'work'], ['вальцы', 'rollers', 'things'], ['стан', 'rolling mill', 'work'],
+    ['цех', 'shop floor', 'work'], ['смена', 'work shift', 'work'], ['бригада', 'work crew', 'people'],
+    ['мастер', 'foreman', 'people'], ['подмастерье', 'apprentice', 'people'], ['чертёж', 'blueprint', 'work'],
+    ['лекало', 'template / curve', 'things'], ['штамп', 'die / stamp', 'things'], ['пресс', 'press', 'things'],
+    ['тиски', 'vice (tool)', 'things'], ['зубило', 'chisel', 'things'], ['напильник', 'file (tool)', 'things'],
+    ['сверло', 'drill bit', 'things'], ['токарь', 'lathe operator', 'people'], ['фреза', 'milling cutter', 'things'],
+    ['шестерня', 'gear wheel', 'things'], ['поршень', 'piston', 'things'], ['шатун', 'connecting rod', 'things'],
+    ['маховик', 'flywheel', 'things'], ['золотник', 'slide valve', 'things'], ['манометр', 'pressure gauge', 'things'],
+    ['форсунка', 'injector nozzle', 'things'], ['горн', 'forge hearth', 'things'], ['мех', 'bellows / fur', 'things'],
+    ['тигель', 'crucible', 'things'], ['изложница', 'ingot mould', 'things'], ['отливка', 'casting', 'things'],
+    ['поковка', 'forging (piece)', 'things'], ['заготовка', 'workpiece', 'things'], ['обжиг', 'firing / roasting', 'work'],
+    ['закалка', 'quench / temper', 'work'], ['припой', 'solder', 'things'], ['флюс', 'flux (smelting)', 'things'],
+    ['руда', 'ore', 'nature'], ['жила', 'vein (of ore)', 'nature'], ['пласт', 'seam / layer', 'nature'],
+    ['порода', 'rock / gangue', 'nature'], ['отвал', 'spoil heap', 'place'], ['карьер', 'open pit', 'place'],
+    ['штрек', 'drift (mining)', 'work'], ['крепь', 'shoring / props', 'things'], ['фонарь', 'lantern', 'things'],
+    ['каска', 'hard hat', 'things'], ['кирка', 'pickaxe', 'things'], ['лом', 'crowbar / scrap', 'things'],
+    ['тачка', 'wheelbarrow', 'things'], ['лоток', 'chute / tray', 'things'], ['жёлоб', 'trough / flume', 'things'],
+    ['насос', 'pump', 'things'], ['штуцер', 'pipe fitting', 'things'], ['муфта', 'coupling / muff', 'things'],
   ];
 
   // ---- phrases: the Assembler's grammar (collocations and short lines, no
@@ -656,6 +705,37 @@
     ['хлеб да соль.', 'Bread and salt.'], ['это мой дом, а это - твой.', 'This is my house, and this is yours.'], ['ещё чуть-чуть.', 'A little more.'], ['поэт читает стихи.', 'The poet reads poems.'],
     ['он сказал: "иди домой".', 'He said: "go home".'], ['вот что нужно: хлеб, соль, вода.', "Here's what's needed: bread, salt, water."], ['книга (старая) лежит на столе.', 'The book (an old one) lies on the table.'], ['"да", - сказал он.', '"Yes," he said.'],
     ['день прошёл; настала ночь.', 'The day passed; night came.'], ['я знаю одно: это не конец.', 'I know one thing: this is not the end.'],
+    // --- the dash pass (2026-08-22): тире at its true weight. Typed as the
+    // hyphen key with a space each side — the stroke every editor sets long;
+    // the display glyph map (— for standalone -) rides the course data ---
+    ['жизнь - игра.', 'Life is a game.'], ['время - деньги.', 'Time is money.'],
+    ['слово - не воробей.', 'A word is not a sparrow (said is said).'], ['повторение - мать учения.', 'Repetition is the mother of learning.'],
+    ['труд - основа всего.', 'Labor is the base of everything.'], ['уголь - хлеб завода.', 'Coal is the factory’s bread.'],
+    ['печать - моё ремесло.', 'Typing is my craft.'], ['завод - мой дом.', 'The works are my home.'],
+    ['дорога - на восток.', 'The road runs east.'], ['вода - рядом.', 'Water is near.'],
+    ['медь - мягкий металл.', 'Copper is a soft metal.'], ['сталь - твёрдая.', 'Steel is hard.'],
+    ['кварц - редкий гость.', 'Quartz is a rare guest.'], ['нефть - чёрное золото.', 'Oil is black gold.'],
+    ['латунь - сплав меди.', 'Brass is a copper alloy.'], ['бронза - старый сплав.', 'Bronze is an old alloy.'],
+    ['стекло - хрупкое.', 'Glass is fragile.'], ['дым - знак работы.', 'Smoke is the sign of work.'],
+    ['искра - начало огня.', 'A spark is the start of a fire.'], ['тишина - редкость в цеху.', 'Silence is a rarity on the floor.'],
+    ['мастер - строгий, но добрый.', 'The foreman is strict but kind.'], ['смена - до заката.', 'The shift runs to sundown.'],
+    ['рудник - глубже, чем кажется.', 'The mine is deeper than it looks.'], ['путь - долгий, цель - одна.', 'The way is long; the goal is one.'],
+    ['утро - для работы, вечер - для песен.', 'Morning is for work, evening for songs.'],
+    ['молот - в руке, дело - в голове.', 'The hammer is in the hand, the plan in the head.'],
+    ['один - за всех, все - за одного.', 'One for all, all for one.'],
+    ['лето - короткое, зима - длинная.', 'Summer is short, winter is long.'],
+    ['дом - там, где твой станок.', 'Home is where your machine stands.'],
+    ['ошибка - урок, а не беда.', 'A mistake is a lesson, not a disaster.'],
+    ['терпение - ключ к ремеслу.', 'Patience is the key to craft.'],
+    ['карта - не земля.', 'The map is not the land.'],
+    ['уголь - в топку, пар - в трубы.', 'Coal to the firebox, steam to the pipes.'],
+    ['рельсы - на юг, провода - на север.', 'Rails run south, wires run north.'],
+    ['хлеб - на столе, дело - сделано.', 'Bread is on the table, the work is done.'],
+    ['глубже шахта - богаче жила.', 'The deeper the shaft, the richer the vein.'],
+    ['выше труба - дальше дым.', 'The taller the stack, the farther the smoke.'],
+    ['наш девиз - работать и петь.', 'Our motto is to work and sing.'],
+    ['первый слиток - самый дорогой.', 'The first ingot is the dearest one.'],
+    ['тяжёлый модуль - лёгкое сердце.', 'A heavy module, a light heart.'],
   ];
 
   // ---- proper names: the Crane's capitals (first letter is the drill) ----

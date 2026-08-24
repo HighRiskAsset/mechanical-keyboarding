@@ -420,6 +420,12 @@ full run; data checks green; the EN stub loads.
   the sentence pool at 20 letters ≥ 100; prices reference existing materials
   the player can hold by that tier; `KINDS` arity matches recipe inputs;
   outlets/inlets are consistent; no Cyrillic literal in `engine.js`.
+- **Deep ores landed 2026-08-22** (same day as the branch; DESIGN.md "Deep
+  ores" is the record): 9 deep ore materials + 6 signature alloys + sealed/
+  bound goods; constant per-course recipe books replace every runtime
+  content floor; ⚙ per recipe with a hand-made run-in; family-aware bag,
+  belts and prices. The pacing bot reads 31.1 h at PACE 3. Content grew
+  with it (clusters 108, RU +105 words, +40 dash sentences, EN 841 words).
 - **`dev/ladder-walk.js`** (2026-08-22, the branch) — walks every Mk table
   a course can reach from the pre-built mines (RU 98 states, EN 59) and
   returns what holds at each: deadlocks, kinds for sale with nothing to

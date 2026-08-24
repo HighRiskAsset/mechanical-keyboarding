@@ -72,64 +72,130 @@
   // three across: the Crane's jib and the printing hall have the reach to
   // earn it, and the Manufacturer needs the front's third place for its
   // fifth port.
+  // Content floors left the runtime with the deep-ore ledger (2026-08-22):
+  // a recipe's alphabet is a constant of its pinned inputs, so what a course
+  // can drill is decided once, when its book is built (below) — V+C for the
+  // Smelter, the word floor for the Constructor — and every gate the player
+  // meets is an ingredient. Full-set kinds drill the whole unlocked set.
   const KINDS = {
-    mine:         { id: 'mine',         arity: 0, grammar: 'letters',   minAlpha: 2,  perUnit: 1,  autoFrom: 0,  tier: 0, size: [2, 1], ready: true },
-    smelter:      { id: 'smelter',      arity: 2, grammar: 'syllables', minAlpha: 4,  perUnit: 4,  autoFrom: 1,  tier: 0, size: [2, 2], ready: true, needsVC: true },
-    foundry:      { id: 'foundry',      arity: 2, grammar: 'clusters',  minAlpha: 8,  perUnit: 5,  autoFrom: 2,  tier: 1, size: [2, 2], ready: true },
-    constructor:  { id: 'constructor',  arity: 1, grammar: 'words',     minAlpha: 8,  perUnit: 6,  autoFrom: 2,  tier: 1, size: [2, 2], ready: true, minWords: 25 },
-    molder:       { id: 'molder',       arity: 2, grammar: 'endings',   minAlpha: 14, perUnit: 6,  autoFrom: 3,  tier: 2, size: [2, 2], ready: true,  full: true },
-    // the Assembler wants every key of the first three eras (18): the oil
-    // derrick is priced in its modules, so no early rung can be left behind
-    // when the pinky arrives (2026-08-22, the branch)
-    assembler:    { id: 'assembler',    arity: 2, grammar: 'phrases',   minAlpha: 18, perUnit: 8,  autoFrom: 3,  tier: 2, size: [2, 2], ready: true,  full: true },
-    fastener:     { id: 'fastener',     arity: 2, grammar: 'punct',     minAlpha: 20, perUnit: 8,  autoFrom: 4,  tier: 3, size: [2, 2], ready: true,  full: true },
-    crane:        { id: 'crane',        arity: 2, grammar: 'capitals',  minAlpha: 30, perUnit: 8,  autoFrom: 6,  tier: 5, size: [3, 2], ready: true,  full: true },
-    manufacturer: { id: 'manufacturer', arity: 3, grammar: 'pages',     minAlpha: 33, perUnit: 12, autoFrom: 99, tier: 6, size: [3, 2], ready: true,  full: true },
+    mine:         { id: 'mine',         arity: 0, grammar: 'letters',   perUnit: 1,  tier: 0, size: [2, 1], ready: true },
+    smelter:      { id: 'smelter',      arity: 2, grammar: 'syllables', perUnit: 4,  tier: 0, size: [2, 2], ready: true, needsVC: true },
+    foundry:      { id: 'foundry',      arity: 2, grammar: 'clusters',  perUnit: 5,  tier: 1, size: [2, 2], ready: true },
+    constructor:  { id: 'constructor',  arity: 1, grammar: 'words',     perUnit: 6,  tier: 1, size: [2, 2], ready: true, minWords: 25 },
+    molder:       { id: 'molder',       arity: 2, grammar: 'endings',   perUnit: 6,  tier: 2, size: [2, 2], ready: true,  full: true },
+    assembler:    { id: 'assembler',    arity: 2, grammar: 'phrases',   perUnit: 8,  tier: 2, size: [2, 2], ready: true,  full: true },
+    fastener:     { id: 'fastener',     arity: 2, grammar: 'punct',     perUnit: 8,  tier: 3, size: [2, 2], ready: true,  full: true },
+    crane:        { id: 'crane',        arity: 2, grammar: 'capitals',  perUnit: 8,  tier: 5, size: [3, 2], ready: true,  full: true },
+    manufacturer: { id: 'manufacturer', arity: 3, grammar: 'pages',     perUnit: 12, tier: 6, size: [3, 2], ready: true,  full: true },
   };
   const KIND_IDS = Object.keys(KINDS);
 
-  // ---- materials: ores, 2-ore ingots, 3-ore ingots, deeper forms ----
+  // ---- materials: ores at depths, pinned ingots, deeper forms ----
+  // The deep-ore ledger (2026-08-22, approved): a Mk MINTS a material. Each
+  // ore-form entry carries its family ore and a depth; a deep good holds its
+  // ore's letters cumulatively through that depth, and satisfies any recipe
+  // or price asking for a shallower form of the same ore (downward
+  // compatibility — see matSatisfies / bagAvail below). Every ingot PINS its
+  // ores at exact depths, so its alphabet — and its whole content pool — is
+  // a constant, checked once per course when the book is built, never at
+  // run time. Variants stop at the ore level: parts and above are grade-free.
   // Legacy ids: slogi = the first ingot (bronze), slova = parts, stroki =
-  // modules; listy retired. Icons are ore-colour stacks (pixels.js).
+  // modules; listy retired. Icons derive from form + ores (pixels.js).
   const MATS = {
-    az: { form: 'ore', ores: ['az'] }, buki: { form: 'ore', ores: ['buki'] }, stone: { form: 'ore', ores: ['stone'] },
-    vedi: { form: 'ore', ores: ['vedi'] }, coal: { form: 'ore', ores: ['coal'] }, oil: { form: 'ore', ores: ['oil'] },
-    slogi:      { form: 'ingot', ores: ['az', 'buki'] },      // bronze
-    castiron:   { form: 'ingot', ores: ['az', 'stone'] },
-    qziron:     { form: 'ingot', ores: ['az', 'vedi'] },
-    steel:      { form: 'ingot', ores: ['az', 'coal'] },
-    brass:      { form: 'ingot', ores: ['buki', 'stone'] },
-    blackiron:  { form: 'ingot', ores: ['az', 'oil'] },
-    gunmetal:   { form: 'ingot', ores: ['buki', 'coal'] },
-    glass:      { form: 'ingot', ores: ['vedi', 'oil'] },
-    qzbronze:   { form: 'ingot3', ores: ['az', 'buki', 'vedi'] },
-    caststeel:  { form: 'ingot3', ores: ['az', 'stone', 'coal'] },
-    blackbrass: { form: 'ingot3', ores: ['buki', 'stone', 'oil'] },
-    qzsteel:    { form: 'ingot3', ores: ['az', 'coal', 'vedi'] },
-    cokeiron:   { form: 'ingot3', ores: ['az', 'oil', 'coal'] },
+    az:    { form: 'ore', ores: ['az'],    depth: 1 }, az2:    { form: 'ore', ores: ['az'],    depth: 2 },
+    buki:  { form: 'ore', ores: ['buki'],  depth: 1 }, buki2:  { form: 'ore', ores: ['buki'],  depth: 2 },
+    stone: { form: 'ore', ores: ['stone'], depth: 1 }, stone2: { form: 'ore', ores: ['stone'], depth: 2 },
+    vedi:  { form: 'ore', ores: ['vedi'],  depth: 1 }, vedi2:  { form: 'ore', ores: ['vedi'],  depth: 2 }, vedi3: { form: 'ore', ores: ['vedi'], depth: 3 },
+    coal:  { form: 'ore', ores: ['coal'],  depth: 1 }, coal2:  { form: 'ore', ores: ['coal'],  depth: 2 }, coal3: { form: 'ore', ores: ['coal'], depth: 3 },
+    oil:   { form: 'ore', ores: ['oil'],   depth: 1 }, oil2:   { form: 'ore', ores: ['oil'],   depth: 2 }, oil3:  { form: 'ore', ores: ['oil'],  depth: 3 },
+    // two-ore ingots (the Smelter), pinned. Six are the deep rungs'
+    // signature alloys — every Mk is a new recipe to hand-work.
+    slogi:       { form: 'ingot', ores: ['az', 'buki'],   pin: { az: 1, buki: 1 } },   // bronze
+    castiron:    { form: 'ingot', ores: ['az', 'stone'],  pin: { az: 1, stone: 1 } },
+    qziron:      { form: 'ingot', ores: ['az', 'vedi'],   pin: { az: 1, vedi: 1 } },
+    rivetiron:   { form: 'ingot', ores: ['az', 'buki'],   pin: { az: 2, buki: 1 } },
+    bellquartz:  { form: 'ingot', ores: ['vedi', 'buki'], pin: { vedi: 2, buki: 1 } },
+    steel:       { form: 'ingot', ores: ['az', 'coal'],   pin: { az: 2, coal: 1 } },
+    gunmetal:    { form: 'ingot', ores: ['buki', 'coal'], pin: { buki: 2, coal: 1 } },
+    brass:       { form: 'ingot', ores: ['buki', 'stone'], pin: { buki: 2, stone: 2 } },   // the deep pair, as the v3 table always intended
+    blackiron:   { form: 'ingot', ores: ['az', 'oil'],    pin: { az: 2, oil: 1 } },
+    glass:       { form: 'ingot', ores: ['vedi', 'oil'],  pin: { vedi: 3, oil: 1 } },
+    naphtha:     { form: 'ingot', ores: ['buki', 'oil'],  pin: { buki: 1, oil: 2 } },      // naphtha bronze
+    cokebrass:   { form: 'ingot', ores: ['buki', 'coal'], pin: { buki: 2, coal: 2 } },
+    petrolglass: { form: 'ingot', ores: ['vedi', 'oil'],  pin: { vedi: 3, oil: 3 } },
+    flashcopper: { form: 'ingot', ores: ['buki', 'coal'], pin: { buki: 2, coal: 3 } },
+    // three-ore ingots (the Foundry), pinned
+    qzbronze:   { form: 'ingot3', ores: ['az', 'buki', 'vedi'],   pin: { az: 1, buki: 1, vedi: 2 } },
+    caststeel:  { form: 'ingot3', ores: ['az', 'coal', 'stone'],  pin: { az: 2, coal: 1, stone: 1 } },
+    blackbrass: { form: 'ingot3', ores: ['buki', 'stone', 'oil'], pin: { buki: 2, stone: 2, oil: 2 } },
+    qzsteel:    { form: 'ingot3', ores: ['az', 'coal', 'vedi'],   pin: { az: 2, coal: 1, vedi: 3 } },
+    cokeiron:   { form: 'ingot3', ores: ['az', 'oil', 'coal'],    pin: { az: 2, oil: 1, coal: 2 } },
     slova: { form: 'parts', ores: [] }, mold: { form: 'moldings', ores: [] }, stroki: { form: 'modules', ores: [] },
-    fast: { form: 'fastened', ores: [] }, crate: { form: 'crates', ores: [] }, heavy: { form: 'heavy', ores: [] },
+    fast: { form: 'fastened', ores: [] }, sealed: { form: 'sealed', ores: [] }, bound: { form: 'bound', ores: [] },
+    crate: { form: 'crates', ores: [] }, heavy: { form: 'heavy', ores: [] },
     listy: { form: 'legacy', ores: [] },
   };
   const MAT_IDS = Object.keys(MATS).filter((id) => MATS[id].form !== 'legacy');
   const INGOT_IDS = MAT_IDS.filter((id) => MATS[id].form === 'ingot' || MATS[id].form === 'ingot3');
+  // the ore families, shallow to deep, and the family algebra
+  const ORE_MATS = {};
+  for (const id of MAT_IDS) if (MATS[id].form === 'ore') (ORE_MATS[MATS[id].ores[0]] = ORE_MATS[MATS[id].ores[0]] || []).push(id);
+  for (const fam of Object.values(ORE_MATS)) fam.sort((a, b) => MATS[a].depth - MATS[b].depth);
+  const matOfDepth = (ore, d) => (ORE_MATS[ore] || [])[Math.max(0, Math.min(d, (ORE_MATS[ore] || []).length)) - 1] || ore;
+  // does material `id` satisfy a slot asking for `pinId`? Itself, or a
+  // deeper member of the same ore family (downward compatibility).
+  function matSatisfies(id, pinId) {
+    if (id === pinId) return true;
+    const a = MATS[id], b = MATS[pinId];
+    return !!(a && b && a.form === 'ore' && b.form === 'ore' && a.ores[0] === b.ores[0] && a.depth >= b.depth);
+  }
+  // how much of `pinId` the bag can cover, counting deeper family stock
+  function bagAvail(bag, pinId) {
+    const spec = MATS[pinId];
+    if (!spec || spec.form !== 'ore') return bag[pinId] || 0;
+    return (ORE_MATS[spec.ores[0]] || [pinId]).filter((id) => matSatisfies(id, pinId)).reduce((a, id) => a + (bag[id] || 0), 0);
+  }
+  // spend a cost from the bag, shallowest stock first; assumes affordable()
+  function spendCost(bag, cost) {
+    for (const [pinId, n] of Object.entries(cost)) {
+      let left = n;
+      const spec = MATS[pinId];
+      const pool = spec && spec.form === 'ore' ? (ORE_MATS[spec.ores[0]] || [pinId]).filter((id) => matSatisfies(id, pinId)) : [pinId];
+      for (const id of pool) {
+        const k = Math.min(left, bag[id] || 0);
+        if (k > 0) { bag[id] -= k; left -= k; }
+        if (!left) break;
+      }
+    }
+  }
 
   // ---- recipes: authored, never emergent. Ratios are placeholders. ----
+  // Inputs name exact materials — a deep id where the ledger pins one — and
+  // an ore slot is satisfied by deeper family stock (matSatisfies). A
+  // recipe with `atMk` needs that many key rungs bought at its own machine
+  // (the Fastener's product line: fastened → sealed → bound) — an upgrade
+  // bought AT the machine changing THAT machine's work, like a mine's Mk.
+  // Tier is documentation of when a recipe tends to arrive, never a gate.
   const RECIPES = [
     { kind: 'smelter', in: { az: 2, buki: 1 }, out: 'slogi', tier: 0 },
     { kind: 'smelter', in: { az: 2, stone: 1 }, out: 'castiron', tier: 0 },
     { kind: 'smelter', in: { az: 2, vedi: 1 }, out: 'qziron', tier: 1 },
-    { kind: 'smelter', in: { az: 3, coal: 1 }, out: 'steel', tier: 2 },
-    { kind: 'smelter', in: { buki: 2, stone: 1 }, out: 'brass', tier: 2 },
-    { kind: 'smelter', in: { az: 2, oil: 1 }, out: 'blackiron', tier: 3 },
-    { kind: 'smelter', in: { buki: 2, coal: 1 }, out: 'gunmetal', tier: 4 },
-    { kind: 'smelter', in: { vedi: 2, oil: 1 }, out: 'glass', tier: 5 },
-    { kind: 'foundry', in: { slogi: 2, vedi: 1 }, out: 'qzbronze', tier: 1 },
-    { kind: 'foundry', in: { castiron: 2, coal: 1 }, out: 'caststeel', tier: 2 },
-    { kind: 'foundry', in: { brass: 2, oil: 1 }, out: 'blackbrass', tier: 3 },
-    { kind: 'foundry', in: { steel: 2, vedi: 1 }, out: 'qzsteel', tier: 4 },
-    { kind: 'foundry', in: { blackiron: 2, coal: 1 }, out: 'cokeiron', tier: 5 },
-    // deeper kinds — data for phases 4–5 (kinds not ready in this build)
+    { kind: 'smelter', in: { az2: 2, buki: 1 }, out: 'rivetiron', tier: 1 },
+    { kind: 'smelter', in: { vedi2: 2, buki: 1 }, out: 'bellquartz', tier: 1 },
+    { kind: 'smelter', in: { az2: 3, coal: 1 }, out: 'steel', tier: 2 },
+    { kind: 'smelter', in: { buki2: 2, coal: 1 }, out: 'gunmetal', tier: 2 },
+    { kind: 'smelter', in: { buki2: 2, stone2: 1 }, out: 'brass', tier: 2 },
+    { kind: 'smelter', in: { az2: 2, oil: 1 }, out: 'blackiron', tier: 3 },
+    { kind: 'smelter', in: { vedi3: 2, oil: 1 }, out: 'glass', tier: 3 },
+    { kind: 'smelter', in: { buki: 2, oil2: 1 }, out: 'naphtha', tier: 3 },
+    { kind: 'smelter', in: { buki2: 2, coal2: 1 }, out: 'cokebrass', tier: 4 },
+    { kind: 'smelter', in: { vedi3: 2, oil3: 1 }, out: 'petrolglass', tier: 4 },
+    { kind: 'smelter', in: { buki2: 2, coal3: 1 }, out: 'flashcopper', tier: 4 },
+    { kind: 'foundry', in: { slogi: 2, vedi2: 1 }, out: 'qzbronze', tier: 1 },
+    { kind: 'foundry', in: { steel: 2, stone: 1 }, out: 'caststeel', tier: 2 },
+    { kind: 'foundry', in: { brass: 2, oil2: 1 }, out: 'blackbrass', tier: 3 },
+    { kind: 'foundry', in: { steel: 2, vedi3: 1 }, out: 'qzsteel', tier: 4 },
+    { kind: 'foundry', in: { blackiron: 2, coal2: 1 }, out: 'cokeiron', tier: 4 },
     { kind: 'molder', in: { slova: 2, az: 1 }, out: 'mold', tier: 2 },
     { kind: 'molder', in: { slova: 2, buki: 1 }, out: 'mold', tier: 2 },
     { kind: 'molder', in: { slova: 2, stone: 1 }, out: 'mold', tier: 2 },
@@ -142,10 +208,14 @@
     { kind: 'assembler', in: { slova: 2, gunmetal: 1 }, out: 'stroki', tier: 4 },
     { kind: 'fastener', in: { stroki: 2, oil: 1 }, out: 'fast', tier: 3 },
     { kind: 'fastener', in: { stroki: 2, coal: 1 }, out: 'fast', tier: 4 },
-    { kind: 'crane', in: { fast: 2, oil: 1 }, out: 'crate', tier: 5 },
-    { kind: 'manufacturer', in: { crate: 2, mold: 1, slova: 2 }, out: 'heavy', tier: 6 },
+    { kind: 'fastener', in: { fast: 1, glass: 1 }, out: 'sealed', tier: 4, atMk: 2 },   // one cased good, sealed — a tax, not a pyramid
+    { kind: 'fastener', in: { sealed: 2, petrolglass: 1 }, out: 'bound', tier: 5, atMk: 3 },
+    { kind: 'crane', in: { sealed: 2, oil: 1 }, out: 'crate', tier: 5 },
+    { kind: 'manufacturer', in: { crate: 2, bound: 1, slova: 2 }, out: 'heavy', tier: 6 },
   ];
   // Constructor: any ingot → parts (2 → 1). Tier = the ingot's recipe tier.
+  // The course book (below) keeps only the ingots whose constant word pool
+  // clears MIN_WORDS — vowel-poor alloys skip the Constructor by design.
   for (const id of INGOT_IDS) {
     const src = RECIPES.find((r) => r.out === id);
     RECIPES.push({ kind: 'constructor', in: { [id]: 2 }, out: 'slova', tier: Math.max(KINDS.constructor.tier, src ? src.tier : 1) });
@@ -154,7 +224,8 @@
   const recipeFor = (mat) => RECIPES.find((r) => r.out === mat) || null;
   // the tier a material first exists at
   function matTier(id) {
-    if (MATS[id].form === 'ore') { const p = L.PAIRS.find((q) => q.ore === id); return p ? p.tier : 0; }
+    const spec = MATS[id];
+    if (spec && spec.form === 'ore') { const p = L.PAIRS.find((q) => q.ore === spec.ores[0] && q.mk === spec.depth); return p ? p.tier : 0; }
     const r = recipeFor(id);
     return r ? r.tier : 0;
   }
@@ -166,9 +237,10 @@
   ];
   // the trade good of each tier (documentation of pacing; nothing is locked
   // behind a tier number — prices ask for later materials, that is all)
-  const TIER_GOOD = ['slogi', 'slova', 'stroki', 'fast', 'fast', 'crate', 'heavy'];
+  const TIER_GOOD = ['slogi', 'slova', 'stroki', 'fast', 'sealed', 'crate', 'heavy'];
   // each ore's own alloy — the good its extra mines and automation cost in
-  const ORE_GOOD = { az: 'slogi', buki: 'slogi', stone: 'brass', vedi: 'qziron', coal: 'gunmetal', oil: 'glass' };
+  // (every entry exists in both courses' books)
+  const ORE_GOOD = { az: 'slogi', buki: 'slogi', stone: 'slogi', vedi: 'qzbronze', coal: 'gunmetal', oil: 'glass' };
 
   const TUNING = {
     PICKUP_CAP: 100,       // (legacy) the old instant pickup; buffers cap below
@@ -197,31 +269,35 @@
     // (EN iron holds no vowel: castiron never smelts there, and qziron /
     // steel / blackiron wait for e / o / a — dev/en.html checks this)
     node: {
-      vedi: { slogi: 40, brass: 40 },
-      // never slova here: the Constructor's 25-word gate is course-dependent
-      // and the EN ladder can't field 25 words this early (2026-08-20)
+      // T0 goods only: parallel with Iron Mk2, the first branch (brass went
+      // deep with the ledger, so raw stone stands beside the bronze)
+      vedi: { slogi: 40, stone: 40 },
       // quartz in the price: the seam (ring finger) follows the vein (middle)
-      coal: { vedi: 40, brass: 60 },
-      oil: { stroki: 60, gunmetal: 40 },
+      coal: { vedi: 40, slogi: 60 },
+      // rivet iron forces Iron Mk2 before the pinky — with modules (which
+      // force everything else early), the derrick leaves no rung behind
+      oil: { stroki: 60, rivetiron: 40 },
     },
-    // Mk levels per ore
+    // Mk levels per ore (gunmetal pins deep copper now, so Copper/Stone Mk2
+    // ask for raw coal instead; naphtha bronze gives Oil Mk2's alloy its
+    // consumer at Coal Mk2; sealed goods put the last letters after ? !)
     mk: {
       az: { 2: { az: 80, slogi: 30 } },
-      buki: { 2: { buki: 80, gunmetal: 30 } },
-      stone: { 2: { stone: 80, gunmetal: 30 } },
+      buki: { 2: { buki: 80, coal: 30 } },
+      stone: { 2: { stone: 80, coal: 30 } },
       vedi: { 2: { vedi: 60, slogi: 40 }, 3: { vedi: 60, stroki: 30 } },   // Mk3 in modules: the middle finger's top row waits for the Assembler's era
-      coal: { 2: { fast: 40, brass: 40 }, 3: { coal: 60, glass: 25 } },
-      // Mk3 in fastened goods: the Fastener era, not a sprint from Mk2. No
-      // place goes past Mk3 (user ruling 2026-08-22): RU's rare pinky tail
-      // folded into Mk2/Mk3 as four-key sweeps — see language-ru.js
-      oil: { 2: { oil: 60, glass: 30 }, 3: { oil: 60, fast: 30 } },
+      coal: { 2: { fast: 40, naphtha: 40 }, 3: { coal: 60, glass: 25 } },
+      // No place goes past Mk3 (user ruling 2026-08-22): RU's rare pinky
+      // tail folded into Mk2/Mk3 as four-key sweeps — see language-ru.js
+      oil: { 2: { oil: 60, glass: 30 }, 3: { oil: 60, sealed: 20 } },
     },
     // Mk levels on a machine kind (the Fastener: punctuation keys) — its own
     // output, typed by hand right before the keys arrive, plus a tier good
     at: {
-      // Mk3 after the Crane, as the course intends — glass beside the crates,
-      // not fastened goods, which the crates themselves are made of
-      fastener: { 1: { fast: 30, gunmetal: 30 }, 2: { fast: 40, gunmetal: 30 }, 3: { glass: 40, crate: 6 } },
+      // comma in gunmetal (deep copper); ? ! in brass — the deep PAIR, so
+      // Stone Mk2 stands on the critical path (no rung is skippable to the
+      // finish); Mk3 after the Crane, in glass and a few crates
+      fastener: { 1: { fast: 30, gunmetal: 30 }, 2: { fast: 40, brass: 30 }, 3: { glass: 40, crate: 6 } },
     },
     // first instance of a kind at a plot — each asks for a material of the
     // era the kind belongs to, which is the only pacing there is. A price
@@ -231,28 +307,33 @@
     // Raw ores and bronze / brass / gunmetal / moldings / modules / fastened
     // goods are the price goods every course can make when the rung appears;
     // quartz iron, steel and black iron are not (EN has no vowel on them).
+    // first instance of a kind at a plot. A price names the kind's own first
+    // feed where one exists (the ledger): the Foundry costs bell quartz —
+    // "after Quartz Mk2" as an ingredient — the Constructor its quartz
+    // bronze, the Crane sealed goods and flash copper. Every good exists in
+    // both courses' books.
     machine: {
       smelter: { az: 30, buki: 30, stone: 30 },
-      // never parts here: EN's two-ore alloys never field 25 words, so its
-      // first parts come from three-ore alloys — the Foundry stands first
-      foundry: { vedi: 40, brass: 40 },
-      constructor: { vedi: 40, slogi: 40 },
+      foundry: { bellquartz: 40, slogi: 40 },
+      constructor: { qzbronze: 40, slogi: 40 },
       molder: { slova: 60, gunmetal: 30 },
       assembler: { mold: 60, slova: 40 },
       fastener: { oil: 40, stroki: 40 },
-      crane: { fast: 80, glass: 40 },
+      crane: { sealed: 50, flashcopper: 30 },
       manufacturer: { crate: 100, mold: 60, slova: 60 },
     },
-    // automation on a processor: its own output + a later good (the price is
-    // the hand work; there is no mastery test)
+    // automation is PER RECIPE (the ledger): its price is the recipe's own
+    // output (`own` — which is also the run-in: that many units by hand
+    // since the machine learned the recipe, and the price then consumes
+    // them) plus a later good. priceAuto() assembles it.
     auto: {
-      smelter: { slogi: 40, slova: 20 },
-      foundry: { qzbronze: 30, slova: 30 },
-      constructor: { slova: 60, qziron: 20 },
-      molder: { mold: 40, stroki: 20 },
-      assembler: { stroki: 40, fast: 20 },
-      fastener: { fast: 40, glass: 20 },   // 2026-08-20: crates hid the whole Crane pyramid inside this price
-      crane: { crate: 40, mold: 30 },   // never heavy: heavy modules are the finish counter
+      smelter: { own: 40, plus: { slova: 20 } },
+      foundry: { own: 30, plus: { slova: 30 } },
+      constructor: { own: 60, plus: { bellquartz: 20 } },
+      molder: { own: 40, plus: { stroki: 20 } },
+      assembler: { own: 40, plus: { fast: 20 } },
+      fastener: { own: 40, plus: { glass: 20 } },   // 2026-08-20: crates hid the whole Crane pyramid inside this price
+      crane: { own: 40, plus: { mold: 30 } },   // never heavy: heavy modules are the finish counter
     },
     // repairing a closed crossing (The Frontier): paid in the goods of the
     // regions behind you
@@ -288,10 +369,31 @@
     if (!base) return null;
     return paced(scaleCost(base, 1 + TUNING.MACHINE_PRICE_STEP * Math.max(0, nth - 1)));
   }
-  // automation on a mine: its ore + its own alloy (processors: phase 3)
-  function priceAuto(m) {
-    if (m.kind === 'mine') return paced({ [m.ore]: 80, [ORE_GOOD[m.ore]]: 20 });
-    return paced(PRICES.auto[m.kind] || null);
+  // automation is per recipe (the ledger, 2026-08-22). A mine's "recipe" is
+  // the material its depth yields — so a Mk retools by construction: the new
+  // depth's product has no ⚙ yet. The price asks for the recipe's own
+  // output, which doubles as the run-in: the machine must have made that
+  // many units by hand since it learned the recipe, and the purchase then
+  // consumes them. No stockpile skips the review.
+  function priceAuto(m, r, profile) {
+    if (m.kind === 'mine') {
+      const own = profile ? mineMat(profile, m) : m.ore;
+      return paced({ [own]: 80, [ORE_GOOD[m.ore]]: 20 });
+    }
+    const spec = PRICES.auto[m.kind];
+    if (!spec || !r) return null;
+    return paced(Object.assign({ [r.out]: spec.own }, spec.plus));
+  }
+  // the key a recipe's ⚙ and run-in hang on (per machine instance)
+  const autoKey = (m, r, profile) => (m.kind === 'mine' ? (profile ? mineMat(profile, m) : m.ore) : (r ? r.out + '|' + JSON.stringify(r.in) : null));
+  const autoOn = (m, key) => !!(key && m.autoOn && m.autoOn[key]);
+  // units still to hand-work before this recipe's ⚙ goes on sale
+  function runInLeft(m, r, profile) {
+    const price = priceAuto(m, r, profile);
+    if (!price) return 0;
+    const own = m.kind === 'mine' ? (profile ? mineMat(profile, m) : m.ore) : r.out;
+    const done = (m.handMade && m.handMade[autoKey(m, r, profile)]) || 0;
+    return Math.max(0, (price[own] || 0) - done);
   }
   const priceCrossing = (c) => paced(PRICES.crossing[c.id] || null);
 
@@ -368,14 +470,16 @@
     return BARS[Math.max(0, Math.min(BARS.length - 1, t - 1))];
   }
 
-  // ---- alphabets: union of the inputs, live ----
+  // ---- alphabets: constants of the pins (2026-08-22) ----
+  // An ore-form material's letters run through its depth; an ingot's are the
+  // union of its pinned ores. Only parts and deeper read the live profile.
   function alphabetOf(mat, profile) {
     const m = MATS[mat];
     if (!m) return [];
-    if (m.form === 'ore') return oreLetters(mat, oreMk(profile, mat));
-    if (m.ores.length) {
+    if (m.form === 'ore') return oreLetters(m.ores[0], m.depth);
+    if (m.pin) {
       const set = new Set();
-      for (const o of m.ores) for (const ch of oreLetters(o, oreMk(profile, o))) set.add(ch);
+      for (const [o, d] of Object.entries(m.pin)) for (const ch of oreLetters(o, d)) set.add(ch);
       return [...set];
     }
     return unlockedKeys(profile); // parts and deeper: the full unlocked set
@@ -406,10 +510,12 @@
     for (const mat of Object.keys(r.in)) {
       const m = MATS[mat];
       if (!m) continue;
-      if (m.form === 'ore') { ores.push(mat); if (!family) family = mat; }
+      if (m.form === 'ore') { ores.push(m.ores[0]); if (!family) family = m.ores[0]; }
       else if (m.ores && m.ores.length) ores.push(...m.ores);
       else continue;
-      for (const ch of alphabetOf(mat, profile)) letters.add(ch);
+      // the focus leans on every letter the player owns of the flux's ores,
+      // not just the pinned depth — a drill emphasis, never a gate
+      for (const o of (m.form === 'ore' ? [m.ores[0]] : m.ores)) for (const ch of oreLetters(o, oreMk(profile, o))) letters.add(ch);
     }
     const tilt = {};
     for (const ch of letters) tilt[ch] = 2;
@@ -419,14 +525,18 @@
   const isLetter = (ch) => !L.PUNCT.has(ch) && /\p{L}/u.test(ch);
   // does this ore exist for the player yet (its first pair unlocked)?
   const oreOpen = (profile, ore) => oreMk(profile, ore) >= 1;
-  // does every ore behind a material exist yet
+  // does this material exist yet: every pinned ore bought to its depth
   function matExists(profile, mat) {
     const m = MATS[mat];
     if (!m) return false;
-    if (m.form === 'ore') return oreOpen(profile, mat);
-    if (m.ores.length) return m.ores.every((o) => oreOpen(profile, o));
+    if (m.form === 'ore') return oreMk(profile, m.ores[0]) >= m.depth;
+    if (m.pin) return Object.entries(m.pin).every(([o, d]) => oreMk(profile, o) >= d);
     return true;
   }
+  // the material a mine yields: its ore at the depth its Mk has reached —
+  // a Mk MINTS a material, and the retool is emergent (the new depth's
+  // product has no ⚙ yet, so the mine is back in your hands)
+  const mineMat = (profile, m) => matOfDepth(m.ore, Math.max(1, oreMk(profile, m.ore)));
   // real words typeable with an alphabet — memoized by the alphabet, since
   // every menu refresh and every state the verify walker visits asks again
   const poolMemo = new Map();
@@ -441,25 +551,41 @@
     }
     return pool;
   }
-  // is a recipe offered now: kind ready, inputs exist, alphabet clears the
-  // minimum (and V+C / word-pool rules). Nothing is locked behind a tier
-  // number — the recipe's tier is documentation of when it tends to arrive.
+  // ---- the course book: which recipes exist in THIS course, decided once ----
+  // A recipe's alphabet is a constant of its pins, so the content checks run
+  // here, at load: the Smelter's alloys must hold a vowel and a consonant
+  // (EN's vowel-poor alloys are absent from its book, never grayed at run
+  // time), and the Constructor's feeds must clear the word floor. Everything
+  // else is always in. dev/verify.html and dev/en.html print each course's
+  // book and hold the ledger's invariants against it.
+  function inBook(r) {
+    const kind = KINDS[r.kind];
+    if (kind.full) return true;
+    const alpha = recipeAlphabet(r, { mk: {} });
+    const letters = alpha.filter(isLetter);
+    if (kind.needsVC && !(letters.some(isVowel) && letters.some((c) => !isVowel(c) && !L.SEMIS.has(c)))) return false;
+    if (kind.minWords && wordPool(alpha).length < kind.minWords) return false;
+    return true;
+  }
+  let BOOK = null;
+  const bookRecipes = () => BOOK || (BOOK = RECIPES.filter(inBook));
+  // is a recipe offered now: in the course's book, kind ready, every input's
+  // rungs bought, and — for the Fastener's product line — enough key rungs
+  // bought at the machine itself. Nothing is locked behind a tier number —
+  // the recipe's tier is documentation of when it tends to arrive.
   function offerable(r, profile) {
     const kind = KINDS[r.kind];
     if (!kind.ready) return false;
+    if (!bookRecipes().includes(r)) return false;
+    if (r.atMk && kindMk(profile, r.kind) < r.atMk) return false;
     for (const mat of Object.keys(r.in)) if (!matExists(profile, mat)) return false;
-    const alpha = recipeAlphabet(r, profile);
-    const letters = alpha.filter(isLetter);
-    if (alpha.length < kind.minAlpha) return false;
-    if (kind.needsVC && !(letters.some(isVowel) && letters.some((c) => !isVowel(c)))) return false;
-    if (kind.minWords && wordPool(alpha).length < kind.minWords) return false;
     return true;
   }
   function offerableRecipes(kind, profile) {
     return recipesFor(kind).filter((r) => offerable(r, profile));
   }
   function affordable(bag, cost) {
-    return !!cost && Object.entries(cost).every(([mat, n]) => (bag[mat] || 0) >= n);
+    return !!cost && Object.entries(cost).every(([mat, n]) => bagAvail(bag, mat) >= n);
   }
 
   // The bag carries at most BAG_CAP of any one material, and everything that
@@ -671,7 +797,8 @@
   }
 
   window.CHAIN = {
-    TILE, ORES, ORE_IDS, ORE_BY_NODE, ORE_GOOD, KINDS, KIND_IDS, MATS, MAT_IDS, INGOT_IDS, RECIPES, BARS, TIER_GOOD, TUNING, PRICES,
+    TILE, ORES, ORE_IDS, ORE_BY_NODE, ORE_GOOD, ORE_MATS, KINDS, KIND_IDS, MATS, MAT_IDS, INGOT_IDS, RECIPES, BARS, TIER_GOOD, TUNING, PRICES,
+    matOfDepth, matSatisfies, bagAvail, spendCost, mineMat, bookRecipes, autoKey, autoOn, runInLeft,
     MAPS, MAP_IDS, DEFAULT_MAP,
     oreLetters, oreMaxMk, recipesFor, recipeFor, matTier,
     priceNode, priceExtraMine, priceMk, priceAt, kindMk, priceMachine, priceAuto, priceCrossing, scaleCost, closedCrossings,

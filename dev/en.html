@@ -113,7 +113,9 @@
     for (const [s] of L.PAGES) for (const c of s) if (c !== ' ' && !allK.has(c) && !allK.has(c.toLowerCase())) stray.push(`page: ${c}`);
     line(!stray.length, `phrases (${L.PHRASES.length}), sentences (${L.SENTENCES.length}) and pages (${L.PAGES.length}) use only the course's keys`, stray.slice(0, 8).join('<br>'));
     const wordBad = L.WORDS.filter(([w]) => ![...w].every((c) => allK.has(c))).map(([w]) => w);
-    line(!wordBad.length, `all ${L.WORDS.length} words are typeable with the full ladder`, wordBad.join(' '));
+    line(!wordBad.length, `all ${L.WORDS.length} words are typeable with the full ladder${wordBad.length ? ' — ' + wordBad.join(' ') : ''}`);
+    const wDupes = [...new Set(L.WORDS.map(([w]) => w).filter((w, i, a) => a.indexOf(w) !== i))];
+    line(!wDupes.length, `no word appears twice${wDupes.length ? ' — ' + wDupes.join(' ') : ''}`);
     // pool sizes along the ladder (the constructor needs 25 by its opening)
     let alpha = [];
     const stagePools = L.PAIRS.map((q) => { alpha = alpha.concat(q.keys); return E.realWordPool(alpha.filter((c) => !L.PUNCT.has(c))).length; });

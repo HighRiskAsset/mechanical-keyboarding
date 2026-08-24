@@ -46,12 +46,18 @@
   // a T1 save: pairs through с б; letters don't matter to the simulation
   const p = { pairsUnlocked: 6, letters: {}, seen: {}, bag: {}, machines: [], belts: [], crossings: {}, nextMachineId: 1 };
   const add = (m) => { m.id = 'm' + (p.nextMachineId++); p.machines.push(m); S.ensureMachine(m); return m; };
-  const iron = add({ kind: 'mine', ore: 'az', node: 0, auto: true });
-  const copper = add({ kind: 'mine', ore: 'buki', node: 1, auto: true });
-  const quartz = add({ kind: 'mine', ore: 'vedi', node: 3, auto: true });
-  const smelter = add({ kind: 'smelter', plot: 'p1', auto: true, recipe: 'slogi', recipeIn: JSON.stringify({ az: 2, buki: 1 }) });
-  const foundry = add({ kind: 'foundry', plot: 'p2', auto: true, recipe: 'qzbronze', recipeIn: JSON.stringify({ slogi: 2, vedi: 1 }) });
-  const cons = add({ kind: 'constructor', plot: 'p3', auto: true, recipe: 'slova', recipeIn: JSON.stringify({ qzbronze: 2 }) });
+  // ⚙ is per recipe (deep-ore ledger 2026-08-22): a mine's key is the
+  // material of its depth, a processor's is out|inputs
+  // a T1 save has iron and quartz at Mk2, so those mines yield the DEEP
+  // materials — their ⚙ keys are az2/vedi2, and deep goods ride the belts
+  // into the bronze recipe's shallow slots (downward compatibility)
+  const iron = add({ kind: 'mine', ore: 'az', node: 0, autoOn: { az2: true } });
+  const copper = add({ kind: 'mine', ore: 'buki', node: 1, autoOn: { buki: true } });
+  const quartz = add({ kind: 'mine', ore: 'vedi', node: 3, autoOn: { vedi2: true } });
+  const rkey = (out, inn) => out + '|' + JSON.stringify(inn);
+  const smelter = add({ kind: 'smelter', plot: 'p1', autoOn: { [rkey('slogi', { az: 2, buki: 1 })]: true }, recipe: 'slogi', recipeIn: JSON.stringify({ az: 2, buki: 1 }) });
+  const foundry = add({ kind: 'foundry', plot: 'p2', autoOn: { [rkey('qzbronze', { slogi: 2, vedi2: 1 })]: true }, recipe: 'qzbronze', recipeIn: JSON.stringify({ slogi: 2, vedi2: 1 }) });
+  const cons = add({ kind: 'constructor', plot: 'p3', autoOn: { [rkey('slova', { qzbronze: 2 })]: true }, recipe: 'slova', recipeIn: JSON.stringify({ qzbronze: 2 }) });
   const fakePath = (n) => Array.from({ length: n }, (_, i) => [i, 0]);
   const link = (a, b, n) => { const ok = S.canLink(p, a, b); if (!ok.ok) { line(false, `canLink ${a.kind}→${b.kind}: ${ok.why}`); return null; } return S.addBelt(p, a, b, fakePath(n)); };
   S.ensure(p);
@@ -81,12 +87,12 @@
 
   // retool: the iron mine goes back to hand work — the smelter starves, then recovers
   S.collect(p, cons); S.collect(p, foundry); S.collect(p, smelter);   // empty the output buffers (the constructor had hit the cap)
-  iron.auto = false;
+  delete iron.autoOn.az2;   // the retool: the depth's ⚙ is gone until re-bought
   const before = cons.buf.out.slova || 0;
   for (let k = 0; k < 6 * MIN / 500; k++) S.step(p, 500);
   const st = S.state(p, smelter);
   line(st === 'starved', `after the iron mine retools the smelter starves (state: ${st})`);
-  iron.auto = true;
+  iron.autoOn.az2 = true;
   for (let k = 0; k < 6 * MIN / 500; k++) S.step(p, 500);
   line((cons.buf.out.slova || 0) > before + 5, `…and recovers when the mine is automated again (+${(cons.buf.out.slova || 0) - before} parts in six minutes)`);
 

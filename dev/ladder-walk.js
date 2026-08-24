@@ -43,7 +43,7 @@
       const spec = C.MATS[mat];
       let ok = false;
       if (!spec) ok = false;
-      else if (spec.form === 'ore') ok = C.oreOpen(prof, mat);
+      else if (spec.form === 'ore') ok = C.matExists(prof, mat);   // depth-aware: deep ores are their own materials
       else {
         outer: for (const kind of C.KIND_IDS) {
           if (kind === 'mine') continue;

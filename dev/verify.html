@@ -127,6 +127,10 @@
   line(!sylBad.length, `syllable table (${L.SYLLABLES.length}) uses letters only`, sylBad.join(' '));
   const noGloss = L.WORDS.filter(([, g]) => !g).map(([w]) => w);
   line(!noGloss.length, `word list (${L.WORDS.length}) — every word has a gloss`, noGloss.join(' '));
+  const wDupes = L.WORDS.map(([w]) => w).filter((w, i, a) => a.indexOf(w) !== i);
+  line(!wDupes.length, 'no word appears twice', [...new Set(wDupes)].join(' '));
+  const cDupes = L.CLUSTERS.filter((c, i, a) => a.indexOf(c) !== i);
+  line(!cDupes.length, 'no cluster appears twice', cDupes.join(' '));
   const clBad = L.CLUSTERS.filter((c) => [...c].some((x) => !RU.includes(x) || isVowel(x)));
   line(!clBad.length, `cluster list (${L.CLUSTERS.length}) is consonants only`, clBad.join(' '));
 
@@ -221,10 +225,17 @@
   // 17c. the crane and manufacturer offer their recipes at full alphabet
   const full = { pairsUnlocked: L.PAIRS.length, letters: {}, seen: {}, bag: {}, machines: [] };
   line(C.offerableRecipes('crane', full).length >= 1 && C.offerableRecipes('manufacturer', full).length >= 1, 'the Crane and the Manufacturer offer recipes at the full alphabet');
-  // 17d. no automation price asks for heavy modules (the finish counter)
-  let autoHeavy = false;
-  for (const kind of C.KIND_IDS) { const pr = C.priceAuto({ kind }); if (pr && pr.heavy) autoHeavy = true; }
-  line(!autoHeavy, 'no automation price asks for heavy modules (the finish counter)');
+  // 17d. no automation price asks for heavy modules (the finish counter);
+  // every ⚙ side-good exists in the course's book
+  const autoBad = [];
+  for (const [kind, spec] of Object.entries(C.PRICES.auto)) {
+    if (spec.plus && spec.plus.heavy) autoBad.push(kind + ': heavy');
+    for (const mat of Object.keys(spec.plus || {})) {
+      const inBook = C.MATS[mat].form !== 'ingot' && C.MATS[mat].form !== 'ingot3' ? true : C.bookRecipes().some((r) => r.out === mat);
+      if (!inBook) autoBad.push(kind + ': ' + mat + ' not in this course\'s book');
+    }
+  }
+  line(!autoBad.length, 'automation prices: never heavy modules, and every side-good is in the course\'s book', autoBad.join('<br>'));
   // 18. every plot and node stands on clear ground and is reachable from the spawn (crossings counted open)
   const placeBad = [], placePending = [];
   for (const mapId of C.MAP_IDS) {

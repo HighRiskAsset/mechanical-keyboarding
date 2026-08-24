@@ -194,7 +194,7 @@
     producedSinceFloat[mat] = (producedSinceFloat[mat] || 0) + got;
   }
   function spend(cost) {
-    for (const [mat, n] of Object.entries(cost)) profile.bag[mat] = Math.max(0, (profile.bag[mat] || 0) - n);
+    CHAIN.spendCost(profile.bag, cost);   // family-aware: deeper ore covers a shallow ask, shallow stock first
   }
   const canPay = (cost) => CHAIN.affordable(profile.bag, cost);
   // the materials of a price the bag falls short of — their counts print
@@ -288,7 +288,15 @@
   }
 
   // ---------- automation: bought at the mine; a Mk on its ore retools it ----------
-  const autoLive = (m) => !!(m && m.auto);
+  // ⚙ is per recipe (the deep-ore ledger): live automation = the machine's
+  // CURRENT work has its engine. A mine that deepens is back in your hands.
+  const autoLive = (m) => !!(m && SIM.autoLive(profile, m));
+  // record a unit made by hand — the run-in every recipe's ⚙ waits on
+  function recordHandMade(m, key, n) {
+    if (!key) return;
+    if (!m.handMade) m.handMade = {};
+    m.handMade[key] = (m.handMade[key] || 0) + n;
+  }
   // the belt spool on the operator's back: {from: machine id} while carrying
   let spool = null;
   let spoolRoute = null;         // the route to the docked machine while carrying, or null
@@ -346,7 +354,12 @@
   let beltFloat = {};
   function workKeystroke() {
     const m = dock.m;
-    if (m.kind === 'mine') { produce(m, m.ore, 1); return; }
+    if (m.kind === 'mine') {
+      const mat = CHAIN.mineMat(profile, m);
+      produce(m, mat, 1);
+      recordHandMade(m, mat, 1);
+      return;
+    }
     if (!recipe) return;
     const kind = CHAIN.KINDS[m.kind];
     if (!unitPaid) {
@@ -357,6 +370,7 @@
     unitAcc++;
     if (unitAcc >= kind.perUnit) {
       unitAcc = 0; unitPaid = false;
+      recordHandMade(m, CHAIN.autoKey(m, recipe, profile), 1);
       produce(m, recipe.out, 1);
     }
   }
@@ -393,9 +407,13 @@
         const price = CHAIN.pricePair(np) || {};
         rows.push({ pre: 'MK' + np.mk, items: price, enabled: canPay(price), priced: true, short: shortOf(price), caption: T.t('capMk', { level: np.mk, name: mineName(ore), keys: pairKeys(np) }), action: { type: 'mk', ore, level: np.mk, price } });
       }
-      if (!m.auto) {
-        const price = CHAIN.priceAuto(m);
-        rows.push({ pre: '⚙', items: price, enabled: canPay(price), priced: true, short: shortOf(price), caption: T.t('capAuto'), action: { type: 'auto', m, price } });
+      if (!autoLive(m)) {
+        // ⚙ for the depth the mine now works: run it in by hand first, then
+        // the price consumes the very units you ran it in on
+        const price = CHAIN.priceAuto(m, null, profile);
+        const left = CHAIN.runInLeft(m, null, profile);
+        const caption = T.t('capAuto') + (left > 0 ? T.t('capRunIn', { left }) : '');
+        rows.push({ pre: '⚙', items: price, enabled: left <= 0 && canPay(price), priced: left <= 0, short: shortOf(price), caption, action: left <= 0 ? { type: 'auto', m, price, key: CHAIN.autoKey(m, null, profile) } : null });
       }
       beltRows(m, rows);
       removeRow(m, rows);
@@ -408,7 +426,10 @@
       const active = SIM.recipeOf(profile, m);
       for (const r of CHAIN.offerableRecipes(m.kind, profile)) {
         if (r === active) continue;
-        rows.push({ items: r.in, out: r.out, ok: SIM.canTake(profile, m, r.in) ? undefined : false, enabled: true, caption: T.t('capRecipe', { out: matName(r.out), inputs: Object.entries(r.in).map(([mat, k]) => `${k} ${matName(mat)}`).join(' + ') }), action: { type: 'recipe', m, r } });
+        // a recipe whose engine this machine already owns wears the gear:
+        // switching to it means the machine runs itself again
+        const owned = CHAIN.autoOn(m, CHAIN.autoKey(m, r, profile));
+        rows.push({ pre: owned ? '⚙' : undefined, items: r.in, out: r.out, ok: SIM.canTake(profile, m, r.in) ? undefined : false, enabled: true, caption: T.t('capRecipe', { out: matName(r.out), inputs: Object.entries(r.in).map(([mat, k]) => `${k} ${matName(mat)}`).join(' + ') }) + (owned ? T.t('capEngineOwned') : ''), action: { type: 'recipe', m, r } });
       }
       // keys bought at this kind of machine (the Fastener's punctuation):
       // its next level, always for sale here at its price
@@ -417,9 +438,14 @@
         const price = CHAIN.pricePair(np) || {};
         rows.push({ pre: 'MK' + np.mk, items: price, enabled: canPay(price), priced: true, short: shortOf(price), caption: T.t('capMkAt', { level: np.mk, name: kindName(m.kind), keys: pairKeys(np) }), action: { type: 'mk-at', kind: m.kind, level: np.mk, price } });
       }
-      if (!m.auto) {
-        const price = CHAIN.priceAuto(m);
-        if (price) rows.push({ pre: '⚙', items: price, enabled: canPay(price), priced: true, short: shortOf(price), caption: T.t('capAuto'), action: { type: 'auto', m, price } });
+      if (active && !autoLive(m)) {
+        // ⚙ for the recipe it is running now — every recipe earns its own
+        const price = CHAIN.priceAuto(m, active, profile);
+        const left = CHAIN.runInLeft(m, active, profile);
+        if (price) {
+          const caption = T.t('capAuto') + (left > 0 ? T.t('capRunIn', { left }) : '');
+          rows.push({ pre: '⚙', items: price, enabled: left <= 0 && canPay(price), priced: left <= 0, short: shortOf(price), caption, action: left <= 0 ? { type: 'auto', m, price, key: CHAIN.autoKey(m, active, profile) } : null });
+        }
       }
       beltRows(m, rows);
       removeRow(m, rows);
@@ -453,7 +479,7 @@
     // (while carrying a spool there is no menu: the hold lays the belt here
     // or drops the spool — see startSpace)
     // feed and collect come before the spool: the everyday rows first
-    if (m.auto && m.kind !== 'mine') rows.push({ pre: '→', items: recipeInputsIcons(m), enabled: SIM.canFeed(profile, m), caption: T.t('capFeed'), action: { type: 'feed', m } });
+    if (autoLive(m) && m.kind !== 'mine') rows.push({ pre: '→', items: recipeInputsIcons(m), enabled: SIM.canFeed(profile, m), caption: T.t('capFeed'), action: { type: 'feed', m } });
     if (SIM.hasOutput(m)) rows.push({ pre: '↓', items: nonZero(m.buf.out), enabled: true, caption: T.t('capCollect'), action: { type: 'collect', m } });
     if (!spool && SIM.beltsFrom(profile, m).length < SIM.outletsOf(m) && (m.kind === 'mine' || SIM.produces(profile, m).length)) {
       rows.push({ pre: '→', enabled: true, caption: T.t('capSpool', { mats: matList(SIM.produces(profile, m)) }), action: { type: 'spool', m } });
@@ -499,7 +525,7 @@
   }
   function placeName(d) {
     if (!d) return '';
-    if (d.kind === 'machine') return machineName(d.m) + (d.m.auto ? ' · ' + T.t('capAutomated') : '');
+    if (d.kind === 'machine') return machineName(d.m) + (autoLive(d.m) ? ' · ' + T.t('capAutomated') : '');
     if (d.kind === 'crossing') return T.t('capCrossing');
     if (d.kind === 'belt') return T.t(d.belts.length > 1 ? 'capOnCrossing' : 'capOnBelt');
     return '';
@@ -818,12 +844,12 @@
       if (!canPay(act.price)) return;
       const np = CHAIN.pairOf(act.ore, act.level);
       if (!np || CHAIN.oreMk(profile, act.ore) + 1 !== act.level) return;
+      // a Mk retools by construction now: the mines' new depth-product has
+      // no ⚙ yet, so they are back in your hands until it is run in and
+      // bought — nothing is switched off, the deeper seam is simply new work
+      const retooled = CHAIN.machinesOfOre(profile, act.ore).some((m) => autoLive(m));
       spend(act.price);
       const pair = E.unlockPair(profile, np);
-      // a Mk retools every mine of this ore: the new keys are worked by hand
-      // until its automation is bought again
-      const retooled = CHAIN.machinesOfOre(profile, act.ore).some((m) => m.auto);
-      for (const m of CHAIN.machinesOfOre(profile, act.ore)) m.auto = false;
       afterPurchase();
       if (pair) { pendingUnlock = pair; showUnlockCard(pair, retooled); }
     } else if (act.type === 'mk-at') {
@@ -835,9 +861,10 @@
       afterPurchase();
       if (pair) { pendingUnlock = pair; showUnlockCard(pair, false); }
     } else if (act.type === 'auto') {
-      if (!canPay(act.price)) return;
+      if (!canPay(act.price) || !act.key) return;
       spend(act.price);
-      act.m.auto = true;
+      if (!act.m.autoOn) act.m.autoOn = {};
+      act.m.autoOn[act.key] = true;
       SIM.ensureMachine(act.m);
       afterPurchase();
       showBenchAutoCard(act.m);

@@ -79,6 +79,12 @@
     ['tu', 1], ['ev', 1], ['ld', 1], ['ry', 1], ['mp', 1], ['fe', 1], ['bl', 1], ['ab', 1],
     ['gh', 1], ['ty', 1], ['op', 1], ['wo', 1], ['sa', 1], ['ay', 1], ['ex', 1], ['ke', 1],
     ['ui', 1], ['pt', 1], ['do', 1], ['gu', 1], ['bu', 1], ['ju', 1], ['fu', 1], ['ky', 1],
+    // the deep-ore pass (2026-08-22): real bigrams for the pinned alloys'
+    // thin sets — ck/dy/cy for the quartz keys, gy/hy/fy for the iron pair,
+    // by/my/nu/ub for the copper-stone brass set
+    ['ck', 3], ['dy', 2], ['cy', 1], ['gy', 1], ['hy', 1], ['fy', 1],
+    ['by', 2], ['my', 2], ['nu', 1], ['ub', 1], ['um', 2], ['ud', 1],
+    ['yr', 1], ['rn', 2], ['rb', 1], ['lt', 1], ['aw', 1],
   ];
 
   const CLUSTERS = [
@@ -312,6 +318,27 @@
     ['furnace', '', 'work'], ['factory', '', 'work'], ['machine', '', 'things'], ['motor', '', 'things'],
     ['power', '', 'things'], ['tower', '', 'place'], ['crane', '', 'work'], ['wagon', '', 'rail'],
     ['frontier', '', 'place'], ['operator', '', 'people'],
+    // --- the deep-ore pass (2026-08-22): the pinned alloys' thin sets, and
+    // the workshop's own vocabulary, generously ---
+    ['sultry', '', 'adj'], ['surly', '', 'adj'], ['tryst', '', 'life'], ['truss', '', 'things'],
+    ['strut', '', 'things'], ['trusty', '', 'adj'], ['unruly', '', 'adj'], ['untruly', '', 'func'],
+    ['pace', '', 'verbs'], ['pack', '', 'verbs'], ['dice', '', 'things'], ['iced', '', 'adj'],
+    ['idea', '', 'life'], ['aide', '', 'people'], ['cake', '', 'things'], ['peak', '', 'place'],
+    ['pike', '', 'things'], ['deck', '', 'place'], ['epic', '', 'adj'], ['acid', '', 'things'],
+    ['decade', '', 'time'], ['decide', '', 'verbs'], ['peace', '', 'life'], ['dazed', '', 'adj'],
+    ['worry', '', 'life'], ['sorry', '', 'adj'], ['tour', '', 'life'], ['sour', '', 'adj'],
+    ['soul', '', 'people'], ['stout', '', 'adj'], ['trout', '', 'nature'], ['scout', '', 'people'],
+    ['rivet', '', 'things'], ['anvil', '', 'things'], ['forge', '', 'work'], ['ingot', '', 'things'],
+    ['boiler', '', 'things'], ['firebox', '', 'things'], ['piston', '', 'things'], ['flywheel', '', 'things'],
+    ['gearwheel', '', 'things'], ['pulley', '', 'things'], ['winch', '', 'things'], ['crucible', '', 'things'],
+    ['furnace', '', 'things'], ['smelter', '', 'work'], ['foundry', '', 'work'], ['bellows', '', 'things'],
+    ['lantern', '', 'things'], ['pickaxe', '', 'things'], ['shaft', '', 'place'], ['seam', '', 'nature'],
+    ['spoil', '', 'nature'], ['slag', '', 'things'], ['soot', '', 'nature'], ['ember', '', 'nature'],
+    ['spark', '', 'nature'], ['grime', '', 'nature'], ['quench', '', 'verbs'], ['temper', '', 'verbs'],
+    ['solder', '', 'verbs'], ['gasket', '', 'things'], ['sprocket', '', 'things'], ['crankshaft', '', 'things'],
+    ['gauge', '', 'things'], ['valve', '', 'things'], ['nozzle', '', 'things'], ['funnel', '', 'things'],
+    ['girder', '', 'things'], ['truss', '', 'things'], ['derrick', '', 'work'], ['gantry', '', 'work'],
+    ['foreman', '', 'people'], ['apprentice', '', 'people'], ['workshop', '', 'work'], ['toolbox', '', 'things'],
   ];
 
   // phrases: the Assembler's grammar (no marks); early ones survive on u/y

@@ -1198,6 +1198,64 @@ a mechanic; progress is what you type and spend.
   pay. Between eras the slack is one rung at the tail. "Unlock two at once"
   on the spine itself is now a price question, not a refactor.
 
+### Deep ores (2026-08-22 — the ledger, approved and built)
+
+The Mk question's resolution: **a Mk mints a material.** The full worksheet
+is the Deep-Ore Ledger (artifact); this is the binding record.
+
+- **Materials.** Each mine rung yields a distinct good — deep iron/copper/
+  stone (Mk2), deep and pure quartz/coal/oil (Mk2/Mk3) — carrying its ore's
+  letters *cumulatively* through that depth. Deep ore satisfies any recipe
+  or price asking a shallower form of the same ore (downward compatibility,
+  `matSatisfies`/`bagAvail`/`spendCost`; belts deliver deep goods into
+  shallow slots; the bag spends shallow stock first). Variants stop at the
+  ore level: parts and above are grade-free.
+- **Constant books.** Every ingot pins its ores at exact depths, so its
+  alphabet and content pools are constants. A course's recipe BOOK is built
+  once at load (`CHAIN.bookRecipes`): Smelter alloys must hold V+C, the
+  Constructor's feeds ≥25 words — vowel-poor alloys are absent from that
+  course's book, never grayed at run time. `minAlpha` and every runtime
+  content floor are GONE: every gate the player meets is an ingredient.
+  Six signature alloys, one per deep rung (rivet iron, bell quartz, naphtha
+  bronze, coke brass, petrol glass, flash copper), so every Mk is a new
+  recipe to hand-work — the revisit as new material. RU Constructor feeds:
+  brass, quartz bronze, cast steel, black brass, quartz steel, coke iron;
+  EN: brass, black brass, quartz steel (as the ledger predicted).
+- **The Fastener's product line.** fastened → sealed (after ? !, +glass) →
+  bound (after : ; " ( ), +petrol glass); recipes with `atMk` need that
+  many key rungs bought at their own machine. Crates take sealed goods;
+  heavy modules take bound goods instead of moldings — the finish itself
+  demands the last punctuation lesson. Sealing is 1 fastened + 1 glass (a
+  tax, not a pyramid — 2 doubled the endgame in the bot).
+- **⚙ is per recipe, with a run-in.** A machine's automation belongs to the
+  recipe it runs (`m.autoOn[key]`); a mine's key is the material of its
+  depth, so a Mk retools by construction — nothing is switched off, the
+  deeper seam is simply new work. ⚙ goes on sale once the machine has made
+  the price's own-output count by hand since learning the recipe
+  (`m.handMade`, shown on the row as "run it in: N more by hand"), and the
+  purchase then consumes those units — no stockpile skips the review.
+  A v2 save's per-machine `auto` migrates to its current recipe's key once.
+- **No rung is skippable to the finish** (the no-terminal rule): oil's
+  price carries rivet iron (⇒ Iron Mk2) and modules (⇒ the whole early
+  set); ? ! costs brass (⇒ the deep pair, Copper+Stone Mk2); the Crane
+  costs sealed goods + flash copper (⇒ pure coal); bound goods ⇒ pure oil;
+  Foundry ← bell quartz (⇒ Quartz Mk2); Constructor ← quartz bronze; the
+  Fastener's Mk contiguity carries its own three. The walker holds it: RU
+  56 reachable states, EN 59 — none deadlocked, finger order kept, six
+  soft cases of a T3 rung early (reported, not failed).
+- **Pacing** (bot, PACE 3): 31.1 h against the ~30 target — T3 is the fat
+  era (the modules-and-Fastener climb). The human log has the last word.
+- **Content volumes** (user ruling: larger than needed, all languages): RU
+  clusters 50 → 108; RU words +~105 (the pinned thin sets + the workshop's
+  own vocabulary — anvil-and-rivet Russian); RU sentences +40 clause-dash
+  lines at тире's true weight ('-' 0.30 → 1.00); EN words 772 → 841; EN
+  syllables +17 bigrams for the thin quartz/iron/brass sets. Dup checks now
+  in both verify pages.
+- **Still open:** the display glyph map (standalone `-` drawn as —, «» on
+  the quote key) rides a later content pass; deep-ore icons are family art
+  with depth pips until the Phase 6 bake; the number row is its own bonus
+  era, later.
+
 ### Machine kinds
 
 Nine lesson kinds. Kinds are templates — build as many instances as the

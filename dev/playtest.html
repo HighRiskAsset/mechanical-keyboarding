@@ -56,8 +56,9 @@
   built.mine.az = true; built.mine.buki = true; built.mine.stone = true;
   const seenMat = (mat) => { p.seen[mat] = true; };
   const add = (bag, cost, k) => { for (const [m, n] of Object.entries(cost || {})) bag[m] = (bag[m] || 0) + n * (k || 1); };
-  const canPay = (cost) => cost && Object.entries(cost).every(([m, n]) => (p.bag[m] || 0) >= n);
-  const pay = (cost) => { for (const [m, n] of Object.entries(cost)) p.bag[m] -= n; };
+  // family-aware (the deep-ore ledger): deeper ore stock covers a shallow ask
+  const canPay = (cost) => cost && Object.entries(cost).every(([m, n]) => C.bagAvail(p.bag, m) >= n);
+  const pay = (cost) => C.spendCost(p.bag, cost);
 
   // the recipe used to hand-make a material (cheapest offered producing it).
   // offerableRecipes measures word pools, so memoize per ladder position.
@@ -84,10 +85,14 @@
     const spec = C.MATS[mat];
     if (!spec) return 0;
     if (spec.form === 'ore') {
-      if (!built.mine[mat]) return 0;
+      const fam = spec.ores[0];
+      if (!built.mine[fam]) return 0;
+      const depth = Math.max(1, C.oreMk(p, fam));
+      if ((spec.depth || 1) > depth) return 0;   // the mine cannot reach that deep yet
+      const yieldMat = C.matOfDepth(fam, depth);  // a mine yields its depth's material
       const got = Math.floor(ks);
-      p.bag[mat] = (p.bag[mat] || 0) + got; seenMat(mat);
-      workLog[mat] = (workLog[mat] || 0) + got;   // credit the material actually worked
+      p.bag[yieldMat] = (p.bag[yieldMat] || 0) + got; seenMat(yieldMat);
+      workLog[yieldMat] = (workLog[yieldMat] || 0) + got;
       return got;
     }
     const r = recipeToMake(mat);
@@ -102,8 +107,9 @@
       }
     }
     // inputs short? spend this minute on the scarcest input instead
+    // (family-aware: deep ore in the bag covers a shallow slot)
     for (const [im, need] of Object.entries(r.in)) {
-      if ((p.bag[im] || 0) < need * 3 && im !== mat) return handWork(im, ks, depth);
+      if (C.bagAvail(p.bag, im) < need * 3 && im !== mat) return handWork(im, ks, depth);
     }
     const kind = C.KINDS[r.kind];
     let used = 0, made = 0;
@@ -122,13 +128,14 @@
     reserve = reserve || {};
     // an automated processor takes only clear surplus (+60): hands and
     // machines never fight over the same intermediate, as belts prevent
-    const spare = (m, n) => (p.bag[m] || 0) - (reserve[m] || 0) - 60 >= n;
+    const spare = (m, n) => C.bagAvail(p.bag, m) - (reserve[m] || 0) - 60 >= n;
     for (const [key, count] of Object.entries(auto)) {
       if (!count) continue;
       if (key.startsWith('mine:')) {
         const ore = key.slice(5);
+        const yieldMat = C.matOfDepth(ore, Math.max(1, C.oreMk(p, ore)));
         const got = Math.floor(count * dt / C.TUNING.RATE.mine);
-        p.bag[ore] = (p.bag[ore] || 0) + got; seenMat(ore);
+        p.bag[yieldMat] = (p.bag[yieldMat] || 0) + got; seenMat(yieldMat);
       } else {
         const r = recipeToMake(autoRecipe[key] || '');
         if (!r) continue;
@@ -167,7 +174,7 @@
   // materials a price needs that the bag lacks
   function deficit(price) {
     const out = [];
-    for (const [m, n] of Object.entries(price || {})) if ((p.bag[m] || 0) < n) out.push(m);
+    for (const [m, n] of Object.entries(price || {})) if (C.bagAvail(p.bag, m) < n) out.push(m);
     return out;
   }
   // can the bot produce this material at all right now? Transitive: the
@@ -186,7 +193,7 @@
     seen.add(mat);
     const spec = C.MATS[mat];
     if (!spec) return false;
-    if (spec.form === 'ore') return !!built.mine[mat];
+    if (spec.form === 'ore') return !!built.mine[spec.ores[0]] && (spec.depth || 1) <= Math.max(1, C.oreMk(p, spec.ores[0]));
     const r = recipeToMake(mat);
     if (!r) return false;
     if (!built[r.kind]) {
@@ -269,12 +276,13 @@
         if (spent < 250) continue;
         const spec = C.MATS[wm];
         if (spec.form === 'ore') {
-          if (auto['mine:' + wm]) continue;
-          pending = { key: 'mine:' + wm, price: C.priceAuto({ kind: 'mine', ore: wm }), label: 'auto ' + wm };
+          const fam = spec.ores[0];
+          if (auto['mine:' + fam]) continue;
+          pending = { key: 'mine:' + fam, price: C.priceAuto({ kind: 'mine', ore: fam }, null, p), label: 'auto ' + fam };
         } else {
           const r = recipeToMake(wm);
-          if (!r || auto[r.kind] || !C.priceAuto({ kind: r.kind })) continue;
-          pending = { key: r.kind, price: C.priceAuto({ kind: r.kind }), mat: wm, label: 'auto ' + r.kind };
+          if (!r || auto[r.kind] || !C.priceAuto({ kind: r.kind }, r, p)) continue;
+          pending = { key: r.kind, price: C.priceAuto({ kind: r.kind }, r, p), mat: wm, label: 'auto ' + r.kind };
         }
         if (pending) break;
       }

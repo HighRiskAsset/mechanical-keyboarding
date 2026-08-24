@@ -113,14 +113,24 @@
     }
     return offered[0];
   }
+  // is this machine's CURRENT work automated? ⚙ is per recipe (the deep-ore
+  // ledger, 2026-08-22): a mine's key is the material its depth yields — so
+  // a Mk retools by construction — a processor's is its running recipe.
+  function autoLive(p, m) {
+    const key = m.kind === 'mine' ? C().mineMat(p, m) : C().autoKey(m, recipeOf(p, m), p);
+    return C().autoOn(m, key);
+  }
   // materials a machine takes in through its inlets: its recipe's inputs
   function accepts(p, m) {
     const r = recipeOf(p, m);
     return r ? Object.keys(r.in) : [];
   }
+  // does `mat` fit this machine's slot for `want`? Itself, or deeper family
+  // stock (downward compatibility): a deep-iron nugget rides into an iron slot
+  const fits = (mat, want) => C().matSatisfies(mat, want);
   // materials a machine can send down a belt
   function produces(p, m) {
-    if (m.kind === 'mine') return [m.ore];
+    if (m.kind === 'mine') return [C().mineMat(p, m)];
     const set = new Set();
     for (const r of C().offerableRecipes(m.kind, p)) set.add(r.out);
     for (const mat of Object.keys(m.buf ? m.buf.out : {})) if ((m.buf.out[mat] || 0) > 0) set.add(mat);
@@ -134,7 +144,7 @@
     if (beltsTo(p, to).length >= inletsOf(to)) return { ok: false, why: 'inlets' };
     if (p.belts.some((b) => b.from === from.id && b.to === to.id)) return { ok: false, why: 'exists' };
     const wants = accepts(p, to), makes = produces(p, from);
-    if (!makes.some((mat) => wants.includes(mat))) return { ok: false, why: 'material' };
+    if (!makes.some((mat) => wants.some((w) => fits(mat, w)))) return { ok: false, why: 'material' };
     return { ok: true };
   }
   function addBelt(p, from, to, path) {
@@ -154,19 +164,21 @@
   // ---------- hands: buffers first, then the bag ----------
   // take n of mat for a worked machine; returns false (taking nothing) if the
   // machine's buffer and the bag together can't cover it
+  // (buffers are keyed by the recipe's input ids; the bag draw is
+  // family-aware — deeper ore stock covers a shallower slot, shallow first)
   function takeInput(p, m, cost) {
     ensureMachine(m);
     for (const [mat, n] of Object.entries(cost)) {
-      if ((m.buf.in[mat] || 0) + (p.bag[mat] || 0) < n) return false;
+      if ((m.buf.in[mat] || 0) + C().bagAvail(p.bag, mat) < n) return false;
     }
     for (const [mat, n] of Object.entries(cost)) {
       const fromBuf = Math.min(n, m.buf.in[mat] || 0);
       if (fromBuf) m.buf.in[mat] -= fromBuf;
-      if (n - fromBuf) p.bag[mat] = (p.bag[mat] || 0) - (n - fromBuf);
+      if (n - fromBuf) C().spendCost(p.bag, { [mat]: n - fromBuf });
     }
     return true;
   }
-  const canTake = (p, m, cost) => Object.entries(cost).every(([mat, n]) => ((m.buf && m.buf.in[mat]) || 0) + (p.bag[mat] || 0) >= n);
+  const canTake = (p, m, cost) => Object.entries(cost).every(([mat, n]) => ((m.buf && m.buf.in[mat]) || 0) + C().bagAvail(p.bag, mat) >= n);
   // where a worked machine's output goes: an exit belt's buffer if one
   // exists (overflow to the bag when full), else the bag. Returns 'belt'|'bag'.
   function emit(p, m, mat, n) {
@@ -202,21 +214,21 @@
     const moved = {};
     for (const mat of accepts(p, m)) {
       const room = CAP() - (m.buf.in[mat] || 0);
-      const k = Math.min(room, p.bag[mat] || 0);
+      const k = Math.min(room, C().bagAvail(p.bag, mat));
       if (k <= 0) continue;
       m.buf.in[mat] = (m.buf.in[mat] || 0) + k;
-      p.bag[mat] -= k;
+      C().spendCost(p.bag, { [mat]: k });
       moved[mat] = k;
     }
     return moved;
   }
-  const canFeed = (p, m) => accepts(p, m).some((mat) => (p.bag[mat] || 0) > 0 && ((m.buf && m.buf.in[mat]) || 0) < CAP());
+  const canFeed = (p, m) => accepts(p, m).some((mat) => C().bagAvail(p.bag, mat) > 0 && ((m.buf && m.buf.in[mat]) || 0) < CAP());
   const hasOutput = (m) => !!m.buf && Object.values(m.buf.out).some((n) => n > 0);
   // a machine's state for the player's eye: 'off' | 'run' | 'starved' | 'full'
   function state(p, m) {
     ensureMachine(m);
-    if (!m.auto) return 'off';
-    if (m.kind === 'mine') return (m.buf.out[m.ore] || 0) >= CAP() ? 'full' : 'run';
+    if (!autoLive(p, m)) return 'off';
+    if (m.kind === 'mine') return (m.buf.out[C().mineMat(p, m)] || 0) >= CAP() ? 'full' : 'run';
     if (m.job) return 'run';
     const r = recipeOf(p, m);
     if (!r) return 'starved';
@@ -229,20 +241,22 @@
   function step(p, dtMs) {
     ensure(p);
     const cap = CAP();
-    // 1. automated mines yield on the clock
+    // 1. automated mines yield on the clock — the material of their depth,
+    // and only while THAT material's ⚙ is bought (a Mk retools emergent)
     const minePer = T().RATE.mine * 1000;
     for (const m of p.machines) {
-      if (m.kind !== 'mine' || !m.auto) continue;
+      if (m.kind !== 'mine' || !autoLive(p, m)) continue;
+      const yieldMat = C().mineMat(p, m);
       m.acc += dtMs;
       while (m.acc >= minePer) {
-        if ((m.buf.out[m.ore] || 0) >= cap) { m.acc = minePer; break; }   // full: wait
+        if ((m.buf.out[yieldMat] || 0) >= cap) { m.acc = minePer; break; }   // full: wait
         m.acc -= minePer;
-        m.buf.out[m.ore] = (m.buf.out[m.ore] || 0) + 1;
+        m.buf.out[yieldMat] = (m.buf.out[yieldMat] || 0) + 1;
       }
     }
     // 2. automated processors run timed jobs from their buffers
     for (const m of p.machines) {
-      if (m.kind === 'mine' || !m.auto) continue;
+      if (m.kind === 'mine' || !autoLive(p, m)) continue;
       if (m.job) {
         m.job.left -= dtMs;
         if (m.job.left <= 0) {
@@ -273,15 +287,18 @@
       }
       if (b.items.length && b.items[0].pos >= end - 1e-6) {
         const it = b.items[0];
-        if (accepts(p, to).includes(it.mat) && (to.buf.in[it.mat] || 0) < cap) {
-          to.buf.in[it.mat] = (to.buf.in[it.mat] || 0) + 1;
+        // deliver into the slot the good satisfies (deep ore fills the
+        // shallow slot it was sent to — downward compatibility on the belt)
+        const slot = accepts(p, to).find((w) => fits(it.mat, w));
+        if (slot && (to.buf.in[slot] || 0) < cap) {
+          to.buf.in[slot] = (to.buf.in[slot] || 0) + 1;
           b.items.shift();
         }
       }
       const tailFree = !b.items.length || b.items[b.items.length - 1].pos >= 1;
       if (tailFree) {
         const wants = accepts(p, to);
-        const mat = wants.find((x) => (from.buf.out[x] || 0) > 0);
+        const mat = Object.keys(from.buf.out).find((x) => (from.buf.out[x] || 0) > 0 && wants.some((w) => fits(x, w)));
         if (mat) { from.buf.out[mat]--; b.items.push({ mat, pos: 0 }); }
       }
     }
@@ -311,7 +328,7 @@
   window.SIM = {
     ensure, ensureMachine, machineById, beltsFrom, beltsTo, outletsOf, inletsOf,
     ports, facingOf, nextFacing, turn, sizeOf, footprintOf, FACINGS,
-    recipeOf, accepts, produces, canLink, addBelt, hasExit,
+    recipeOf, autoLive, accepts, produces, canLink, addBelt, hasExit,
     takeInput, canTake, emit, collect, feed, canFeed, hasOutput, state,
     step, catchUp, tick,
   };

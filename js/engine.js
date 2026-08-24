@@ -188,6 +188,15 @@
       }
     }
     if (window.SIM) SIM.ensure(p);   // buffers, belts, the clock, the facing (phase 3)
+    // ⚙ went per-recipe with the deep-ore ledger (2026-08-22): a save from
+    // before carries one `auto` flag per machine — it becomes that machine's
+    // engine for the work it is doing right now, once
+    for (const m of p.machines) {
+      if (m.auto !== true) { delete m.auto; continue; }
+      const key = m.kind === 'mine' ? C().mineMat(p, m) : (window.SIM ? C().autoKey(m, SIM.recipeOf(p, m), p) : null);
+      if (key) { if (!m.autoOn) m.autoOn = {}; m.autoOn[key] = true; }
+      delete m.auto;
+    }
     if (window.DROPS) DROPS.ensure(p);   // goods lying on the ground; they never expire
     // machines stand on tiles now (rotation overhaul, 2026-08-21): a machine
     // from before carries a plot or node anchor and no `at` — seat it there
