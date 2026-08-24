@@ -1,5 +1,6 @@
 // Synthesized sound: key clicks, error thuds, arrival whistle, collect ding,
-// the soft poof of a thing coming apart, the pickup run off the ground,
+// the soft poof of a thing coming apart and the assemble that runs it
+// backwards, the pickup run off the ground and the shimmer it lands on,
 // and the train rhythm — steady typing makes the ride sound smooth.
 // No audio assets; everything is WebAudio. Global namespace: AUDIO
 (function () {
@@ -180,6 +181,78 @@
     o.start(t); o.stop(t + 0.13);
     noiseBurst(0.02, 4200, 0.025, 'highpass');          // the sparkle on top of it
   }
+  // A batch of goods landing in the bag. The pop at the far end of the
+  // flight: `mint` and `pickup` fire when a good leaves the world, this
+  // fires when it arrives, so a reward is two beats and not one. It sits
+  // above the count-up ticks rather than over them — a bell and a sparkle,
+  // both quiet, and a fatter batch only opens it a little wider.
+  function arrive(n) {
+    ensureCtx();
+    if (!enabled || !ctx) return;
+    const k = Math.min(1, (Math.max(1, n || 1) + 2) / 6);
+    tone(1568, 0.16, 0.05 * k, 0, 'sine');
+    tone(2093, 0.22, 0.035 * k, 0.035, 'sine');
+    noiseBurst(0.05, 6000, 0.03 * k, 'highpass', 0.02);
+  }
+  // Materials leaving the bag on their way to a build site: `mint` run
+  // backwards, a pop that falls instead of climbing. Soft on purpose —
+  // paying is the wind-up, and the latch at the end is the payoff.
+  function pay() {
+    ensureCtx();
+    if (!enabled || !ctx) return;
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(900, t);
+    o.frequency.exponentialRampToValueAtTime(430, t + 0.09);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.075, t + 0.014);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    o.connect(g).connect(ctx.destination);
+    o.start(t); o.stop(t + 0.14);
+    noiseBurst(0.03, 3200, 0.02, 'highpass');
+  }
+  // A thing coming together: `poof` run backwards. Where the poof opens a
+  // breath down into a thud, this gathers a thud up into a breath — the
+  // filter climbs, the body tone rises instead of sagging, and the three
+  // quiet taps lead in rather than trailing off. It ends on the swell,
+  // which is where `build`'s latch lands.
+  function assemble() {
+    ensureCtx();
+    if (!enabled || !ctx) return;
+    const t = ctx.currentTime, dur = 0.34;
+    const len = Math.floor(ctx.sampleRate * dur);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.Q.value = 0.5;                                   // no resonance, same as the poof
+    lp.frequency.setValueAtTime(260, t);
+    lp.frequency.exponentialRampToValueAtTime(1500, t + dur);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.16, t + dur * 0.8);   // the swell, at the end this time
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(lp).connect(g).connect(ctx.destination);
+    src.start(t); src.stop(t + dur);
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(62, t);
+    o.frequency.exponentialRampToValueAtTime(165, t + 0.3);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(0.0001, t);
+    og.gain.linearRampToValueAtTime(0.12, t + 0.24);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 0.33);
+    o.connect(og).connect(ctx.destination);
+    o.start(t); o.stop(t + 0.35);
+    noiseBurst(0.05, 520, 0.03, 'lowpass', 0.02);
+    noiseBurst(0.05, 700, 0.04, 'lowpass', 0.09);
+    noiseBurst(0.06, 900, 0.05, 'lowpass', 0.16);
+  }
   // purchase: latch + heavy chunk + body resonance
   function build() {
     ensureCtx();
@@ -252,5 +325,5 @@
   }
   function isEnabled() { return enabled; }
 
-  window.AUDIO = { click, thud, ding, whistle, press, mint, build, countTick, fanfare, poof, pickup, onKey, setEnabled, isEnabled };
+  window.AUDIO = { click, thud, ding, whistle, press, mint, build, countTick, fanfare, poof, assemble, pickup, arrive, pay, onKey, setEnabled, isEnabled };
 })();

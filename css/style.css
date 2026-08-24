@@ -235,12 +235,37 @@ body.night #factory-mount canvas { filter: brightness(0.45) saturate(0.8); }
 }
 .keycap.lesson.hint { color: #1a1508; }
 /* materials flying from bench to the inventory panel */
+/* Goods in flight between the world and the bag, either way round. The
+   arc, the tumble and the timing are the script's — it draws the whole
+   path as keyframes — so all that lives here is the glow each direction
+   burns with: gold for a reward coming in, verdigris for a price going
+   out, the same two colours the HUD row flashes with. */
 .fly-mat {
   position: fixed;
   z-index: 60;
   pointer-events: none;
   image-rendering: pixelated;
-  transition: transform 0.55s cubic-bezier(0.4, 0, 0.9, 0.6), opacity 0.6s;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 0 3px rgba(255, 226, 138, 0.95)) drop-shadow(0 0 9px rgba(255, 226, 138, 0.55));
+}
+.fly-mat.out {
+  filter: drop-shadow(0 0 3px rgba(127, 201, 168, 0.95)) drop-shadow(0 0 9px rgba(127, 201, 168, 0.5));
+}
+/* the trail: motes dropped on the arc behind a good and left to fade
+   where they were dropped, so the flight has a wake and not just a path */
+.fly-mote {
+  position: fixed;
+  z-index: 59;
+  pointer-events: none;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  background: #ffe28a;
+  box-shadow: 0 0 6px 2px rgba(255, 226, 138, 0.75);
+}
+.fly-mote.out {
+  background: #7fc9a8;
+  box-shadow: 0 0 6px 2px rgba(127, 201, 168, 0.7);
 }
 .keycap.unlock-glow {
   background: var(--brass);

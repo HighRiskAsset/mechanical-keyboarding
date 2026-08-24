@@ -246,7 +246,15 @@
     PICKUP_CAP: 100,       // (legacy) the old instant pickup; buffers cap below
     // the simulation (phase 3): buffers, rates, belts — real time
     BUFFER_CAP: 100,       // per material, input and output buffers
-    BAG_CAP: 9999,         // per material, what the operator can carry (see bagAdd)
+    // What his back will bear, made real (user ruling 2026-08-22): the bag
+    // is the HAND ceiling — every mandatory hold tops out at 240 (paced), so
+    // 300 gives 25% headroom — and the standing factory is the scalable
+    // warehouse: every machine's bins hold 100 per material and refill
+    // themselves while you type elsewhere. Wanting a bigger surplus means
+    // building more works. Hand overflow: bag → the machine's own bin → the
+    // ground at your feet (bounded by typing speed; automation NEVER spills
+    // — a full machine pauses, as ever).
+    BAG_CAP: 300,          // per material, what the operator can carry (see bagAdd)
     RATE: { mine: 2, smelter: 3, foundry: 4, constructor: 4, molder: 5, assembler: 6, fastener: 6, crane: 7, manufacturer: 10 }, // seconds per unit
     BELT_SPEED: 2,         // tiles per second, one item per tile
     OUTLETS: { mine: 1, processor: 2 }, // belts out of a machine; inlets = the kind's arity
@@ -320,7 +328,7 @@
       assembler: { mold: 60, slova: 40 },
       fastener: { oil: 40, stroki: 40 },
       crane: { sealed: 50, flashcopper: 30 },
-      manufacturer: { crate: 100, mold: 60, slova: 60 },
+      manufacturer: { crate: 80, mold: 60, slova: 60 },   // 80: no single ask may crowd the 300 bag (240 paced is the game-wide ceiling)
     },
     // automation is PER RECIPE (the ledger): its price is the recipe's own
     // output (`own` — which is also the run-in: that many units by hand

@@ -191,7 +191,10 @@
   // Returns the goods collected this tick as [{mat, n, x, y}], or null. The
   // caller banks them — this file never touches the bag, so the flight into
   // the HUD and the pop stay where the rest of the bag's feedback lives.
-  function tick(p, dtMs, px, py) {
+  // canTake(mat), when given, keeps a stack lying where it is instead of
+  // pulling it in — the full-of-that bag walks over its own spill without
+  // churning it (the bag cap, 2026-08-22)
+  function tick(p, dtMs, px, py, canTake) {
     const list = ensure(p);
     if (!list || !list.length) return null;
     const ms = Math.min(MAX_DT, Math.max(0, dtMs));
@@ -224,6 +227,7 @@
       }
       if (d.settle) { d.settle = Math.max(0, d.settle - ms); if (!d.settle) delete d.settle; continue; }
       if (!live) continue;
+      if (canTake && !canTake(d.mat)) continue;   // a full back leaves the pile lying
       const dx = tx - d.x, dy = ty - d.y;
       const r = Math.hypot(dx, dy);
       if (r > PULL) continue;

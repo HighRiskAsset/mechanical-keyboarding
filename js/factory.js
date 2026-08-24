@@ -29,7 +29,7 @@
   let dockedId = null;
   let frameClock = 0;
   let dotTex = null;
-  const particles = [], floats = [], flashes = [], sparks = [], puffs = [];
+  const particles = [], floats = [], flashes = [], sparks = [], puffs = [], builds = [];
   const petals = [];
   let ambient = [], waterSprites = [], terrain = [], nodeSprites = [];
   let waterTexes = [];
@@ -133,26 +133,55 @@
       .fill({ color: 0x221d29, alpha: 0.74 });
     uiC.addChild(hudPanel);
     hudKeys.forEach((k, i) => {
+      // the row's own flash, under everything in it: a bar that lights when
+      // goods land in this row or a price leaves it, so the bag says which
+      // line moved without the number having to be read
+      const flash = new PIXI.Graphics().rect(1, 1 + i * HUD_ROW, HUD_W - 2, HUD_ROW - 1).fill(0xffffff);
+      flash.visible = false;
+      uiC.addChild(flash);
       const ic = new PIXI.Sprite(PIXELS.matTex(k));
       ic.position.set(3, 3 + i * HUD_ROW);
       uiC.addChild(ic);
       const t = new PIXI.Sprite(PIXELS.textTex(String(invValues[k] || 0), PIXELS.P.paper));
       t.position.set(HUD_W - 3 - t.texture.width, 6 + i * HUD_ROW);
       uiC.addChild(t);
-      hudRows[k] = t;
+      hudRows[k] = { t, ic, flash, iy: ic.y, pulse: null };
     });
   }
   function setInvValue(key, n) {
     invValues[key] = n;
-    const t = hudRows[key];
-    if (!t) return;
-    t.texture = PIXELS.textTex(String(n), PIXELS.P.paper);
-    t.position.x = HUD_W - 3 - t.texture.width;
+    const r = hudRows[key];
+    if (!r) return;
+    r.t.texture = PIXELS.textTex(String(n), PIXELS.P.paper);
+    r.t.position.x = HUD_W - 3 - r.t.texture.width;
   }
   function invScreenPos(key) {
-    const t = hudRows[key];
-    if (!t) return null;
-    return t.getGlobalPosition();
+    const r = hudRows[key];
+    if (!r) return null;
+    return r.t.getGlobalPosition();
+  }
+  // The row takes the hit: gold and a jump up when a good lands in it,
+  // verdigris and a press down when a price is drawn out of it. One flag
+  // and the frame does the rest, so a burst of arrivals restarts the same
+  // flash instead of stacking a dozen of them.
+  function pulseInv(key, out) {
+    const r = hudRows[key];
+    if (!r) return;
+    r.pulse = { t: 0, life: 15, out: !!out };
+  }
+  function tickHud(dt) {
+    for (const r of Object.values(hudRows)) {
+      const p = r.pulse;
+      if (!p) continue;
+      p.t += dt;
+      const k = Math.min(1, p.t / p.life);
+      r.flash.visible = true;
+      r.flash.tint = p.out ? 0x7fc9a8 : 0xf2c14e;
+      r.flash.alpha = (1 - k) * (p.out ? 0.34 : 0.55);
+      r.ic.y = r.iy + (p.out ? 1 : -1) * (k < 0.55 ? 1 : 0);
+      r.t.tint = k < 0.55 ? (p.out ? 0x7fc9a8 : 0xfff0a6) : 0xffffff;
+      if (k >= 1) { r.pulse = null; r.flash.visible = false; r.ic.y = r.iy; r.t.tint = 0xffffff; }
+    }
   }
   // the hold-to-interact bar over the operator; its color says what the hold
   // will do (gold = menu, green = lay the belt here, red = drop the spool)
@@ -561,6 +590,7 @@
     for (const l of labelsC.children.slice()) { labelsC.removeChild(l); l.destroy(); }
     floats.length = 0;
     flashes.length = 0;
+    builds.length = 0;            // the bodies these held are being destroyed below
     stations = {};
     if (player) { cameraC.removeChild(player); player.destroy(); player = null; }
 
@@ -627,6 +657,7 @@
       stations[id] = {
         def: { id, x: bx + 1, y: by + bhPx - 5, kind: m.kind, m, bw }, root, sp, glow, mark, built: true, auto: live, sqTtl: 0,
         spBase: sp.y,
+        body: { x: bx, y: by, w: bwPx, h: bhPx },   // the ground it covers, for the smoke it arrives in
         glowRect: { x: 1, y: bhPx - 5, w: bw - 4, h: 2 },
         simState: live && window.SIM ? SIM.state(profile, m) : 'off',
       };
@@ -1337,17 +1368,31 @@
 
   function setMove(which, down) { moving[which] = down; }
 
-  function spawnSparks(wx, wy, n, tint) {
+  // Motes: thrown up out of a place, or — with `ring` — drawn into one from
+  // a circle that wide, which is the only difference between a thing giving
+  // something up and a thing being put together. Drawn in, they fall to the
+  // middle instead of to the ground, so they carry no weight.
+  function spawnSparks(wx, wy, n, tint, ring) {
     for (let i = 0; i < n; i++) {
       const sp = new PIXI.Sprite(PIXELS.sparkTex());
       sp.tint = tint;
       sp.zIndex = 5000;
       cameraC.addChild(sp);
-      sparks.push({
-        sp, x: wx + Math.random() * 10 - 5, y: wy,
-        vx: Math.random() * 1.6 - 0.8, vy: -(0.15 + Math.random() * 0.5),
-        ttl: 18 + Math.random() * 10,
-      });
+      if (ring) {
+        const a = (i / n) * Math.PI * 2 + Math.random() * 0.6;
+        const r = ring * (0.65 + Math.random() * 0.5), ttl = 14 + Math.random() * 8;
+        sparks.push({
+          sp, x: wx + Math.cos(a) * r, y: wy + Math.sin(a) * r * 0.6,
+          vx: (-Math.cos(a) * r) / ttl, vy: (-Math.sin(a) * r * 0.6) / ttl, g: 0,
+          ttl,
+        });
+      } else {
+        sparks.push({
+          sp, x: wx + Math.random() * 10 - 5, y: wy,
+          vx: Math.random() * 1.6 - 0.8, vy: -(0.15 + Math.random() * 0.5), g: 0.07,
+          ttl: 18 + Math.random() * 10,
+        });
+      }
     }
   }
 
@@ -1375,6 +1420,107 @@
       });
     }
     spawnSparks(wx + w / 2, wy + h * 0.7, 7, 0xe8dcc0);
+  }
+
+  // ---------- coming together: the poof, run backwards ----------
+  // Everything built goes out through here, the way everything destroyed
+  // goes out through DROPS.demolish, and for the same reason: a purchase
+  // should look like its own undoing played the other way round. The poof
+  // opens puffs out of a body and leaves bare ground; this gathers puffs
+  // onto bare ground, draws a ring of motes down into the middle of them,
+  // and settles the body out of the smoke a beat later.
+  //
+  // `what` names the site the way demolish names what is coming apart:
+  //   {dockId}  a station's body — a machine, or a place with none left
+  //   {path}    the tiles a run was laid along
+  //   {rect}    any box of world pixels, for a site with no station
+  // `hold` is how long the price is still in the air: the body lands a beat
+  // after that, and the site smokes for the whole wait rather than standing
+  // bare and then puffing at the last moment. The body is hidden the moment
+  // this is called, so a rebuilt world never shows the thing standing there
+  // before it has arrived. Returns the delay in ms before it lands, so the
+  // caller can put the latch on the same beat.
+  //
+  // the smoke leads, the body follows: ten frames of it, said in frames
+  // because that is what the ticker counts, and in ms for the caller
+  const BODY_IN_F = 10, BODY_IN = Math.round((BODY_IN_F * 1000) / 60);
+  const inFrames = (ms) => Math.max(0, (ms || 0) / (1000 / 60));
+  function materialize(what, hold) {
+    if (!ready || !what) return BODY_IN;
+    const wait = inFrames(hold) + BODY_IN_F;      // frames from now until the body lands
+    const boxes = [];
+    let st = null;
+    if (what.dockId) {
+      st = stations[what.dockId] || null;
+      if (st && st.body) boxes.push(st.body);
+    }
+    if (what.path) {
+      const path = what.path;
+      const step = Math.max(1, Math.ceil(path.length / 5));
+      for (let i = 0; i < path.length; i += step) boxes.push({ x: path[i][0] * T16, y: path[i][1] * T16, w: T16, h: T16 });
+    }
+    if (what.rect) boxes.push({ x: what.rect.x, y: what.rect.y, w: what.rect.w, h: what.rect.h });
+    if (!boxes.length && st) boxes.push({ x: st.def.x, y: st.def.y - 24, w: st.def.bw || 26, h: 26 });
+    if (st && st.built && st.sp) bodyIn(st, wait);
+    for (const b of boxes.slice(0, 6)) gather(b.x, b.y, b.w, b.h, wait);
+    return (hold || 0) + BODY_IN;
+  }
+  // where a site is, in world pixels: the middle of a body, the middle tile
+  // of a run, the middle of a rect. The price flies to this point, and the
+  // smoke gathers around it.
+  function siteOf(what) {
+    if (!ready || !what) return null;
+    if (what.dockId) {
+      const st = stations[what.dockId];
+      if (st && st.body) return { x: st.body.x + st.body.w / 2, y: st.body.y + st.body.h / 2 };
+      const def = posOf(what.dockId);
+      if (def) return { x: midX(def), y: def.y - 14 };
+    }
+    if (what.path && what.path.length) {
+      const [tx, ty] = what.path[what.path.length >> 1];
+      return { x: tx * T16 + T16 / 2, y: ty * T16 + T16 / 2 };
+    }
+    if (what.rect) return { x: what.rect.x + what.rect.w / 2, y: what.rect.y + what.rect.h / 2 };
+    return null;
+  }
+  // One box of ground filling with smoke: the same puffs as the poof, but
+  // they sink instead of rising and tighten through their frames instead of
+  // opening out, and the motes come down a ring rather than off the foot.
+  // They are spread across the whole wait rather than fired all at once, so
+  // a site still being paid for goes on smoking right up to the landing —
+  // a machine takes a moment to come together, and a machine coming apart
+  // does not, which is the difference between the two written as timing.
+  function gather(wx, wy, w, h, wait) {
+    const base = Math.max(3, Math.min(9, Math.round((w * h) / 90)));
+    const n = Math.min(18, Math.round(base * (1 + wait / 24)));
+    for (let i = 0; i < n; i++) {
+      const sp = new PIXI.Sprite(PIXELS.puffTex(PIXELS.PUFF_FRAMES - 1));
+      sp.anchor.set(0.5);
+      sp.zIndex = 5600;
+      sp.visible = false;
+      cameraC.addChild(sp);
+      puffs.push({
+        sp, frame: -1, rev: true,
+        x: wx + Math.random() * w, y: wy + h * 0.15 + Math.random() * h * 0.7,
+        vx: Math.random() * 0.5 - 0.25, vy: 0.1 + Math.random() * 0.22,
+        t: 0, life: 22 + Math.random() * 10, delay: (wait * i) / n,
+      });
+    }
+    // the ring closes as the body lands, not before it
+    const ms = Math.round(Math.max(0, wait - 6) * (1000 / 60));
+    if (ms) setTimeout(() => ringIn(wx, wy, w, h), ms);
+    else ringIn(wx, wy, w, h);
+  }
+  const ringIn = (wx, wy, w, h) => spawnSparks(wx + w / 2, wy + h * 0.6, 8, 0xfff0a6, Math.max(12, w * 0.7));
+  // the body settling out of the smoke: it drops the last few pixels on an
+  // ease-out, comes up opaque almost at once so the smoke never shows
+  // through it, and runs hot for the first beat
+  function bodyIn(st, wait) {
+    const sp = st.sp;
+    const base = st.spBase === undefined ? sp.y : st.spBase;
+    for (let i = builds.length - 1; i >= 0; i--) if (builds[i].sp === sp) builds.splice(i, 1);
+    sp.visible = false;
+    builds.push({ sp, base, t: 0, life: 14, delay: wait || 0 });
   }
   // Goods lying on the ground, drawn straight off the save: one sprite and
   // one shadow each, created and destroyed as the pile changes. They are
@@ -1691,23 +1837,44 @@
     }
     // smoke: it rises, opens out through its four frames and thins away.
     // They start a beat apart so a body comes apart in a roll rather than
-    // all at once.
+    // all at once. A puff marked `rev` runs the same numbers the other way
+    // — it sinks, tightens back down its frames and is gone by the time the
+    // body it gathered into is standing — so building and destroying share
+    // one loop and cannot drift apart.
     for (let i = puffs.length - 1; i >= 0; i--) {
       const p = puffs[i];
       if (p.delay > 0) { p.delay -= dt; continue; }
       p.sp.visible = true;
       p.t += dt;
       p.x += p.vx * dt; p.y += p.vy * dt;
-      const f = Math.min(PIXELS.PUFF_FRAMES - 1, Math.floor((p.t / p.life) * PIXELS.PUFF_FRAMES));
+      const k = Math.min(0.999, p.t / p.life);
+      const f = p.rev ? PIXELS.PUFF_FRAMES - 1 - Math.floor(k * PIXELS.PUFF_FRAMES) : Math.floor(k * PIXELS.PUFF_FRAMES);
       if (p.frame !== f) { p.frame = f; p.sp.texture = PIXELS.puffTex(f); }
       p.sp.position.set(Math.round(p.x), Math.round(p.y));
-      p.sp.alpha = Math.max(0, 1 - p.t / p.life) * 0.85;
+      // coming apart it is opaque at once and thins out; coming together it
+      // has to arrive from nothing, so it fades up fast and off at the end
+      p.sp.alpha = 0.85 * (p.rev ? Math.min(1, k / 0.16) * Math.min(1, (1 - k) / 0.35) : 1 - k);
       if (p.t >= p.life) { cameraC.removeChild(p.sp); p.sp.destroy(); puffs.splice(i, 1); }
     }
+    // a body settling out of that smoke: down the last few pixels, opaque
+    // almost at once, hot for the first beat
+    for (let i = builds.length - 1; i >= 0; i--) {
+      const b = builds[i];
+      if (b.sp.destroyed) { builds.splice(i, 1); continue; }
+      if (b.delay > 0) { b.delay -= dt; continue; }
+      b.sp.visible = true;
+      b.t += dt;
+      const k = Math.min(1, b.t / b.life);
+      b.sp.y = Math.round(b.base - 7 * (1 - k) * (1 - k));
+      b.sp.alpha = Math.min(1, k * 2.4);
+      b.sp.tint = k < 0.45 ? 0xfff0c4 : 0xffffff;
+      if (k >= 1) { b.sp.y = b.base; b.sp.alpha = 1; b.sp.tint = 0xffffff; builds.splice(i, 1); }
+    }
+    tickHud(dt);
     syncDrops();
     for (let i = sparks.length - 1; i >= 0; i--) {
       const p = sparks[i];
-      p.vy += 0.07 * dt;
+      p.vy += p.g * dt;
       p.x += p.vx * dt; p.y += p.vy * dt;
       p.sp.position.set(Math.round(p.x), Math.round(p.y));
       p.ttl -= dt;
@@ -1735,7 +1902,10 @@
   }
 
   window.FACTORY = {
-    init, loadMap, buildWorld, setMove, castLetter, floatText, stamp, getDocked, posOf, poof,
+    init, loadMap, buildWorld, setMove, castLetter, floatText, stamp, getDocked, posOf, poof, materialize, siteOf,
+    // the burst a good makes as it leaves the world for the bag, or as a
+    // price leaves the bag for a site
+    sparkle: (wx, wy, n, tint, ring) => { if (ready) spawnSparks(wx, wy, n, tint, ring); },
     playerPos: () => ({ x: playerX, y: playerY }),
     // the way the operator faces, as a world side — the build ghost stands ahead
     playerDir: () => (facing === 'down' ? 's' : facing === 'up' ? 'n' : faceSign > 0 ? 'e' : 'w'),
@@ -1743,7 +1913,7 @@
     screenPos, setDockGlow, showInfo, clearInfo, showMenu, clearMenu, setAutoLook,
     routeBelt, beltReaches, machinePorts, portsOpen, showGhost, clearGhost, setSpool, markStations, setSocketTarget,
     showBuildGhost, clearBuildGhost,
-    setInvValue, invScreenPos, setHudKeys, setCharge,
+    setInvValue, invScreenPos, setHudKeys, setCharge, pulseInv,
     onDock: null,
   };
 })();

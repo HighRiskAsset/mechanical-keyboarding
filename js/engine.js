@@ -151,10 +151,21 @@
     if (!p.bag) p.bag = {};
     if (!p.seen) p.seen = {};
     if (!p.crossings) p.crossings = {};
-    // a save from before the cap (or one hand-edited) settles to it on load
+    // a save from before the cap (2026-08-22) spills its surplus onto the
+    // ground at the spawn, once — clamping would be theft. The piles lie
+    // where the operator lands and never expire.
     const bagCap = C().TUNING.BAG_CAP;
+    if (!Array.isArray(p.drops)) p.drops = [];
+    if (typeof p.nextDropId !== 'number') p.nextDropId = 1;
+    let spillN = 0;
     for (const [k, v] of Object.entries(p.bag)) {
-      if (v > bagCap) p.bag[k] = bagCap;
+      if (v > bagCap) {
+        const over = v - bagCap;
+        p.bag[k] = bagCap;
+        const sp = C().SPAWN || { x: 100, y: 100 };
+        p.drops.push({ id: 'd' + (p.nextDropId++), mat: k, n: over, x: sp.x + 14 + (spillN % 5) * 9, y: sp.y + 10 + Math.floor(spillN / 5) * 8 });
+        spillN++;
+      }
       if (v > 0) p.seen[k] = true;
     }
     if (!Array.isArray(p.machines) || !p.machines.length) {

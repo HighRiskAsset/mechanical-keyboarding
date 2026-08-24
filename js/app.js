@@ -214,24 +214,46 @@
   // numbers). Rows are the materials the player has held, in tree order.
   let iconURLs = {};
   const invPrev = {};
-  const countTimers = {};
+  const invShown = {};
+  const countTimers = {}, countWaits = {};
+  // A row waiting on goods in the air. The bag is banked the instant it is
+  // earned, but the number is what the player watches, and a number that
+  // has already climbed by the time the goods arrive makes the flight
+  // decorative. So the flight leaves a note here and the count keeps to it:
+  // `wait` holds the climb until the goods land, `drain` walks a price down
+  // as it flies out instead of snapping to the new total.
+  const countHint = {};
   let hudKeysShown = [];
   const invValue = (k) => profile.bag[k] || 0;
   function hudKeys() {
     return CHAIN.MAT_IDS.filter((id) => profile.seen[id]);
   }
-  function animateCount(key, from, to) {
-    clearInterval(countTimers[key]);
-    const delta = to - from;
-    const steps = Math.min(8, Math.abs(delta));
-    if (steps <= 1) { FACTORY.setInvValue(key, to); if (delta > 0) A.countTick(1); return; }
-    let i = 0;
-    countTimers[key] = setInterval(() => {
-      i++;
-      FACTORY.setInvValue(key, Math.round(from + (delta * i) / steps));
-      if (delta > 0) A.countTick(i);
-      if (i >= steps) clearInterval(countTimers[key]);
-    }, 45);
+  function showInv(key, n) {
+    invShown[key] = n;
+    FACTORY.setInvValue(key, n);
+  }
+  function stopCount(key) { clearInterval(countTimers[key]); clearTimeout(countWaits[key]); }
+  // always from what the row is actually showing, never from the last value
+  // banked — two batches landing close together would otherwise make the
+  // second one start from a number the first never got round to drawing
+  function animateCount(key, to, hint) {
+    stopCount(key);
+    const run = () => {
+      const from = invShown[key] === undefined ? to : invShown[key];
+      const delta = to - from;
+      const up = delta > 0;
+      const steps = Math.min(8, Math.abs(delta));
+      if (steps <= 1) { showInv(key, to); if (up) A.countTick(1); return; }
+      let i = 0;
+      countTimers[key] = setInterval(() => {
+        i++;
+        showInv(key, Math.round(from + (delta * i) / steps));
+        if (up) A.countTick(i);
+        if (i >= steps) clearInterval(countTimers[key]);
+      }, up ? 45 : 32);
+    };
+    if (hint && hint.wait) countWaits[key] = setTimeout(run, hint.wait);
+    else run();
   }
   function refreshInventory() {
     if (!profile) return;
@@ -239,14 +261,16 @@
     if (keys.join() !== hudKeysShown.join()) {
       hudKeysShown = keys;
       FACTORY.setHudKeys(keys);
-      for (const k of keys) { if (!iconURLs[k]) iconURLs[k] = PIXELS.matURL(k); FACTORY.setInvValue(k, invPrev[k] === undefined ? invValue(k) : invPrev[k]); }
+      for (const k of keys) { if (!iconURLs[k]) iconURLs[k] = PIXELS.matURL(k); showInv(k, invPrev[k] === undefined ? invValue(k) : invPrev[k]); }
     }
     for (const k of keys) {
       const v = invValue(k);
-      if (invPrev[k] === undefined) { invPrev[k] = v; FACTORY.setInvValue(k, v); continue; }
-      if (v === invPrev[k]) continue;
-      if (v > invPrev[k]) animateCount(k, invPrev[k], v);
-      else { clearInterval(countTimers[k]); FACTORY.setInvValue(k, v); }
+      if (invPrev[k] === undefined) { invPrev[k] = v; showInv(k, v); continue; }
+      if (v === invPrev[k]) continue;               // a note is only spent on the change it was left for
+      const hint = countHint[k];
+      delete countHint[k];
+      if (v > invPrev[k] || (hint && hint.drain)) animateCount(k, v, hint);
+      else { stopCount(k); showInv(k, v); }
       invPrev[k] = v;
     }
   }
@@ -254,37 +278,120 @@
     const def = FACTORY.posOf(dockId);
     if (def) flyFrom(mat, count, def.x + 13, def.y - 30);
   }
-  // the same flight from anywhere on the map: a loose good swept off the
-  // ground takes it too, so picking one up looks exactly like typing one out
-  function flyFrom(mat, count, wx, wy) {
+
+  // ---------- the flight between the world and the bag ----------
+  // One flight, run either way round. A good typed out of a machine or
+  // swept off the ground flies world → bag; the price of anything built
+  // flies bag → world. Same arc, same tumble, same burst at both ends,
+  // because a purchase should read as a reward played backwards — the
+  // rule the poof and DROPS.demolish already keep on the other side.
+  //
+  // The arc is thrown and not dragged: a good pops up and a little back
+  // from where it starts, hangs a beat, then swoops in with all of its
+  // speed at the end. A straight slide reads as a panel updating; this
+  // reads as a thing moving, which is the whole point of it.
+  const FLY_MS = 520, FLY_STEP = 70, FLY_STEPS = 16;
+  // page coordinates: the canvas is drawn at device pixels and laid out at
+  // css pixels, so everything the DOM throws over it comes through here
+  function pageOf(p) {
     const canvas = document.querySelector('#factory-mount canvas');
-    if (!canvas) return;
-    if (!iconURLs[mat]) iconURLs[mat] = PIXELS.matURL(mat);
+    if (!canvas || !p) return null;
     const rect = canvas.getBoundingClientRect();
-    const scale = rect.width / canvas.width;
-    const sp = FACTORY.screenPos(wx, wy);
-    const sx = rect.left + sp.x * scale, sy = rect.top + sp.y * scale;
-    const tp = FACTORY.invScreenPos(mat);
-    if (!tp) return;
-    const tx = rect.left + tp.x * scale, ty = rect.top + tp.y * scale;
+    const k = rect.width / canvas.width;
+    return { x: rect.left + p.x * k, y: rect.top + p.y * k, k };
+  }
+  const screenOf = (wx, wy) => pageOf(FACTORY.screenPos(wx, wy));
+  const hudOf = (mat) => pageOf(FACTORY.invScreenPos(mat));
+  // a quadratic bezier whose control point is up and a touch behind the
+  // start — that is what makes it a toss and not a slide
+  const flyArc = (dx, dy, side, lift) => (u) => {
+    const cx = -dx * 0.16 + side, cy = -lift, v = 1 - u;
+    return [2 * v * u * cx + u * u * dx, 2 * v * u * cy + u * u * dy];
+  };
+  // time → distance along that arc: a snap out, a hang at the top, then
+  // everything else in the last third
+  const flyEase = (t) => (t < 0.3 ? (t / 0.3) * 0.2 : 0.2 + 0.8 * Math.pow((t - 0.3) / 0.7, 1.75));
+  // Returns how long the last good of the batch is in the air, so a caller
+  // can put whatever happens at the far end on the same beat.
+  function flight(mat, count, from, to, out) {
+    if (!from || !to) return 0;
+    if (!iconURLs[mat]) iconURLs[mat] = PIXELS.matURL(mat);
     // the same size it will be when it lands: a world pixel is FACTORY.scale()
-    // device pixels, and `scale` turns those into the page's own
-    const px = PIXELS.MAT_PX * FACTORY.scale() * scale;
-    for (let i = 0; i < Math.min(count, 5); i++) {
-      const img = document.createElement('img');
-      img.src = iconURLs[mat];
-      img.className = 'fly-mat';
-      img.style.width = px + 'px';
-      img.style.height = px + 'px';
-      img.style.left = sx + 'px';
-      img.style.top = sy + 'px';
-      document.body.appendChild(img);
-      setTimeout(() => {
-        img.style.transform = `translate(${tx - sx}px, ${ty - sy}px) scale(0.8)`;
-        img.style.opacity = '0.2';
-      }, 30 + i * 70);
-      setTimeout(() => img.remove(), 750 + i * 70);
+    // device pixels, and `from.k` turns those into the page's own
+    const px = PIXELS.MAT_PX * FACTORY.scale() * from.k;
+    const dx = to.x - from.x, dy = to.y - from.y;
+    const n = Math.max(1, Math.min(count, 5));
+    for (let i = 0; i < n; i++) {
+      // each good of a batch is thrown its own way, so five of them are a
+      // handful in the air and not one icon drawn five times
+      const side = (i % 2 ? 1 : -1) * (14 + Math.random() * 26);
+      const lift = Math.min(150, 54 + Math.hypot(dx, dy) * 0.2) * (0.8 + Math.random() * 0.45);
+      const at = flyArc(dx, dy, side, lift);
+      const spin = (Math.random() < 0.5 ? -1 : 1) * (110 + Math.random() * 150);
+      const el = document.createElement('img');
+      el.src = iconURLs[mat];
+      el.className = 'fly-mat' + (out ? ' out' : '');
+      el.style.width = el.style.height = px + 'px';
+      el.style.left = from.x + 'px';
+      el.style.top = from.y + 'px';
+      document.body.appendChild(el);
+      const frames = [];
+      for (let s = 0; s <= FLY_STEPS; s++) {
+        const t = s / FLY_STEPS, u = flyEase(t);
+        const [x, y] = at(u);
+        // it swells as it is thrown and shrinks into wherever it is going
+        const k = out ? 1.3 - 0.9 * u : u < 0.2 ? 1 + u * 1.9 : 1.38 - (0.72 * (u - 0.2)) / 0.8;
+        frames.push({
+          transform: `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) rotate(${(spin * u).toFixed(1)}deg) scale(${k.toFixed(3)})`,
+          opacity: t < 0.86 ? 1 : ((1 - t) / 0.14).toFixed(2),
+          easing: 'linear',
+        });
+      }
+      const delay = i * FLY_STEP;
+      el.animate(frames, { duration: FLY_MS, delay, fill: 'forwards', easing: 'linear' });
+      if (i < 3) trail(at, from, delay, out);
+      setTimeout(() => el.remove(), FLY_MS + delay + 80);
     }
+    return FLY_MS + (n - 1) * FLY_STEP;
+  }
+  // two motes dropped on the arc behind a good and left to fade where they
+  // were dropped — the wake, not the path
+  function trail(at, from, delay, out) {
+    for (const t of [0.5, 0.72]) {
+      setTimeout(() => {
+        const [mx, my] = at(flyEase(t));
+        const el = document.createElement('div');
+        el.className = 'fly-mote' + (out ? ' out' : '');
+        el.style.left = from.x + mx + 'px';
+        el.style.top = from.y + my + 'px';
+        document.body.appendChild(el);
+        el.animate([{ opacity: 0.95, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(0.25)' }],
+          { duration: 300, easing: 'ease-out', fill: 'forwards' });
+        setTimeout(() => el.remove(), 340);
+      }, delay + FLY_MS * t);
+    }
+  }
+  // world → bag: a good typed out of a machine, or swept up off the ground.
+  // It leaves in a burst of motes and lands on the row lighting up, the
+  // count starting to climb and a shimmer over the ticks.
+  function flyFrom(mat, count, wx, wy) {
+    const from = screenOf(wx, wy), to = hudOf(mat);
+    if (!from || !to) return 0;
+    FACTORY.sparkle(wx, wy, 4, 0xffe08a);
+    const ms = flight(mat, count, from, to, false);
+    if (!ms) return 0;
+    countHint[mat] = { wait: FLY_MS };            // the row climbs when they land, not when they leave
+    setTimeout(() => { FACTORY.pulseInv(mat, false); A.arrive(count); }, FLY_MS);
+    return ms;
+  }
+  // bag → world: the price of anything built, on its way to the site. The
+  // row it comes out of presses down as it goes, and the count drains
+  // behind it rather than snapping to the new number.
+  function flyTo(mat, count, wx, wy) {
+    const from = hudOf(mat), to = screenOf(wx, wy);
+    if (!from || !to) return 0;
+    FACTORY.pulseInv(mat, true);
+    return flight(mat, count, from, to, true);
   }
 
   // ---------- automation: bought at the mine; a Mk on its ore retools it ----------
@@ -336,11 +443,20 @@
 
   // per correct letter: mines yield an ore; processors pay for a unit at its
   // first keystroke and emit at its last
-  // output: onto the machine's exit belt if it has one, else into the bag
+  // output: exit belt → bag → the machine's own bin — and past all three,
+  // the ground at your feet (the bag cap: only hands ever reach this, so a
+  // spill is a trickle in front of the one who typed it, never a pump)
+  let lastSpillFloat = 0;
   function produce(m, mat, n) {
-    const where = SIM.emit(profile, m, mat, n);
-    if (where === 'bag') { profile.seen[mat] = true; producedSinceFloat[mat] = (producedSinceFloat[mat] || 0) + n; }
-    else { profile.seen[mat] = true; beltFloat[mat] = (beltFloat[mat] || 0) + n; }
+    const res = SIM.emit(profile, m, mat, n);
+    profile.seen[mat] = true;
+    if (res.where === 'bag') producedSinceFloat[mat] = (producedSinceFloat[mat] || 0) + n - res.spilled;
+    else beltFloat[mat] = (beltFloat[mat] || 0) + n - res.spilled;
+    if (res.spilled > 0 && window.DROPS) {
+      DROPS.scatter(profile, { [mat]: res.spilled }, CHAIN.machinePos(m).x, CHAIN.machinePos(m).y + 8);
+      const now = Date.now();
+      if (now - lastSpillFloat > 4000 && dock) { FACTORY.floatText(T.t('floatBagFull'), dock.id, 0xd8905f); lastSpillFloat = now; }
+    }
     // the finish: K heavy modules, hand-made here — a count, never a lock
     if (mat === 'heavy') {
       profile.heavy = (profile.heavy || 0) + n;
@@ -364,8 +480,8 @@
     const kind = CHAIN.KINDS[m.kind];
     if (!unitPaid) {
       // a worked machine uses what is inside it first, then the bag
-      if (SIM.takeInput(profile, m, recipe.in)) { unitPaid = true; if (dryNow) { dryNow = false; refreshInfo(); } }
-      else { if (!dryNow) { dryNow = true; refreshInfo(); } return; }   // starved: runs dry, still trains
+      if (SIM.takeInput(profile, m, recipe.in)) { unitPaid = true; if (dryNow) { dryNow = false; refreshInfo(); refreshCaption(); } }
+      else { if (!dryNow) { dryNow = true; refreshInfo(); refreshCaption(); } return; }   // starved: runs dry, still trains
     }
     unitAcc++;
     if (unitAcc >= kind.perUnit) {
@@ -585,6 +701,15 @@
       setCaption(T.t('capNothingToMake', { name: machineName(dock.m) }) + afterTail(dock.m.kind), 'no');
       return;
     }
+    // typing outran supply: name the starving input — this is the moment
+    // the player should feel "I need a belt here, or another maker"
+    if (dock && dock.kind === 'machine' && dryNow && recipe) {
+      SIM.ensureMachine(dock.m);
+      const short = Object.entries(recipe.in)
+        .filter(([mat, n]) => ((dock.m.buf.in[mat] || 0) + CHAIN.bagAvail(profile.bag, mat)) < n)
+        .map(([mat]) => matName(mat));
+      if (short.length) { setCaption(T.t('capStarved', { mats: short.join(' / ') }), 'no'); return; }
+    }
     if (dock && menuRowsFor(dock).length) { setCaption(T.t('capHold', { place: placeName(dock) }), 'dim'); return; }
     setCaption('');
   }
@@ -797,8 +922,10 @@
     profile.machines.push(m);
     placing = null;
     FACTORY.clearBuildGhost();
-    afterPurchase();
-    if (pair) { pendingUnlock = pair; showUnlockCard(pair); }
+    const landed = afterPurchase({ dockId: 'm:' + m.id }, price);
+    // the card waits for the body: a mine that opens a pair is the build
+    // most worth watching, and a card over the smoke is a card over nothing
+    if (pair) { pendingUnlock = pair; setTimeout(() => showUnlockCard(pair), landed + 140); }
   }
 
   function openMenu() {
@@ -848,26 +975,27 @@
       // no ⚙ yet, so they are back in your hands until it is run in and
       // bought — nothing is switched off, the deeper seam is simply new work
       const retooled = CHAIN.machinesOfOre(profile, act.ore).some((m) => autoLive(m));
+      const site = dock ? { dockId: dock.id } : null;
       spend(act.price);
       const pair = E.unlockPair(profile, np);
-      afterPurchase();
-      if (pair) { pendingUnlock = pair; showUnlockCard(pair, retooled); }
+      const landed = afterPurchase(site, act.price);
+      if (pair) { pendingUnlock = pair; setTimeout(() => showUnlockCard(pair, retooled), landed + 140); }
     } else if (act.type === 'mk-at') {
       if (!canPay(act.price)) return;
       const np = CHAIN.pairOf(act.kind, act.level);
       if (!np || CHAIN.kindMk(profile, act.kind) + 1 !== act.level) return;
       spend(act.price);
       const pair = E.unlockPair(profile, np);
-      afterPurchase();
-      if (pair) { pendingUnlock = pair; showUnlockCard(pair, false); }
+      const landed = afterPurchase(dock ? { dockId: dock.id } : null, act.price);
+      if (pair) { pendingUnlock = pair; setTimeout(() => showUnlockCard(pair, false), landed + 140); }
     } else if (act.type === 'auto') {
       if (!canPay(act.price) || !act.key) return;
       spend(act.price);
       if (!act.m.autoOn) act.m.autoOn = {};
       act.m.autoOn[act.key] = true;
       SIM.ensureMachine(act.m);
-      afterPurchase();
-      showBenchAutoCard(act.m);
+      const landed = afterPurchase({ dockId: 'm:' + act.m.id }, act.price);
+      setTimeout(() => showBenchAutoCard(act.m), landed + 140);
     } else if (act.type === 'recipe') {
       act.m.recipe = act.r.out; act.m.recipeIn = JSON.stringify(act.r.in);
       recipe = act.r;
@@ -878,10 +1006,13 @@
       A.click();
     } else if (act.type === 'repair') {
       if (!canPay(act.price)) return;
+      // its station goes with the repair — an open crossing is not a place —
+      // so the site is the span of ground it stood on
+      const cr = CHAIN.MAP.CROSSINGS.find((c) => c.id === act.id);
       spend(act.price);
       profile.crossings[act.id] = true;
-      afterPurchase();
-      A.fanfare();
+      const landed = afterPurchase(cr ? { rect: { x: cr.x, y: cr.y, w: cr.w, h: cr.h } } : null, act.price);
+      setTimeout(A.fanfare, landed);
     } else if (act.type === 'collect') {
       // the machine empties whether or not the bag can take it all; a stack
       // already at the cap swallows nothing, and the surplus is gone
@@ -914,7 +1045,9 @@
       spool = null; spoolRoute = null;
       FACTORY.setSpool(false);
       FACTORY.setSocketTarget(null);
-      afterPurchase();
+      // a run costs nothing, so there is no price to fly — it simply lays
+      // itself down the length of the route it took
+      afterPurchase({ path: act.path });
     } else if (act.type === 'unbelt') {
       const b = (profile.belts || []).find((x) => x.id === act.id);
       if (!b) return;
@@ -931,13 +1064,38 @@
   // turn gives: re-laying the runs is part of the act, and a run that had
   // nowhere to go leaves its goods on the ground. Saving first wrote the
   // world as it was a moment before that.
-  function afterPurchase() {
+  //
+  // Everything bought goes out through here, the way everything destroyed
+  // goes out through DROPS.demolish — and this is that, run backwards. The
+  // price climbs out of the bag and flies to the site; the site fills with
+  // smoke as it arrives; the body settles out of the smoke and the latch
+  // closes on it. `built` names the site the way demolish names what is
+  // coming apart — {dockId} a body, {path} a run, {rect} a place with no
+  // station left — and anything bought later must name itself too, or it
+  // simply appears, which is the one thing nothing in this world does.
+  function afterPurchase(built, cost) {
     rebuildWorld();
     E.saveProfile(profile);
+    const site = built ? FACTORY.siteOf(built) : null;
+    let flying = 0;
+    if (site) {
+      for (const [mat, n] of Object.entries(cost || {})) {
+        if (!(n > 0)) continue;
+        countHint[mat] = { drain: true };         // the row walks down behind them
+        flying = Math.max(flying, flyTo(mat, Math.min(n, 3), site.x, site.y));
+      }
+      if (flying) A.pay();
+    }
     refreshInventory();
     refreshKeyboard();
     redock();
-    A.build();
+    // the site smokes for the whole flight and the body settles as the last
+    // of the price arrives, so the ground is never bare between the ghost
+    // going and the thing standing
+    const landed = built ? FACTORY.materialize(built, flying) : 0;
+    if (built) setTimeout(A.assemble, Math.max(0, landed - 340));
+    setTimeout(A.build, landed);
+    return landed;                   // when the thing is standing, for a caller with something to say after
   }
   // Taking a thing down is a purchase run backwards, minus the chunk of the
   // latch closing: DROPS.demolish has already made the poof and its sound,
@@ -1387,12 +1545,15 @@
   function sweepDrops(dt) {
     if (!window.DROPS || !FACTORY.playerPos) return false;
     const at = FACTORY.playerPos();
-    const got = DROPS.tick(profile, dt, at.x, at.y);
+    // a stack the bag has no room for stays lying where it is (canTake);
+    // a partly-taken one falls back with the remainder
+    const got = DROPS.tick(profile, dt, at.x, at.y, (mat) => (profile.bag[mat] || 0) < CHAIN.TUNING.BAG_CAP);
     if (!got) return false;
     for (const g of got) {
       const kept = CHAIN.bagAdd(profile.bag, g.mat, g.n);
       profile.seen[g.mat] = true;
-      if (!kept) continue;               // the bag is full of this one — it vanishes off the ground
+      if (kept < g.n) DROPS.spawn(profile, g.mat, g.n - kept, g.x, g.y);
+      if (!kept) continue;
       flyFrom(g.mat, Math.min(kept, 3), g.x, g.y);
       A.pickup();
     }
@@ -1708,7 +1869,9 @@
     unitAcc = 0; unitPaid = false; dryNow = false; lastCorrectTime = null;
     producedSinceFloat = {};
     for (const k of Object.keys(invPrev)) delete invPrev[k];
-    for (const k of Object.keys(countTimers)) clearInterval(countTimers[k]);
+    for (const k of Object.keys(invShown)) delete invShown[k];
+    for (const k of Object.keys(countHint)) delete countHint[k];
+    for (const k of new Set([...Object.keys(countTimers), ...Object.keys(countWaits)])) stopCount(k);
     hudKeysShown = [];
     cancelCharge(); spaceDown = false;
 

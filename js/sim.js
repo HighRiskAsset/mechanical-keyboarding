@@ -180,22 +180,31 @@
   }
   const canTake = (p, m, cost) => Object.entries(cost).every(([mat, n]) => ((m.buf && m.buf.in[mat]) || 0) + C().bagAvail(p.bag, mat) >= n);
   // where a worked machine's output goes: an exit belt's buffer if one
-  // exists (overflow to the bag when full), else the bag. Returns 'belt'|'bag'.
+  // exists, else the bag — and past a full bag, the machine's own bin
+  // catches it, belt or no belt (the bag cap, 2026-08-22). Whatever not
+  // even the bin will hold comes back as `spilled` for the caller to lay
+  // on the ground: only HANDS can reach this branch, so a spill is bounded
+  // by typing speed and lands in front of the one who typed it.
+  // Returns { where: 'belt'|'bag', spilled }.
   function emit(p, m, mat, n) {
     ensureMachine(m);
+    let left = n, where = 'bag';
     if (hasExit(p, m) && (m.buf.out[mat] || 0) < CAP()) {
-      const room = CAP() - (m.buf.out[mat] || 0);
-      const k = Math.min(room, n);
+      const k = Math.min(CAP() - (m.buf.out[mat] || 0), left);
       m.buf.out[mat] = (m.buf.out[mat] || 0) + k;
-      if (n - k > 0) C().bagAdd(p.bag, mat, n - k);
-      return 'belt';
+      left -= k;
+      where = 'belt';
     }
-    C().bagAdd(p.bag, mat, n);
-    return 'bag';
+    if (left > 0) left -= C().bagAdd(p.bag, mat, left);
+    if (left > 0) {
+      const k = Math.min(CAP() - (m.buf.out[mat] || 0), left);
+      if (k > 0) { m.buf.out[mat] = (m.buf.out[mat] || 0) + k; left -= k; }
+    }
+    return { where, spilled: left };
   }
   // collect a machine's output buffer into the bag; returns {mat: n} of what
-  // actually landed. The buffer empties either way — what the bag has no room
-  // for is gone, not left behind in the machine.
+  // actually landed. What the bag has no room for STAYS in the machine
+  // (the bag cap, 2026-08-22): the bin is the shelf, not a chute.
   function collect(p, m) {
     ensureMachine(m);
     const got = {};
@@ -203,7 +212,7 @@
       if (n <= 0) continue;
       const kept = C().bagAdd(p.bag, mat, n);
       if (kept > 0) got[mat] = kept;
-      m.buf.out[mat] = 0;
+      m.buf.out[mat] = n - kept;
     }
     return got;
   }

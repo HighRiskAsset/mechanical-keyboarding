@@ -1251,6 +1251,33 @@ is the Deep-Ore Ledger (artifact); this is the binding record.
   lines at тире's true weight ('-' 0.30 → 1.00); EN words 772 → 841; EN
   syllables +17 bigrams for the thin quartz/iron/brass sets. Dup checks now
   in both verify pages.
+- **The demand rule — tempo (2026-08-22, the automation-concern talk).**
+  Almost every price is one-time, and early on that is correct (the user
+  accepts no-surplus play through the opening eras). What makes a player
+  build more than one of a kind, automate, and lay belts is TEMPO: the
+  player's own WPM is the rate the factory must match, because typing at a
+  bench consumes its inputs live and the Manufacturer never automates. A
+  25-WPM typist eats ~21 crates a minute against one Crane's 8.6 — the
+  endgame needs the wide factory by arithmetic, and every full-set bench
+  feels the same pull earlier. Scale buys unbroken typing time, and dead
+  air is the enemy. UX: when hands outrun supply, the caption names the
+  starving input and the three cures (belt · feed · another maker) —
+  never a silent ✗. Held for later, both liked: rolling orders (contracts
+  for surplus, the sanctioned gravy) and coal-fired automation upkeep (a
+  continuous sink; a new mechanic, decided separately).
+- **The bag cap is real (user ruling 2026-08-22): 300 per material.** The
+  bag is the hand ceiling; the standing factory is the scalable warehouse
+  (every machine's bins hold 100 per material and refill themselves while
+  you type elsewhere — wanting a bigger surplus means building more
+  works). Every mandatory hold tops out at 240 paced (the Manufacturer's
+  crate ask trimmed 100 → 80 to fit), and verify asserts no ask ever
+  crowds 80% of the cap. Hand overflow runs bag → the machine's own bin →
+  the ground at your feet, with a float; a spill is bounded by typing
+  speed and lands in front of whoever typed it. **Automation never
+  spills** — a full machine pauses, as ever. Collect leaves what the bag
+  can't take in the bin; a full-of-that back walks over its own piles
+  without churning them; an old save's surplus spills at the spawn once
+  instead of being clamped away.
 - **Still open:** the display glyph map (standalone `-` drawn as —, «» on
   the quote key) rides a later content pass; deep-ore icons are family art
   with depth pips until the Phase 6 bake; the number row is its own bonus

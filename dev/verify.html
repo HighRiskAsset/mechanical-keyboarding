@@ -236,6 +236,21 @@
     }
   }
   line(!autoBad.length, 'automation prices: never heavy modules, and every side-good is in the course\'s book', autoBad.join('<br>'));
+  // 17e. the bag cap: no single-material ask (paced) may crowd what the
+  // operator can hold — every price and run-in fits with ≥20% headroom
+  {
+    const asks = [];
+    const take = (label, cost) => { for (const [mat, n] of Object.entries(cost || {})) asks.push([label + ' · ' + mat, n]); };
+    for (const [ore, pr] of Object.entries(C.PRICES.node)) take('node ' + ore, C.priceNode(ore));
+    for (const ore of Object.keys(C.PRICES.mk)) for (const lvl of Object.keys(C.PRICES.mk[ore])) take(ore + ' Mk' + lvl, C.priceMk(ore, +lvl));
+    for (const kind of Object.keys(C.PRICES.at)) for (const lvl of Object.keys(C.PRICES.at[kind])) take(kind + ' Mk' + lvl, C.priceAt(kind, +lvl));
+    for (const kind of Object.keys(C.PRICES.machine)) take('build ' + kind, C.priceMachine(kind, 1));
+    for (const ore of C.ORE_IDS) { take('extra mine ' + ore, C.priceExtraMine(ore)); take('mine ⚙ ' + ore, C.priceAuto({ kind: 'mine', ore }, null, null)); }
+    for (const [kind, spec] of Object.entries(C.PRICES.auto)) take('⚙ ' + kind, C.scaleCost(Object.assign({ own: spec.own }, spec.plus), C.TUNING.PACE));
+    const cap = C.TUNING.BAG_CAP;
+    const over = asks.filter(([, n]) => n > cap * 0.8);
+    line(!over.length, `no single-material ask crowds the bag: every hold ≤ ${cap * 0.8} of the ${cap} cap`, over.map(([l, n]) => `${l}: ${n}`).join('<br>'));
+  }
   // 18. every plot and node stands on clear ground and is reachable from the spawn (crossings counted open)
   const placeBad = [], placePending = [];
   for (const mapId of C.MAP_IDS) {

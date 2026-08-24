@@ -451,6 +451,7 @@ full run; data checks green; the EN stub loads.
 | Job seconds | mine 2 · smelter 3 · foundry 4 · constructor 4 · molder 5 · assembler 6 · fastener 6 · crane 7 · manufacturer 10 | −20% at bars 2 and 4 |
 | Belt speed | 2 tiles/s, 1 item/tile | pipes same |
 | Buffer cap | 100 per material | in and out |
+| Bag cap | 300 per material (2026-08-22) | the hand ceiling; overflow bag → bin → ground; no price ask may exceed 80% of it (verify 17e) |
 | Outlets / inlets | mines 1, processors 2 / arity | each at a port: one tile against the body, met head-on |
 | Machine size | mine 2×1 · smelter…fastener 2×2 · crane + manufacturer 3×2 | `KINDS[kind].size`; a side of a one-deep body is one tile, so only a one-outlet kind can be one deep |
 | Build plot | one size, 3×2 — it takes the largest kind, smaller ones leave slack | wants 5 tiles across × 4 deep for all three turns; dev/verify.html asserts it per plot per map |
