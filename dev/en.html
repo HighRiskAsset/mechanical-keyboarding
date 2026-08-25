@@ -69,7 +69,7 @@
     line(SIM.outletsOf(m) === 1, 'the simulation reads the stub world (a mine has one outlet)');
     const words = E.realWordPool(C.unlockedKeys(p).filter((c) => !L.PUNCT.has(c)));
     log.textContent = `word pool at T0: ${words.map(([w]) => w).join(', ') || '(none — syllables carry the tutorial)'}`;
-    line(true, `T0 word pool noted (${words.length}) — 'y' is the only early vowel; syllables carry T0–T1`);
+    line(words.length >= 8, `T0 word pool holds real words from the first rung (${words.length}) — u leads the seed alphabet (2026-08-25 ladder)`);
     // the ladder branches (2026-08-22): walk every Mk table the EN course
     // can reach and hold the rules at each — no deadlock (the coal node
     // deadlock of 2026-08-20, a price asking for parts before the 25-word
@@ -119,7 +119,7 @@
     // pool sizes along the ladder (the constructor needs 25 by its opening)
     let alpha = [];
     const stagePools = L.PAIRS.map((q) => { alpha = alpha.concat(q.keys); return E.realWordPool(alpha.filter((c) => !L.PUNCT.has(c))).length; });
-    line(stagePools[7] >= 25, `the word pool clears 25 when the u-words arrive (pair 8: ${stagePools[7]})`);
+    line(stagePools[7] >= 25, `the word pool clears 25 by the Constructor's era (pair 8: ${stagePools[7]})`);
     line(stagePools[L.PAIRS.length - 1] >= 300, `the full pool is deep enough for the late game (${stagePools[L.PAIRS.length - 1]})`);
     log.textContent += `\npool per pair: ${stagePools.join(' ')}`;
   } catch (e) {

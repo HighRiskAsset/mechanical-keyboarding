@@ -384,6 +384,14 @@ pages, the human playtest log.
 - **PAGES organised:** placeholders in `language-ru.js` with the writing
   rules in a comment (the course's keys only — no numbers, no em-dash, no
   guillemets); the engine grades and orders them itself.
+- **The EN ladder reseated (2026-08-25):** the key-for-key order retired
+  for a frequency-built EN ladder in the same 18 slots (T0 = f j · r u ·
+  b n; e i at pair 4; copper takes the index top row so brass/gunmetal
+  keep a vowel in the smelter book — prices untouched). Bank grown to
+  ~1590 words / 110 phrases / 120 sentences / 22 pages, machine-staged;
+  contractions from Oil Mk1 (apostrophe); 'I' waits for the Crane;
+  `MINE_MARKS` moved trainable-mark declaration into the course files.
+  `dev/en.html` re-checked green after the change.
 - Still open: the tuning playtest by a human; belt-clatter sound; art
   variants per mine ore/Mk; passport coverage of the grown word list.
 

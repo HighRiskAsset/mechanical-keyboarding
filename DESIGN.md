@@ -240,6 +240,22 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   producibility walk in dev/verify.html (RU) and dev/en.html (EN, plus
   ladder coverage checks). ORE_GOOD retuned the same way (stone → brass,
   coal → gunmetal, oil → glass).
+- **The EN ladder reseated (2026-08-25):** the key-for-key placeholder is
+  retired — the pinned question answered with a ladder of EN's own. Same
+  18 slots, tiers and prices (ore = finger, Mk = reach); the pairs move
+  within their fingers by English frequency. T0 = f j (iron, the bumps) ·
+  r u (copper — u is the first vowel) · b n; e i arrives at pair 4 (20%
+  of text in one rung), a at 10, o at 14. Seating constraint discovered
+  on the way: copper must own the index TOP row — brass and gunmetal pin
+  deep copper, the smelter book drops vowel-less alloys, and r u t y are
+  the only index vowels; iron keeps f j g h, so castiron/steel stay out
+  of the EN book exactly as before and the shared prices stand untouched.
+  The full ladder, the split of the x/period mirror pair, and the other
+  deviations live in Course exceptions below. Content grew to ~1590
+  words / 110 phrases / 120 sentences / 22 pages, machine-staged by rung;
+  contractions enter with the apostrophe (Oil Mk1); the pronoun 'I' waits
+  for the Crane. Engine: TRAINABLE_PUNCT is now course-declared
+  (`MINE_MARKS` — invariant 5; RU keeps the ['.','-'] fallback).
 - **Tiers 4–6 (phase 5, 2026-08-20):** the Crane drills *capitals*
   (sentence-initial, with `NAMES`; a capital's stats fold onto its
   lowercase letter) and the Manufacturer drills *pages* (`PAGES`, real
@@ -995,8 +1011,8 @@ If a recipe or a tier disagrees with a rule, the recipe is wrong.
    pinky. An ore's Mk adds the next key-pair on that finger. Pairs are mirror
    keys — same finger, both hands — sorted by frequency. Mk is per ore, not
    per mine: every iron mine drills the same keys. This is course data; the
-   EN course will assign its own pairs to the same six ores (F/J = f/j is a
-   poor first pair in English).
+   EN course assigns its own pairs to the same six ores (done 2026-08-25 —
+   see Course exceptions: EN).
 2. **Alphabet = union of the inputs.** A material's letter set is the union of
    what went into it, computed live from the recipe graph and the current Mk
    levels. Feed a Smelter iron + copper → syllables over а о е н; iron + stone
@@ -1100,13 +1116,48 @@ ores, the course folds the remainder into existing rungs and documents the
 deviation here and in its own course file. Every layout will carry a few of
 these; they are data, never engine rules (invariant 5).
 
+**The pair order is a base mode, not a law (user ruling 2026-08-25).** The
+mirror-pair spine — index out, home row first, both hands on the same finger —
+exists for one reason: to order lessons sensibly for a learner. Easiest reaches
+first, every new key with a twin so the hands stay balanced. *That purpose is
+the rule.* The specific ЙЦУКЕН sequence is only its best answer for a
+33-letter Cyrillic alphabet on an ANSI slab — it is not itself the principle,
+and a course does not have to argue its way out of it. Where a language's own
+frequencies, script, or input method make a different order the better teacher,
+the course takes the better order and documents it here. Base mode is what a
+course inherits when it has no reason to differ.
+
+What base mode actually holds steady is the **frame**, not the sequence: six
+ores = six fingers, Mk = reach, eighteen-odd slots, shared tiers and prices. A
+Latin or Cyrillic course inherits that whole frame and moves only *which pairs
+sit where* — by its own letter frequencies, within their fingers. That is
+exactly what the EN reseat of 2026-08-25 did, and why it cost nothing
+structurally: same slots, same prices, English order.
+
+Romaji, pinyin and kana courses go further, because for them even the frame's
+unit is wrong — kana teaches a syllable, not a letter, and its natural order is
+by sound family (gojūon), not by finger. Those courses set their own ladder
+outright and let the ore-per-finger mapping follow it, rather than bending the
+order to keep an ore where it was. See the JA course sketch below.
+
 - **RU (ЙЦУКЕН):** 33 letters leave a rare tail on the pinky. Oil Mk2 is a
   four-key top-row sweep (й з х ъ — Q P [ ]) and Mk3 a four-key home-row
   sweep (ф ж э ё — A ; ' `), with ё on the corner key the course's one
   off-finger stroke. The four tail letters together are ~1.5% of text.
-- **EN (QWERTY):** 26 letters end at Oil Mk3 naturally; the period rides
-  the Period key and the apostrophe the Quote key (marks where RU has
-  letters); '?' is Shift+Slash, the same stroke as the Russian comma.
+- **EN (QWERTY, reseated 2026-08-25):** its own pair order in the same 18
+  slots — T0 is f j · r u · b n, then e i, g h, d k, s l + period, t y,
+  v m, a ; ' (the pinky home sweep), ?, c + comma, q p, w o, ! -, z, x,
+  : " ( ). Copper owns the index top row (r u t y) so the deep-copper
+  alloys (brass, gunmetal — Fastener price goods) keep a vowel; iron's
+  vowel-less alloys stay out of the EN book, as the price tables already
+  assume. The x/period mirror pair splits: the period joins s l at Coal
+  Mk1 (sentences begin at the Fastener, rung 11 — its mirror slot is
+  rung 17), and x stands alone as the Coal Mk3 capstone; z stands alone
+  at Oil Mk3. The comma rides Quartz Mk3 unshifted; the apostrophe rides
+  Oil Mk1 and opens the contractions; '?' is Shift+Slash, the same stroke
+  as the Russian comma; the / ` [ ] caps stay untaught. The pronoun 'I'
+  waits for the Crane with every other capital — earlier content simply
+  avoids the word.
 - **RU: the dash key rides the oil derrick (Oil Mk1 = я . -).** Russian
   leans on the dash the way English leans on the comma, and phrases — the
   first content a dash belongs in — begin right before the derrick opens
@@ -1125,18 +1176,136 @@ these; they are data, never engine rules (invariant 5).
   for it in sentence content — and the Quote-role key carries the quote
   glyph the language actually prints. The glyph map lives in the course
   file next to the pair table.
-- **Expected later, same pattern:** Spanish (ñ on its own key on ES
-  layouts, dead-key accents), Polish (AltGr diacritics — a new modifier
-  taught like Shift), French (AZERTY moves the home fingers), CJK (an IME
-  sits between keys and text — a different course model, out of scope until
-  scoped). None of these bend the engine; each is a pair table, a glyph
-  map, and a documented exception list. Prices are placeholders showing the pattern: the ore's own
+- **Expected later, same pattern:** Spanish (ñ on its own key on ES layouts;
+  dead-key accents; ¿ ¡ bought as *pairs* — the opening mark and its closer
+  are one purchase, which is a better rung than anything in the EN course),
+  German (QWERTZ on an ISO board — ä ö ü ß all land on real unshifted keys in
+  the pinky's territory, so the tail folds exactly as Russian's does; and the
+  y/z swap puts German's near-useless y on the pinky bottom, which the
+  frequencies endorse), Polish (plain ANSI, but nine letters live behind
+  AltGr — a new modifier taught like Shift, and a ladder that runs a *second
+  layer* over keys already owned instead of growing longer), French (AZERTY
+  moves the home fingers), Arabic (RTL; mirrored marks ، ؛ ؟ on the same
+  physical keys as their Latin twins; Shift carries letters, not just
+  capitals).
+- **Correction: three of these do bend one engine rule.** The earlier claim
+  that none of them do was too generous. Spanish dead keys, Polish AltGr and
+  kana dakuten each produce **one character from more than one keystroke**,
+  and `CHAR_TO_CODE` is a 1:1 map. It wants to become char → keystroke
+  sequence (`{code, mods}[]`) once, deliberately, rather than three times as
+  a patch. Two smaller ones: `'ß'.toUpperCase()` is `'SS'`, which would
+  silently poison the auto-derived shifted map; and Arabic's contextual
+  letter shaping is broken by the per-character `<span>`s in `renderLine()`
+  (`app.js`) — each letter isolated in its own box renders in isolated form,
+  so الكتاب comes out as ا ل ك ت ا ب. The tech tree is untouched by all of
+  this.
+- **CJK: the IME is real, but the dominant methods are QWERTY skills.**
+  Roughly nine in ten Japanese PC typists use romaji input — type `nihon`,
+  the IME shows にほん, Space converts to 日本, Enter commits — and the
+  overwhelming majority of mainland Chinese typists use pinyin the same way.
+  Both are Latin letters on an unmodified board, so a romaji course and a
+  pinyin course are data drops on this engine with kana or hanzi as the belt
+  gloss. That is not a compromise standing in for "real" Japanese: it *is*
+  the national skill. What the engine cannot model is the conversion half —
+  Space, a candidate list, Enter — which is a decision skill, not a motor
+  one. If it is ever wanted, it is shaped like a machine and not a drill:
+  romaji → kana → committed kanji is a smelting chain. Kana-direct
+  (JIS かな入力, a small but real minority) is the one variant
+  architecturally identical to Russian — one key, one kana — at the price of
+  a JIS board and dakuten composition. Neither CJK course inherits base mode:
+  each sets its own pair order, and neither has word spaces, which quietly
+  removes the space bar from the curriculum.
+- **Boards:** `BOARD_ANSI` gets siblings — ISO (German, Spain) and JIS (kana).
+  The file is already factored for this and nothing has tested the seam yet;
+  German is the natural first test. Chinese needs no new board at all.
+
+Prices are placeholders showing the pattern: the ore's own
 material, typed by hand right before its new keys arrive, plus a good from the
 current tier. Extra mines of an ore are bought at unbuilt nodes and inherit
 the ore's Mk. The "comes after" column is the course order — one branch of
 the ladder, the one the summary and the pacing bot follow; the live prices
 are `PRICES` in `chain.js`, and since 2026-08-22 they are the only thing
 that orders one place against another (below).
+
+### JA course — how Japanese gets taught (plan agreed 2026-08-25, not built)
+
+**Ruling: build the IME into the game, and copy the one ~90% of Japanese PC
+typists actually use.** Romaji input on QWERTY, not kana-direct. This is not a
+simplification standing in for "real" Japanese typing — typing `nihon` on a
+QWERTY board *is* what a Japanese person does at a computer. Kana-direct
+(JIS かな入力) stays parked as a possible separate course; it is the variant
+architecturally identical to RU (one key, one kana) but it costs a JIS board
+and dakuten composition, and it is a shrinking minority method.
+
+**Two stages, and they are already the smelting chain:**
+
+> **romaji = ore · kana = ingot · kanji = finished good**
+
+- **Stage 1 — romaji → kana. The mines.** Latin keys on QWERTY, kana shown on
+  the belt. Pure motor skill; the pair ladder lives here. Output defaults to
+  hiragana.
+- **Stage 2 — kana → committed text. The Converter.** Judgment, not motor
+  skill. Three output chutes, and the operator picks:
+  - **stays hiragana** — particles (は が を に で と も の), verb and
+    adjective endings (します ました ている かった). Commit with Enter, no
+    conversion. ~45–50% of running text; the busiest chute is the one that
+    does nothing.
+  - **becomes kanji** — content words. Space, then accept or pick. ~35–40%.
+  - **becomes katakana** — loanwords and onomatopoeia. F7 or a candidate
+    pick. ~5–10%.
+
+**Stage 1 does not inherit base mode — it sets its own order, by kana row.**
+Japanese is learned in gojūon order (あかさたなはまやらわ) and every romaji
+tutor follows it. In romaji terms that ladder is unusually generous: after the
+five vowels, **each new row costs exactly one new consonant key and pays out
+five syllables.** Buy one key, five new kana appear on the belt — a better
+payoff-per-purchase than mirror pairs produce anywhere in the RU course. This
+is the clearest case of the base-mode ruling above: the purpose (teach in a
+sensible order) beats the rule (mirror pairs by finger).
+
+| rung | new keys | kana unlocked |
+| --- | --- | --- |
+| 1 | a i u e o | あいうえお |
+| 2 | k | かきくけこ |
+| 3 | s h | さしすせそ (shi) |
+| 4 | t c | たちつてと (chi, tsu) |
+| 5 | n | なにぬねの + ん |
+| 6 | f | はひふへほ |
+| 7 | m | まみむめも |
+| 8 | y | やゆよ **+ every glide at once** (kya sha cho…) |
+| 9 | r | らりるれろ |
+| 10 | w | わを |
+| 11+ | g z d b p | が ざ だ ば ぱ rows |
+
+**Hiragana is the spine; katakana is a second layer over keys already owned** —
+structurally the same move as Polish AltGr. It is not free, though: katakana
+carries the long-vowel bar **ー** (the `-` key, essentially katakana-only —
+コーヒー has two) and the extended foreign-sound combos ファ フィ ヴ ティ ディ
+(`fa` `fi` `vu` `thi` `dhi`), which hiragana has no equivalent for. That earns
+a real rung. And it should arrive **earlier than its 5–10% frequency argues**,
+because loanwords are guessable for an English speaker — コーヒー ビール テレビ
+パン コンピューター — so the player reads their first Japanese word correctly
+with zero vocabulary. Strongest early-game beat in the course.
+
+**The Converter must not eat the typing share (invariant: 80%+ of play is
+typing).** A candidate list is a menu, and menus are not typing. Copy what real
+IMEs do: **a single Space accepts the first candidate**, which is right the
+large majority of the time, and modern IMEs convert whole clauses at once
+rather than word by word. Surface the candidate list only when the reading is
+genuinely ambiguous *and* the course wants to teach that distinction — rare and
+deliberate. That also keeps the Converter honest as a machine: it runs itself
+most of the time and only calls the operator when the ore is unusual.
+
+**Why the ambiguity is worth teaching at all:** picking 記者 / 汽車 / 貴社 out
+of きしゃ is vocabulary practice, not typing practice — the player has to know
+which word they meant. For a game whose pitch is typing practice that teaches
+you something, that is the strongest content in the design.
+
+**Also true of this course:** no word spaces, so the space bar leaves the
+curriculum as a rhythm anchor and returns as the *convert* key — a promotion,
+not a loss. Punctuation is full-width: 。 、 「」 ・ and ー (a letter, not a
+mark). The same two-stage model applies to a ZH pinyin course, which is the
+method the overwhelming majority of mainland typists use.
 
 ### The ladder branches (2026-08-22 — the Molder problem)
 

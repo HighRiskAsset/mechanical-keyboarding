@@ -37,9 +37,12 @@
   }
 
   // the letters the generator can produce today — the readiness gate only
-  // looks at these (comma and the deeper punctuation arrive with their
-  // machines in later build phases)
-  const TRAINABLE_PUNCT = new Set(['.', '-']);   // marks a course may seat on a mine rung (RU: both ride the oil derrick)
+  // looks at these (punctuation seated at machines arrives with its machine
+  // in later build phases). Which marks ride mine rungs is the course's
+  // call (invariant 5): the course file declares them in MINE_MARKS — RU
+  // seats the period and dash on the oil derrick (the fallback), EN the
+  // period, comma, semicolon and apostrophe on their own fingers' rungs.
+  const TRAINABLE_PUNCT = new Set(L.MINE_MARKS || ['.', '-']);
   const trainable = (ch) => !L.PUNCT.has(ch) || TRAINABLE_PUNCT.has(ch);
 
   // ---------- profile ----------

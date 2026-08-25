@@ -53,8 +53,8 @@ there are no image assets.
 
 Interface language and course language are independent axes: the interface is
 available in English or Russian, and two courses are playable — Russian
-ЙЦУКЕН and English QWERTY (same ladder key-for-key, its own saves; switch
-from ⚙). The trainer maps your physical keys
+ЙЦУКЕН and English QWERTY (each with its own frequency-built ladder over
+the same tech tree, its own saves; switch from ⚙). The trainer maps your physical keys
 itself, so you can drill a foreign alphabet without switching your OS layout.
 
 ## Deploying
