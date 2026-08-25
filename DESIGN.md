@@ -643,7 +643,7 @@ corner cells left clear, so at the worst point of a quarter turn it reaches
 on every corner. Goods sit a whole tile apart, so ten still leaves six pixels of
 band between them. `PIXELS.MAT_PX` is that number — read it, never repeat it.
 
-Three rules make twenty-five materials tell apart at ten pixels:
+Four rules make twenty-five materials tell apart at ten pixels:
 
 - **Form is the silhouette.** An ore is an irregular lump (each of the six its
   own: angular chunk, round nugget, flat slab, twin crystals, jagged lump,
@@ -664,13 +664,29 @@ Three rules make twenty-five materials tell apart at ten pixels:
   coal with it. Only *square* neighbours take the light; let the diagonal
   staircases light up too and the cream stops being an edge and becomes a halo,
   which at ten pixels is a quarter of the sprite spent on nothing.
+- **Grade is a twinkle, and hue is the grade** (2026-08-25). Form and colour are
+  spent on *which* material a good is; they cannot also say *how deep it was
+  dug*, because a deep ore wears its family's art by design. So depth animates
+  instead: **Mk1 nothing, Mk2 a small warm gold twinkle, Mk3 a wider verdigris
+  one**, on a one-second cycle. Two rules keep it honest. The difference between
+  the grades is **hue, not size** — a moving ten-pixel sprite hides size and
+  cannot hide warm against cold — and subtlety is brightness, never *rarity*: a
+  mark that is dark most of the second is not subtle, it is missed. Mk2 runs
+  half the cycle at five pixels, Mk3 all of it at nine. Every sprite carries its
+  own phase, so a run of deep ore shimmers down the line instead of the whole
+  belt blinking at once. One drawing (`matGrade`/`SPARK_GRADE` in `pixels.js`)
+  feeds the bag, the belts, the ground and the price rows through
+  `matIcon` in `factory.js`, so the grade cannot say one thing in the HUD and
+  another on the band.
 
 Masks are 8×8 character grids laid at (1,1) in `pixels.js` (`ORE_MASK`, `BAR`,
 `STACK`, `PANE`, `FORM_ART`); a digit indexes a tone list. Keep the four corner
 cells of a mask empty — that is what keeps the good inside the trestle on a
 turn. Proof sheets: `dev/mats.html` (every material in the bag, on a straight,
-round a corner, and the whole ladder on one run) and `dev/mats-zoom.html` (the
-pixels themselves, on both the grounds that matter).
+round a corner, and the whole ladder on one run), `dev/mats-zoom.html` (the
+pixels themselves, on both the grounds that matter), and `dev/grade.html` +
+`dev/grade-zoom.html` (every frame of the grade twinkle, on the band it rides,
+and the three grades of a family side by side).
 
 ### Machine animation — the three states (ruling 2026-08-20)
 
@@ -1447,9 +1463,13 @@ is the Deep-Ore Ledger (artifact); this is the binding record.
   can't take in the bin; a full-of-that back walks over its own piles
   without churning them; an old save's surplus spills at the spawn once
   instead of being clamped away.
+- **Grade reads at a glance (2026-08-25).** Deep-ore icons stay family art
+  until the Phase 6 bake, but the depth pip is no longer carrying the read on
+  its own: every good wears its grade as an animated twinkle — Mk1 nothing,
+  Mk2 warm gold, Mk3 verdigris — in the bag, on the belts, on the ground and
+  in every price row. See *Materials* above for the rule.
 - **Still open:** the display glyph map (standalone `-` drawn as —, «» on
-  the quote key) rides a later content pass; deep-ore icons are family art
-  with depth pips until the Phase 6 bake; the number row is its own bonus
+  the quote key) rides a later content pass; the number row is its own bonus
   era, later.
 
 ### Machine kinds

@@ -53,6 +53,42 @@
   const HUD_W = 46, HUD_ROW = 14;
   let chargeVal = null, chargeG = null;
 
+  // ---------- the grade twinkle: every sprite that shows a material ----------
+  // A good's grade is animated (pixels.js draws it), so the sprite showing it
+  // has to be re-textured on a beat. Everything that draws a material — the
+  // bag, the belts, the goods lying on the ground, the price and recipe rows —
+  // is made here and refreshed from this one list, so the grade cannot say one
+  // thing in the bag and another on the band.
+  //
+  // Each sprite carries its own phase. A run of deep ore that all twinkled on
+  // the same frame would strobe; offset, the same run shimmers down the line,
+  // which is what a belt of ore should look like anyway.
+  const SPARK_BEAT = 5;                  // ticks per frame — one cycle a second
+  let matFrame = 0, matPhase = 0;
+  const matViews = [];
+  function matIcon(mat, phase) {
+    const ph = phase === undefined ? (matPhase = (matPhase + 5) % PIXELS.MAT_SPARK_FRAMES) : phase;
+    const sp = new PIXI.Sprite(PIXELS.matTex(mat, matFrame + ph));
+    sp._mat = mat; sp._ph = ph;
+    matViews.push(sp);
+    return sp;
+  }
+  // the material under a long-lived sprite changes (a belt shifts its goods
+  // down a place, a pile on the ground is picked over) — the phase does not
+  function setMatIcon(sp, mat) {
+    sp._mat = mat;
+    sp.texture = PIXELS.matTex(mat, matFrame + sp._ph);
+  }
+  // destroyed or orphaned sprites fall out of the list here: a menu row lives
+  // as long as the menu, and there is no other moment to sweep them up
+  function tickMatIcons() {
+    for (let i = matViews.length - 1; i >= 0; i--) {
+      const sp = matViews[i];
+      if (sp.destroyed || !sp.parent) { matViews.splice(i, 1); continue; }
+      if (PIXELS.matGrade(sp._mat)) sp.texture = PIXELS.matTex(sp._mat, matFrame + sp._ph);
+    }
+  }
+
   // ---------- how a machine looks: the three states (DESIGN.md, 2026-08-20) ----------
   // 'still' — not automated, nobody working it: nothing moves.
   // 'idle'  — automated with nothing to process: the pose holds, the lamp breathes.
@@ -139,7 +175,7 @@
       const flash = new PIXI.Graphics().rect(1, 1 + i * HUD_ROW, HUD_W - 2, HUD_ROW - 1).fill(0xffffff);
       flash.visible = false;
       uiC.addChild(flash);
-      const ic = new PIXI.Sprite(PIXELS.matTex(k));
+      const ic = matIcon(k, (i * 5) % PIXELS.MAT_SPARK_FRAMES);
       ic.position.set(3, 3 + i * HUD_ROW);
       uiC.addChild(ic);
       const t = new PIXI.Sprite(PIXELS.textTex(String(invValues[k] || 0), PIXELS.P.paper));
@@ -398,11 +434,11 @@
       put(ic, 0); ix += 14;
     }
     if (row.ore) {
-      const ic = new PIXI.Sprite(PIXELS.matTex(row.ore));
+      const ic = matIcon(row.ore);
       put(ic, 1); ix += 12;
     }
     for (const [mat, n] of Object.entries(row.items || {})) {
-      const ic = new PIXI.Sprite(PIXELS.matTex(mat));
+      const ic = matIcon(mat);
       put(ic, 1); ix += 11;
       // a count the bag falls short of prints red (row.short lists them),
       // so an unaffordable price says which material is the problem
@@ -413,7 +449,7 @@
     if (row.out) {
       const arrow = new PIXI.Sprite(PIXELS.textTex('→', PIXELS.P.brass2));
       put(arrow, 3); ix += arrow.texture.width + 3;
-      const oc = new PIXI.Sprite(PIXELS.matTex(row.out));
+      const oc = matIcon(row.out);
       put(oc, 1); ix += 11;
     }
     if (row.ok === true) {
@@ -1538,12 +1574,13 @@
       if (!v) {
         const sh = new PIXI.Sprite(PIXELS.dropShadowTex());
         sh.anchor.set(0.5);
-        const sp = new PIXI.Sprite(PIXELS.matTex(d.mat));
+        const ph = (d.id.charCodeAt(d.id.length - 1) * 37) % 64;
+        const sp = matIcon(d.mat, ph % PIXELS.MAT_SPARK_FRAMES);
         sp.anchor.set(0.5);
         cameraC.addChild(sh); cameraC.addChild(sp);
-        v = dropViews[d.id] = { sp, sh, mat: d.mat, ph: (d.id.charCodeAt(d.id.length - 1) * 37) % 64 };
+        v = dropViews[d.id] = { sp, sh, mat: d.mat, ph };
       }
-      if (v.mat !== d.mat) { v.mat = d.mat; v.sp.texture = PIXELS.matTex(d.mat); }
+      if (v.mat !== d.mat) { v.mat = d.mat; setMatIcon(v.sp, d.mat); }
       const z = d.z || 0;
       // at rest it breathes, a pixel up and a pixel down, on its own phase:
       // enough to say "pick me up" and not enough to look like it is loose
@@ -1750,7 +1787,7 @@
           // the good's own sprite, the same one the bag shows. The head of a
           // run is delivered and the rest shift down a place, so the material
           // under a given sprite changes — swap the texture when it does.
-          const g = new PIXI.Sprite(PIXELS.matTex('az'));
+          const g = matIcon('az', (v.items.length * 5) % PIXELS.MAT_SPARK_FRAMES);
           v.itemsC.addChild(g);
           v.items.push({ g, mat: 'az' });
         }
@@ -1759,7 +1796,7 @@
           const sp = v.items[i];
           const [px, py] = pathPos(v.geo, it.pos);
           sp.g.position.set(Math.round(px) - HALF_MAT, Math.round(py) - HALF_MAT);
-          if (sp.mat !== it.mat) { sp.mat = it.mat; sp.g.texture = PIXELS.matTex(it.mat); }
+          if (sp.mat !== it.mat) { sp.mat = it.mat; setMatIcon(sp.g, it.mat); }
         });
       }
       // the sim's own answer for each machine, read on a slow beat: it drives
@@ -1775,6 +1812,11 @@
     }
 
     frameClock++;
+    // the grade twinkle, on its own clock: bag, belts, ground and menus at once
+    {
+      const mf = Math.floor(frameClock / SPARK_BEAT) % PIXELS.MAT_SPARK_FRAMES;
+      if (mf !== matFrame) { matFrame = mf; tickMatIcons(); }
+    }
     // every machine on the map, in its state, on the right clock: the work
     // beat is quick, the idle breath slow, so the two never read alike
     {

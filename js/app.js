@@ -262,7 +262,7 @@
     if (keys.join() !== hudKeysShown.join()) {
       hudKeysShown = keys;
       FACTORY.setHudKeys(keys);
-      for (const k of keys) { if (!iconURLs[k]) iconURLs[k] = PIXELS.matURL(k); showInv(k, invPrev[k] === undefined ? invValue(k) : invPrev[k]); }
+      for (const k of keys) { if (!iconURLs[k]) iconURLs[k] = PIXELS.matURL(k, PIXELS.MAT_SPARK_PEAK); showInv(k, invPrev[k] === undefined ? invValue(k) : invPrev[k]); }
     }
     for (const k of keys) {
       const v = invValue(k);
@@ -316,7 +316,7 @@
   // can put whatever happens at the far end on the same beat.
   function flight(mat, count, from, to, out) {
     if (!from || !to) return 0;
-    if (!iconURLs[mat]) iconURLs[mat] = PIXELS.matURL(mat);
+    if (!iconURLs[mat]) iconURLs[mat] = PIXELS.matURL(mat, PIXELS.MAT_SPARK_PEAK);
     // the same size it will be when it lands: a world pixel is FACTORY.scale()
     // device pixels, and `from.k` turns those into the page's own
     const px = PIXELS.MAT_PX * FACTORY.scale() * from.k;

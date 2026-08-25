@@ -1,0 +1,91 @@
+<!doctype html>
+<!-- Grade proof sheet (dev only). The twinkle that says how deep a good was
+     dug: none on Mk1, a small warm one on Mk2, a wider cold one on Mk3.
+     Every frame of the cycle, in the bag's plate and on the belt's band,
+     for every ore the ladder mints — plus the three grades of each family
+     side by side, which is the read the player actually has to make.
+     Open: http://localhost:8123/dev/grade.html  (optionally ?name=x.png&s=4) -->
+<meta charset="utf-8">
+<title>grade proof</title>
+<style>
+  body { margin: 0; background: #1a1a20; color: #ddd; font: 12px/1.4 monospace; }
+  #out { image-rendering: pixelated; display: block; margin: 8px; }
+  #log { padding: 8px; white-space: pre; }
+</style>
+<div id="log"></div>
+<canvas id="out"></canvas>
+<script src="../js/pixels.js"></script>
+<script src="../js/tiles.js"></script>
+<script src="../js/layout-en.js"></script>
+<script src="../js/language-en.js"></script>
+<script src="../js/courses.js"></script>
+<script src="../js/language-ru.js"></script>
+<script src="../js/maps/kit.js"></script>
+<script src="../js/maps/frontier.js"></script>
+<script src="../js/maps/range.js"></script>
+<script src="../js/chain.js"></script>
+<script src="../js/sim.js"></script>
+<script src="../js/drops.js"></script>
+<script>
+(async function () {
+  const Q = new URLSearchParams(location.search);
+  const SCALE = +(Q.get('s') || 4);
+  const F = PIXELS.MAT_SPARK_FRAMES;
+  const HM = PIXELS.MAT_PX >> 1;
+  const ORES = CHAIN.MAT_IDS.filter((id) => CHAIN.MATS[id].form === 'ore');
+  const FAMS = CHAIN.ORE_IDS;
+  const ROW = 18, LEFT = 58, W = LEFT + F * 16 + 18, HH = 30 + ORES.length * ROW + 30 + FAMS.length * 20 + 16;
+  const c = document.createElement('canvas'); c.width = W; c.height = HH;
+  const x = c.getContext('2d');
+  x.fillStyle = '#26262e'; x.fillRect(0, 0, W, HH);
+  const label = (s, px, py, col) => { x.fillStyle = col || '#fff4dc'; x.font = '6px monospace'; x.fillText(s, px, py); };
+  const bed = (kind, px, py, w, h) => {
+    for (let ty = 0; ty < h; ty++) for (let tx = 0; tx < w; tx++) {
+      x.drawImage(TILES.fill(kind, (tx * 7 + ty * 13) % 23), px + tx * 16, py + ty * 16);
+    }
+  };
+
+  label('the grade twinkle — every frame of the cycle, on the band it rides', 4, 8);
+  label('Mk1 plain / Mk2 warm / Mk3 cold. ' + F + ' frames, one second', 4, 16, '#c3ab84');
+
+  // every ore the ladder mints, one row each: the whole cycle on the belt
+  ORES.forEach((id, i) => {
+    const y = 24 + i * ROW;
+    const g = PIXELS.matGrade(id);
+    label(id, 4, y + 11, g === 2 ? '#7fc9a8' : g === 1 ? '#fff0a6' : '#8f8a80');
+    label('Mk' + (CHAIN.MATS[id].depth || 1), 40, y + 11, '#c3ab84');
+    for (let f = 0; f < F; f++) {
+      const bx = LEFT + f * 16, by = y - 1;
+      x.drawImage(PIXELS.beltTileCanvas(0, 'h', false, false), bx, by);
+      x.drawImage(PIXELS.matCanvas(id, f), bx + 8 - HM, by + 8 - HM);
+    }
+  });
+
+  // the read the player makes: one family's three grades together, at peak
+  const ly = 30 + ORES.length * ROW;
+  label('the three grades of a family together — bag plate, then grass, at the widest frame', 4, ly + 4);
+  FAMS.forEach((fam, i) => {
+    const y = ly + 12 + i * 20;
+    label(fam, 4, y + 12, '#fff4dc');
+    const mats = CHAIN.ORE_MATS[fam] || [];
+    mats.forEach((id, j) => {
+      const px = LEFT + j * 46;
+      x.fillStyle = 'rgba(34,29,41,0.74)'; x.fillRect(px, y, 24, 14);
+      x.drawImage(PIXELS.matCanvas(id, PIXELS.MAT_SPARK_PEAK), px + 2, y + 2);
+      bed('grass', px + 26, y - 1, 1, 1);
+      x.drawImage(PIXELS.matCanvas(id, PIXELS.MAT_SPARK_PEAK), px + 34 - HM, y + 7 - HM);
+    });
+  });
+
+  const out = document.getElementById('out');
+  out.width = W * SCALE; out.height = HH * SCALE;
+  const ox = out.getContext('2d'); ox.imageSmoothingEnabled = false;
+  ox.drawImage(c, 0, 0, W, HH, 0, 0, W * SCALE, HH * SCALE);
+  const name = Q.get('name') || 'grade.png';
+  try {
+    const blob = await (await fetch(out.toDataURL('image/png'))).blob();
+    const res = await fetch('/upload?name=' + encodeURIComponent(name), { method: 'POST', body: blob });
+    document.getElementById('log').textContent = 'uploaded ' + name + ': ' + res.status + ' ' + await res.text();
+  } catch (e) { document.getElementById('log').textContent = 'upload failed: ' + e; }
+})().catch((e) => { document.getElementById('log').textContent = 'ERROR ' + (e.stack || e); });
+</script>

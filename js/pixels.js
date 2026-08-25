@@ -2269,7 +2269,64 @@
                  '..2222..'], t: [P.brass2, P.brass1, P.brass3, P.brass1] },
   };
 
-  function matSprite(kind) {
+  // ---------- grade: the twinkle that says how deep a good was dug ----------
+  // A deep or pure ore wears its family's art, so a bag of iron ore and a bag
+  // of deep iron were the same picture twice — told apart by a pip one pixel
+  // wide, which is nothing at all once the good is riding a moving band. The
+  // grade is a twinkle instead: none on Mk1, a small warm one on Mk2, a wider
+  // cold one on Mk3. Warm against cold is the whole read. Nothing has to be
+  // counted, and the two never blur at ten pixels, because the difference is
+  // not size (which a moving sprite hides) but hue (which it cannot).
+  const SPARK_FRAMES = 12;                 // one cycle; FACTORY sets the beat
+  const SPARK_PEAK = 2;                    // the frame a twinkle is widest
+  // sites are [x, y, frame it starts on]; ramp is the width of the star over
+  // its life, fade the alpha under it. What is left of the cycle is dark.
+  // Subtlety is size and brightness, never rarity: a mark that is dark most
+  // of the second is not a subtle mark, it is one the player misses. Mk2 runs
+  // half the cycle at five pixels, Mk3 all of it at nine.
+  const SPARK_GRADE = [
+    // Mk2 — one small glint, high on the good. Brass and not cream for the
+    // arms: cream is bright on the belt's dark band and invisible on stone.
+    { core: P.white, arm: P.brass2, sites: [[7, 2, 0]], ramp: [1, 2, 2, 2, 1, 1], fade: [0.55, 1, 1, 0.85, 0.6, 0.4] },
+    // Mk3 — verdigris over ice, twice the reach, and it crosses the whole
+    // good: no ore in this world is dug in that colour, so it can only be
+    // the mark. Two sites half a cycle apart, so something is always lit.
+    { core: P.wF, arm: P.teal3, sites: [[7, 2, 0], [2, 6, 6]], ramp: [1, 2, 3, 3, 2, 1], fade: [0.7, 1, 1, 1, 0.9, 0.6] },
+  ];
+  // 0 = plain (Mk1, and everything past the ore level), 1 = deep, 2 = pure
+  function matGrade(kind) {
+    const spec = (window.CHAIN && window.CHAIN.MATS && window.CHAIN.MATS[kind]) || null;
+    if (!spec || spec.form !== 'ore') return 0;
+    return Math.max(0, Math.min(SPARK_GRADE.length, (spec.depth || 1) - 1));
+  }
+  // a four-point star: a core pixel, then arms one and two out from it
+  function twinkle(x, g, cx, cy, size, alpha) {
+    x.globalAlpha = alpha;
+    R(x, g.core, cx, cy, 1, 1);
+    for (let d = 1; d < size; d++) {
+      R(x, g.arm, cx - d, cy, 1, 1); R(x, g.arm, cx + d, cy, 1, 1);
+      R(x, g.arm, cx, cy - d, 1, 1); R(x, g.arm, cx, cy + d, 1, 1);
+    }
+    x.globalAlpha = 1;
+  }
+  function sparkleOn(c, level, frame) {
+    const g = SPARK_GRADE[level - 1];
+    if (!g) return;
+    const x = c.getContext('2d');
+    for (const [sx, sy, at] of g.sites) {
+      const i = (frame - at + SPARK_FRAMES) % SPARK_FRAMES;
+      if (i < g.ramp.length) twinkle(x, g, sx, sy, g.ramp[i], g.fade[i]);
+    }
+  }
+  const sparkFrame = (frame) => (((frame | 0) % SPARK_FRAMES) + SPARK_FRAMES) % SPARK_FRAMES;
+
+  function matSprite(kind, frame) {
+    const c = matBody(kind);
+    const lv = matGrade(kind);
+    if (lv) sparkleOn(c, lv, sparkFrame(frame));
+    return c;
+  }
+  function matBody(kind) {
     const spec = (window.CHAIN && window.CHAIN.MATS && window.CHAIN.MATS[kind]) || null;
     const form = spec ? spec.form : (kind === 'money' ? 'money' : 'crates');
     if (form === 'ore') {
@@ -2429,10 +2486,16 @@
     textTex: (str, fg) => cachedTex('t:' + fg + '|' + str, () => textCanvas(str, fg)),
     // materials: one sprite, three ways of asking for it. The HUD, the menu
     // rows, the goods on the belt and the fly-to-bag image are all this.
+    // `frame` is the grade twinkle's; a plain good ignores it and keeps the
+    // one texture it always had.
     MAT_PX,
-    matTex: (kind) => cachedTex('mat:' + kind, () => matSprite(kind)),
+    MAT_SPARK_FRAMES: SPARK_FRAMES, MAT_SPARK_PEAK: SPARK_PEAK, matGrade,
+    matTex: (kind, frame) => {
+      const f = matGrade(kind) ? sparkFrame(frame) : 0;
+      return cachedTex('mat:' + kind + ':' + f, () => matSprite(kind, f));
+    },
     matCanvas: matSprite,
-    matURL: (kind) => matSprite(kind).toDataURL(),
+    matURL: (kind, frame) => matSprite(kind, frame).toDataURL(),
     kindIconTex: (kind) => cachedTex('kind:' + kind, () => kindIcon(kind)),
     // raw canvases for the dev proof page (dev/tiles.html) — no PIXI needed
     nodeCanvas: nodePatch,

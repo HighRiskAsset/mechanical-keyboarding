@@ -1,0 +1,68 @@
+<!doctype html>
+<!-- Grade twinkle, close up (dev only). One ore family, its grades stacked,
+     the first frames of the cycle across — big enough to count pixels on.
+     Open: http://localhost:8123/dev/grade-zoom.html?fam=vedi  (&s=8&name=x.png) -->
+<meta charset="utf-8">
+<title>grade zoom</title>
+<style>
+  body { margin: 0; background: #1a1a20; color: #ddd; font: 12px/1.4 monospace; }
+  #out { image-rendering: pixelated; display: block; margin: 8px; }
+  #log { padding: 8px; white-space: pre; }
+</style>
+<div id="log"></div>
+<canvas id="out"></canvas>
+<script src="../js/pixels.js"></script>
+<script src="../js/tiles.js"></script>
+<script src="../js/layout-en.js"></script>
+<script src="../js/language-en.js"></script>
+<script src="../js/courses.js"></script>
+<script src="../js/maps/kit.js"></script>
+<script src="../js/maps/frontier.js"></script>
+<script src="../js/maps/range.js"></script>
+<script src="../js/chain.js"></script>
+<script src="../js/sim.js"></script>
+<script src="../js/drops.js"></script>
+<script>
+(async function () {
+  const Q = new URLSearchParams(location.search);
+  const SCALE = +(Q.get('s') || 8);
+  const FAM = Q.get('fam') || 'vedi';
+  const NF = +(Q.get('f') || 6);                 // frames across
+  const HM = PIXELS.MAT_PX >> 1;
+  const MATS = CHAIN.ORE_MATS[FAM] || [];
+  const ROW = 20, LEFT = 34, W = LEFT + NF * 16 + 40, HH = 14 + MATS.length * ROW + 4;
+  const c = document.createElement('canvas'); c.width = W; c.height = HH;
+  const x = c.getContext('2d');
+  x.fillStyle = '#26262e'; x.fillRect(0, 0, W, HH);
+  const label = (s, px, py, col) => { x.fillStyle = col || '#fff4dc'; x.font = '6px monospace'; x.fillText(s, px, py); };
+
+  label(FAM + ' — frames 0-' + (NF - 1) + ', then on grass', 4, 8);
+  MATS.forEach((id, i) => {
+    const y = 12 + i * ROW;
+    const g = PIXELS.matGrade(id);
+    label('Mk' + (CHAIN.MATS[id].depth || 1), 4, y + 12, g === 2 ? '#7fc9a8' : g === 1 ? '#fff0a6' : '#8f8a80');
+    for (let f = 0; f < NF; f++) {
+      const bx = LEFT + f * 16, by = y;
+      x.drawImage(PIXELS.beltTileCanvas(0, 'h', false, false), bx, by);
+      x.drawImage(PIXELS.matCanvas(id, f), bx + 8 - HM, by + 8 - HM);
+    }
+    // the same good on grass and on the bag's plate, at the widest frame
+    const gx = LEFT + NF * 16 + 4;
+    x.drawImage(TILES.fill('grass', 3), gx, y);
+    x.drawImage(PIXELS.matCanvas(id, PIXELS.MAT_SPARK_PEAK), gx + 8 - HM, y + 8 - HM);
+    x.fillStyle = 'rgba(34,29,41,0.74)'; x.fillRect(gx + 18, y, 14, 14);
+    x.drawImage(PIXELS.matCanvas(id, PIXELS.MAT_SPARK_PEAK), gx + 20, y + 2);
+  });
+
+  const out = document.getElementById('out');
+  out.width = W * SCALE; out.height = HH * SCALE;
+  const ox = out.getContext('2d'); ox.imageSmoothingEnabled = false;
+  ox.drawImage(c, 0, 0, W, HH, 0, 0, W * SCALE, HH * SCALE);
+  const name = Q.get('name') || ('grade-' + FAM + '.png');
+  try {
+    const blob = await (await fetch(out.toDataURL('image/png'))).blob();
+    const res = await fetch('/upload?name=' + encodeURIComponent(name), { method: 'POST', body: blob });
+    document.getElementById('log').textContent = 'uploaded ' + name + ': ' + res.status + ' ' + await res.text();
+  } catch (e) { document.getElementById('log').textContent = 'upload failed: ' + e; }
+})().catch((e) => { document.getElementById('log').textContent = 'ERROR ' + (e.stack || e); });
+</script>
