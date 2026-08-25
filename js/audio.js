@@ -18,6 +18,11 @@
     enabled = v !== 'off';
   } catch { /* default on */ }
 
+  // A second, non-persisted switch, held down by the debug autotyper: at
+  // machine speed the key clicks are a buzzsaw, and the preference the player
+  // actually set has to survive being talked over.
+  let muted = false;
+
   let ctx = null;
   let rumbleGain = null;
   let clackTimer = null;
@@ -33,7 +38,7 @@
 
   // Short filtered noise burst — a soft mechanical click.
   function noiseBurst(dur, freq, gain, type, when) {
-    if (!enabled || !ctx) return;
+    if (!enabled || muted || !ctx) return;
     const t = ctx.currentTime + (when || 0);
     const len = Math.max(1, Math.floor(ctx.sampleRate * dur));
     const buf = ctx.createBuffer(1, len, ctx.sampleRate);
@@ -53,7 +58,7 @@
   }
 
   function tone(freq, dur, gain, when, type) {
-    if (!enabled || !ctx) return;
+    if (!enabled || muted || !ctx) return;
     const t = ctx.currentTime + (when || 0);
     const osc = ctx.createOscillator();
     osc.type = type || 'triangle';
@@ -101,7 +106,7 @@
   // material pickup: quick pitch-up pop
   function mint() {
     ensureCtx();
-    if (!enabled || !ctx) return;
+    if (!enabled || muted || !ctx) return;
     const t = ctx.currentTime;
     const o = ctx.createOscillator();
     o.type = 'sine';
@@ -123,7 +128,7 @@
   // settling, then three quiet taps of the pieces landing.
   function poof() {
     ensureCtx();
-    if (!enabled || !ctx) return;
+    if (!enabled || muted || !ctx) return;
     const t = ctx.currentTime, dur = 0.42;
     const len = Math.floor(ctx.sampleRate * dur);
     const buf = ctx.createBuffer(1, len, ctx.sampleRate);
@@ -163,7 +168,7 @@
   let pickAt = 0, pickRun = 0;
   function pickup() {
     ensureCtx();
-    if (!enabled || !ctx) return;
+    if (!enabled || muted || !ctx) return;
     const now = performance.now();
     pickRun = now - pickAt < 900 ? Math.min(pickRun + 1, 11) : 0;
     pickAt = now;
@@ -188,7 +193,7 @@
   // both quiet, and a fatter batch only opens it a little wider.
   function arrive(n) {
     ensureCtx();
-    if (!enabled || !ctx) return;
+    if (!enabled || muted || !ctx) return;
     const k = Math.min(1, (Math.max(1, n || 1) + 2) / 6);
     tone(1568, 0.16, 0.05 * k, 0, 'sine');
     tone(2093, 0.22, 0.035 * k, 0.035, 'sine');
@@ -199,7 +204,7 @@
   // paying is the wind-up, and the latch at the end is the payoff.
   function pay() {
     ensureCtx();
-    if (!enabled || !ctx) return;
+    if (!enabled || muted || !ctx) return;
     const t = ctx.currentTime;
     const o = ctx.createOscillator();
     o.type = 'sine';
@@ -220,7 +225,7 @@
   // which is where `build`'s latch lands.
   function assemble() {
     ensureCtx();
-    if (!enabled || !ctx) return;
+    if (!enabled || muted || !ctx) return;
     const t = ctx.currentTime, dur = 0.34;
     const len = Math.floor(ctx.sampleRate * dur);
     const buf = ctx.createBuffer(1, len, ctx.sampleRate);
@@ -302,7 +307,7 @@
 
   function scheduleClack() {
     const idleMs = performance.now() - lastKeyAt;
-    if (idleMs > 2500 || !enabled) {
+    if (idleMs > 2500 || !enabled || muted) {
       clackTimer = null;
       if (rumbleGain) rumbleGain.gain.setTargetAtTime(0, ctx.currentTime, 0.4);
       return;
@@ -325,5 +330,10 @@
   }
   function isEnabled() { return enabled; }
 
-  window.AUDIO = { click, thud, ding, whistle, press, mint, build, countTick, fanfare, poof, assemble, pickup, arrive, pay, onKey, setEnabled, isEnabled };
+  function setMuted(on) {
+    muted = !!on;
+    if (muted && rumbleGain && ctx) rumbleGain.gain.setTargetAtTime(0, ctx.currentTime, 0.1);
+  }
+
+  window.AUDIO = { click, thud, ding, whistle, press, mint, build, countTick, fanfare, poof, assemble, pickup, arrive, pay, onKey, setEnabled, isEnabled, setMuted };
 })();

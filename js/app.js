@@ -135,6 +135,7 @@
   }
   function scheduleHint() {
     clearHint();
+    if (autoTyping) return;   // no finger to prompt
     if (lineText[pos] === undefined) return;
     const tier = hintTier();
     if (tier >= 5) return;                                  // hint-free
@@ -662,6 +663,7 @@
   }
   function refreshCaption() {
     if (captionFlash) return;
+    if (autoTyping) { setCaption(T.t('capDebugAuto'), 'ok'); return; }
     if (!profile) { setCaption(''); return; }
     if (menu || buildMenu) {
       const mm = menu || buildMenu;
@@ -1348,6 +1350,80 @@
     A.fanfare();
   }
 
+  // debug: hold Tab — the drill types itself, correctly, as fast as the frame
+  // will carry, so the mechanics can be tested without doing the typing that
+  // pays for them. Developer mode arms it; with the box unticked Tab is Tab.
+  //
+  // Every autotyped character goes through the same handleTyped() a real key
+  // goes through: ore, recipes, belts, spills, prices, the ladder and the
+  // finish all run for real, and the only thing skipped is the finger. What it
+  // will not do is sign the typing record — see handleTyped: the letter stats,
+  // the accuracy and the WPM stay a record of the hands, not of the machine
+  // that stood in for them.
+  //
+  // Speed is a frame budget rather than a fixed rate: it types until it has
+  // eaten AUTO_FRAME_MS of the frame, so a slow machine types slower instead
+  // of dropping frames, and a fast one runs thousands of characters a second.
+  const AUTO_KEY = 'Tab';       // one key, held by the left little finger, on no course's board
+  const AUTO_FRAME_MS = 6;      // of a ~16ms frame; the rest belongs to the factory
+  const AUTO_MAX_CHARS = 400;   // a ceiling, so one long frame cannot run away
+  const AUTO_SAVE_MS = 1500;    // the per-line save steps aside for this one
+  let autoTyping = false, autoRaf = null, autoSavedAt = 0, autoChars = 0;
+
+  function autoTypeFrame() {
+    autoRaf = null;
+    if (!autoTyping) return;
+    const t0 = performance.now();
+    let n = 0;
+    while (n < AUTO_MAX_CHARS && performance.now() - t0 < AUTO_FRAME_MS) {
+      if (!overlay.classList.contains('hidden')) break;   // a card is up: hands off
+      if (menu || buildMenu || placing) break;            // and the same doors a real keystroke waits at
+      if (!canTypeHere()) break;                          // walking, or standing somewhere with no drill
+      if (lineText[pos] === undefined) break;
+      handleTyped(lineText[pos]);
+      n++;
+    }
+    if (n) {
+      autoChars += n;
+      // the once-a-frame half of what a keystroke normally does per character
+      renderLine();
+      FACTORY.castLetter(true);
+      flushFloats();
+      refreshInventory();
+      refreshStatus();
+      const now = performance.now();
+      if (now - autoSavedAt > AUTO_SAVE_MS) { E.saveProfile(profile); autoSavedAt = now; }
+    }
+    autoRaf = requestAnimationFrame(autoTypeFrame);
+  }
+
+  function autoTypeStart() {
+    if (autoTyping || !profile) return;
+    autoTyping = true;
+    autoChars = 0;
+    autoSavedAt = performance.now();
+    clearHint();
+    A.setMuted(true);            // a few hundred key clicks a second is a buzzsaw
+    refreshCaption();            // the caption says so for as long as the key is down
+    autoRaf = requestAnimationFrame(autoTypeFrame);
+  }
+  function autoTypeStop() {
+    if (!autoTyping) return;
+    autoTyping = false;
+    if (autoRaf) cancelAnimationFrame(autoRaf);
+    autoRaf = null;
+    A.setMuted(false);
+    if (profile) E.saveProfile(profile);
+    renderLine();
+    flushFloats();
+    refreshInventory();
+    refreshKeyboard();
+    refreshStats();
+    refreshStatus();
+    flashCaption(T.t('capDebugAutoDone', { n: autoChars }));
+  }
+  // a key held while the window goes away never sends its keyup
+  window.addEventListener('blur', autoTypeStop);
   window.addEventListener('keydown', (e) => {
     noteRealKeyboard(e);
     const overlayOpen = !overlay.classList.contains('hidden');
@@ -1355,6 +1431,11 @@
     if (((e.ctrlKey && e.altKey && e.code === 'KeyM') || (e.ctrlKey && e.shiftKey && e.code === 'KeyQ')) && !overlayOpen && profile && DEVMODE.isEnabled()) {
       e.preventDefault();
       debugMaterials();
+      return;
+    }
+    if (e.code === AUTO_KEY && !overlayOpen && profile && DEVMODE.isEnabled()) {
+      e.preventDefault();
+      if (!e.repeat) autoTypeStart();
       return;
     }
     if (ARROWS[e.code]) {
@@ -1393,6 +1474,7 @@
     const ARROWS = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
     if (ARROWS[e.code]) FACTORY.setMove(ARROWS[e.code], false);
     if (e.code === 'Space') endSpace();
+    if (e.code === AUTO_KEY) autoTypeStop();
   });
 
   function handleTyped(typed) {
@@ -1406,25 +1488,31 @@
         const gap = now - lastCorrectTime;
         if (gap <= E.MAX_LATENCY) { latency = gap; session.activeMs += gap; }
       }
-      lastCorrectTime = now;
+      // The autotyper drives the world but never signs the register: no
+      // latency, no letter stat, no character on the session's count. What it
+      // does not measure it cannot lie about, so the skill model and the two
+      // readouts over the board stay a record of the hands that really typed.
+      lastCorrectTime = autoTyping ? null : now;
 
-      if (expected !== ' ') E.recordHit(profile, expected, latency);
-      session.chars++;
-      session.streak++;
-      if (session.streak > session.bestStreak) session.bestStreak = session.streak;
-      profile.totalChars++;
+      if (!autoTyping) {
+        if (expected !== ' ') E.recordHit(profile, expected, latency);
+        session.chars++;
+        session.streak++;
+        if (session.streak > session.bestStreak) session.bestStreak = session.streak;
+        profile.totalChars++;
 
-      A.click();
-      A.onKey(latency);
+        A.click();
+        A.onKey(latency);
+      }
 
       if (expected !== ' ') {
-        FACTORY.castLetter(true);
+        if (!autoTyping) FACTORY.castLetter(true);   // once a frame instead, while the autotyper runs
         workKeystroke();
       }
 
       pos++;
       attemptsAtPos = 0;
-      advanceCaret();
+      if (!autoTyping) advanceCaret();
 
       if (lineText[pos] === ' ' || pos >= lineText.length) {
         const endedIdx = lineText.slice(0, pos).split(' ').length - 1;
@@ -1433,17 +1521,21 @@
           session.wordsTyped++;
           const clean = !wordHadError;
           const justCollected = collectWord(word, clean);
-          showGloss(word, justCollected);
-          flushFloats();
-          refreshInventory();
-          refreshStatus();
+          // the panels: per word by hand, per frame under the autotyper —
+          // hundreds of words a second is not something a panel can show
+          if (!autoTyping) {
+            showGloss(word, justCollected);
+            flushFloats();
+            refreshInventory();
+            refreshStatus();
+          }
         }
         wordHadError = false;
       }
 
       if (pos >= lineText.length) finishLine();
       else scheduleHint();
-      refreshStats();
+      if (!autoTyping) refreshStats();
     } else {
       attemptsAtPos++;
       if (erroredAt !== pos) {
@@ -1469,14 +1561,15 @@
     session.linesDone++;
     lastCorrectTime = null;
     FACTORY.stamp();
-    A.press();
-    flushFloats();
-    refreshInventory();
-
-    E.saveProfile(profile);
+    if (!autoTyping) {
+      A.press();
+      flushFloats();
+      refreshInventory();
+      E.saveProfile(profile);   // the autotyper saves on its own beat instead
+    }
     // the bag may now pay for a different recipe
     if (dock && dock.kind === 'machine' && dock.m.kind !== 'mine') recipe = pickRecipe(dock.m);
-    refreshStatus();
+    if (!autoTyping) refreshStatus();
 
     if (session.activeMs > SOFT_STOP_MIN * 60000 && session.activeMs - lastSoftStopAt > 10 * 60000) {
       lastSoftStopAt = session.activeMs;
