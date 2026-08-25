@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MK · route sim (machine-by-machine)</title>
+<style>
+  body { font: 13px/1.45 Consolas, monospace; background: #14181b; color: #e4ece9; padding: 18px 24px; max-width: 1500px; }
+  h1 { font-size: 17px; margin: 0 0 4px; } h2 { font-size: 15px; color: #d4a94e; margin: 22px 0 6px; }
+  p { color: #9aa9ab; margin: 0 0 10px; }
+  table { border-collapse: collapse; margin: 8px 0 16px; font-size: 12px; }
+  td, th { border: 1px solid #2c3a40; padding: 2px 8px; text-align: right; vertical-align: top; }
+  th { color: #d4a94e; } td:first-child, th:first-child { text-align: left; }
+  td.l, th.l { text-align: left; }
+  .buy { color: #6cc46c; } .auto { color: #7fb8e8; } .wait { color: #f2c14e; }
+  .keys { color: #cbb27a; max-width: 460px; word-break: break-all; }
+</style>
+</head>
+<body>
+<h1>Route simulation — one stint per machine visit</h1>
+<p>Read-only. Reuses js/chain.js prices, recipes, perUnit and alphabets exactly as the game has them.
+Query: <code>?course=en|ru</code> <code>&amp;policy=ladder|industry</code> <code>&amp;pace=N</code></p>
+<div id="out"></div>
+
+<script src="../js/i18n.js"></script>
+<script src="../js/board-ansi.js"></script>
+<script src="../js/language-ru.js"></script>
+<script src="../js/language-en.js"></script>
+<script src="../js/layout-ru.js"></script>
+<script src="../js/layout-en.js"></script>
+<script src="../js/courses.js"></script>
+<script src="../js/maps/kit.js"></script>
+<script src="../js/maps/frontier.js"></script>
+<script src="../js/maps/range.js"></script>
+<script>
+// course must be chosen BEFORE chain.js reads COURSES.course()
+(() => {
+  const q = new URLSearchParams(location.search);
+  const want = (q.get('course') || 'ru').toLowerCase();
+  const id = want.startsWith('en') ? 'en-qwerty' : 'ru-jcuken';
+  if (window.COURSES.get() !== id && !window.COURSES.set(id)) console.warn('course set failed', id);
+})();
+</script>
+<script src="../js/chain.js"></script>
+<script>
+(() => {
+'use strict';
+const C = window.CHAIN;
+const Q = new URLSearchParams(location.search);
+const L = window.COURSES.course();
+const POLICY = Q.get('policy') || 'ladder';
+if (Q.get('pace')) C.TUNING.PACE = +Q.get('pace');
+C.useMap('range');   // flat map: pacing without geography
+
+// ---------- the learner ----------
+// same model as dev/playtest.html so the two logs are comparable
+const wpmAt = (h) => 12 + 26 * (1 - Math.exp(-h / 14));
+const accAt = (h) => 0.94 + 0.04 * (1 - Math.exp(-h / 10));
+const UTIL = 0.8;                                   // share of a session actually typing
+const kpm = (h) => wpmAt(h) * 5 * accAt(h) * UTIL;  // CORRECT keystrokes per minute
+
+// ---------- state ----------
+const tier0 = L.PAIRS.filter((p) => p.tier === 0).length;
+const P = { mk: C.mkTable({ pairsUnlocked: tier0 }), bag: {}, seen: {}, machines: [], crossings: {}, nextMachineId: 1, unlockLog: [] };
+const built = Object.create(null);           // built[kind] = count ; built.mine[ore] = count
+built.mine = Object.create(null);            // null prototype: 'constructor' is a kind id here
+for (const p of L.PAIRS) if (p.tier === 0 && p.ore) built.mine[p.ore] = 1;
+const auto = {};                            // autoKey -> instances running
+const autoMat = {};                         // autoKey -> output material
+const handMade = {};                        // autoKey -> units hand-made since learning
+const CAP = C.TUNING.BAG_CAP;
+
+let hours = 0;
+const stints = [];      // the route log
+const events = [];      // purchases, interleaved with stints by index
+let stintSeq = 0;
+
+// ---------- chain helpers ----------
+const ladderKey = () => C.PLACES.map((pl) => P.mk[pl] || 0).join(',');
+const recipeCache = {};
+function candidates(mat) {
+  const key = ladderKey();
+  if (!recipeCache[key]) {
+    const t = recipeCache[key] = Object.create(null);
+    for (const kind of C.KIND_IDS) {
+      if (kind === 'mine') continue;
+      for (const r of C.offerableRecipes(kind, P)) (t[r.out] = t[r.out] || []).push(r);
+    }
+  }
+  return recipeCache[key][mat] || [];
+}
+// Which recipe the operator would actually use: the first offered one whose
+// inputs he can in fact produce. (EN's Assembler offers parts + steel, and
+// EN never smelts steel — a recipe offered on pins alone. See the report.)
+function recipeToMake(mat, seen) {
+  const list = candidates(mat);
+  if (!list.length) return null;
+  for (const r of list) {
+    if (Object.keys(r.in).every((im) => makeable(im, new Set(seen || [])))) return r;
+  }
+  return list[0];
+}
+const rKey = (kind, r) => (kind === 'mine' ? 'mine:' + r : kind + ':' + r.out + '|' + JSON.stringify(r.in));
+const canPay = (cost) => !!cost && Object.entries(cost).every(([m, n]) => C.bagAvail(P.bag, m) >= n);
+const pay = (cost) => C.spendCost(P.bag, cost);
+const deficit = (cost) => Object.entries(cost || {}).filter(([m, n]) => C.bagAvail(P.bag, m) < n).map(([m, n]) => [m, n - C.bagAvail(P.bag, m)]);
+
+const makeableCache = {};
+function makeable(mat, seen) {
+  if (!seen) {
+    const k = ladderKey() + '|' + JSON.stringify(built);
+    const c = makeableCache[k] || (makeableCache[k] = Object.create(null));
+    if (mat in c) return c[mat];
+    return (c[mat] = makeable(mat, new Set()));
+  }
+  if (seen.has(mat)) return false;
+  seen.add(mat);
+  const spec = C.MATS[mat];
+  if (!spec) return false;
+  if (spec.form === 'ore') return !!built.mine[spec.ores[0]] && (spec.depth || 1) <= Math.max(1, C.oreMk(P, spec.ores[0]));
+  for (const r of candidates(mat)) {
+    if (!built[r.kind]) {
+      const price = C.priceMachine(r.kind, 1);
+      if (!price || !Object.keys(price).every((m) => makeable(m, new Set(seen)))) continue;
+    }
+    if (Object.keys(r.in).every((m) => makeable(m, new Set(seen)))) return true;
+  }
+  return false;
+}
+
+// ---------- clock + automation ----------
+// the ⚙s bought at a kind, oldest first; only the first `built[kind]` of them
+// can be running, one per body
+let RESERVE = {};   // what the operator is saving toward: automation leaves it alone
+const autoRank = (kind) => Object.keys(auto).filter((k) => !k.startsWith('mine:') && k.split(':')[0] === kind);
+const autoSeats = (kind) => (built[kind] || 0) - autoRank(kind).length;   // free bodies at this kind
+
+function autoRun(minutes) {
+  const dt = minutes * 60;
+  for (const [key, n] of Object.entries(auto)) {
+    if (!n) continue;
+    if (key.startsWith('mine:')) {
+      const ore = key.slice(5);
+      const mat = C.matOfDepth(ore, Math.max(1, C.oreMk(P, ore)));
+      const got = Math.floor(n * dt / C.TUNING.RATE.mine);
+      C.bagAdd(P.bag, mat, got);
+    } else {
+      const kind = key.split(':')[0];
+      const r = autoMat[key];
+      if (!r) continue;
+      // sim.js: a machine runs ONE recipe at a time, so a kind can only run
+      // as many automated recipes at once as it has bodies standing
+      if (autoRank(kind).indexOf(key) >= (built[kind] || 0)) continue;
+      const units = Math.floor(n * dt / C.TUNING.RATE[kind]);
+      // an automated consumer takes only clear surplus — never what the
+      // operator is saving toward — and a full machine pauses, never spills
+      for (let i = 0; i < units; i++) {
+        if ((P.bag[r.out] || 0) >= CAP) break;
+        if (!Object.entries(r.in).every(([m, k]) => C.bagAvail(P.bag, m) - (RESERVE[m] || 0) - 40 >= k)) break;
+        pay(r.in); C.bagAdd(P.bag, r.out, 1);
+      }
+    }
+  }
+}
+function advance(minutes) { autoRun(minutes); hours += minutes / 60; }
+
+// ---------- the route log ----------
+function logStint(meta, keystrokes) {
+  if (keystrokes <= 0) return;
+  const at = hours;
+  const mins = keystrokes / kpm(hours);
+  advance(mins);
+  const prev = stints[stints.length - 1];
+  if (prev && prev.key === meta.key && events.length === prev.evAt) {
+    prev.ks += keystrokes; prev.mins += mins; prev.units += meta.units || 0;
+    return;
+  }
+  stints.push({ n: ++stintSeq, ...meta, ks: keystrokes, mins, at, evAt: events.length });
+}
+function note(type, text, extra) { events.push({ type, text, at: hours, ks: totalKs(), ...extra }); }
+const totalKs = () => stints.reduce((a, s) => a + s.ks, 0);
+
+// ---------- describing a machine visit ----------
+function mineMeta(ore) {
+  const mk = Math.max(1, C.oreMk(P, ore));
+  const mat = C.matOfDepth(ore, mk);
+  return {
+    key: 'mine:' + ore + ':mk' + mk,
+    kind: 'mine', label: oreName(ore) + ' Mine', mk, grammar: 'letters',
+    out: mat, keys: C.oreLetters(ore, mk).slice(),
+  };
+}
+function procMeta(kind, r) {
+  const K = C.KINDS[kind];
+  const mk = C.PLACES.includes(kind) ? C.kindMk(P, kind) : null;
+  const alpha = C.recipeAlphabet(r, P);
+  const focus = K.full ? C.recipeFocus(r, P).letters : null;
+  return {
+    key: kind + ':' + r.out + '|' + JSON.stringify(r.in) + '|' + (mk || 0) + '|' + alpha.length,
+    kind, label: kindName(kind), mk, grammar: K.grammar,
+    out: r.out, recipe: r, keys: alpha.slice(), focus, full: !!K.full,
+  };
+}
+const oreName = (o) => ({ az: 'Iron', buki: 'Copper', stone: 'Stone', vedi: 'Quartz', coal: 'Coal', oil: 'Oil' }[o] || o);
+const kindName = (k) => k.charAt(0).toUpperCase() + k.slice(1);
+
+// ---------- hand work ----------
+function isAuto(mat) {
+  const spec = C.MATS[mat];
+  if (spec && spec.form === 'ore') return !!auto['mine:' + spec.ores[0]];
+  const r = recipeToMake(mat);
+  return !!(r && auto[rKey(r.kind, r)]);
+}
+function ensureKind(kind) {
+  const price = C.priceMachine(kind, (built[kind] || 0) + 1);
+  if (!price || !canPay(price)) return !!built[kind];
+  pay(price); built[kind] = (built[kind] || 0) + 1;
+  note('build', `build ${kindName(kind)} #${built[kind]}`, { price });
+  return true;
+}
+// An automated producer is left to run — but only for a bounded stretch. If
+// the belt does not deliver (its own feed is short), the operator goes back
+// to working it by hand, which the game always allows.
+function tryWait(mat, need, mins, why) {
+  let waited = 0;
+  while (C.bagAvail(P.bag, mat) < need && waited < mins) {
+    const before = C.bagAvail(P.bag, mat);
+    advance(2); waited += 2;
+    if (C.bagAvail(P.bag, mat) <= before) break;   // dead belt: back to hand work
+  }
+  if (waited) note('wait', `wait ${waited}m for ${need}× ${mat} ${why || ''}`, { mins: waited });
+  return C.bagAvail(P.bag, mat) >= need;
+}
+
+function produceByHand(mat, qty, depth) {
+  depth = (depth || 0) + 1;
+  if (depth > 10 || qty <= 0) return false;
+  const spec = C.MATS[mat];
+  if (!spec) return false;
+
+  if (spec.form === 'ore') {
+    const ore = spec.ores[0];
+    if (!built.mine[ore]) return false;
+    const d = Math.max(1, C.oreMk(P, ore));
+    if ((spec.depth || 1) > d) return false;
+    const yieldMat = C.matOfDepth(ore, d);
+    if (auto['mine:' + ore] && tryWait(yieldMat, qty, 30, '(mine automated)')) return true;
+    let left = qty;
+    while (left > 0) {
+      const room = CAP - (P.bag[yieldMat] || 0);
+      if (room <= 0) break;
+      const n = Math.min(left, room);
+      logStint({ ...mineMeta(ore), units: n }, n);   // 1 correct keystroke = 1 ore
+      C.bagAdd(P.bag, yieldMat, n);
+      const k = 'mine:' + ore;
+      handMade[k] = (handMade[k] || 0) + n;
+      left -= n;
+    }
+    return C.bagAvail(P.bag, mat) > 0;
+  }
+
+  const r = recipeToMake(mat);
+  if (!r) return false;
+  if (!built[r.kind]) {
+    // no machine of that kind yet: earn its price by hand, then buy it
+    const mp = C.priceMachine(r.kind, 1);
+    if (!mp) return false;
+    for (const [m, n] of deficit(mp)) if (m !== mat && makeable(m)) produceByHand(m, n, depth);
+    if (!ensureKind(r.kind)) return false;
+  }
+  const key = rKey(r.kind, r);
+  if (auto[key] && tryWait(mat, qty, 30, '(automated)')) return true;
+
+  const perUnit = C.KINDS[r.kind].perUnit;
+  let left = qty, guard = 0;
+  while (left > 0 && guard++ < 60) {
+    let cap = CAP - (P.bag[mat] || 0);
+    for (const [im, n] of Object.entries(r.in)) cap = Math.min(cap, Math.floor(CAP / n));
+    const round = Math.max(1, Math.min(left, cap));
+    if (cap <= 0) break;
+    for (const [im, n] of Object.entries(r.in)) {
+      const short = n * round - C.bagAvail(P.bag, im);
+      if (short > 0 && !produceByHand(im, short, depth)) { /* partial stock is fine */ }
+    }
+    let can = Infinity;
+    for (const [im, n] of Object.entries(r.in)) can = Math.min(can, Math.floor(C.bagAvail(P.bag, im) / n));
+    const run = Math.min(round, can);
+    if (run <= 0) break;
+    for (let i = 0; i < run; i++) pay(r.in);
+    logStint({ ...procMeta(r.kind, r), units: run }, run * perUnit);
+    C.bagAdd(P.bag, mat, run);
+    handMade[key] = (handMade[key] || 0) + run;
+    left -= run;
+  }
+  return C.bagAvail(P.bag, mat) > 0;
+}
+
+window.SIMDBG = { P, built, auto, autoMat, handMade, produceByHand, recipeToMake, makeable, deficit, stints };
+
+// ---------- automation shopping ----------
+// every ⚙ the operator could be saving toward, best-worked first. The run-in
+// (the price's `own` term) must already be served by hand.
+function autoOptions() {
+  const out = [];
+  for (const [key, done] of Object.entries(handMade).sort((a, b) => b[1] - a[1])) {
+    if (auto[key]) continue;
+    let price, r = null, ore = null;
+    if (key.startsWith('mine:')) {
+      ore = key.slice(5);
+      price = C.priceAuto({ kind: 'mine', ore }, null, P);
+    } else {
+      r = C.RECIPES.find((x) => rKey(x.kind, x) === key);
+      if (!r) continue;
+      price = C.priceAuto({ kind: r.kind }, r, P);
+    }
+    if (!price) continue;
+    const own = ore ? C.matOfDepth(ore, Math.max(1, C.oreMk(P, ore))) : r.out;
+    if (done < (price[own] || 0)) continue;                                   // run-in not served
+    if (!Object.keys(price).every((m) => makeable(m))) continue;
+    // a ⚙ needs a body to stand in: one running recipe per machine
+    const needsBody = !ore && autoSeats(r.kind) <= 0 ? r.kind : null;
+    out.push({ key, price, r, ore, own, done, needsBody });
+  }
+  return out;
+}
+function buyAuto(o) {
+  pay(o.price);
+  auto[o.key] = 1;
+  if (o.r) autoMat[o.key] = o.r;
+  note('auto', `⚙ automate ${o.ore ? oreName(o.ore) + ' mine' : kindName(o.r.kind) + ' → ' + o.r.out}`, { price: o.price });
+}
+function tryAutomate() {
+  for (const o of autoOptions()) {
+    if (o.needsBody) { if (canPay(C.priceMachine(o.needsBody, (built[o.needsBody] || 0) + 1))) { ensureKind(o.needsBody); return true; } continue; }
+    if (canPay(o.price)) { buyAuto(o); return true; }
+  }
+  return false;
+}
+
+// ---------- the ladder ----------
+function nextGoal() {
+  const forSale = C.nextPairs(P);
+  if (!forSale.length) return { kind: 'finish' };
+  const byEra = (a, b) => a.tier - b.tier || L.PAIRS.indexOf(a) - L.PAIRS.indexOf(b);
+  const ready = forSale.filter((q) => Object.keys(C.pricePair(q) || {}).every((m) => makeable(m))).sort(byEra);
+  const np = ready[0] || forSale.slice().sort(byEra)[0];
+  return { kind: 'rung', pair: np, price: C.pricePair(np) };
+}
+
+// ---------- the run ----------
+const TRACE = [];
+let guard = 0, finished = false, finishInfo = null;
+while (!finished && guard++ < 4000) {
+  const goal = nextGoal();
+  if (goal.kind === 'finish') {
+    // the endgame: K heavy modules at the Manufacturer, hand-typed pages,
+    // with the whole chain automated behind it (crane-limited flow)
+    const K = C.TUNING.K_HEAVY;
+    const per = C.KINDS.manufacturer.perUnit;
+    const ks = K * per;
+    const typing = ks / kpm(hours) / 60;
+    const craneChain = (K * 2 * C.TUNING.RATE.crane) / 3600;
+    const rMan = C.RECIPES.find((x) => x.kind === 'manufacturer');
+    if (rMan) {
+      if (!built.manufacturer) { built.manufacturer = 1; note('build', 'build Manufacturer #1', {}); }
+      stints.push({ n: ++stintSeq, ...procMeta('manufacturer', rMan), units: K, ks, mins: Math.max(typing, craneChain) * 60 + 30, at: hours, evAt: events.length });
+    }
+    finishInfo = { K, ks, typing, craneChain, hours: Math.max(typing, craneChain) + 0.5 };
+    hours += finishInfo.hours;
+    finished = true;
+    break;
+  }
+
+  const price = goal.price || {};
+  RESERVE = Object.assign({}, price);
+  if (canPay(price)) {
+    pay(price);
+    const np = goal.pair;
+    P.mk[C.placeOf(np)] = np.mk;
+    P.unlockLog.push({ keys: np.keys, at: 0 });
+    if (np.ore && np.mk === 1) built.mine[np.ore] = 1;
+    if (np.ore && np.mk > 1) { delete auto['mine:' + np.ore]; delete handMade['mine:' + np.ore]; }  // a Mk retools the mine
+    note('rung', `⇧ ${C.placeOf(np) === np.ore ? oreName(np.ore) : kindName(np.at)} Mk${np.mk} — keys ${np.keys.join(' ')}`,
+      { price, keys: np.keys.slice(), tier: np.tier, place: C.placeOf(np), mk: np.mk });
+    continue;
+  }
+
+  // the industrialist stops carrying water and builds the pipe: a served
+  // run-in becomes the shopping list before the next rung does
+  if (POLICY === 'industry') {
+    if (tryAutomate()) continue;
+    const o = autoOptions()[0];
+    if (o) {
+      const want = o.needsBody ? C.priceMachine(o.needsBody, (built[o.needsBody] || 0) + 1) : o.price;
+      const lackA = deficit(want).filter(([m]) => makeable(m));
+      if (lackA.length) {
+        const b0 = totalKs();
+        produceByHand(lackA[0][0], lackA[0][1]);
+        if (totalKs() > b0) { tryAutomate(); continue; }
+      }
+    }
+  }
+
+  const lack = deficit(price);
+  // prefer something the hands can actually make; automated items we wait on
+  const hand = lack.filter(([m]) => makeable(m) && !isAuto(m));
+  const pick = (hand[0] || lack.find(([m]) => makeable(m)) || lack[0]);
+  if (!pick) break;
+  const before = totalKs();
+  produceByHand(pick[0], pick[1]);
+  TRACE.push(`${hours.toFixed(2)}h goal=${C.placeOf(goal.pair)}Mk${goal.pair.mk} lack=${lack.map((x) => x.join(':')).join(',')} pick=${pick.join(':')} made=${totalKs() - before} built=${Object.keys(built).filter((k) => k !== 'mine').join('+')} bag=${Object.entries(P.bag).filter(([, v]) => v > 0).map(([k, v]) => k + ':' + v).join(',')}`);
+  if (POLICY !== 'industry') tryAutomate();
+  if (totalKs() === before && !canPay(price)) {
+    // nothing moved: let automation carry it, or give up on this rung
+    const h0 = hours;
+    advance(5);
+    if (hours - h0 <= 0) break;
+    if (guard > 3900) break;
+  }
+}
+
+// ---------- render ----------
+const esc = (s) => String(s).replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+const fmtKeys = (m) => {
+  if (m.full) return `<i>all ${m.keys.length} unlocked</i>` + (m.focus && m.focus.length ? ` · focus ${esc(m.focus.join(' '))}` : '');
+  return esc(m.keys.join(' '));
+};
+const hm = (h) => `${Math.floor(h)}h ${String(Math.round((h % 1) * 60)).padStart(2, '0')}m`;
+
+// merge the timeline: stints with the events that follow them
+const timeline = [];
+let ei = 0;
+for (const s of stints) {
+  while (ei < s.evAt) { timeline.push({ ev: events[ei++] }); }
+  timeline.push({ s });
+}
+while (ei < events.length) timeline.push({ ev: events[ei++] });
+
+let html = '';
+html += `<h2>Route — ${L === window.LANG_EN ? 'EN' : 'RU'} course, policy “${POLICY}”, PACE ${C.TUNING.PACE}</h2>`;
+html += '<table><tr><th>#</th><th class="l">machine</th><th>Mk</th><th class="l">makes</th><th class="l">drill</th><th>units</th><th>keys<br>pressed</th><th>mins</th><th>at</th><th class="l">keys practiced</th></tr>';
+for (const row of timeline) {
+  if (row.ev) {
+    const e = row.ev;
+    const cls = e.type === 'rung' ? 'buy' : e.type === 'auto' ? 'auto' : e.type === 'wait' ? 'wait' : '';
+    html += `<tr><td></td><td class="l ${cls}" colspan="8">${esc(e.text)}${e.price ? ' — ' + esc(Object.entries(e.price).map(([m, n]) => n + '×' + m).join(', ')) : ''}</td><td class="l ${cls}">${e.keys ? esc(e.keys.join(' ')) : ''}</td></tr>`;
+  } else {
+    const s = row.s;
+    html += `<tr><td>${s.n}</td><td class="l">${esc(s.label)}</td><td>${s.mk == null ? '—' : 'Mk' + s.mk}</td><td class="l">${esc(s.out)}</td><td class="l">${esc(s.grammar)}</td><td>${s.units || ''}</td><td>${Math.round(s.ks)}</td><td>${(s.mins).toFixed(1)}</td><td>${hm(s.at)}</td><td class="l keys">${fmtKeys(s)}</td></tr>`;
+  }
+}
+html += '</table>';
+
+// per-rung pacing
+html += '<h2>Pacing per rung — what was typed between lessons</h2>';
+html += '<table><tr><th class="l">rung</th><th>tier</th><th>keys<br>pressed</th><th>mins</th><th>at</th><th class="l">machines worked</th></tr>';
+let lastKs = 0, lastH = 0, bucket = {};
+for (const row of timeline) {
+  if (row.s) { bucket[row.s.label + (row.s.mk == null ? '' : ' Mk' + row.s.mk)] = (bucket[row.s.label + (row.s.mk == null ? '' : ' Mk' + row.s.mk)] || 0) + Math.round(row.s.ks); continue; }
+  const e = row.ev;
+  if (e.type !== 'rung') continue;
+  const ks = e.ks - lastKs, h = e.at - lastH;
+  const where = Object.entries(bucket).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(' · ');
+  html += `<tr><td class="l">${esc(e.text)}</td><td>${e.tier}</td><td>${Math.round(ks)}</td><td>${(h * 60).toFixed(0)}</td><td>${hm(e.at)}</td><td class="l keys">${esc(where)}</td></tr>`;
+  lastKs = e.ks; lastH = e.at; bucket = {};
+}
+html += '</table>';
+
+// per-machine totals
+html += '<h2>Totals per machine</h2>';
+const tot = {};
+for (const s of stints) {
+  const k = s.label + (s.mk == null ? '' : ' Mk' + s.mk);
+  const t = tot[k] || (tot[k] = { ks: 0, mins: 0, visits: 0, units: 0, first: s.at, grammar: s.grammar });
+  t.ks += s.ks; t.mins += s.mins; t.visits++; t.units += s.units || 0; t.first = Math.min(t.first, s.at);
+}
+html += '<table><tr><th class="l">machine</th><th class="l">drill</th><th>visits</th><th>units</th><th>keys pressed</th><th>mins</th><th>share</th><th>first seen</th></tr>';
+const grand = Object.values(tot).reduce((a, t) => a + t.ks, 0);
+for (const [k, t] of Object.entries(tot).sort((a, b) => a[1].first - b[1].first)) {
+  html += `<tr><td class="l">${esc(k)}</td><td class="l">${esc(t.grammar)}</td><td>${t.visits}</td><td>${t.units}</td><td>${Math.round(t.ks)}</td><td>${t.mins.toFixed(0)}</td><td>${(100 * t.ks / grand).toFixed(1)}%</td><td>${hm(t.first)}</td></tr>`;
+}
+html += `<tr><th class="l">total</th><th></th><th></th><th></th><th>${Math.round(grand)}</th><th>${(hours * 60).toFixed(0)}</th><th></th><th>${hm(hours)}</th></tr></table>`;
+
+document.getElementById('out').innerHTML = html;
+window.ROUTE = { stints, events, timeline, hours, totalKs: grand, finishInfo, tot, TRACE, policy: POLICY, course: window.COURSES.active ? window.COURSES.active() : '?' };
+})();
+</script>
+</body>
+</html>
