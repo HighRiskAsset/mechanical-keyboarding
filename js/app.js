@@ -1361,9 +1361,10 @@
   // the accuracy and the WPM stay a record of the hands, not of the machine
   // that stood in for them.
   //
-  // Speed is a frame budget rather than a fixed rate: it types until it has
-  // eaten AUTO_FRAME_MS of the frame, so a slow machine types slower instead
-  // of dropping frames, and a fast one runs thousands of characters a second.
+  // Speed is a rate, not a race: AUTO_CPS characters a second, measured off
+  // the clock rather than off the frame, so it reads the same on any machine.
+  // The fraction of a character a frame leaves over is carried to the next one
+  // — dropping it would quietly cost about a fifth of the rate at 60fps.
   // Three keys, any of which does it, because a hold key has to be one the
   // browser has no opinion about. Tab was the obvious hold and the wrong one:
   // it drives focus navigation, and a page that only asks for it politely (a
@@ -1373,21 +1374,29 @@
   // and Tab left in for the boards where it does come through. None of the
   // three carries a glyph on either course's board, so none costs a key.
   const AUTO_KEYS = new Set(['Backspace', 'Backslash', 'Tab']);
-  const AUTO_FRAME_MS = 6;      // of a ~16ms frame; the rest belongs to the factory
-  const AUTO_MAX_CHARS = 400;   // a ceiling, so one long frame cannot run away
+  const AUTO_CPS = 200;         // characters a second
+  const AUTO_MAX_GAP = 250;     // ms of one frame that may be paid for; a stalled
+                                // tab owes for the stall, not for the whole nap
   const AUTO_SAVE_MS = 1500;    // the per-line save steps aside for this one
   let autoTyping = false, autoRaf = null, autoSavedAt = 0, autoChars = 0;
+  let autoLastFrame = 0, autoOwed = 0;
 
   function autoTypeFrame() {
     autoRaf = null;
     if (!autoTyping) return;
-    const t0 = performance.now();
+    const now = performance.now();
+    autoOwed += Math.min(AUTO_MAX_GAP, now - autoLastFrame) * AUTO_CPS / 1000;
+    autoLastFrame = now;
+    const budget = Math.floor(autoOwed);
+    autoOwed -= budget;                                   // the remainder rides to the next frame
     let n = 0;
-    while (n < AUTO_MAX_CHARS && performance.now() - t0 < AUTO_FRAME_MS) {
-      if (!overlay.classList.contains('hidden')) break;   // a card is up: hands off
-      if (menu || buildMenu || placing) break;            // and the same doors a real keystroke waits at
-      if (!canTypeHere()) break;                          // walking, or standing somewhere with no drill
-      if (lineText[pos] === undefined) break;
+    while (n < budget) {
+      // a door shut mid-hold cancels what is owed rather than banking it: a
+      // walk across the map must not arrive as one burst at the next machine
+      if (!overlay.classList.contains('hidden')) { autoOwed = 0; break; }   // a card is up: hands off
+      if (menu || buildMenu || placing) { autoOwed = 0; break; }            // and the same doors a real keystroke waits at
+      if (!canTypeHere()) { autoOwed = 0; break; }                          // walking, or standing somewhere with no drill
+      if (lineText[pos] === undefined) { autoOwed = 0; break; }
       handleTyped(lineText[pos]);
       n++;
     }
@@ -1399,7 +1408,6 @@
       flushFloats();
       refreshInventory();
       refreshStatus();
-      const now = performance.now();
       if (now - autoSavedAt > AUTO_SAVE_MS) { E.saveProfile(profile); autoSavedAt = now; }
     }
     autoRaf = requestAnimationFrame(autoTypeFrame);
@@ -1409,7 +1417,9 @@
     if (autoTyping || !profile) return;
     autoTyping = true;
     autoChars = 0;
-    autoSavedAt = performance.now();
+    autoOwed = 0;
+    autoLastFrame = performance.now();
+    autoSavedAt = autoLastFrame;
     clearHint();
     A.setMuted(true);            // a few hundred key clicks a second is a buzzsaw
     refreshCaption();            // the caption says so for as long as the key is down
