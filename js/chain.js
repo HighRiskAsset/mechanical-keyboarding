@@ -648,6 +648,12 @@
     const b = machineBox(m);
     return { x: b.c0 * TILE + 1, y: (b.r1 + 1) * TILE - 5 };
   }
+  // the middle of that same foot: where a machine sets something down in
+  // front of itself (a spill), rather than where a line is drawn from it
+  function machineFoot(m) {
+    const b = machineBox(m);
+    return { x: (b.c0 + b.w / 2) * TILE, y: (b.r1 + 1) * TILE - 5 };
+  }
   const machinesOfKind = (profile, kind) => profile.machines.filter((m) => m.kind === kind);
   const machinesOfOre = (profile, ore) => profile.machines.filter((m) => m.kind === 'mine' && m.ore === ore);
   const nodeBuilt = (profile, i) => profile.machines.some((m) => m.node === i);
@@ -817,7 +823,7 @@
     priceNode, priceExtraMine, priceMk, priceAt, kindMk, priceMachine, priceAuto, priceCrossing, scaleCost, closedCrossings,
     AT_KINDS, PLACES, placeOf, mkTable, pairOf, pairBought, boughtPairs, oreMk, unlockedKeys, currentTier, nextPairs, nextPair, pricePair, newestPair, targetBar,
     alphabetOf, recipeAlphabet, recipeTilt, recipeFocus, wordPool, offerable, offerableRecipes, matExists, oreOpen, affordable, bagAdd,
-    machinePos, machineBox, machineAnchor, nodeFace, machinesOfKind, machinesOfOre, nodeBuilt, freePlots, unbuiltNodes, visibleKinds, buildableKinds, kindLive, kindEverLive, whatUnlocks, rungsInView, starterNodes,
+    machinePos, machineFoot, machineBox, machineAnchor, nodeFace, machinesOfKind, machinesOfOre, nodeBuilt, freePlots, unbuiltNodes, visibleKinds, buildableKinds, kindLive, kindEverLive, whatUnlocks, rungsInView, starterNodes,
     useMap, currentMap, plotById, crossingOpen, regionAt,
     // per-map fields (MAP, PLOTS, SCENERY, PROPS, WORLD_W, WORLD_H, SPAWN, LEGACY, MAP_ID) are set by useMap
   };

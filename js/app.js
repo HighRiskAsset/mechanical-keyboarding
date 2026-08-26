@@ -454,7 +454,8 @@
     if (res.where === 'bag') producedSinceFloat[mat] = (producedSinceFloat[mat] || 0) + n - res.spilled;
     else beltFloat[mat] = (beltFloat[mat] || 0) + n - res.spilled;
     if (res.spilled > 0 && window.DROPS) {
-      DROPS.scatter(profile, { [mat]: res.spilled }, CHAIN.machinePos(m).x, CHAIN.machinePos(m).y + 8);
+      const at = CHAIN.machineFoot(m);
+      DROPS.scatter(profile, { [mat]: res.spilled }, at.x, at.y + 8);
       const now = Date.now();
       if (now - lastSpillFloat > 4000 && dock) { FACTORY.floatText(T.t('floatBagFull'), dock.id, 0xd8905f); lastSpillFloat = now; }
     }
