@@ -1364,7 +1364,15 @@
   // Speed is a frame budget rather than a fixed rate: it types until it has
   // eaten AUTO_FRAME_MS of the frame, so a slow machine types slower instead
   // of dropping frames, and a fast one runs thousands of characters a second.
-  const AUTO_KEY = 'Tab';       // one key, held by the left little finger, on no course's board
+  // Three keys, any of which does it, because a hold key has to be one the
+  // browser has no opinion about. Tab was the obvious hold and the wrong one:
+  // it drives focus navigation, and a page that only asks for it politely (a
+  // listener in the bubble phase, preventDefault) can still be beaten to it.
+  // Backspace is the one to lean on — a big key under the right little finger
+  // that browsers stopped steering with in 2016 — with backslash next to it
+  // and Tab left in for the boards where it does come through. None of the
+  // three carries a glyph on either course's board, so none costs a key.
+  const AUTO_KEYS = new Set(['Backspace', 'Backslash', 'Tab']);
   const AUTO_FRAME_MS = 6;      // of a ~16ms frame; the rest belongs to the factory
   const AUTO_MAX_CHARS = 400;   // a ceiling, so one long frame cannot run away
   const AUTO_SAVE_MS = 1500;    // the per-line save steps aside for this one
@@ -1422,6 +1430,18 @@
     refreshStatus();
     flashCaption(T.t('capDebugAutoDone', { n: autoChars }));
   }
+  // The hold is armed from the capture phase, ahead of every other listener on
+  // the page and ahead of the browser's own reading of the key, and the event
+  // is swallowed whole. Asking politely from the bubble phase is what let Tab
+  // move the focus instead of running the drill.
+  window.addEventListener('keydown', (e) => {
+    if (!AUTO_KEYS.has(e.code)) return;
+    if (!overlay.classList.contains('hidden') || !profile || !DEVMODE.isEnabled()) return;   // a card up, or the box unticked: the key is the browser's again
+    e.preventDefault();
+    e.stopPropagation();
+    if (!e.repeat) autoTypeStart();
+  }, { capture: true });
+  window.addEventListener('keyup', (e) => { if (AUTO_KEYS.has(e.code)) autoTypeStop(); }, { capture: true });
   // a key held while the window goes away never sends its keyup
   window.addEventListener('blur', autoTypeStop);
   window.addEventListener('keydown', (e) => {
@@ -1431,11 +1451,6 @@
     if (((e.ctrlKey && e.altKey && e.code === 'KeyM') || (e.ctrlKey && e.shiftKey && e.code === 'KeyQ')) && !overlayOpen && profile && DEVMODE.isEnabled()) {
       e.preventDefault();
       debugMaterials();
-      return;
-    }
-    if (e.code === AUTO_KEY && !overlayOpen && profile && DEVMODE.isEnabled()) {
-      e.preventDefault();
-      if (!e.repeat) autoTypeStart();
       return;
     }
     if (ARROWS[e.code]) {
@@ -1474,7 +1489,6 @@
     const ARROWS = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
     if (ARROWS[e.code]) FACTORY.setMove(ARROWS[e.code], false);
     if (e.code === 'Space') endSpace();
-    if (e.code === AUTO_KEY) autoTypeStop();
   });
 
   function handleTyped(typed) {
