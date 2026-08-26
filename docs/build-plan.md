@@ -20,7 +20,7 @@ the gravy list.
 4. **Every phase has three proofs:** data checks (a dev page that loads the
    data files and asserts the rules), a simulation check where the phase
    touches the factory, and a playtest script a person can follow in minutes.
-5. **Ids are additive.** Legacy material ids (az/buki/vedi/slogi/slova/stroki)
+5. **Ids are additive.** Legacy material ids (iron/copper/quartz/bronze/parts/modules)
    keep mapping to iron/copper/stone/…; new ids are added, never renamed.
 6. **One interact key.** Everything the player does at a place is hold-Space
    (menus: arrows choose, hold-Space confirms). No new keys, no mouse.
@@ -52,7 +52,7 @@ the gravy list.
 ### World / economy data — `chain.js`
 
 - `ORES`: `{id, finger, color}` ×6 (ids: fe, cu, st, qz, co, oi; legacy
-  aliases az→fe, buki→cu, vedi→qz kept in a map).
+  aliases iron→fe, copper→cu, quartz→qz kept in a map).
 - `KINDS`: `{id, arity, grammar, minAlphabet, jobSeconds, outlets, autoFromTier,
   adds:[keys]|null}` ×9 (mine, smelter, foundry, constructor, molder,
   assembler, fastener, crane, manufacturer).

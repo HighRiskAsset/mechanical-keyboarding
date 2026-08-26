@@ -32,6 +32,7 @@
 <script src="../js/sim.js"></script>
 <script src="../js/drops.js"></script>
 <script src="ladder-walk.js"></script>
+<script src="ore-load.js"></script>
 <script>
 (async () => {
   const L = window.LANG_RU, LAY = window.LAYOUT_RU, C = window.CHAIN, E = window.ENGINE;
@@ -141,7 +142,7 @@
   // Fastener's keys after oil — has to fall out of what the prices ask for.
   const WALK = LADDERWALK.walk(C, L, {
     after: [
-      [['coal', 1], ['vedi', 1]],       // the seam asks for quartz
+      [['coal', 1], ['quartz', 1]],       // the seam asks for quartz
       [['oil', 1], ['coal', 1]],        // the derrick asks for a coal alloy
       [['fastener', 1], ['oil', 1]],    // the Fastener's keys need the Fastener, which needs oil
     ],
@@ -177,6 +178,33 @@
     }
   }
   line(!nodeBad.length, 'every map has a node for every ore', nodeBad.join('<br>'));
+
+  // 11b. the vein counts follow the tree (DESIGN.md, ruling 2026-08-25): an
+  // ore's veins are owed in proportion to the work that ore is asked to do,
+  // and the test is local optimality — no single-vein swap may shorten the
+  // bill by more than the margin. Recomputed here, never written down.
+  for (const id of C.MAP_IDS) {
+    const veins = ORELOAD.veinsOf(C, id);
+    const r = ORELOAD.measure(C, L, veins);
+    const table = '<table>' + Object.entries(r.perOre).map(([o, v]) =>
+      `<tr><td>${o}</td><td>${v.veins} vein${v.veins === 1 ? '' : 's'}</td>` +
+      `<td>${v.units} ore</td><td>${v.hours} h</td><td>${Math.round(v.busy * 100)}% busy</td></tr>`).join('') + '</table>';
+    const owedCut = Object.entries(r.owed).map(([o, n]) => o + ' ' + n).join(' · ');
+    const detail = table + `<br>the tree asks for: <b>${owedCut}</b> (${r.owedTotal} veins, bottleneck ${r.owedHours} h)`
+      + `<br>growth from the floor: ${r.steps.join(' · ') || '(none — the floor already covers it)'}`;
+    if (r.belowFloor.length) {
+      line(false, `${id}: every ore owes ${r.floor} veins (an extra-mine row to sell) — short: ${r.belowFloor.join(', ')}`, detail);
+    } else if (r.short) {
+      line(false, `${id} is short of ${r.short.ore}: one more seam of it shortens the bill `
+        + `${Math.round(r.short.gain * 100)}% (${r.haveTotal} veins, ${r.hours} h)`, detail);
+    } else if (r.padded) {
+      line(null, `${id} carries a ${r.padded.ore} seam that earns nothing: dropping it costs `
+        + `${Math.round(r.padded.cost * 100)}% (${r.haveTotal} veins, ${r.hours} h)`, detail);
+    } else {
+      line(true, `${id}: vein counts follow the tree (${r.haveTotal} veins, bottleneck ${r.hours} h) — `
+        + `no seam gains > ${Math.round(r.margin * 100)}%, none is idle`, detail);
+    }
+  }
 
   // 12. the engine knows no Cyrillic
   try {

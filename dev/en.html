@@ -40,6 +40,7 @@
 <script src="../js/sim.js"></script>
 <script src="../js/drops.js"></script>
 <script src="ladder-walk.js"></script>
+<script src="ore-load.js"></script>
 <script>
 (() => {
   const C = window.CHAIN, E = window.ENGINE, L = window.LANG_EN;
@@ -64,7 +65,7 @@
     line(!!text.length && [...text.replace(/ /g, '')].every((c) => C.unlockedKeys(p).includes(c)), `a T0 syllable line generates inside the alphabet: "${text}"`);
     const np = C.nextPair(p);
     line(!!np && !!C.priceNode(np.ore), `the ladder continues (next: ${np ? np.keys.join(' ') : '—'} at ${np ? np.ore : '?'})`);
-    const m = { id: 'm1', kind: 'mine', ore: 'az', node: 0, auto: false };
+    const m = { id: 'm1', kind: 'mine', ore: 'iron', node: 0, auto: false };
     p.machines.push(m); SIM.ensure(p);
     line(SIM.outletsOf(m) === 1, 'the simulation reads the stub world (a mine has one outlet)');
     const words = E.realWordPool(C.unlockedKeys(p).filter((c) => !L.PUNCT.has(c)));
@@ -77,7 +78,7 @@
     // that cannot name what it waits for, the finger order kept by prices
     const WALK = LADDERWALK.walk(C, L, {
       after: [
-        [['coal', 1], ['vedi', 1]],
+        [['coal', 1], ['quartz', 1]],
         [['oil', 1], ['coal', 1]],
         [['fastener', 1], ['oil', 1]],
       ],
@@ -122,6 +123,30 @@
     line(stagePools[7] >= 25, `the word pool clears 25 by the Constructor's era (pair 8: ${stagePools[7]})`);
     line(stagePools[L.PAIRS.length - 1] >= 300, `the full pool is deep enough for the late game (${stagePools[L.PAIRS.length - 1]})`);
     log.textContent += `\npool per pair: ${stagePools.join(' ')}`;
+
+    // the vein counts follow the tree (DESIGN.md, ruling 2026-08-25). EN's
+    // book is not RU's — the vowel-poor iron alloys are absent — so the ore
+    // an EN player leans on is not the ore a RU player does, and each course
+    // measures its own maps.
+    for (const id of C.MAP_IDS) {
+      const veins = ORELOAD.veinsOf(C, id);
+      const r = ORELOAD.measure(C, L, veins);
+      const owedCut = Object.entries(r.owed).map(([o, n]) => o + ' ' + n).join(' · ');
+      if (r.belowFloor.length) {
+        line(false, `${id}: every ore owes ${r.floor} veins — short: ${r.belowFloor.join(', ')}`);
+      } else if (r.short) {
+        line(false, `${id} is short of ${r.short.ore}: one more seam shortens the bill `
+          + `${Math.round(r.short.gain * 100)}% (${r.haveTotal} veins, ${r.hours} h)`);
+      } else if (r.padded) {
+        line(true, `${id} carries a ${r.padded.ore} seam that earns nothing — dropping it costs `
+          + `${Math.round(r.padded.cost * 100)}%`);
+      } else {
+        line(true, `${id}: vein counts follow the tree (${r.haveTotal} veins, bottleneck ${r.hours} h)`);
+      }
+      log.textContent += `\n${id} ore load: ` + Object.entries(r.perOre)
+        .map(([o, v]) => `${o} ${v.veins}v ${v.hours}h ${Math.round(v.busy * 100)}%`).join(' · ')
+        + `\n${id} the tree asks for: ${owedCut} (${r.owedTotal} veins, ${r.owedHours} h)`;
+    }
   } catch (e) {
     line(false, 'threw: ' + e.message);
   }

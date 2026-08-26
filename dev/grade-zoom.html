@@ -1,7 +1,7 @@
 <!doctype html>
 <!-- Grade twinkle, close up (dev only). One ore family, its grades stacked,
      the first frames of the cycle across — big enough to count pixels on.
-     Open: http://localhost:8123/dev/grade-zoom.html?fam=vedi  (&s=8&name=x.png) -->
+     Open: http://localhost:8123/dev/grade-zoom.html?fam=quartz  (&s=8&name=x.png) -->
 <meta charset="utf-8">
 <title>grade zoom</title>
 <style>
@@ -26,7 +26,7 @@
 (async function () {
   const Q = new URLSearchParams(location.search);
   const SCALE = +(Q.get('s') || 8);
-  const FAM = Q.get('fam') || 'vedi';
+  const FAM = Q.get('fam') || 'quartz';
   const NF = +(Q.get('f') || 6);                 // frames across
   const HM = PIXELS.MAT_PX >> 1;
   const MATS = CHAIN.ORE_MATS[FAM] || [];

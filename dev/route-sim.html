@@ -200,7 +200,7 @@ function procMeta(kind, r) {
     out: r.out, recipe: r, keys: alpha.slice(), focus, full: !!K.full,
   };
 }
-const oreName = (o) => ({ az: 'Iron', buki: 'Copper', stone: 'Stone', vedi: 'Quartz', coal: 'Coal', oil: 'Oil' }[o] || o);
+const oreName = (o) => ({ iron: 'Iron', copper: 'Copper', stone: 'Stone', quartz: 'Quartz', coal: 'Coal', oil: 'Oil' }[o] || o);
 const kindName = (k) => k.charAt(0).toUpperCase() + k.slice(1);
 
 // ---------- hand work ----------

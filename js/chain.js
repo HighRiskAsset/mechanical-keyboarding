@@ -33,12 +33,12 @@
 
   // ---- ores: six fingers. ids are material ids (legacy names never rename) ----
   const ORES = {
-    az:    { id: 'az',    node: 'iron',   order: 0 },
-    buki:  { id: 'buki',  node: 'copper', order: 1 },
-    stone: { id: 'stone', node: 'stone',  order: 2 },
-    vedi:  { id: 'vedi',  node: 'quartz', order: 3 },
-    coal:  { id: 'coal',  node: 'coal',   order: 4 },
-    oil:   { id: 'oil',   node: 'oil',    order: 5 },
+    iron:   { id: 'iron',   node: 'iron',   order: 0 },
+    copper: { id: 'copper', node: 'copper', order: 1 },
+    stone:  { id: 'stone',  node: 'stone',  order: 2 },
+    quartz: { id: 'quartz', node: 'quartz', order: 3 },
+    coal:   { id: 'coal',   node: 'coal',   order: 4 },
+    oil:    { id: 'oil',    node: 'oil',    order: 5 },
   };
   const ORE_IDS = Object.keys(ORES);
   const ORE_BY_NODE = {};
@@ -99,43 +99,48 @@
   // ores at exact depths, so its alphabet — and its whole content pool — is
   // a constant, checked once per course when the book is built, never at
   // run time. Variants stop at the ore level: parts and above are grade-free.
-  // Legacy ids: slogi = the first ingot (bronze), slova = parts, stroki =
-  // modules; listy retired. Icons derive from form + ores (pixels.js).
+  // Ids are the material's own name (2026-08-26): the transliterated ids the
+  // chain carried from the pre-v3 build — `az`, `buki`, `vedi`, `slogi`,
+  // `slova`, `stroki` — are gone, and an id now reads as what it is, the same
+  // word the maps, the art and DESIGN.md use. They are save keys, so
+  // engine.js migrates a v2 profile forward (migrateV2); the only places the
+  // old spellings survive are the two v1/v2 lookup tables there and each
+  // map's `LEGACY`, all of which are read off disk and can never rename.
+  // Icons derive from form + ores (pixels.js).
   const MATS = {
-    az:    { form: 'ore', ores: ['az'],    depth: 1 }, az2:    { form: 'ore', ores: ['az'],    depth: 2 },
-    buki:  { form: 'ore', ores: ['buki'],  depth: 1 }, buki2:  { form: 'ore', ores: ['buki'],  depth: 2 },
-    stone: { form: 'ore', ores: ['stone'], depth: 1 }, stone2: { form: 'ore', ores: ['stone'], depth: 2 },
-    vedi:  { form: 'ore', ores: ['vedi'],  depth: 1 }, vedi2:  { form: 'ore', ores: ['vedi'],  depth: 2 }, vedi3: { form: 'ore', ores: ['vedi'], depth: 3 },
-    coal:  { form: 'ore', ores: ['coal'],  depth: 1 }, coal2:  { form: 'ore', ores: ['coal'],  depth: 2 }, coal3: { form: 'ore', ores: ['coal'], depth: 3 },
-    oil:   { form: 'ore', ores: ['oil'],   depth: 1 }, oil2:   { form: 'ore', ores: ['oil'],   depth: 2 }, oil3:  { form: 'ore', ores: ['oil'],  depth: 3 },
+    iron:   { form: 'ore', ores: ['iron'],   depth: 1 }, iron2:   { form: 'ore', ores: ['iron'],   depth: 2 },
+    copper: { form: 'ore', ores: ['copper'], depth: 1 }, copper2: { form: 'ore', ores: ['copper'], depth: 2 },
+    stone:  { form: 'ore', ores: ['stone'],  depth: 1 }, stone2:  { form: 'ore', ores: ['stone'],  depth: 2 },
+    quartz: { form: 'ore', ores: ['quartz'], depth: 1 }, quartz2: { form: 'ore', ores: ['quartz'], depth: 2 }, quartz3: { form: 'ore', ores: ['quartz'], depth: 3 },
+    coal:   { form: 'ore', ores: ['coal'],   depth: 1 }, coal2:   { form: 'ore', ores: ['coal'],   depth: 2 }, coal3:   { form: 'ore', ores: ['coal'],   depth: 3 },
+    oil:    { form: 'ore', ores: ['oil'],    depth: 1 }, oil2:    { form: 'ore', ores: ['oil'],    depth: 2 }, oil3:    { form: 'ore', ores: ['oil'],    depth: 3 },
     // two-ore ingots (the Smelter), pinned. Six are the deep rungs'
     // signature alloys — every Mk is a new recipe to hand-work.
-    slogi:       { form: 'ingot', ores: ['az', 'buki'],   pin: { az: 1, buki: 1 } },   // bronze
-    castiron:    { form: 'ingot', ores: ['az', 'stone'],  pin: { az: 1, stone: 1 } },
-    qziron:      { form: 'ingot', ores: ['az', 'vedi'],   pin: { az: 1, vedi: 1 } },
-    rivetiron:   { form: 'ingot', ores: ['az', 'buki'],   pin: { az: 2, buki: 1 } },
-    bellquartz:  { form: 'ingot', ores: ['vedi', 'buki'], pin: { vedi: 2, buki: 1 } },
-    steel:       { form: 'ingot', ores: ['az', 'coal'],   pin: { az: 2, coal: 1 } },
-    gunmetal:    { form: 'ingot', ores: ['buki', 'coal'], pin: { buki: 2, coal: 1 } },
-    brass:       { form: 'ingot', ores: ['buki', 'stone'], pin: { buki: 2, stone: 2 } },   // the deep pair, as the v3 table always intended
-    blackiron:   { form: 'ingot', ores: ['az', 'oil'],    pin: { az: 2, oil: 1 } },
-    glass:       { form: 'ingot', ores: ['vedi', 'oil'],  pin: { vedi: 3, oil: 1 } },
-    naphtha:     { form: 'ingot', ores: ['buki', 'oil'],  pin: { buki: 1, oil: 2 } },      // naphtha bronze
-    cokebrass:   { form: 'ingot', ores: ['buki', 'coal'], pin: { buki: 2, coal: 2 } },
-    petrolglass: { form: 'ingot', ores: ['vedi', 'oil'],  pin: { vedi: 3, oil: 3 } },
-    flashcopper: { form: 'ingot', ores: ['buki', 'coal'], pin: { buki: 2, coal: 3 } },
+    bronze:       { form: 'ingot', ores: ['iron', 'copper'],   pin: { iron: 1, copper: 1 } },   // bronze
+    castiron:    { form: 'ingot', ores: ['iron', 'stone'],  pin: { iron: 1, stone: 1 } },
+    qziron:      { form: 'ingot', ores: ['iron', 'quartz'],   pin: { iron: 1, quartz: 1 } },
+    rivetiron:   { form: 'ingot', ores: ['iron', 'copper'],   pin: { iron: 2, copper: 1 } },
+    bellquartz:  { form: 'ingot', ores: ['quartz', 'copper'], pin: { quartz: 2, copper: 1 } },
+    steel:       { form: 'ingot', ores: ['iron', 'coal'],   pin: { iron: 2, coal: 1 } },
+    gunmetal:    { form: 'ingot', ores: ['copper', 'coal'], pin: { copper: 2, coal: 1 } },
+    brass:       { form: 'ingot', ores: ['copper', 'stone'], pin: { copper: 2, stone: 2 } },   // the deep pair, as the v3 table always intended
+    blackiron:   { form: 'ingot', ores: ['iron', 'oil'],    pin: { iron: 2, oil: 1 } },
+    glass:       { form: 'ingot', ores: ['quartz', 'oil'],  pin: { quartz: 3, oil: 1 } },
+    naphtha:     { form: 'ingot', ores: ['copper', 'oil'],  pin: { copper: 1, oil: 2 } },      // naphtha bronze
+    cokebrass:   { form: 'ingot', ores: ['copper', 'coal'], pin: { copper: 2, coal: 2 } },
+    petrolglass: { form: 'ingot', ores: ['quartz', 'oil'],  pin: { quartz: 3, oil: 3 } },
+    flashcopper: { form: 'ingot', ores: ['copper', 'coal'], pin: { copper: 2, coal: 3 } },
     // three-ore ingots (the Foundry), pinned
-    qzbronze:   { form: 'ingot3', ores: ['az', 'buki', 'vedi'],   pin: { az: 1, buki: 1, vedi: 2 } },
-    caststeel:  { form: 'ingot3', ores: ['az', 'coal', 'stone'],  pin: { az: 2, coal: 1, stone: 1 } },
-    blackbrass: { form: 'ingot3', ores: ['buki', 'stone', 'oil'], pin: { buki: 2, stone: 2, oil: 2 } },
-    qzsteel:    { form: 'ingot3', ores: ['az', 'coal', 'vedi'],   pin: { az: 2, coal: 1, vedi: 3 } },
-    cokeiron:   { form: 'ingot3', ores: ['az', 'oil', 'coal'],    pin: { az: 2, oil: 1, coal: 2 } },
-    slova: { form: 'parts', ores: [] }, mold: { form: 'moldings', ores: [] }, stroki: { form: 'modules', ores: [] },
+    qzbronze:   { form: 'ingot3', ores: ['iron', 'copper', 'quartz'],   pin: { iron: 1, copper: 1, quartz: 2 } },
+    caststeel:  { form: 'ingot3', ores: ['iron', 'coal', 'stone'],  pin: { iron: 2, coal: 1, stone: 1 } },
+    blackbrass: { form: 'ingot3', ores: ['copper', 'stone', 'oil'], pin: { copper: 2, stone: 2, oil: 2 } },
+    qzsteel:    { form: 'ingot3', ores: ['iron', 'coal', 'quartz'],   pin: { iron: 2, coal: 1, quartz: 3 } },
+    cokeiron:   { form: 'ingot3', ores: ['iron', 'oil', 'coal'],    pin: { iron: 2, oil: 1, coal: 2 } },
+    parts: { form: 'parts', ores: [] }, mold: { form: 'moldings', ores: [] }, modules: { form: 'modules', ores: [] },
     fast: { form: 'fastened', ores: [] }, sealed: { form: 'sealed', ores: [] }, bound: { form: 'bound', ores: [] },
     crate: { form: 'crates', ores: [] }, heavy: { form: 'heavy', ores: [] },
-    listy: { form: 'legacy', ores: [] },
   };
-  const MAT_IDS = Object.keys(MATS).filter((id) => MATS[id].form !== 'legacy');
+  const MAT_IDS = Object.keys(MATS);
   const INGOT_IDS = MAT_IDS.filter((id) => MATS[id].form === 'ingot' || MATS[id].form === 'ingot3');
   // the ore families, shallow to deep, and the family algebra
   const ORE_MATS = {};
@@ -177,48 +182,48 @@
   // bought AT the machine changing THAT machine's work, like a mine's Mk.
   // Tier is documentation of when a recipe tends to arrive, never a gate.
   const RECIPES = [
-    { kind: 'smelter', in: { az: 2, buki: 1 }, out: 'slogi', tier: 0 },
-    { kind: 'smelter', in: { az: 2, stone: 1 }, out: 'castiron', tier: 0 },
-    { kind: 'smelter', in: { az: 2, vedi: 1 }, out: 'qziron', tier: 1 },
-    { kind: 'smelter', in: { az2: 2, buki: 1 }, out: 'rivetiron', tier: 1 },
-    { kind: 'smelter', in: { vedi2: 2, buki: 1 }, out: 'bellquartz', tier: 1 },
-    { kind: 'smelter', in: { az2: 3, coal: 1 }, out: 'steel', tier: 2 },
-    { kind: 'smelter', in: { buki2: 2, coal: 1 }, out: 'gunmetal', tier: 2 },
-    { kind: 'smelter', in: { buki2: 2, stone2: 1 }, out: 'brass', tier: 2 },
-    { kind: 'smelter', in: { az2: 2, oil: 1 }, out: 'blackiron', tier: 3 },
-    { kind: 'smelter', in: { vedi3: 2, oil: 1 }, out: 'glass', tier: 3 },
-    { kind: 'smelter', in: { buki: 2, oil2: 1 }, out: 'naphtha', tier: 3 },
-    { kind: 'smelter', in: { buki2: 2, coal2: 1 }, out: 'cokebrass', tier: 4 },
-    { kind: 'smelter', in: { vedi3: 2, oil3: 1 }, out: 'petrolglass', tier: 4 },
-    { kind: 'smelter', in: { buki2: 2, coal3: 1 }, out: 'flashcopper', tier: 4 },
-    { kind: 'foundry', in: { slogi: 2, vedi2: 1 }, out: 'qzbronze', tier: 1 },
+    { kind: 'smelter', in: { iron: 2, copper: 1 }, out: 'bronze', tier: 0 },
+    { kind: 'smelter', in: { iron: 2, stone: 1 }, out: 'castiron', tier: 0 },
+    { kind: 'smelter', in: { iron: 2, quartz: 1 }, out: 'qziron', tier: 1 },
+    { kind: 'smelter', in: { iron2: 2, copper: 1 }, out: 'rivetiron', tier: 1 },
+    { kind: 'smelter', in: { quartz2: 2, copper: 1 }, out: 'bellquartz', tier: 1 },
+    { kind: 'smelter', in: { iron2: 3, coal: 1 }, out: 'steel', tier: 2 },
+    { kind: 'smelter', in: { copper2: 2, coal: 1 }, out: 'gunmetal', tier: 2 },
+    { kind: 'smelter', in: { copper2: 2, stone2: 1 }, out: 'brass', tier: 2 },
+    { kind: 'smelter', in: { iron2: 2, oil: 1 }, out: 'blackiron', tier: 3 },
+    { kind: 'smelter', in: { quartz3: 2, oil: 1 }, out: 'glass', tier: 3 },
+    { kind: 'smelter', in: { copper: 2, oil2: 1 }, out: 'naphtha', tier: 3 },
+    { kind: 'smelter', in: { copper2: 2, coal2: 1 }, out: 'cokebrass', tier: 4 },
+    { kind: 'smelter', in: { quartz3: 2, oil3: 1 }, out: 'petrolglass', tier: 4 },
+    { kind: 'smelter', in: { copper2: 2, coal3: 1 }, out: 'flashcopper', tier: 4 },
+    { kind: 'foundry', in: { bronze: 2, quartz2: 1 }, out: 'qzbronze', tier: 1 },
     { kind: 'foundry', in: { steel: 2, stone: 1 }, out: 'caststeel', tier: 2 },
     { kind: 'foundry', in: { brass: 2, oil2: 1 }, out: 'blackbrass', tier: 3 },
-    { kind: 'foundry', in: { steel: 2, vedi3: 1 }, out: 'qzsteel', tier: 4 },
+    { kind: 'foundry', in: { steel: 2, quartz3: 1 }, out: 'qzsteel', tier: 4 },
     { kind: 'foundry', in: { blackiron: 2, coal2: 1 }, out: 'cokeiron', tier: 4 },
-    { kind: 'molder', in: { slova: 2, az: 1 }, out: 'mold', tier: 2 },
-    { kind: 'molder', in: { slova: 2, buki: 1 }, out: 'mold', tier: 2 },
-    { kind: 'molder', in: { slova: 2, stone: 1 }, out: 'mold', tier: 2 },
-    { kind: 'molder', in: { slova: 2, vedi: 1 }, out: 'mold', tier: 2 },
-    { kind: 'molder', in: { slova: 2, coal: 1 }, out: 'mold', tier: 2 },
-    { kind: 'molder', in: { slova: 2, oil: 1 }, out: 'mold', tier: 3 },
-    { kind: 'assembler', in: { slova: 2, steel: 1 }, out: 'stroki', tier: 2 },
-    { kind: 'assembler', in: { slova: 2, brass: 1 }, out: 'stroki', tier: 2 },
-    { kind: 'assembler', in: { slova: 2, blackiron: 1 }, out: 'stroki', tier: 3 },
-    { kind: 'assembler', in: { slova: 2, gunmetal: 1 }, out: 'stroki', tier: 4 },
-    { kind: 'fastener', in: { stroki: 2, oil: 1 }, out: 'fast', tier: 3 },
-    { kind: 'fastener', in: { stroki: 2, coal: 1 }, out: 'fast', tier: 4 },
+    { kind: 'molder', in: { parts: 2, iron: 1 }, out: 'mold', tier: 2 },
+    { kind: 'molder', in: { parts: 2, copper: 1 }, out: 'mold', tier: 2 },
+    { kind: 'molder', in: { parts: 2, stone: 1 }, out: 'mold', tier: 2 },
+    { kind: 'molder', in: { parts: 2, quartz: 1 }, out: 'mold', tier: 2 },
+    { kind: 'molder', in: { parts: 2, coal: 1 }, out: 'mold', tier: 2 },
+    { kind: 'molder', in: { parts: 2, oil: 1 }, out: 'mold', tier: 3 },
+    { kind: 'assembler', in: { parts: 2, steel: 1 }, out: 'modules', tier: 2 },
+    { kind: 'assembler', in: { parts: 2, brass: 1 }, out: 'modules', tier: 2 },
+    { kind: 'assembler', in: { parts: 2, blackiron: 1 }, out: 'modules', tier: 3 },
+    { kind: 'assembler', in: { parts: 2, gunmetal: 1 }, out: 'modules', tier: 4 },
+    { kind: 'fastener', in: { modules: 2, oil: 1 }, out: 'fast', tier: 3 },
+    { kind: 'fastener', in: { modules: 2, coal: 1 }, out: 'fast', tier: 4 },
     { kind: 'fastener', in: { fast: 1, glass: 1 }, out: 'sealed', tier: 4, atMk: 2 },   // one cased good, sealed — a tax, not a pyramid
     { kind: 'fastener', in: { sealed: 2, petrolglass: 1 }, out: 'bound', tier: 5, atMk: 3 },
     { kind: 'crane', in: { sealed: 2, oil: 1 }, out: 'crate', tier: 5 },
-    { kind: 'manufacturer', in: { crate: 2, bound: 1, slova: 2 }, out: 'heavy', tier: 6 },
+    { kind: 'manufacturer', in: { crate: 2, bound: 1, parts: 2 }, out: 'heavy', tier: 6 },
   ];
   // Constructor: any ingot → parts (2 → 1). Tier = the ingot's recipe tier.
   // The course book (below) keeps only the ingots whose constant word pool
   // clears MIN_WORDS — vowel-poor alloys skip the Constructor by design.
   for (const id of INGOT_IDS) {
     const src = RECIPES.find((r) => r.out === id);
-    RECIPES.push({ kind: 'constructor', in: { [id]: 2 }, out: 'slova', tier: Math.max(KINDS.constructor.tier, src ? src.tier : 1) });
+    RECIPES.push({ kind: 'constructor', in: { [id]: 2 }, out: 'parts', tier: Math.max(KINDS.constructor.tier, src ? src.tier : 1) });
   }
   const recipesFor = (kind) => RECIPES.filter((r) => r.kind === kind);
   const recipeFor = (mat) => RECIPES.find((r) => r.out === mat) || null;
@@ -237,10 +242,10 @@
   ];
   // the trade good of each tier (documentation of pacing; nothing is locked
   // behind a tier number — prices ask for later materials, that is all)
-  const TIER_GOOD = ['slogi', 'slova', 'stroki', 'fast', 'sealed', 'crate', 'heavy'];
+  const TIER_GOOD = ['bronze', 'parts', 'modules', 'fast', 'sealed', 'crate', 'heavy'];
   // each ore's own alloy — the good its extra mines and automation cost in
   // (every entry exists in both courses' books)
-  const ORE_GOOD = { az: 'slogi', buki: 'slogi', stone: 'slogi', vedi: 'qzbronze', coal: 'gunmetal', oil: 'glass' };
+  const ORE_GOOD = { iron: 'bronze', copper: 'bronze', stone: 'bronze', quartz: 'qzbronze', coal: 'gunmetal', oil: 'glass' };
 
   const TUNING = {
     PICKUP_CAP: 100,       // (legacy) the old instant pickup; buffers cap below
@@ -279,21 +284,21 @@
     node: {
       // T0 goods only: parallel with Iron Mk2, the first branch (brass went
       // deep with the ledger, so raw stone stands beside the bronze)
-      vedi: { slogi: 40, stone: 40 },
+      quartz: { bronze: 40, stone: 40 },
       // quartz in the price: the seam (ring finger) follows the vein (middle)
-      coal: { vedi: 40, slogi: 60 },
+      coal: { quartz: 40, bronze: 60 },
       // rivet iron forces Iron Mk2 before the pinky — with modules (which
       // force everything else early), the derrick leaves no rung behind
-      oil: { stroki: 60, rivetiron: 40 },
+      oil: { modules: 60, rivetiron: 40 },
     },
     // Mk levels per ore (gunmetal pins deep copper now, so Copper/Stone Mk2
     // ask for raw coal instead; naphtha bronze gives Oil Mk2's alloy its
     // consumer at Coal Mk2; sealed goods put the last letters after ? !)
     mk: {
-      az: { 2: { az: 80, slogi: 30 } },
-      buki: { 2: { buki: 80, coal: 30 } },
+      iron: { 2: { iron: 80, bronze: 30 } },
+      copper: { 2: { copper: 80, coal: 30 } },
       stone: { 2: { stone: 80, coal: 30 } },
-      vedi: { 2: { vedi: 60, slogi: 40 }, 3: { vedi: 60, stroki: 30 } },   // Mk3 in modules: the middle finger's top row waits for the Assembler's era
+      quartz: { 2: { quartz: 60, bronze: 40 }, 3: { quartz: 60, modules: 30 } },   // Mk3 in modules: the middle finger's top row waits for the Assembler's era
       coal: { 2: { fast: 40, naphtha: 40 }, 3: { coal: 60, glass: 25 } },
       // No place goes past Mk3 (user ruling 2026-08-22): RU's rare pinky
       // tail folded into Mk2/Mk3 as four-key sweeps — see language-ru.js
@@ -321,24 +326,24 @@
     // bronze, the Crane sealed goods and flash copper. Every good exists in
     // both courses' books.
     machine: {
-      smelter: { az: 30, buki: 30, stone: 30 },
-      foundry: { bellquartz: 40, slogi: 40 },
-      constructor: { qzbronze: 40, slogi: 40 },
-      molder: { slova: 60, gunmetal: 30 },
-      assembler: { mold: 60, slova: 40 },
-      fastener: { oil: 40, stroki: 40 },
+      smelter: { iron: 30, copper: 30, stone: 30 },
+      foundry: { bellquartz: 40, bronze: 40 },
+      constructor: { qzbronze: 40, bronze: 40 },
+      molder: { parts: 60, gunmetal: 30 },
+      assembler: { mold: 60, parts: 40 },
+      fastener: { oil: 40, modules: 40 },
       crane: { sealed: 50, flashcopper: 30 },
-      manufacturer: { crate: 80, mold: 60, slova: 60 },   // 80: no single ask may crowd the 300 bag (240 paced is the game-wide ceiling)
+      manufacturer: { crate: 80, mold: 60, parts: 60 },   // 80: no single ask may crowd the 300 bag (240 paced is the game-wide ceiling)
     },
     // automation is PER RECIPE (the ledger): its price is the recipe's own
     // output (`own` — which is also the run-in: that many units by hand
     // since the machine learned the recipe, and the price then consumes
     // them) plus a later good. priceAuto() assembles it.
     auto: {
-      smelter: { own: 40, plus: { slova: 20 } },
-      foundry: { own: 30, plus: { slova: 30 } },
+      smelter: { own: 40, plus: { parts: 20 } },
+      foundry: { own: 30, plus: { parts: 30 } },
       constructor: { own: 60, plus: { bellquartz: 20 } },
-      molder: { own: 40, plus: { stroki: 20 } },
+      molder: { own: 40, plus: { modules: 20 } },
       assembler: { own: 40, plus: { fast: 20 } },
       fastener: { own: 40, plus: { glass: 20 } },   // 2026-08-20: crates hid the whole Crane pyramid inside this price
       crane: { own: 40, plus: { mold: 30 } },   // never heavy: heavy modules are the finish counter
@@ -346,11 +351,11 @@
     // repairing a closed crossing (The Frontier): paid in the goods of the
     // regions behind you
     crossing: {
-      x1: { slogi: 30, brass: 30 },
-      x2: { slova: 40, qzbronze: 20 },
-      x3: { slova: 40, brass: 20 },
-      x4: { gunmetal: 30, slova: 40 },
-      x5: { blackiron: 40, slova: 60 },
+      x1: { bronze: 30, brass: 30 },
+      x2: { parts: 40, qzbronze: 20 },
+      x3: { parts: 40, brass: 20 },
+      x4: { gunmetal: 30, parts: 40 },
+      x5: { blackiron: 40, parts: 60 },
     },
   };
   const scaleCost = (cost, k) => {

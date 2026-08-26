@@ -66,7 +66,7 @@
     for (const ch of L.UNLOCK_ORDER) letters[ch] = newLetterStats();
     const sm = starterMachines();
     return {
-      version: 2,
+      version: 3,
       map: mapId,
       createdAt: Date.now(),
       savedAt: null,
@@ -93,7 +93,13 @@
   // ---- v1 → v2 migration (one-shot, on load) ----
   // A v1 save's unlockedCount indexes the course's pre-v3 order (course data).
   const V1_ORDER = L.LEGACY_ORDER || L.UNLOCK_ORDER;
-  const V1_MATS = { az: 'az', buki: 'buki', vedi: 'vedi', slogi: 'slogi', slova: 'slova', stroki: 'stroki' };
+  // KEYS on the left of these two tables are what a v1 SAVE FILE says, so they
+  // keep the pre-v3 names for ever — they are read off disk, not written. The
+  // values are current ids and move with the rename (2026-08-26).
+  const V1_MATS = { az: 'iron', buki: 'copper', vedi: 'quartz', slogi: 'bronze', slova: 'parts', stroki: 'modules' };
+  // v1 STATION ids, which merely looked like material ids. `CHAIN.LEGACY` on
+  // each map is keyed by these same station ids and is legacy for the same
+  // reason (js/maps/frontier.js).
   const V1_KIT_KIND = { slogi: 'smelter', slova: 'constructor', stroki: 'foundry' };
   function migrateV1(p, mapId) {
     const q = defaultProfile(mapId);
@@ -118,12 +124,14 @@
     // machines: starter mines carry the old bench automation; kit stations
     // become instances on the plots they stood on
     for (const m of q.machines) {
-      if (m.ore === 'az' && p.autoBench && p.autoBench.az) m.auto = true;
-      if (m.ore === 'buki' && p.autoBench && p.autoBench.buki) m.auto = true;
+      // m.ore is a CURRENT id (it is on `q`); p.autoBench is a v1 save's own
+      // table and stays spelled the v1 way
+      if (m.ore === 'iron' && p.autoBench && p.autoBench.az) m.auto = true;
+      if (m.ore === 'copper' && p.autoBench && p.autoBench.buki) m.auto = true;
     }
-    if (C().oreOpen(q, 'vedi')) {
-      const node = C().unbuiltNodes(q).find((nd) => nd.ore === 'vedi');
-      if (node) q.machines.push({ id: 'm' + (q.nextMachineId++), kind: 'mine', ore: 'vedi', node: node.index, face: C().nodeFace(node.index), auto: !!(p.autoBench && p.autoBench.vedi) });
+    if (C().oreOpen(q, 'quartz')) {
+      const node = C().unbuiltNodes(q).find((nd) => nd.ore === 'quartz');
+      if (node) q.machines.push({ id: 'm' + (q.nextMachineId++), kind: 'mine', ore: 'quartz', node: node.index, face: C().nodeFace(node.index), auto: !!(p.autoBench && p.autoBench.vedi) });
     }
     const built = p.built || {}, plots = p.plots || {};
     for (const [stId, kind] of Object.entries(V1_KIT_KIND)) {
@@ -237,21 +245,92 @@
   }
   function fresh(mapId) { return normalize(defaultProfile(mapId), mapId); }
 
+  // ---- v2 → v3 migration (one-shot, on load) ----
+  // The material ids stopped being the pre-v3 transliterations on 2026-08-26
+  // (`az` → `iron`, `slogi` → `bronze`, …) so the chain reads in the same
+  // words the map, the art and the design doc use. Those ids are SAVE KEYS,
+  // so a v2 profile has to be rewritten rather than reinterpreted: rename it
+  // everywhere it is spelled and nothing is lost — a world in progress keeps
+  // its bag, its buffers, its belts and its automation.
+  //
+  // Every place a material id is written down, and there are more of them
+  // than there look to be:
+  //   bag / seen            keys
+  //   mk                    keys (ore places; machine places are kind ids)
+  //   machines[].ore        the ore a mine stands on
+  //   machines[].recipe     a material id
+  //   machines[].recipeIn   JSON of a recipe's inputs — ids inside a string
+  //   machines[].buf.in/out keys
+  //   machines[].autoOn     keys: an ore id, or "out|{inputs}" per recipe
+  //   machines[].handMade   the same key shape as autoOn
+  //   belts[].items[].mat   goods in flight
+  //   drops[].mat           goods on the ground
+  const V2_MATS = {
+    az: 'iron', az2: 'iron2',
+    buki: 'copper', buki2: 'copper2',
+    vedi: 'quartz', vedi2: 'quartz2', vedi3: 'quartz3',
+    slogi: 'bronze', slova: 'parts', stroki: 'modules',
+  };
+  const v3mat = (id) => V2_MATS[id] || id;
+  const v3keys = (obj) => {
+    if (!obj || typeof obj !== 'object') return obj;
+    const out = {};
+    for (const [k, v] of Object.entries(obj)) out[v3mat(k)] = v;
+    return out;
+  };
+  // "out|{"az":2,"buki":1}" → "bronze|{"iron":2,"copper":1}". The inputs keep
+  // their order, and the renamed RECIPES keep theirs, so the rebuilt key is
+  // the one CHAIN.autoKey will ask for.
+  function v3autoKey(key) {
+    if (typeof key !== 'string') return key;
+    const bar = key.indexOf('|');
+    if (bar < 0) return v3mat(key);                 // a mine's key: a material id
+    const out = v3mat(key.slice(0, bar));
+    try {
+      return out + '|' + JSON.stringify(v3keys(JSON.parse(key.slice(bar + 1))));
+    } catch {
+      return out + '|' + key.slice(bar + 1);        // unparseable: leave the tail be
+    }
+  }
+  function migrateV2(p) {
+    const q = Object.assign({}, p, { version: 3 });
+    q.bag = v3keys(p.bag);
+    q.seen = v3keys(p.seen);
+    q.mk = v3keys(p.mk);                            // ore places rename; kind places do not
+    q.machines = (p.machines || []).map((m) => {
+      const n = Object.assign({}, m);
+      if (n.ore) n.ore = v3mat(n.ore);
+      if (n.recipe) n.recipe = v3mat(n.recipe);
+      if (n.recipeIn) { try { n.recipeIn = JSON.stringify(v3keys(JSON.parse(n.recipeIn))); } catch { /* leave it */ } }
+      if (n.buf) n.buf = { in: v3keys(n.buf.in), out: v3keys(n.buf.out) };
+      if (n.autoOn) { const a = {}; for (const [k, v] of Object.entries(n.autoOn)) a[v3autoKey(k)] = v; n.autoOn = a; }
+      if (n.handMade) { const h = {}; for (const [k, v] of Object.entries(n.handMade)) h[v3autoKey(k)] = v; n.handMade = h; }
+      return n;
+    });
+    q.belts = (p.belts || []).map((b) => Object.assign({}, b, {
+      items: (b.items || []).map((it) => Object.assign({}, it, { mat: v3mat(it.mat) })),
+    }));
+    q.drops = (p.drops || []).map((d) => Object.assign({}, d, { mat: v3mat(d.mat) }));
+    return q;
+  }
+
   function loadProfile(mapId) {
     try {
       const raw = rawFor(mapId);
       if (!raw) return fresh(mapId);
       const p = JSON.parse(raw);
-      if (p.version === 1) return normalize(migrateV1(p, mapId), mapId);
-      if (p.version !== 2) return fresh(mapId);
+      if (p.version === 1) return normalize(migrateV1(p, mapId), mapId);   // migrateV1 already writes current ids
+      if (p.version === 2) return normalize(migrateV2(p), mapId);
+      if (p.version !== 3) return fresh(mapId);
       return normalize(p, mapId);
     } catch {
       return fresh(mapId);
     }
   }
-  // import: a raw profile object (v1 or v2) → a normalized v2 for a map
+  // import: a raw profile object (v1, v2 or v3) → a normalized v3 for a map
   function adoptProfile(p, mapId) {
-    if (p.version === 1) return normalize(migrateV1(p, mapId), mapId);
+    if (p.version === 1) return normalize(migrateV1(p, mapId), mapId);   // migrateV1 already writes current ids
+    if (p.version === 2) return normalize(migrateV2(p), mapId);
     return normalize(p, mapId);
   }
 
@@ -264,7 +343,7 @@
       if (p.version === 1) {
         return { letters: p.unlockedCount || 0, machines: 3 + Object.keys(p.built || {}).length, totalChars: p.totalChars || 0, savedAt: typeof p.savedAt === 'number' ? p.savedAt : null };
       }
-      if (p.version !== 2) return null;
+      if (p.version !== 2 && p.version !== 3) return null;
       const letters = C().unlockedKeys({ mk: p.mk, pairsUnlocked: p.pairsUnlocked }).length;
       return {
         letters, machines: (p.machines || []).length,

@@ -2067,7 +2067,7 @@
   // round nugget and its pebble, a flat slab, twin crystals, a jagged lump,
   // a stoppered flask. Told apart with the colour taken away.
   const ORE_MASK = {
-    az: ['........',
+    iron: ['........',
          '..33....',
          '.3331...',
          '.3311112',
@@ -2075,7 +2075,7 @@
          '11112222',
          '.1122...',
          '........'],
-    buki: ['........',
+    copper: ['........',
            '..3311..',
            '.3311112',
            '.3111112',
@@ -2091,7 +2091,7 @@
             '11111122',
             '.222222.',
             '........'],
-    vedi: ['.....3..',
+    quartz: ['.....3..',
            '..3..31.',
            '..3..312',
            '.331.312',
@@ -2117,10 +2117,10 @@
           '..2222..'],
   };
   const ORE_TONE = {
-    az: [P.ironore, P.ironore2, P.ironore3],
-    buki: [P.copper, P.copper2, P.copper3],
+    iron: [P.ironore, P.ironore2, P.ironore3],
+    copper: [P.copper, P.copper2, P.copper3],
     stone: [P.stoneore, P.stoneore2, P.stoneore3],
-    vedi: [P.quartz, P.quartz2, P.quartz3],
+    quartz: [P.quartz, P.quartz2, P.quartz3],
     coal: [P.coal, P.coal2, P.coal3],
     oil: [P.oil, P.oil2, P.oil3],
   };
@@ -2131,7 +2131,7 @@
   // brass is brass, steel is bright. Eight bars that differed only by a tone
   // swap were eight of the same bar.
   const ALLOY_TONE = {
-    slogi: [P.bronze, P.bronzeD, P.bronzeL],
+    bronze: [P.bronze, P.bronzeD, P.bronzeL],
     castiron: [P.cIron, P.cIronD, P.cIronL],
     qziron: [P.qIron, P.qIronD, P.qIronL],
     steel: [P.stl, P.stlD, P.stlL],
@@ -2177,7 +2177,7 @@
                  '11111111',
                  '11111111',
                  '.222222.'];
-  // az the ore is an angular chunk with a facet, buki a round nugget, stone a
+  // iron the ore is an angular chunk with a facet, copper a round nugget, stone a
   // flat slab. Set against a flat-topped bar, none of the three can be
   // mistaken for something that has been cast.
   // glass is not a bar. It is the one material in the ladder that is not
@@ -2334,8 +2334,8 @@
       // one bright fleck per reach past the first (Phase 6 gives each its
       // own chunk; until then the pips are the mark)
       const fam = (spec && spec.ores[0]) || kind;
-      const t = (ORE_TONE[fam] || ORE_TONE.az).concat(ORE_EXTRA[fam] || P.white);
-      const c = matMask(ORE_MASK[fam] || ORE_MASK.az, t);
+      const t = (ORE_TONE[fam] || ORE_TONE.iron).concat(ORE_EXTRA[fam] || P.white);
+      const c = matMask(ORE_MASK[fam] || ORE_MASK.iron, t);
       const depth = (spec && spec.depth) || 1;
       if (depth > 1) {
         const x = c.getContext('2d');
@@ -2347,7 +2347,7 @@
     if (form === 'ingot') {
       const t = ALLOY_TONE[kind] || ALLOY_TONE.castiron;
       if (kind === 'glass' || kind === 'petrolglass') return matMask(PANE, t);
-      const a = ORE_TONE[(spec.ores && spec.ores[1]) || 'az'] || ORE_TONE.az;
+      const a = ORE_TONE[(spec.ores && spec.ores[1]) || 'iron'] || ORE_TONE.iron;
       return matMask(BAR, t.concat([a[0], a[2]]));
     }
     if (form === 'ingot3') {
@@ -2359,7 +2359,7 @@
         return s && s.ores.join() === pair;
       });
       const t = ALLOY_TONE[parent] || ALLOY_TONE.castiron;
-      const a = ORE_TONE[spec.ores[2]] || ORE_TONE.vedi;
+      const a = ORE_TONE[spec.ores[2]] || ORE_TONE.quartz;
       return matMask(STACK, t.concat([a[0], a[2], a[1]]));
     }
     const art = FORM_ART[form] || FORM_ART.crates;

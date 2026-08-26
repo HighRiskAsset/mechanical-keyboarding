@@ -49,15 +49,15 @@
   // ⚙ is per recipe (deep-ore ledger 2026-08-22): a mine's key is the
   // material of its depth, a processor's is out|inputs
   // a T1 save has iron and quartz at Mk2, so those mines yield the DEEP
-  // materials — their ⚙ keys are az2/vedi2, and deep goods ride the belts
+  // materials — their ⚙ keys are iron2/quartz2, and deep goods ride the belts
   // into the bronze recipe's shallow slots (downward compatibility)
-  const iron = add({ kind: 'mine', ore: 'az', node: 0, autoOn: { az2: true } });
-  const copper = add({ kind: 'mine', ore: 'buki', node: 1, autoOn: { buki: true } });
-  const quartz = add({ kind: 'mine', ore: 'vedi', node: 3, autoOn: { vedi2: true } });
+  const iron = add({ kind: 'mine', ore: 'iron', node: 0, autoOn: { iron2: true } });
+  const copper = add({ kind: 'mine', ore: 'copper', node: 1, autoOn: { copper: true } });
+  const quartz = add({ kind: 'mine', ore: 'quartz', node: 3, autoOn: { quartz2: true } });
   const rkey = (out, inn) => out + '|' + JSON.stringify(inn);
-  const smelter = add({ kind: 'smelter', plot: 'p1', autoOn: { [rkey('slogi', { az: 2, buki: 1 })]: true }, recipe: 'slogi', recipeIn: JSON.stringify({ az: 2, buki: 1 }) });
-  const foundry = add({ kind: 'foundry', plot: 'p2', autoOn: { [rkey('qzbronze', { slogi: 2, vedi2: 1 })]: true }, recipe: 'qzbronze', recipeIn: JSON.stringify({ slogi: 2, vedi2: 1 }) });
-  const cons = add({ kind: 'constructor', plot: 'p3', autoOn: { [rkey('slova', { qzbronze: 2 })]: true }, recipe: 'slova', recipeIn: JSON.stringify({ qzbronze: 2 }) });
+  const smelter = add({ kind: 'smelter', plot: 'p1', autoOn: { [rkey('bronze', { iron: 2, copper: 1 })]: true }, recipe: 'bronze', recipeIn: JSON.stringify({ iron: 2, copper: 1 }) });
+  const foundry = add({ kind: 'foundry', plot: 'p2', autoOn: { [rkey('qzbronze', { bronze: 2, quartz2: 1 })]: true }, recipe: 'qzbronze', recipeIn: JSON.stringify({ bronze: 2, quartz2: 1 }) });
+  const cons = add({ kind: 'constructor', plot: 'p3', autoOn: { [rkey('parts', { qzbronze: 2 })]: true }, recipe: 'parts', recipeIn: JSON.stringify({ qzbronze: 2 }) });
   const fakePath = (n) => Array.from({ length: n }, (_, i) => [i, 0]);
   const link = (a, b, n) => { const ok = S.canLink(p, a, b); if (!ok.ok) { line(false, `canLink ${a.kind}→${b.kind}: ${ok.why}`); return null; } return S.addBelt(p, a, b, fakePath(n)); };
   S.ensure(p);
@@ -70,7 +70,7 @@
   const cap = C.TUNING.BUFFER_CAP;
   let worst = 0, negatives = 0, overCap = 0;
   const MIN = 60 * 1000;
-  const snapshot = () => ({ parts: cons.buf.out.slova || 0, qzb: foundry.buf.out.qzbronze || 0, bronze: smelter.buf.out.slogi || 0, consIn: cons.buf.in.qzbronze || 0 });
+  const snapshot = () => ({ parts: cons.buf.out.parts || 0, qzb: foundry.buf.out.qzbronze || 0, bronze: smelter.buf.out.bronze || 0, consIn: cons.buf.in.qzbronze || 0 });
   const check = () => {
     for (const m of p.machines) for (const side of ['in', 'out']) for (const [, n] of Object.entries(m.buf[side])) { if (n < 0) negatives++; if (n > cap) overCap++; worst = Math.max(worst, n); }
   };
@@ -80,56 +80,56 @@
   log.textContent = 'snapshots (minute → parts / quartz bronze / bronze in out-buffers):\n' + Object.entries(marks).map(([k, v]) => `${k}: ${JSON.stringify(v)}`).join('\n');
   line(negatives === 0, `no buffer ever went negative`);
   line(overCap === 0, `no buffer ever exceeded the cap of ${cap} (worst ${worst})`);
-  const parts = cons.buf.out.slova || 0;
+  const parts = cons.buf.out.parts || 0;
   // iron-limited chain: 1 ore / 2 s → 900 iron → 450 bronze → 225 quartz bronze → ~112 parts, minus belt latency
   line(parts >= 70 && parts <= 130, `parts made in 30 min ≈ 112 expected, got ${parts}`);
-  line((smelter.buf.out.slogi || 0) < cap, 'the smelter\'s bronze is drained by its belt, not piling to the cap');
+  line((smelter.buf.out.bronze || 0) < cap, 'the smelter\'s bronze is drained by its belt, not piling to the cap');
 
   // retool: the iron mine goes back to hand work — the smelter starves, then recovers
   S.collect(p, cons); S.collect(p, foundry); S.collect(p, smelter);   // empty the output buffers (the constructor had hit the cap)
-  delete iron.autoOn.az2;   // the retool: the depth's ⚙ is gone until re-bought
-  const before = cons.buf.out.slova || 0;
+  delete iron.autoOn.iron2;   // the retool: the depth's ⚙ is gone until re-bought
+  const before = cons.buf.out.parts || 0;
   for (let k = 0; k < 6 * MIN / 500; k++) S.step(p, 500);
   const st = S.state(p, smelter);
   line(st === 'starved', `after the iron mine retools the smelter starves (state: ${st})`);
-  iron.autoOn.az2 = true;
+  iron.autoOn.iron2 = true;
   for (let k = 0; k < 6 * MIN / 500; k++) S.step(p, 500);
-  line((cons.buf.out.slova || 0) > before + 5, `…and recovers when the mine is automated again (+${(cons.buf.out.slova || 0) - before} parts in six minutes)`);
+  line((cons.buf.out.parts || 0) > before + 5, `…and recovers when the mine is automated again (+${(cons.buf.out.parts || 0) - before} parts in six minutes)`);
 
   // hands: a worked machine uses its buffers first, then the bag; output to belt or bag
-  p.bag = { az: 10, buki: 10 };
-  smelter.buf.in = { az: 1, buki: 0 };
-  const took = S.takeInput(p, smelter, { az: 2, buki: 1 });
-  line(took && smelter.buf.in.az === 0 && p.bag.az === 9 && p.bag.buki === 9, 'takeInput uses the buffer first, then the bag');
-  const where1 = S.emit(p, smelter, 'slogi', 1);
-  const where2 = S.emit(p, cons, 'slova', 1);
+  p.bag = { iron: 10, copper: 10 };
+  smelter.buf.in = { iron: 1, copper: 0 };
+  const took = S.takeInput(p, smelter, { iron: 2, copper: 1 });
+  line(took && smelter.buf.in.iron === 0 && p.bag.iron === 9 && p.bag.copper === 9, 'takeInput uses the buffer first, then the bag');
+  const where1 = S.emit(p, smelter, 'bronze', 1);
+  const where2 = S.emit(p, cons, 'parts', 1);
   line(where1.where === 'belt' && where2.where === 'bag' && !where1.spilled && !where2.spilled, 'output rolls onto an exit belt when one exists, else into the bag');
   // the bag cap (2026-08-22): past a full bag the machine's own bin catches
   // it, and only past BOTH does anything come back as a spill
-  p.bag.slova = C.TUNING.BAG_CAP;
-  cons.buf.out.slova = 0;
-  const capped = S.emit(p, cons, 'slova', 5);
-  line(capped.spilled === 0 && cons.buf.out.slova === 5 && p.bag.slova === C.TUNING.BAG_CAP, 'a full bag overflows into the machine\'s own bin, not the void');
-  cons.buf.out.slova = C.TUNING.BUFFER_CAP;
-  const spilled = S.emit(p, cons, 'slova', 3);
+  p.bag.parts = C.TUNING.BAG_CAP;
+  cons.buf.out.parts = 0;
+  const capped = S.emit(p, cons, 'parts', 5);
+  line(capped.spilled === 0 && cons.buf.out.parts === 5 && p.bag.parts === C.TUNING.BAG_CAP, 'a full bag overflows into the machine\'s own bin, not the void');
+  cons.buf.out.parts = C.TUNING.BUFFER_CAP;
+  const spilled = S.emit(p, cons, 'parts', 3);
   line(spilled.spilled === 3, 'past a full bag AND a full bin, the surplus comes back to be laid on the ground');
-  p.bag.slova = 0; cons.buf.out.slova = 0;
+  p.bag.parts = 0; cons.buf.out.parts = 0;
 
   // catch-up equals stepping
   const q = JSON.parse(JSON.stringify(p));
   q.lastTick = 1000; S.catchUp(q, 1000 + 10 * MIN);
   const r = JSON.parse(JSON.stringify(p));
   for (let k = 0; k < 10 * MIN / 500; k++) S.step(r, 500);
-  const qc = q.machines.find((m) => m.kind === 'constructor').buf.out.slova || 0, rc = r.machines.find((m) => m.kind === 'constructor').buf.out.slova || 0;
+  const qc = q.machines.find((m) => m.kind === 'constructor').buf.out.parts || 0, rc = r.machines.find((m) => m.kind === 'constructor').buf.out.parts || 0;
   line(Math.abs(qc - rc) <= 2, `fast-forward matches stepping (${qc} vs ${rc} parts after ten minutes)`);
   // taking a run up: the one door, and the goods it was carrying end up on
   // the ground rather than back in the machine they came from
   const D = window.DROPS;
   const doomed = p.belts[0], riding = doomed.items.length, looseBefore = D.count(p);
-  const ironOut = iron.buf.out.az || 0;
+  const ironOut = iron.buf.out.iron || 0;
   const razed = D.demolish(p, { belt: doomed });
   line(!!razed && p.belts.length === 4 && !p.belts.includes(doomed), 'a run is taken up through DROPS.demolish (nothing else removes one)');
-  line(riding > 0 && D.count(p) - looseBefore === riding && (iron.buf.out.az || 0) === ironOut,
+  line(riding > 0 && D.count(p) - looseBefore === riding && (iron.buf.out.iron || 0) === ironOut,
     `its ${riding} goods fall where they rode, not into the source (${D.count(p) - looseBefore} landed on the ground)`);
 
   // ports (rotation overhaul, 2026-08-21): body-relative — the whole front

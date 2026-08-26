@@ -16,8 +16,8 @@
      six mine colours (ORE_TONE, pixels.js) reappear here — lifted a few
      steps, because 3px of coal or oil at their true tone is black on a dark
      cap. --band-free is for the keys no mine sells: space and Shift. */
-  --ore-az: #8fb0d6; --ore-buki: #d8814e; --ore-stone: #b8ab8e;
-  --ore-vedi: #e59ae0; --ore-coal: #7f8494; --ore-oil: #8b6fc4;
+  --ore-iron: #8fb0d6; --ore-copper: #d8814e; --ore-stone: #b8ab8e;
+  --ore-quartz: #e59ae0; --ore-coal: #7f8494; --ore-oil: #8b6fc4;
   --band-free: #4f6f7a;
   --hand-l-bg: #12242e; --hand-r-bg: #1c2527;
 }

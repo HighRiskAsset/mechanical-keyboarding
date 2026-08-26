@@ -48,23 +48,23 @@
   // the ladder: same (ore, Mk, tier) slots as the RU course — prices and
   // the goods graph line up rung for rung — with EN's own pairs seated
   const PAIRS = [
-    { keys: ['f', 'j'], ore: 'az', mk: 1, tier: 0 },       // F J — the bumps; iron holds the home anchors
-    { keys: ['r', 'u'], ore: 'buki', mk: 1, tier: 0 },     // R U — copper is the top row; u is the first vowel
-    { keys: ['b', 'n'], ore: 'stone', mk: 1, tier: 0 },    // B N — index bottom
-    { keys: ['e', 'i'], ore: 'vedi', mk: 1, tier: 1 },     // E I — middle top: a fifth of English in one rung
-    { keys: ['g', 'h'], ore: 'az', mk: 2, tier: 1 },       // G H — index inner home
-    { keys: ['d', 'k'], ore: 'vedi', mk: 2, tier: 1 },     // D K — middle home
+    { keys: ['f', 'j'], ore: 'iron', mk: 1, tier: 0 },         // F J — the bumps; iron holds the home anchors
+    { keys: ['r', 'u'], ore: 'copper', mk: 1, tier: 0 },       // R U — copper is the top row; u is the first vowel
+    { keys: ['b', 'n'], ore: 'stone', mk: 1, tier: 0 },        // B N — index bottom
+    { keys: ['e', 'i'], ore: 'quartz', mk: 1, tier: 1 },       // E I — middle top: a fifth of English in one rung
+    { keys: ['g', 'h'], ore: 'iron', mk: 2, tier: 1 },         // G H — index inner home
+    { keys: ['d', 'k'], ore: 'quartz', mk: 2, tier: 1 },       // D K — middle home
     { keys: ['s', 'l', '.'], ore: 'coal', mk: 1, tier: 2 },    // S L + the period on its own key (see the header note)
-    { keys: ['t', 'y'], ore: 'buki', mk: 2, tier: 2 },     // T Y — index inner top: 'the' arrives
-    { keys: ['v', 'm'], ore: 'stone', mk: 2, tier: 2 },    // V M — index inner bottom
+    { keys: ['t', 'y'], ore: 'copper', mk: 2, tier: 2 },       // T Y — index inner top: 'the' arrives
+    { keys: ['v', 'm'], ore: 'stone', mk: 2, tier: 2 },        // V M — index inner bottom
     { keys: ['a', ';', "'"], ore: 'oil', mk: 1, tier: 3 },     // A ; ' — the pinky home sweep; contractions open
-    { keys: ['?'], at: 'fastener', mk: 1, tier: 3 },       // Shift+/ — the same stroke as the Russian comma
-    { keys: ['c', ','], ore: 'vedi', mk: 3, tier: 3 },     // C , — middle bottom, the comma unshifted
-    { keys: ['q', 'p'], ore: 'oil', mk: 2, tier: 3 },      // Q P — pinky top
-    { keys: ['w', 'o'], ore: 'coal', mk: 2, tier: 4 },     // W O — ring top: the last vowel
+    { keys: ['?'], at: 'fastener', mk: 1, tier: 3 },           // Shift+/ — the same stroke as the Russian comma
+    { keys: ['c', ','], ore: 'quartz', mk: 3, tier: 3 },       // C , — middle bottom, the comma unshifted
+    { keys: ['q', 'p'], ore: 'oil', mk: 2, tier: 3 },          // Q P — pinky top
+    { keys: ['w', 'o'], ore: 'coal', mk: 2, tier: 4 },         // W O — ring top: the last vowel
     { keys: ['!', '-'], at: 'fastener', mk: 2, tier: 4 },
-    { keys: ['z'], ore: 'oil', mk: 3, tier: 4 },           // Z — pinky bottom, alone
-    { keys: ['x'], ore: 'coal', mk: 3, tier: 4 },          // X — ring bottom, alone: the capstone
+    { keys: ['z'], ore: 'oil', mk: 3, tier: 4 },               // Z — pinky bottom, alone
+    { keys: ['x'], ore: 'coal', mk: 3, tier: 4 },              // X — ring bottom, alone: the capstone
     { keys: [':', '"', '(', ')'], at: 'fastener', mk: 3, tier: 5 },
   ];
 
@@ -128,10 +128,10 @@
   // each by the live alphabet as ever. Oil's "-'s" is the possessive — the
   // apostrophe is oil's own key.
   const ENDINGS = {
-    az:    ['-ful', '-ght', '-ing', '-igh', '-ish', '-ify'],
-    buki:  ['-ty', '-tten', '-ent', '-ate', '-ture', '-tion'],
+    iron:    ['-ful', '-ght', '-ing', '-igh', '-ish', '-ify'],
+    copper:  ['-ty', '-tten', '-ent', '-ate', '-ture', '-tion'],
     stone: ['un-', '-ness', '-ed', '-en', 'be-', '-ent'],
-    vedi:  ['-ck', '-ic', '-ical', '-ance', '-ade', '-ide'],
+    quartz:  ['-ck', '-ic', '-ical', '-ance', '-ade', '-ide'],
     coal:  ['-ly', '-less', '-ss', '-sty', '-self', '-low'],
     oil:   ['-zz', '-que', '-ap', '-ize', '-ous', "-'s"],
   };

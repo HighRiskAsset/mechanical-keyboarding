@@ -44,7 +44,7 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
    → crates (capitals, Crane) → heavy modules (pages, Manufacturer) → the
    finish. Machines take 1–3 inputs with ratios, 1 output.
    IMPORTANT: internal save ids keep the legacy Slavic names
-   (az/buki/vedi/slogi/slova/stroki/listy) — display names live in i18n
+   (iron/copper/quartz/bronze/parts/modules) — display names live in i18n
    matNames/stationNames, looks in pixels.js matSprite. Renames never touch ids.
 4. **Automation is bought, and a new Mk takes it back.** The curriculum
    advances by purchase — a key-pair is bought at its mine or vein, each
@@ -294,8 +294,9 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   Fastener like an ore's at a mine (`PAIRS` events with `at:`,
   `PRICES.at`): "MK1 ," with a price, the unlock card names ⇧ Shift + the
   finger; the comma is typed as Shift+/ and the hint lights Shift. Maps
-  carry the pyramid (iron 3, copper 2, stone 2, quartz 2, coal 2, oil 2)
-  and the outer regions have their own plots.
+  carry the pyramid — veins per ore in proportion to the work that ore is
+  asked to do, computed from the tree rather than named (see *Veins follow
+  the tree*) — and the outer regions have their own plots.
 - **Discoverability (2026-08-19):** the in-canvas menus are icons only (the
   bitmap font has no letters), so a **caption** (`#place-caption`, DOM text,
   EN/RU) sits at the bottom of the map: while a menu is open it says what
@@ -1317,11 +1318,192 @@ of きしゃ is vocabulary practice, not typing practice — the player has to k
 which word they meant. For a game whose pitch is typing practice that teaches
 you something, that is the strongest content in the design.
 
+**The shown target is the whole spec (user ruling 2026-08-25).** Display the
+finished form we want — and where we want the kana left alone, display the
+kana. Nothing else instructs the player: the target form silently says whether
+to convert and to what, exactly as a document being copied does. Three
+consequences worth having:
+
+- **One reading generates three exercises.** にほん / 日本 / ニホン are all
+  `nihon` — identical keystrokes, different commits. The romaji ladder and the
+  Converter ladder share one bank instead of needing two.
+- **A wrong candidate is a typo**, graded by the same character comparison as
+  everything else. No new error concept, no new grading path.
+- **Ambiguity gets a correct answer.** Showing 記者 makes きしゃ a real
+  vocabulary question rather than a free pick. Candidates should still be
+  frequency-ordered honestly — that *is* the skill — but the bank controls
+  when an ambiguous reading is presented at all.
+
+**Banks: one extra column, and the destination computes itself.** Rows go from
+`[surface, gloss, set]` to `[surface, reading, gloss, set]`, and the chute is
+derived, never authored: `surface === reading` → stays kana; all-katakana
+surface → katakana; otherwise kanji. So balancing the mix is a *query* over a
+bank, not a curation burden — measurable and adjustable the way letter
+coverage already is. **The alphabet filter runs on the reading, not the
+surface** — a word is typeable when its kana are unlocked however exotic its
+kanji, which is correct (the player types `nihon` either way and reads 日本 as
+a picture). Kanji need no unlock track of their own.
+
+**Two mixes, never conflated.** Characters in running text are ~45–50%
+hiragana / ~35–40% kanji / ~5–10% katakana — that is what the typing-share
+yardstick measures. *Decisions* asked by the Converter are kanji-dominant,
+because hiragana is the null choice. A drill balanced by character count is
+mostly kanji decisions.
+
+**Kanji and katakana drill in isolation; hiragana cannot.** は alone is just
+"ha" — it is only a particle in context. So the no-conversion chute cannot
+appear until items are at least word-plus-particle, which gives the Converter a
+three-stage arc mirroring how the mines already tier: (1) isolated
+conversions — katakana loanwords first for the win rate, then simple kanji
+nouns; (2) word + particle, where the no-conversion chute appears and the
+player learns that not everything converts; (3) clauses — one Space over a
+whole phrase, glance, Enter. Existing content slots already fit: `SYLLABLES` →
+kana (they *are* syllables), `WORDS` → stage 1, `ENDINGS` → the hiragana glue
+(します ました ている かった, already keyed by ore), `PHRASES` → stage 2,
+`SENTENCES`/`PAGES` → stage 3.
+
+**Focused exercises are authentic registers, not training wheels.** All-katakana
+documents exist (menus, product names, foreign place names); all-hiragana
+documents exist (children's books); kanji-focus is a noun drill or an ambiguity
+set. A themed run never reads as a lab exercise, which matters for a course
+teaching a real skill.
+
+**Katakana is easy to read and hard to type** — the inverse of the usual
+assumption, so do not seat it as the easy tier. Loanwords are guessable for an
+English speaker, but the fingers must produce Japanese phonology, not the
+English word: ベッド = `beddo`, コーヒー = `ko-hi-`, サッカー = `sakka-`,
+マクドナルド = `makudonarudo`. Small っ, the ー bar, doubled consonants. It earns
+its early slot on readability while staying demanding.
+
+**Open question — alternate romaji spellings.** Real IMEs accept both し =
+`shi`/`si`, つ = `tsu`/`tu`, ふ = `fu`/`hu`, じ = `ji`/`zi`, ん = `nn`/`n`.
+Recommendation: teach one canonical spelling (the Hepburn-ish `shi tsu fu ji`,
+which is what learners are taught and matches the sound) and accept the other
+silently, never penalised. The short forms are a genuine expert speed
+technique — one keystroke cheaper — so there is an option, not a
+recommendation, to reveal them later as an efficiency upgrade rather than
+day-one noise.
+
 **Also true of this course:** no word spaces, so the space bar leaves the
 curriculum as a rhythm anchor and returns as the *convert* key — a promotion,
 not a loss. Punctuation is full-width: 。 、 「」 ・ and ー (a letter, not a
 mark). The same two-stage model applies to a ZH pinyin course, which is the
 method the overwhelming majority of mainland typists use.
+
+### ZH course — how Chinese gets taught (plan agreed 2026-08-25, not built)
+
+**Ruling: pinyin input, the method the overwhelming majority of mainland
+typists use, on a plain ANSI board.** No new board file — mainland keyboards
+are unmodified US boards with nothing extra printed. Simplified characters by
+default (the vast majority of speakers and learners); traditional is a cheap
+later variant, see below. Sibling plan to the JA course above; where the two
+agree, this section says so rather than repeating.
+
+**The structural difference from Japanese: there is no intermediate script.**
+Japanese runs romaji → kana → kanji, and the kana stage is a real script that
+stands on its own — roughly half of Japanese text *stays* kana and needs no
+decision. Pinyin is not a script anyone reads. No Chinese text is written in
+it. So:
+
+> **pinyin = ore · hanzi = finished good.** Two stages, not three. **One
+> chute, not three: everything converts.**
+
+The JA Converter's busiest chute is the one that does nothing, which is what
+protects its typing share. **Chinese has no null chute at all** — every word
+goes through the IME. That is the central risk in this course and the ladder
+below is shaped around it.
+
+**The answer to the typing-share risk is long units, and it is what skilled
+typists actually do.** Toneless pinyin is drastically lossy — Mandarin has
+~400 syllables ignoring tone against several thousand common characters, so
+`shi` alone maps to dozens (是十时事实施式市试…). Nobody types syllable by
+syllable. They type multi-syllable words and whole phrases and let context
+disambiguate: `zhongguo` → 中国 is near-unambiguous, `wojintianhenkaixin` →
+我今天很开心 converts on one Space. That is **18 keystrokes to one decision** —
+a far better ratio than Japanese word-by-word. So the ZH arc pushes to phrase
+length *earlier* than JA's does: word → phrase → sentence, with the isolated
+single-character stage kept deliberately brief because it is both
+unrepresentative and ambiguity-hell. First-candidate-on-one-Space matters even
+more here than in JA (invariant: 80%+ of play is typing).
+
+**ZH does not inherit base mode, and the reason is structural, not stylistic.**
+Pinyin has a hard constraint no Latin alphabet has: **no vowel, no syllable, no
+output.** English can drill `th` and consonant clusters early; pinyin can
+produce *nothing at all* until a e i o u are in hand. The EN reseat seats e i
+at pair 4 and o at 14 — under that order a ZH course types nothing for half the
+ladder. So rung 1 is forced: the five vowels, which sit on five different
+fingers across both hands (l5 l3 r3 r4 r2 — scattered, but balanced). After
+that the finger-pair principle can resume wherever it costs no coverage; where
+it costs coverage, coverage wins.
+
+**Ladder sketch — 26 keys over 12 rungs, ordered by character yield.** Pinyin
+uses all 26 keys: 25 letters plus `v`, which every mainland IME accepts as ü
+(`lv` → 绿) because v is otherwise unused. Note `zh ch sh` are digraphs and
+arrive free once both halves are owned.
+
+| rung | new keys | characters it opens |
+| --- | --- | --- |
+| 1 | a e i o u | the vowels — position drill, no words yet |
+| 2 | d y | **的**(#1, ~4% of all text) **一**(#2) **有**(#9) 都 第 |
+| 3 | n w | **我**(#7) 你 那 为 年 |
+| 4 | s h | **是**(#3) 十 说 好 和 会 四 |
+| 5 | b l | **不**(#4) **了**(#5) 来 里 吧 八 |
+| 6 | r z | **人**(#6) **在**(#8) 日 子 做 走 最 |
+| 7 | t g | **他**(#10) 个 国 天 给 过 到 |
+| 8 | m j | 吗 们 么 就 家 几 没 见 |
+| 9 | c k | 可 看 出 从 才 开 次 车 |
+| 10 | f p | 发 方 服 跑 朋 分 |
+| 11 | q x | 去 起 下 想 学 前 谢 |
+| 12 | v (= ü) | 女 绿 旅 律 — the tail, ZH's ъ |
+
+**Seven rungs of twelve cover the ten most frequent characters in Chinese**
+(的一是不了人我在有他). That is the payoff that justifies taking an own order.
+
+**Banks: the same schema as JA**, `[surface, reading, gloss, set]`, reading =
+pinyin. Two simplifications over Japanese: the chute needs no computing (there
+is only one), and there is no script-mix to balance. One addition: a
+**traditional surface** as an optional extra column makes a Taiwan/HK variant
+nearly free — identical readings, identical ladder, different glyphs (国/國,
+学/學, 门/門). The alphabet filter runs on the reading, as in JA. The only
+pass-through material is Latin letters and digits, which appear untouched in
+Chinese text (WiFi, 2026年) — a footnote, not a chute.
+
+**Punctuation is full-width, and the IME does the width conversion** — which is
+already the house rule ("teach the stroke, map the glyph", as with тире on
+Minus). Press `,` get ，; press `.` get 。(a small hollow circle, not a dot).
+Two marks need their own strokes and have **no Latin equivalent**, so both are
+real course items:
+
+- **、 the enumeration comma (顿号)**, on `\`. Used *only* between list items —
+  苹果、香蕉、橘子 — and never interchangeable with ，.
+- **《》 book-title marks**, on Shift+`,` and Shift+`.`. Titles of books, films
+  and articles; English uses italics or quotes and has nothing equivalent.
+
+Also doubled by convention: —— (em dash) and …… (ellipsis), both written as two
+characters. Mainland uses “”‘’ for quotes; Taiwan uses 「」.
+
+**Open question — tones.** Standard pinyin input drops them, which is why
+ambiguity is so severe. But real IMEs (Sogou, Google Pinyin and others) *do*
+accept tone digits — `ma3` → 马 — and this is worth considering as an optional
+discipline rather than dismissing: it teaches the tone, which a learner
+genuinely needs and toneless typing actively neglects; it collapses the
+candidate list; and it **adds keystrokes**, which helps the typing share. Three
+arguments in favour and it is a real IME feature, not an invented mechanic.
+Recommendation: default to toneless (real practice), offer tone digits as a
+course setting or a late precision upgrade. Not decided.
+
+**Same open question as JA, same answer:** experts use abbreviated input —
+initials only, `zg` → 中国, `wjthkx` → 我今天很开心. Real and widely used, but it
+*removes* keystrokes, so teach full pinyin, never penalise the short form, and
+do not train it.
+
+**Parked variants, none scoped:** **Zhuyin/Bopomofo** (Taiwan standard, 37
+symbols on QWERTY, tones typed — architecturally a middle case between
+kana-direct and pinyin, since it is one-key-one-symbol *plus* conversion);
+**Wubi / Cangjie** (shape-based, near-deterministic, no candidate list for most
+characters — the closest fit of anything to this engine, but low single-digit
+usage and months of decomposition study); **Cantonese** input for HK. All are
+data drops on top of the Converter if ever wanted.
 
 ### The ladder branches (2026-08-22 — the Molder problem)
 
@@ -1761,10 +1943,80 @@ quartz #2 in the canyon); **Oil flats** open at T3 (oil seam); **Titanium
 peaks** open at T4 as the finish site with extra nodes (the titanium seam
 becomes a late iron/coal/oil node or a landmark). Crossings are repaired at
 the place for a price in the goods of the regions behind you (2026-08-19:
-no tier locks anywhere — pacing is prices and the readiness bar). Nodes per ore across the map ≈ iron 3,
-copper 2, stone 2, quartz 2, coal 2, oil 2; plots as many as the tree can use.
-Open Range needs the same node set on its row A. Choke points (bridges, gaps)
-stay authored — they are the belt-congestion feature.
+no tier locks anywhere — pacing is prices and the readiness bar). Nodes per
+ore are not named here — see *Veins follow the tree* below; plots as many as
+the tree can use. Open Range needs the same ores on its row A. Choke points
+(bridges, gaps) stay authored — they are the belt-congestion feature.
+
+### Veins follow the tree, and are never written down (user ruling 2026-08-25)
+
+This section used to name the counts: *"iron 3, copper 2, stone 2, quartz 2,
+coal 2, oil 2."* A number written once and never re-derived cannot follow the
+tree it was cut for, and this one did not follow it. Measured against the
+recipes as they actually stand, **the ore with the most seams is the one whose
+last seam earns nothing, and the ore the tree leans on hardest has the fewest**
+— iron's third seam can be taken out for 0.0% while copper, which the cheapest
+route to parts runs almost entirely on, sits on two. Nobody chose that; it is
+what a fixed list does when the tree moves underneath it. **How many veins an
+ore gets is a consequence of the mechanics, not an authored constant**, and it
+is recomputed, never remembered.
+
+(Iron's seams are not *idle* — under a balanced blend they run flat out,
+because a player short of copper pushes work onto iron on purpose. That is the
+point: an ore's load is not a property of the ore, it is what the blend does
+when some other ore runs out. Only the marginal seam tells you anything, which
+is why the test is marginal.)
+
+The derivation, and why it is available at all:
+
+- **A vein is one unit of supply.** Every mine yields at `TUNING.RATE.mine`
+  whatever the ore and whatever the Mk — a depth mints a new *material*, never
+  a new *rate* — so an ore's supply is exactly `veins × rate`. Yield is not a
+  mechanic and never becomes one; **plenty is placement**.
+- **The bill is authored.** Everything the player must buy to finish stands in
+  `PRICES` — rungs, first builds, ⚙, extra mines — plus `K_HEAVY` of the last
+  good. Nothing is emergent, so the bill totals.
+- **The path is the player's.** A good with several recipes can be made
+  several ways, and a player short of copper reaches for the recipe that is
+  not copper. So an ore's share is not one number off the cheapest path: it is
+  what the best *blend* consumes, which is a linear program.
+
+The test is **local optimality, not a target**, and it runs both ways: a map
+is **short** when a seam that is not there would buy more than 15%, and
+**padded** when a seam that is there could come out for almost nothing. One
+floor sits under both: **at least two veins of every ore**, so every ore has
+an extra-mine row to sell and no ore is a single point of failure.
+
+Local on purpose, because **the two courses do not want the same cut** — EN's
+book has no vowel on the iron alloys, so an EN player leans on quartz where a
+RU player leans on copper — and one map serves both. A map is not wrong for
+carrying a seam this course would not have chosen; it is wrong for being
+short. So the pass condition is *short for nobody*, which one cut can satisfy
+for every course at once, and a padded seam is reported rather than failed. A
+greedy cut grown from the floor is printed alongside as guidance, never as
+the test.
+
+`dev/ore-load.js` does the arithmetic; `dev/verify.html` (RU) and
+`dev/en.html` (EN) run it per map and print the per-ore table. It is a **ratio
+diagnostic, not a play-length claim**: it assumes mines never stall and
+everything they raise is consumed, and it ignores the hands, which out-produce
+about six mines at speed.
+
+Measured 2026-08-25, the tree as it stands wants **iron 2 · copper 4 · stone 2
+· quartz 3 · coal 2 · oil 2** — fifteen seams, short for neither course (RU
+7.2 h, EN 5.2 h). The maps carry thirteen, cut iron 3 / copper 2, which is
+short of copper on both courses by about a fifth, and whose third iron seam
+can be removed for **0.0%**. That is a reading, not a new spec: it is what the
+check said on the day, and it is expected to move.
+
+The same rule governs plots, and always did — *as many as the tree can use*.
+What the tree can use is roughly twelve to finish and twenty-five to thirty
+for a player who wants every good standing and refilling itself; never a
+throughput number, because at full mine output the whole chain needs under
+four machines' worth of rate. Nothing may cap that from outside the tree — a
+per-instance price escalation, a bag that cannot hold a price, any rule whose
+effect is "you may not build the next one" — see *the bag is the hand
+ceiling*. If a count has to be capped, the tree caps it.
 
 ### Course data this asks for (RU)
 
@@ -1783,8 +2035,8 @@ events (bars replace them; crossings open on bars) · single-letter unlock order
 (pairs) · fixed per-bench focus sets (alphabet from the graph) · fixed BELTS
 list, `upgradeCost`/`buildCost` on stations (place menus, ⚙, spool) · the
 "collect 100 on approach" pickup (output buffers) · per-keystroke autofeed
-(real-time simulation). Save ids stay additive: az/buki/vedi/slogi/slova/
-stroki keep mapping to iron/copper/stone/…; a v2 profile migrates into the v3
+(real-time simulation). Save ids stay additive: iron/copper/quartz/bronze/parts/
+modules keep mapping to iron/copper/stone/…; a v2 profile migrates into the v3
 model (see the build plan). Décor money, live exams, a guidance checklist and
 "contracts for variety" may return later — none is a core mechanic.
 

@@ -53,7 +53,7 @@
   const ladderKey = () => C.PLACES.map((pl) => p.mk[pl] || 0).join(',');
   const auto = {};        // kind or 'mine:ore' → count of automated instances
   const built = { mine: {} };   // what stands: built[kind] = true, built.mine[ore] = true
-  built.mine.az = true; built.mine.buki = true; built.mine.stone = true;
+  built.mine.iron = true; built.mine.copper = true; built.mine.stone = true;
   const seenMat = (mat) => { p.seen[mat] = true; };
   const add = (bag, cost, k) => { for (const [m, n] of Object.entries(cost || {})) bag[m] = (bag[m] || 0) + n * (k || 1); };
   // family-aware (the deep-ore ledger): deeper ore stock covers a shallow ask

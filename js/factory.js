@@ -1787,9 +1787,9 @@
           // the good's own sprite, the same one the bag shows. The head of a
           // run is delivered and the rest shift down a place, so the material
           // under a given sprite changes — swap the texture when it does.
-          const g = matIcon('az', (v.items.length * 5) % PIXELS.MAT_SPARK_FRAMES);
+          const g = matIcon('iron', (v.items.length * 5) % PIXELS.MAT_SPARK_FRAMES);
           v.itemsC.addChild(g);
-          v.items.push({ g, mat: 'az' });
+          v.items.push({ g, mat: 'iron' });
         }
         while (v.items.length > b.items.length) { const it = v.items.pop(); v.itemsC.removeChild(it.g); it.g.destroy(); }
         b.items.forEach((it, i) => {

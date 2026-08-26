@@ -14,6 +14,8 @@
 <canvas id="out"></canvas>
 <script src="../js/pixels.js"></script>
 <script src="../js/tiles.js"></script>
+<script src="../js/layout-en.js"></script>
+<script src="../js/language-en.js"></script>
 <script src="../js/courses.js"></script>
 <script src="../js/language-ru.js"></script>
 <script src="../js/maps/kit.js"></script>
@@ -61,7 +63,7 @@
   // a good on the band is the material's own sprite, centred on it
   const HM = PIXELS.MAT_PX >> 1;
   const good = (gx, gy, mat) => x.drawImage(PIXELS.matCanvas(mat), gx - HM, gy - HM);
-  const LOAD = ['az', 'buki', 'coal', 'vedi'];
+  const LOAD = ['iron', 'copper', 'coal', 'quartz'];
   for (let f = 0; f < 4; f++) {
     const ox = 4 + f * 56, oy = cy3 + 6;
     // a belt run: in from the west, a corner, then north
@@ -99,7 +101,7 @@
     x.drawImage(PIXELS.kindIconCanvas(k), 4 + i * 16, cy5 + 4);
   });
   label('material sprites — the bag and the belt carry the same picture', 2, cy5 + 26);
-  ['az', 'vedi', 'coal', 'oil', 'slogi', 'qzbronze', 'slova', 'mold', 'stroki', 'fast', 'crate', 'heavy', 'money'].forEach((k, i) => {
+  ['iron', 'quartz', 'coal', 'oil', 'bronze', 'qzbronze', 'parts', 'mold', 'modules', 'fast', 'crate', 'heavy', 'money'].forEach((k, i) => {
     x.drawImage(PIXELS.matCanvas(k), 4 + i * 16, cy5 + 30);
   });
   label('palette: iron ramp · brass · copper · enamel · soot/steam', 2, cy5 + 54);

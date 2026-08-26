@@ -24,8 +24,8 @@
   // ---- the curriculum spine (v3, locked 2026-08-18) ----
   // Mirror key-pairs — same finger, both hands — sorted by frequency, each
   // pair belonging to one ore (= one finger) at one Mk (= one reach). Ore ids
-  // are the chain's material ids (az = iron, buki = copper, vedi = quartz —
-  // legacy names, never renamed; stone / coal / oil are additive).
+  // are the chain's material ids — iron, copper, stone, quartz, coal, oil,
+  // each the ore's own name since the 2026-08-26 rename.
   // Entries with `at` are key events at a machine (comma at the Fastener…):
   // they unlock when that machine's Mk is bought.
   //
@@ -43,23 +43,23 @@
   // carry a few such documented deviations (see DESIGN.md, Course
   // exceptions); the EN course keeps its dash at Fastener Mk2.
   const PAIRS = [
-    { keys: ['а', 'о'], ore: 'az', mk: 1, tier: 0 },     // F J — index home
-    { keys: ['е', 'н'], ore: 'buki', mk: 1, tier: 0 },   // T Y — index top
-    { keys: ['и', 'т'], ore: 'stone', mk: 1, tier: 0 },  // B N — index bottom
-    { keys: ['в', 'л'], ore: 'vedi', mk: 1, tier: 1 },   // D K — middle home
-    { keys: ['п', 'р'], ore: 'az', mk: 2, tier: 1 },     // G H — index inner home
-    { keys: ['с', 'б'], ore: 'vedi', mk: 2, tier: 1 },   // C , — middle bottom
-    { keys: ['ы', 'д'], ore: 'coal', mk: 1, tier: 2 },   // S L — ring home
-    { keys: ['к', 'г'], ore: 'buki', mk: 2, tier: 2 },   // R U — index inner top
-    { keys: ['м', 'ь'], ore: 'stone', mk: 2, tier: 2 },  // V M — index inner bottom
-    { keys: ['я', '.', '-'], ore: 'oil', mk: 1, tier: 3 },   // Z / and the Minus key — pinky bottom + the dash (see the exception note)
-    { keys: [','], at: 'fastener', mk: 1, tier: 3 },      // Shift+/ — the signature hurdle
-    { keys: ['у', 'ш'], ore: 'vedi', mk: 3, tier: 3 },   // E I — middle top
-    { keys: ['й', 'з', 'х', 'ъ'], ore: 'oil', mk: 2, tier: 3 },  // Q P [ ] — the pinky's top-row sweep (the tail fold)
-    { keys: ['ч', 'ю'], ore: 'coal', mk: 2, tier: 4 },   // X . — ring bottom
+    { keys: ['а', 'о'], ore: 'iron', mk: 1, tier: 0 },       // F J — index home
+    { keys: ['е', 'н'], ore: 'copper', mk: 1, tier: 0 },     // T Y — index top
+    { keys: ['и', 'т'], ore: 'stone', mk: 1, tier: 0 },      // B N — index bottom
+    { keys: ['в', 'л'], ore: 'quartz', mk: 1, tier: 1 },     // D K — middle home
+    { keys: ['п', 'р'], ore: 'iron', mk: 2, tier: 1 },       // G H — index inner home
+    { keys: ['с', 'б'], ore: 'quartz', mk: 2, tier: 1 },     // C , — middle bottom
+    { keys: ['ы', 'д'], ore: 'coal', mk: 1, tier: 2 },       // S L — ring home
+    { keys: ['к', 'г'], ore: 'copper', mk: 2, tier: 2 },     // R U — index inner top
+    { keys: ['м', 'ь'], ore: 'stone', mk: 2, tier: 2 },      // V M — index inner bottom
+    { keys: ['я', '.', '-'], ore: 'oil', mk: 1, tier: 3 },    // Z / and the Minus key — pinky bottom + the dash (see the exception note)
+    { keys: [','], at: 'fastener', mk: 1, tier: 3 },           // Shift+/ — the signature hurdle
+    { keys: ['у', 'ш'], ore: 'quartz', mk: 3, tier: 3 },     // E I — middle top
+    { keys: ['й', 'з', 'х', 'ъ'], ore: 'oil', mk: 2, tier: 3 }, // Q P [ ] — the pinky's top-row sweep (the tail fold)
+    { keys: ['ч', 'ю'], ore: 'coal', mk: 2, tier: 4 },       // X . — ring bottom
     { keys: ['?', '!'], at: 'fastener', mk: 2, tier: 4 },
-    { keys: ['ф', 'ж', 'э', 'ё'], ore: 'oil', mk: 3, tier: 4 },  // A ; ' ` — the pinky's home-row sweep; ё on the corner key
-    { keys: ['ц', 'щ'], ore: 'coal', mk: 3, tier: 4 },   // W O — ring top
+    { keys: ['ф', 'ж', 'э', 'ё'], ore: 'oil', mk: 3, tier: 4 }, // A ; ' ` — the pinky's home-row sweep; ё on the corner key
+    { keys: ['ц', 'щ'], ore: 'coal', mk: 3, tier: 4 },       // W O — ring top
     { keys: [':', ';', '"', '(', ')'], at: 'fastener', mk: 3, tier: 5 },
   ];
 
@@ -183,10 +183,10 @@
 
   // ---- ending families: the Molder's grammar, keyed by ore (flux) ----
   const ENDINGS = {
-    az:    ['по-', 'про-', '-ор', '-ар', '-ора', '-ро', '-ра', '-опа', '-ап', '-оп'],
-    buki:  ['-ение', '-ник', '-ек', '-нк', '-ен', '-ген', '-ке', '-нег', '-ние', '-нее', '-ене'],
+    iron:    ['по-', 'про-', '-ор', '-ар', '-ора', '-ро', '-ра', '-опа', '-ап', '-оп'],
+    copper:  ['-ение', '-ник', '-ек', '-нк', '-ен', '-ген', '-ке', '-нег', '-ние', '-нее', '-ене'],
     stone: ['-ть', '-ить', '-ом', '-им', '-ими', '-ит', '-ми', '-тим', '-ти', '-ите', '-ат', '-ять'],
-    vedi:  ['-ств', '-ов', '-ев', '-ул', '-ль', '-сь', '-ушк', '-вш', '-ал', '-ел', '-ав'],
+    quartz:  ['-ств', '-ов', '-ев', '-ул', '-ль', '-сь', '-ушк', '-вш', '-ал', '-ел', '-ав'],
     coal:  ['-ды', '-ция', '-щик', '-чик', '-ющ', '-ущ', '-ич', 'до-', '-ыд', '-ады', '-оды'],
     oil:   ['-ся', '-ый', '-ий', '-ой', '-яя', '-ёт', '-ешь', 'объ-', 'съ-', '-ая', '-яй', '-зя'],
   };
