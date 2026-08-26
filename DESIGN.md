@@ -675,10 +675,17 @@ Four rules make twenty-five materials tell apart at ten pixels:
   mark that is dark most of the second is not subtle, it is missed. Mk2 runs
   half the cycle at five pixels, Mk3 all of it at nine. Every sprite carries its
   own phase, so a run of deep ore shimmers down the line instead of the whole
-  belt blinking at once. One drawing (`matGrade`/`SPARK_GRADE` in `pixels.js`)
-  feeds the bag, the belts, the ground and the price rows through
-  `matIcon` in `factory.js`, so the grade cannot say one thing in the HUD and
-  another on the band.
+  belt blinking at once.
+- **The mark is one sprite, and it is not part of any material** (2026-08-26).
+  A good is drawn, and its grade rides on top of it: a transparent ten by ten
+  holding nothing but the twinkle, the *identical* overlay over every material
+  of that grade (`gradeMark`/`gradeTex` in `pixels.js`, hung as a child by
+  `matIcon` in `factory.js`, which is where the bag, the belts, the ground and
+  the price rows all get their sprites). So there are twenty-four marks in the
+  whole game — two grades, twelve frames — not a private set baked into every
+  ore, and a material keeps the one texture it always had. **There is exactly
+  one mark.** A static depth pip said the same thing worse until this ruling
+  and is gone: two marks for one fact is one of them lying, eventually.
 
 Masks are 8×8 character grids laid at (1,1) in `pixels.js` (`ORE_MASK`, `BAR`,
 `STACK`, `PANE`, `FORM_ART`); a digit indexes a tone list. Keep the four corner
@@ -1645,11 +1652,11 @@ is the Deep-Ore Ledger (artifact); this is the binding record.
   can't take in the bin; a full-of-that back walks over its own piles
   without churning them; an old save's surplus spills at the spawn once
   instead of being clamped away.
-- **Grade reads at a glance (2026-08-25).** Deep-ore icons stay family art
-  until the Phase 6 bake, but the depth pip is no longer carrying the read on
-  its own: every good wears its grade as an animated twinkle — Mk1 nothing,
-  Mk2 warm gold, Mk3 verdigris — in the bag, on the belts, on the ground and
-  in every price row. See *Materials* above for the rule.
+- **Grade reads at a glance (2026-08-25, settled 2026-08-26).** Deep-ore icons
+  stay family art until the Phase 6 bake; what tells the grades apart is one
+  animated mark laid over the good — Mk1 nothing, Mk2 warm gold, Mk3 verdigris
+  — in the bag, on the belts, on the ground and in every price row. The depth
+  pip it replaced has been removed. See *Materials* above for the rule.
 - **Still open:** the display glyph map (standalone `-` drawn as —, «» on
   the quote key) rides a later content pass; the number row is its own bonus
   era, later.

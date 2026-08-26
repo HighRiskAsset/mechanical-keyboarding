@@ -2309,40 +2309,44 @@
     }
     x.globalAlpha = 1;
   }
-  function sparkleOn(c, level, frame) {
+  const sparkFrame = (frame) => (((frame | 0) % SPARK_FRAMES) + SPARK_FRAMES) % SPARK_FRAMES;
+  // The mark is ONE sprite and it is not part of any material: a transparent
+  // ten by ten holding nothing but the twinkle, laid over the good. Every
+  // material of a grade wears the identical mark, so there are twenty-four of
+  // these in the whole game (two grades, twelve frames) instead of a private
+  // set of frames baked into every ore. It also means the thing that says
+  // *what a good is* and the thing that says *how good it is* are two
+  // drawings, and neither can quietly become the other.
+  function gradeMark(level, frame) {
+    const [c, x] = canvas(MAT_PX, MAT_PX);
     const g = SPARK_GRADE[level - 1];
-    if (!g) return;
-    const x = c.getContext('2d');
+    if (!g) return c;
+    const f = sparkFrame(frame);
     for (const [sx, sy, at] of g.sites) {
-      const i = (frame - at + SPARK_FRAMES) % SPARK_FRAMES;
+      const i = (f - at + SPARK_FRAMES) % SPARK_FRAMES;
       if (i < g.ramp.length) twinkle(x, g, sx, sy, g.ramp[i], g.fade[i]);
     }
+    return c;
   }
-  const sparkFrame = (frame) => (((frame | 0) % SPARK_FRAMES) + SPARK_FRAMES) % SPARK_FRAMES;
-
+  // body and mark flattened into one canvas — for the places that have no
+  // sprite to hang a child on: the dev proof sheets and the fly-to-bag image.
+  // On the map they are two sprites; see `matIcon` in factory.js.
   function matSprite(kind, frame) {
     const c = matBody(kind);
     const lv = matGrade(kind);
-    if (lv) sparkleOn(c, lv, sparkFrame(frame));
+    if (lv) c.getContext('2d').drawImage(gradeMark(lv, frame === undefined ? SPARK_PEAK : frame), 0, 0);
     return c;
   }
   function matBody(kind) {
     const spec = (window.CHAIN && window.CHAIN.MATS && window.CHAIN.MATS[kind]) || null;
     const form = spec ? spec.form : (kind === 'money' ? 'money' : 'crates');
     if (form === 'ore') {
-      // a deep ore wears its family's art with depth pips along the top —
-      // one bright fleck per reach past the first (Phase 6 gives each its
-      // own chunk; until then the pips are the mark)
+      // a deep ore wears its family's art until the Phase 6 bake gives each
+      // its own chunk. What says how deep it was dug is the grade mark, which
+      // is not part of the body and is not drawn here — see gradeMark above.
       const fam = (spec && spec.ores[0]) || kind;
       const t = (ORE_TONE[fam] || ORE_TONE.iron).concat(ORE_EXTRA[fam] || P.white);
-      const c = matMask(ORE_MASK[fam] || ORE_MASK.iron, t);
-      const depth = (spec && spec.depth) || 1;
-      if (depth > 1) {
-        const x = c.getContext('2d');
-        x.fillStyle = P.white;
-        for (let i = 0; i < depth - 1; i++) x.fillRect(1 + i * 2, 0, 1, 1);
-      }
-      return c;
+      return matMask(ORE_MASK[fam] || ORE_MASK.iron, t);
     }
     if (form === 'ingot') {
       const t = ALLOY_TONE[kind] || ALLOY_TONE.castiron;
@@ -2486,14 +2490,13 @@
     textTex: (str, fg) => cachedTex('t:' + fg + '|' + str, () => textCanvas(str, fg)),
     // materials: one sprite, three ways of asking for it. The HUD, the menu
     // rows, the goods on the belt and the fly-to-bag image are all this.
-    // `frame` is the grade twinkle's; a plain good ignores it and keeps the
-    // one texture it always had.
+    // A material is one texture, as it always was — the grade mark is its own
+    // sprite laid over it (`gradeTex`), never baked in. `matCanvas`/`matURL`
+    // flatten the two for callers that can only take a picture.
     MAT_PX,
     MAT_SPARK_FRAMES: SPARK_FRAMES, MAT_SPARK_PEAK: SPARK_PEAK, matGrade,
-    matTex: (kind, frame) => {
-      const f = matGrade(kind) ? sparkFrame(frame) : 0;
-      return cachedTex('mat:' + kind + ':' + f, () => matSprite(kind, f));
-    },
+    matTex: (kind) => cachedTex('mat:' + kind, () => matBody(kind)),
+    gradeTex: (level, frame) => cachedTex('grade:' + level + ':' + sparkFrame(frame), () => gradeMark(level, frame)),
     matCanvas: matSprite,
     matURL: (kind, frame) => matSprite(kind, frame).toDataURL(),
     kindIconTex: (kind) => cachedTex('kind:' + kind, () => kindIcon(kind)),

@@ -53,31 +53,50 @@
   const HUD_W = 46, HUD_ROW = 14;
   let chargeVal = null, chargeG = null;
 
-  // ---------- the grade twinkle: every sprite that shows a material ----------
-  // A good's grade is animated (pixels.js draws it), so the sprite showing it
-  // has to be re-textured on a beat. Everything that draws a material — the
-  // bag, the belts, the goods lying on the ground, the price and recipe rows —
-  // is made here and refreshed from this one list, so the grade cannot say one
-  // thing in the bag and another on the band.
+  // ---------- the grade mark: every sprite that shows a material ----------
+  // A good is one sprite and its grade is a second one riding on top of it —
+  // the same transparent ten by ten over every material of that grade. So a
+  // material has the one texture it always had, and the mark is a child that
+  // animates. Everything that draws a material — the bag, the belts, the goods
+  // lying on the ground, the price and recipe rows — is made here, so the
+  // grade cannot say one thing in the bag and another on the band.
   //
   // Each sprite carries its own phase. A run of deep ore that all twinkled on
   // the same frame would strobe; offset, the same run shimmers down the line,
   // which is what a belt of ore should look like anyway.
+  //
+  // `anchor` is passed in rather than set by the caller afterwards: a child is
+  // laid out from its parent's origin and takes no notice of the parent's
+  // anchor, so the mark has to be given the same one to sit over the good.
+  // (Never stash it in `_anchor` — that is pixi's own field behind `.anchor`,
+  // and writing a number over it turns the anchor into a number.)
   const SPARK_BEAT = 5;                  // ticks per frame — one cycle a second
   let matFrame = 0, matPhase = 0;
   const matViews = [];
-  function matIcon(mat, phase) {
-    const ph = phase === undefined ? (matPhase = (matPhase + 5) % PIXELS.MAT_SPARK_FRAMES) : phase;
-    const sp = new PIXI.Sprite(PIXELS.matTex(mat, matFrame + ph));
-    sp._mat = mat; sp._ph = ph;
+  function matIcon(mat, phase, anchor) {
+    const sp = new PIXI.Sprite(PIXELS.matTex(mat));
+    sp._ph = phase === undefined ? (matPhase = (matPhase + 5) % PIXELS.MAT_SPARK_FRAMES) : phase;
+    if (anchor) sp.anchor.set(anchor);
+    setMatIcon(sp, mat);
     matViews.push(sp);
     return sp;
   }
-  // the material under a long-lived sprite changes (a belt shifts its goods
-  // down a place, a pile on the ground is picked over) — the phase does not
+  // The material under a long-lived sprite changes (a belt shifts its goods
+  // down a place, a pile on the ground is picked over) — the phase does not,
+  // and the mark comes and goes with the grade of whatever is there now.
   function setMatIcon(sp, mat) {
     sp._mat = mat;
-    sp.texture = PIXELS.matTex(mat, matFrame + sp._ph);
+    sp.texture = PIXELS.matTex(mat);
+    sp._lv = PIXELS.matGrade(mat);
+    if (!sp._lv) {
+      if (sp._mark) { sp.removeChild(sp._mark); sp._mark.destroy(); sp._mark = null; }
+      return;
+    }
+    if (!sp._mark) {
+      sp._mark = new PIXI.Sprite(PIXELS.gradeTex(sp._lv, matFrame + sp._ph));
+      sp._mark.anchor.set(sp.anchor.x, sp.anchor.y);
+      sp.addChild(sp._mark);
+    } else sp._mark.texture = PIXELS.gradeTex(sp._lv, matFrame + sp._ph);
   }
   // destroyed or orphaned sprites fall out of the list here: a menu row lives
   // as long as the menu, and there is no other moment to sweep them up
@@ -85,7 +104,7 @@
     for (let i = matViews.length - 1; i >= 0; i--) {
       const sp = matViews[i];
       if (sp.destroyed || !sp.parent) { matViews.splice(i, 1); continue; }
-      if (PIXELS.matGrade(sp._mat)) sp.texture = PIXELS.matTex(sp._mat, matFrame + sp._ph);
+      if (sp._mark) sp._mark.texture = PIXELS.gradeTex(sp._lv, matFrame + sp._ph);
     }
   }
 
@@ -1575,8 +1594,7 @@
         const sh = new PIXI.Sprite(PIXELS.dropShadowTex());
         sh.anchor.set(0.5);
         const ph = (d.id.charCodeAt(d.id.length - 1) * 37) % 64;
-        const sp = matIcon(d.mat, ph % PIXELS.MAT_SPARK_FRAMES);
-        sp.anchor.set(0.5);
+        const sp = matIcon(d.mat, ph % PIXELS.MAT_SPARK_FRAMES, 0.5);
         cameraC.addChild(sh); cameraC.addChild(sp);
         v = dropViews[d.id] = { sp, sh, mat: d.mat, ph };
       }
