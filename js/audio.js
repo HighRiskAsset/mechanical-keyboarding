@@ -46,20 +46,47 @@
   // actually set has to survive being talked over.
   let muted = false;
 
+  // ---------- the balance between the buses ----------
+  // Measured, not guessed, and the measurement said the first pass was wrong.
+  // A key click renders at RMS 0.0027; the rain bed at full rendered at RMS
+  // 0.0324, which is the click 21.7 dB DOWN on the weather. The mistake was
+  // levelling a continuous bed against a transient by their peaks: a bed is
+  // heard by its RMS, a click by its peak, and matching those two makes the
+  // bed win by twenty decibels. A bed belongs well under the events, and the
+  // events belong out in front, so the trims below open the gap from both
+  // ends. They are the only place the balance lives; no sound is edited to
+  // change it.
+  const TRIM = { sfx: 1.85, music: 1.0, weather: 0.38 };
+
   let ctx = null;
   let rumbleGain = null;
   let clackTimer = null;
-  let sfxBus = null, musicBus = null, wxBus = null;
+  let sfxBus = null, musicBus = null, wxBus = null, master = null;
 
   function ensureCtx() {
     if (!ctx) {
       ctx = new (window.AudioContext || window.webkitAudioContext)();
-      sfxBus = ctx.createGain(); sfxBus.gain.value = sfxOn ? 1 : 0;
-      musicBus = ctx.createGain(); musicBus.gain.value = musicOn ? 1 : 0;
-      wxBus = ctx.createGain(); wxBus.gain.value = sfxOn && wxOn ? 1 : 0;
-      sfxBus.connect(ctx.destination);
-      musicBus.connect(ctx.destination);
-      wxBus.connect(ctx.destination);
+      // Everything meets at one master, and a limiter stands after it. With
+      // the effects pushed out in front there is real headroom being used, and
+      // a fanfare landing on a build landing on a storm must clip on nobody's
+      // machine. Threshold is up at the ceiling and the knee is hard, so it
+      // does nothing at all until something would otherwise have gone over.
+      master = ctx.createGain();
+      master.gain.value = 1;
+      const limiter = ctx.createDynamicsCompressor();
+      limiter.threshold.value = -1.5;
+      limiter.knee.value = 0;
+      limiter.ratio.value = 20;
+      limiter.attack.value = 0.002;
+      limiter.release.value = 0.12;
+      master.connect(limiter).connect(ctx.destination);
+
+      sfxBus = ctx.createGain(); sfxBus.gain.value = sfxOn ? TRIM.sfx : 0;
+      musicBus = ctx.createGain(); musicBus.gain.value = musicOn ? TRIM.music : 0;
+      wxBus = ctx.createGain(); wxBus.gain.value = sfxOn && wxOn ? TRIM.weather : 0;
+      sfxBus.connect(master);
+      musicBus.connect(master);
+      wxBus.connect(master);
       buildRumble();
       buildWeather();
     }
@@ -74,13 +101,30 @@
     if (bus === 'wx') return sfxOn && wxOn;
     return sfxOn;
   }
+  // A ramp rather than a step, so switching a bus never pops. Short, though:
+  // measured at a tenth of a second, a keystroke fired the instant sound came
+  // back on was still inaudible, because a click is over in 28 ms and the bus
+  // had not arrived yet. Thirty milliseconds is past the pop and under the ear.
   function rampBus(g, to) {
-    if (g && ctx) g.gain.setTargetAtTime(to, ctx.currentTime, 0.08);
+    if (g && ctx) g.gain.setTargetAtTime(to, ctx.currentTime, 0.03);
   }
   function syncBuses() {
-    rampBus(sfxBus, sfxOn && !muted ? 1 : 0);
-    rampBus(musicBus, musicOn && !muted ? 1 : 0);
-    rampBus(wxBus, sfxOn && wxOn && !muted ? 1 : 0);
+    rampBus(sfxBus, sfxOn && !muted ? TRIM.sfx : 0);
+    rampBus(musicBus, musicOn && !muted ? TRIM.music : 0);
+    rampBus(wxBus, sfxOn && wxOn && !muted ? TRIM.weather : 0);
+  }
+
+  // The mix bench. Hands back a tap on the master so the balance can be
+  // measured on the real graph rather than on a replica of it: what is heard
+  // is what comes out of here, filters and envelopes and all. Dev only, and
+  // it costs nothing until something asks for it.
+  function tap() {
+    ensureCtx();
+    if (!ctx) return null;
+    const a = ctx.createAnalyser();
+    a.fftSize = 2048;
+    master.connect(a);
+    return a;
   }
 
   // Short filtered noise burst — a soft mechanical click.
@@ -289,8 +333,25 @@
   // One satisfying mobile-game language, not per-station instruments.
 
   // keystroke: crisp two-layer tick
-  function click() { ensureCtx(); noiseBurst(0.018, 5200, 0.05, 'highpass'); noiseBurst(0.028, 1600, 0.09); }
-  function thud() { ensureCtx(); noiseBurst(0.09, 220, 0.18, 'lowpass'); }
+  // Measured on the master, the click came out the quietest event in the game
+  // bar one, at a peak of 0.099 against a fanfare's 0.335. It fires thirty to
+  // sixty times a minute for thirty-two hours and it is the atomic reward of
+  // the whole design, so it has no business down there. Doubled, it sits at
+  // about 0.2: clearly in front of everything ambient, still well under the
+  // rare loud events, and nowhere near tiring.
+  function click() { ensureCtx(); noiseBurst(0.018, 5200, 0.10, 'highpass'); noiseBurst(0.028, 1600, 0.18); }
+  // And the thud was the quietest thing of all, at 0.029, a tenth of the
+  // click. Being unable to hear your own mistake is the wrong failure for a
+  // typing tutor. The gain number was never the problem: 0.18 of white noise
+  // through a 220 Hz lowpass is almost nothing left, which is exactly the trap
+  // of reading a pre-filter number as a level. So it gets a low sine with real
+  // body under the burst, the way `press` does, and lands just under the
+  // click. Under, not over: a miss must register, never punish.
+  function thud() {
+    ensureCtx();
+    noiseBurst(0.09, 260, 0.30, 'lowpass');
+    tone(120, 0.10, 0.055, 0, 'sine');
+  }
   function ding() { ensureCtx(); tone(1320, 0.25, 0.08); tone(1760, 0.35, 0.05, 0.07); }
   function press() { ensureCtx(); noiseBurst(0.14, 130, 0.24, 'lowpass'); tone(90, 0.16, 0.1, 0.02, 'sine'); }
   // material pickup: quick pitch-up pop
@@ -588,6 +649,8 @@
     assemble, pickup, arrive, pay, thunder, onKey, setMuted,
     // the sky drives these two; nothing else may
     weather, setDrive,
+    // the mix bench: a tap on the master, for measuring the real graph
+    tap,
     // the three switches. sfx and music are the player's, in the header;
     // weather is a developer switch while the bed is being judged.
     setSfx, isSfx: () => sfxOn,

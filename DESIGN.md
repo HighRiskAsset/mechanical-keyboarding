@@ -2324,8 +2324,14 @@ crisp), and that ladder is the atomic reward of the entire game. So:
   What is left is patter and weight, rain heard through a window. It does not
   sound like rain sounds. That is the price of having rain at all, and it is
   worth paying.
-- **The bed peaks at about the level of the loudest key click** and no higher,
-  so a storm is present without ever being the loudest thing in the room.
+- **The bed sits well under the events, measured by the right quantity.** The
+  first pass got this wrong and a listening test caught it: the bed was
+  levelled against the loudest *stack* of sounds, by *peak*. Both halves were
+  mistakes. A continuous bed is heard by its RMS and a click by its peak, and
+  matching those two makes the bed win by twenty decibels. Rendered on the
+  master, the click was 21.7 dB under the rain in RMS and 5.4 dB under it even
+  on peaks. It is now 16 dB **over** the storm on peaks, which is the
+  relationship a foreground event and a background bed should have.
 - **Wind is one wide unresonant band.** Q stays low on purpose: a resonant peak
   would give the wind a pitch, and a pitch would fight whatever key the
   soundtrack is in.
@@ -2335,6 +2341,23 @@ crisp), and that ladder is the atomic reward of the entire game. So:
   into the gap between 1.6 and 5.2 kHz and both quiet.
 - **Snow makes no sound of its own**, so a snowfall is heard as wind and as the
   night bed going quiet under it.
+
+**The balance lives in one place**, a `TRIM` per bus, and no sound is edited to
+change it. Sfx 1.85, music 1.0, weather 0.38. A hard limiter stands on the
+master afterwards: with the effects pushed out in front there is real headroom
+in use, and a fanfare landing on a build landing on a storm measures 0.56 peak,
+so the limiter never engages. It is insurance for whatever gets added next.
+
+**`AUDIO.tap()` is the mix bench.** It hands back an analyser on the master, so
+a balance can be measured on the real graph rather than on a replica of it,
+with the filters and envelopes that actually run. It was worth building: the
+numbers said two things reading the code never would. The thud was the quietest
+sound in the game at a tenth of the click, because 0.18 of white noise through
+a 220 Hz lowpass is almost nothing left, and **a gain argument is a pre-filter
+number, not a level**. And the click, which fires sixty times a minute for
+thirty-two hours and is the atomic reward of the design, was the second
+quietest. Both are now levelled: click out in front, thud just under it, since
+a miss must register and never punish.
 
 **Typing pushes the weather back.** A run of clean characters ducks the whole
 weather bus, all the way back at a streak of forty. This is the bgm plan's
