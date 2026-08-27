@@ -114,6 +114,16 @@
     rampBus(wxBus, sfxOn && wxOn && !muted ? TRIM.weather : 0);
   }
 
+  // Where js/music.js plugs in: the shared context and the bus its output
+  // belongs on. Handing back the bus rather than playing the tracks here is
+  // what keeps the switch honest — the music trim, the mute and the master
+  // limiter apply to a loaded track exactly as they do to a click, because
+  // it is the same graph and there is only one of it.
+  function musicOut() {
+    ensureCtx();
+    return ctx ? { ctx, bus: musicBus } : null;
+  }
+
   // The mix bench. Hands back a tap on the master so the balance can be
   // measured on the real graph rather than on a replica of it: what is heard
   // is what comes out of here, filters and envelopes and all. Dev only, and
@@ -651,6 +661,8 @@
     weather, setDrive,
     // the mix bench: a tap on the master, for measuring the real graph
     tap,
+    // the socket js/music.js plugs its tracks into
+    musicOut,
     // the three switches. sfx and music are the player's, in the header;
     // weather is a developer switch while the bed is being judged.
     setSfx, isSfx: () => sfxOn,

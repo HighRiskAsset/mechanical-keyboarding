@@ -334,7 +334,27 @@ the same sonic family as `AUDIO.pickup`, `AUDIO.poof` and the arrival whistle.
 Suno cannot cut that short or that clean, and a generated fanfare would be the
 one sound in the game that came from somewhere else.
 
-## Playback (`js/music.js`, not yet built)
+## Playback — `js/music.js` (BUILT 2026-08-28)
+
+Shipped and verified in the running game: region resolves through
+`CHAIN.regionAt(FACTORY.playerPos())`, the basin pool plays at −16 dBFS at the
+master (the source file measures −15.9, so the bus is at unity), the 1.8 s
+hold ignores a brief edge crossing and follows a real one, the header switch
+takes it to silence and back, and `MUSIC.works(true)` swaps in the works
+theme. Public surface: `MUSIC.works(on)`, `MUSIC.launch()`,
+`MUSIC.duck(depth, secs)`, `MUSIC.now()`.
+
+`AUDIO.musicOut()` is the socket — it hands back the shared context and the
+music bus, so a loaded track inherits the music trim, the mute and the master
+limiter rather than running in a graph of its own.
+
+**Two things still want wiring from outside**, because whether they are true is
+the simulation's business and not the soundtrack's: `MUSIC.works(true)` when a
+place's machines are mostly automated, and `MUSIC.launch()` at the finish.
+Until something calls them the game plays place loops only, which is correct
+for T0–T4 anyway.
+
+The design the file implements:
 
 - **Crossfade-loop, never a hard loop.** At `duration - 3s`, restart the buffer
   with a 3-second equal-power crossfade. Hides whatever intro and ending Suno
