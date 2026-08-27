@@ -91,6 +91,59 @@ bright per-region palettes. This ruling moves that. The art direction needs the
 same re-tune, and DESIGN.md is the source of truth — this document should not
 be the only place the change is recorded.
 
+## Timbre — sequenced, not recorded (user ruling 2026-08-27)
+
+The v5.5 take on MK 00 landed tonally, but **sounds too realistic**: a real
+violin and a real flute clash against true pixel graphics. The music has to be
+as sampled as the art is.
+
+Push every prompt toward **sequenced, not recorded**: short looped 32 kHz
+SPC700-style samples, a GM MIDI soundfont character, slightly grainy and
+quantized — the way a Super Nintendo *sequences* a flute rather than a
+recording of one. **Not square-wave chiptune** — the ask is a tinge, not a
+genre change. The working clause, which goes near the front of the prompt where
+it carries weight:
+
+> Sampled and synthetic, NOT a real orchestra: short looped 32kHz SPC700
+> samples, GM MIDI soundfont character, slightly grainy and quantized. Not
+> square-wave chiptune, but clearly sequenced.
+
+**Model: v5.5 only** (Pro, from 2026-08-27). The v4.5 takes are not used —
+ignore them in the workspace and do not download them.
+
+## Mode balance — the melody carries the hope (user concern 2026-08-27)
+
+Worry raised: the mist direction may be **too much minor key for a
+dopamine-spiking game**. The worry is right, and the fix is not a retreat to
+major. It is placement:
+
+- **Dorian is not sad.** Its major sixth is why it reads as *adventure* rather
+  than *grief*, and it is the mode most beloved exploration music sits in.
+  Keep it as the default bed.
+- **Aeolian is where the sadness actually lives.** Keep natural minor out of
+  the high-traffic spaces. The bog can have it; the basin cannot.
+- **Mixolydian is the reward mode** — major with a flat seventh, heroic
+  without turning sweet. The Works and anything that plays after an
+  achievement belong here.
+- **Split the layers: harmony carries the mystery, melody carries the hope.**
+  A wistful modal bed under a rising, singable tune is the whole trick. You do
+  not have to choose between dopamine and mystery — they go in different
+  voices.
+
+**Reference: Bravely Default's Norende village-rebuilding theme** (user, same
+day). The music box is not the ask — *the melody* is: a clear singable line
+with a rising, hopeful contour over a gentle accompaniment, wistful underneath
+because it is about rebuilding something that was lost. That is this game's
+premise exactly — a frontier of machines somebody built and abandoned — and it
+is the target for every place loop.
+
+**The hard consequence, and the strongest argument here.** If the SFX are
+key-locked to the BGM (see *Key-locked SFX*, the headline idea of this plan),
+then a relentlessly minor soundtrack **makes the reward sounds sad too**. A
+pickup run resolving in natural minor reads as a loss, not a win — the juice
+inverts. Keeping the high-traffic tracks dorian or mixolydian is therefore not
+a taste call; it is what lets the reward layer work at all.
+
 ## The rules
 
 1. **No lyrics, ever.** The one rule with no exception. Words compete directly
@@ -298,6 +351,76 @@ Get these two right first. Everything else is a Cover of the theme.
 
 Both are the tonal test: if they come back cheerful, the prompt is not carrying
 *Tone* above and the mist words need to move to the front.
+
+## Measured results — the v5.5 batch (2026-08-27)
+
+15 v5.5 takes in `assets/bgm/`, measured with ffmpeg + a Goertzel chroma
+analyser (`scratchpad/keyscan.ps1`). Mode is read from actual scale-degree
+strength (flat vs natural third, sixth, seventh) relative to the detected
+tonic, not from a major/minor guess.
+
+| Track | Dur | Mode | Click band | LRA | Tail |
+|---|---|---|---|---|---|
+| mk00b-frontier-theme-snes-**a** | 0:49 | **A dorian** ✓brief | −14.4 | 3.1 | ok |
+| mk00b-frontier-theme-snes-b | 1:50 | G mixolydian | −13.0 | 3.6 | ok |
+| mk00-frontier-theme-orig-a | 2:14 | G aeolian | −16.3 | 4.1 | ok |
+| mk01-basin-first-light-**a** | 0:43 | **G ionian** (conf 0.86, best in set) | −13.5 | 3.6 | ok |
+| mk01-basin-first-light-b | 0:45 | B aeolian ✗ wrong for home | −14.3 | 3.3 | ok |
+| mk05-quarry-hills-**a** | 2:46 | **C dorian** ✓brief | −13.8 | 2.9 | FADES |
+| mk05-quarry-hills-b | 2:47 | C ionian | −11.4 | 5.4 | FADES |
+| mk06-coal-bog-a | 1:42 | C dorian | −16.3 | 4.9 | FADES |
+| mk06-coal-bog-**b** | 1:02 | **G aeolian** ✓brief (bog is the one place) | −14.8 | 4.1 | FADES |
+| mk07-oil-flats-**a** | 1:09 | **D mixolydian** ✓brief | −17.8 | 6.9 | ok |
+| mk07-oil-flats-b | 1:18 | A# mixolydian ✓brief | −17.0 | 6.1 | ok |
+| mk08-snow-peaks-**a** | 2:12 | **G mixolydian** ✓brief | −13.8 | 5.2 | FADES |
+| mk08-snow-peaks-b | 1:57 | G aeolian | −14.2 | 6.1 | FADES |
+| mk09-the-works-iron-a | 1:52 | C aeolian ✗ darkest in set | −12.8 | 3.7 | ok |
+| mk09-the-works-iron-**b** | 0:35 | **C dorian** (best available) | −11.3 | 1.8 | ok |
+
+*Click band = 2–5 kHz RMS relative to overall RMS, in dB. More negative is
+better — it is headroom for the key clicks. LRA = loudness range in LU.*
+
+### What the numbers say
+
+- **The minor-key worry is smaller than feared.** Six takes are mixolydian or
+  ionian, four dorian, five aeolian. Two thirds sit at dorian or brighter, and
+  three of the five aeolians are B-variants that simply do not get used.
+- **Almost every track has a brighter take and a darker take.** That is the
+  useful finding: the mode can be *chosen per place from what exists* rather
+  than regenerated. The bolded row in each group is the pick.
+- **The Works is the one real miss.** It is the reward-state track and it came
+  back the darkest thing in the set (take a has the strongest flat third of
+  any track, 0.185 against 0.045 natural). Per *Mode balance* it should be
+  mixolydian; neither take is. **Regenerate it** — and because the SFX are
+  key-locked, an aeolian works theme would make the payoff sound like a loss.
+- **Duration is the actual problem.** Seven of fifteen are under 1:20, four
+  under 0:50. At 0:43 the basin track repeats roughly 84 times an hour. Suno
+  v5.5 defaults short; the fix is **Extend**, not acceptance.
+- **The "no fade ending" instruction held about 60% of the time.** Six takes
+  fade out, bog-b by 15.8 dB. Fades must be trimmed before the crossfade-loop
+  can work.
+- **Click-band headroom is good everywhere** — 11 to 18 dB below overall RMS.
+  The two most percussive takes (works-b, quarry-b) crowd it most, exactly as
+  expected from industrial percussion, and are still 11 dB down.
+- **No track swells.** LRA 1.8–6.9 LU across the set; the steady-dynamics rule
+  worked without exception.
+
+## Mix note — SFX is too soft against weather (user, 2026-08-27)
+
+Playtest observation: **the SFX read as soft, especially next to the weather
+bed.** This contradicts the stated design in `js/audio.js`, whose header says
+the weather bus is "quiet by construction" and that "weather is ducked by
+typing, never the reverse" — so this is a mix bug, not a taste call. Three
+candidates, in order of likelihood:
+
+1. the typing duck on `wxDuck` is not firing, or its depth is too shallow;
+2. the weather bus sits too hot relative to the sfx bus at rest;
+3. the sfx bus is simply low and the click ladder needs gain.
+
+Not fixed here — `js/audio.js` is owned by another session in flight. Flagging
+only. It matters more than a normal mix nit: the click ladder at 1.6 and
+5.2 kHz **is** the atomic reward of the game, and per *The dopamine loop*
+above, anything that buries it is burying the dopamine.
 
 ## Superseded
 
