@@ -2,10 +2,11 @@
 // Walk with arrows; dock at a place by standing near it; type to work a
 // machine; hold Space to open the place's menu (arrows choose, a tap of
 // Space confirms, Escape closes). Tech tree v3: everything is bought from
-// the bag — Mk and ⚙ at the machine, and machines through the build menu a
-// hold raises on open ground: pick a kind, walk its ghost to a pad (mines
-// to a free vein), tap Space to turn it, hold Space to build (rotation
-// overhaul, 2026-08-21). The one screen before the world is the map picker.
+// the bag: Mk and ⚙ at the machine, and machines through the build menu a
+// hold raises on open ground: pick a kind, walk its ghost to a build site
+// (mines to a free vein), tap Space to turn it, hold Space to build
+// (rotation overhaul, 2026-08-21). The one screen before the world is the
+// map picker.
 (function () {
   'use strict';
 
@@ -648,24 +649,49 @@
     if (d.kind === 'belt') return T.t(d.belts.length > 1 ? 'capOnCrossing' : 'capOnBelt');
     return '';
   }
-  // the caption: the chosen row's meaning while a menu is open; the place
-  // and the prompt while docked; the spool's errand while carrying
-  function setCaption(text, cls) {
+  // The caption: two lines under the map — what the place is, then what can
+  // be done with it; either line may stand alone (2026-08-27). While a menu
+  // is open the second line is the chosen row's meaning; while carrying the
+  // spool it is the spool's errand, which already names its own parties.
+  function setCaption(name, action, cls) {
     if (!captionEl) return;
-    if (!text) { captionEl.classList.add('hidden'); captionEl.textContent = ''; return; }
-    captionEl.textContent = text;
+    if (!name && !action) { captionEl.classList.add('hidden'); captionEl.textContent = ''; return; }
+    captionEl.textContent = '';
+    for (const [line, cn] of [[name, 'cap-name'], [action, 'cap-act']]) {
+      if (!line) continue;
+      const el = document.createElement('div');
+      el.className = cn;
+      el.textContent = line;
+      captionEl.appendChild(el);
+    }
     captionEl.className = cls || '';
   }
   let captionFlash = null;
   function flashCaption(text) {
     if (captionFlash) clearTimeout(captionFlash);
-    setCaption(text, 'ok');
+    setCaption('', text, 'ok');
     captionFlash = setTimeout(() => { captionFlash = null; refreshCaption(); }, 1600);
+  }
+  // what the operator stands on when no place holds them: a free vein, a
+  // build site, or nothing worth a name. The identity line for ground that
+  // all looks alike from above
+  function groundName() {
+    const at = FACTORY.playerPos();
+    const tx = Math.floor(at.x / 16), ty = Math.floor((at.y - 1) / 16);
+    for (const n of CHAIN.unbuiltNodes(profile)) {
+      const b = MAPKIT.veinBox(n);
+      if (tx >= b.c0 && tx <= b.c1 && ty >= b.r0 && ty <= b.r1) return (T.t('veinNames') || {})[n.ore] || '';
+    }
+    for (const p of CHAIN.freeSites(profile)) {
+      const b = MAPKIT.siteBox(p);
+      if (tx >= b.c0 && tx <= b.c1 && ty >= b.r0 && ty <= b.r1) return T.t('capSite');
+    }
+    return '';
   }
   function refreshCaption() {
     if (captionFlash) return;
-    if (autoTyping) { setCaption(T.t('capDebugAuto'), 'ok'); return; }
-    if (!profile) { setCaption(''); return; }
+    if (autoTyping) { setCaption('', T.t('capDebugAuto'), 'ok'); return; }
+    if (!profile) { setCaption('', ''); return; }
     if (menu || buildMenu) {
       const mm = menu || buildMenu;
       const row = mm.rows[mm.sel] || {};
@@ -674,34 +700,34 @@
       if (row.enabled === false) { cls = 'dim'; if (row.priced) text += T.t('capUnaffordable'); }
       else if (row.action && row.action.type === 'socket') cls = 'ok';
       if (row.ok === false && row.action === null && spool) cls = 'no';
-      setCaption(text, cls);
+      setCaption(menu ? placeName(dock) : groundName() || T.t('capOpenGround'), text, cls);
       return;
     }
     if (placing) {
-      if (placing.kind === 'mine' && !placing.vein) { setCaption(T.t('capPlaceMine'), 'no'); return; }
-      if (placing.later) { setCaption(T.t('capVeinLater', { name: mineName(placing.vein.ore) }), 'no'); return; }
+      if (placing.kind === 'mine' && !placing.vein) { setCaption('', T.t('capPlaceMine'), 'no'); return; }
+      if (placing.later) { setCaption('', T.t('capVeinLater', { name: mineName(placing.vein.ore) }), 'no'); return; }
       const name = placing.kind === 'mine' ? mineName(placing.vein.ore) : kindName(placing.kind);
-      if (placing.poor) { setCaption(T.t('capPlacePoor', { name }), 'no'); return; }
-      if (!placing.ground) { setCaption(T.t('capPlaceBad'), 'no'); return; }
-      setCaption(placing.kind === 'mine' ? T.t('capPlaceMine') : T.t('capPlace', { name }), 'ok');
+      if (placing.poor) { setCaption('', T.t('capPlacePoor', { name }), 'no'); return; }
+      if (!placing.ground) { setCaption('', T.t('capPlaceBad'), 'no'); return; }
+      setCaption('', placing.kind === 'mine' ? T.t('capPlaceMine') : T.t('capPlace', { name }), 'ok');
       return;
     }
     if (spool && dock && dock.kind === 'machine' && dock.m.id !== spool.from) {
       const from = SIM.machineById(profile, spool.from);
       const link = from ? SIM.canLink(profile, from, dock.m) : { ok: false, why: 'same' };
       if (dock.m.kind === 'mine' && !link.ok) link.why = 'mine';
-      if (link.ok && spoolRoute) setCaption(T.t('capSocket', { n: spoolRoute.length, from: machineName(from) }), 'ok');
-      else setCaption(T.t('capNoBelt', { why: beltWhy(link.ok ? 'path' : link.why, from) }), 'no');
+      if (link.ok && spoolRoute) setCaption(placeName(dock), T.t('capSocket', { n: spoolRoute.length, from: machineName(from) }), 'ok');
+      else setCaption(placeName(dock), T.t('capNoBelt', { why: beltWhy(link.ok ? 'path' : link.why, from) }), 'no');
       return;
     }
     if (spool) {
       const from = SIM.machineById(profile, spool.from);
-      setCaption(T.t('capCarrying', { from: machineName(from), mats: matList(from ? SIM.produces(profile, from) : []) }), '');
+      setCaption('', T.t('capCarrying', { from: machineName(from), mats: matList(from ? SIM.produces(profile, from) : []) }), '');
       return;
     }
     // a machine with nothing to make says so, and names what would change it
     if (dock && dock.kind === 'machine' && dock.m.kind !== 'mine' && !CHAIN.kindLive(dock.m.kind, profile)) {
-      setCaption(T.t('capNothingToMake', { name: machineName(dock.m) }) + afterTail(dock.m.kind), 'no');
+      setCaption(placeName(dock), T.t('capNothingToMake') + afterTail(dock.m.kind), 'no');
       return;
     }
     // typing outran supply: name the starving input — this is the moment
@@ -711,13 +737,12 @@
       const short = Object.entries(recipe.in)
         .filter(([mat, n]) => ((dock.m.buf.in[mat] || 0) + CHAIN.bagAvail(profile.bag, mat)) < n)
         .map(([mat]) => matName(mat));
-      if (short.length) { setCaption(T.t('capStarved', { mats: short.join(' / ') }), 'no'); return; }
+      if (short.length) { setCaption(placeName(dock), T.t('capStarved', { mats: short.join(' / ') }), 'no'); return; }
     }
-    if (dock && menuRowsFor(dock).length) { setCaption(T.t('capHold', { place: placeName(dock) }), 'dim'); return; }
-    // open ground: the hold raises the build menu — said only while the menu
-    // would have a row the bag can actually cover, so the hint is never a lie
-    if (buildMenuRows().some((r) => r.enabled)) { setCaption(T.t('capOpenGround'), 'dim'); return; }
-    setCaption('');
+    if (dock && menuRowsFor(dock).length) { setCaption(placeName(dock), T.t('capHold'), 'dim'); return; }
+    // the ground underfoot: its name, plus the build prompt only while the
+    // menu would have a row the bag can cover — the hint is never a lie
+    setCaption(groundName(), buildMenuRows().some((r) => r.enabled) ? T.t('capBuildHere') : '', 'dim');
   }
   // while carrying the spool: a green bar under every machine the belt may
   // end at, red under the rest. A machine has to want the material AND have
@@ -832,19 +857,19 @@
     A.thud();
     redock();
   }
-  // The zone, as tiles: for now a machine may only stand on a surveyed pad
-  // (CURRENT RULE — free placement over open terrain is a later mode, and
+  // The zone, as tiles: for now a machine may only stand on a build site
+  // (CURRENT RULE; free placement over open terrain is a later mode, and
   // this set is the one thing it will replace with a terrain answer).
-  let padTiles = null, padTilesMap = null;
-  function padZone() {
-    if (padTiles && padTilesMap === mapId) return padTiles;
-    padTiles = new Set();
-    padTilesMap = mapId;
-    for (const p of CHAIN.PLOTS) {
-      const b = MAPKIT.padBox(p);
-      for (let ty = b.r0; ty <= b.r1; ty++) for (let tx = b.c0; tx <= b.c1; tx++) padTiles.add(tx + ',' + ty);
+  let siteTiles = null, siteTilesMap = null;
+  function siteZone() {
+    if (siteTiles && siteTilesMap === mapId) return siteTiles;
+    siteTiles = new Set();
+    siteTilesMap = mapId;
+    for (const p of CHAIN.SITES) {
+      const b = MAPKIT.siteBox(p);
+      for (let ty = b.r0; ty <= b.r1; ty++) for (let tx = b.c0; tx <= b.c1; tx++) siteTiles.add(tx + ',' + ty);
     }
-    return padTiles;
+    return siteTiles;
   }
   // the ghost walks a step ahead of the operator, snapped to the grid: the
   // body stands against the tile they are on, in the direction they face,
@@ -865,7 +890,7 @@
     placing.at = [c0, r0];
     const phantom = { kind: placing.kind, at: [c0, r0], face: placing.face };
     const box = CHAIN.machineBox(phantom);
-    const zone = padZone();
+    const zone = siteZone();
     const bodies = new Set();
     for (const om of profile.machines) {
       const ob = CHAIN.machineBox(om);
@@ -1213,7 +1238,7 @@
   function showGloss(word, justCollected) {
     if (!word.gloss) return;
     const mark = justCollected ? ` <span class="collect-mark">🎫 ${T.t('collectedMark')}</span>` : '';
-    glossLine.innerHTML = `<b>${word.text}</b> — ${word.gloss}${mark}`;
+    glossLine.innerHTML = `<b>${word.text}</b> · ${word.gloss}${mark}`;
     glossLine.classList.add('visible');
     clearTimeout(glossTimer);
     glossTimer = setTimeout(() => glossLine.classList.remove('visible'), 3500);
@@ -1244,9 +1269,9 @@
   }
   function refreshStats() {
     const acc = sessionAccuracy();
-    $('stat-acc').textContent = acc === null ? '—' : (acc * 100).toFixed(1) + '%';
+    $('stat-acc').textContent = acc === null ? '–' : (acc * 100).toFixed(1) + '%';
     const wpm = sessionWPM();
-    $('stat-wpm').textContent = wpm === null ? '—' : wpm.toFixed(0);
+    $('stat-wpm').textContent = wpm === null ? '–' : wpm.toFixed(0);
     $('stat-streak').textContent = session.streak;
     $('stat-time').textContent = fmtTime(session.activeMs);
   }
@@ -1659,6 +1684,7 @@
   // visible jumps; the timer carries it while the tab is in the background,
   // where frames stop but the factory should not.
   let simRaf = null, simTimer = null, simSaveAcc = 0, beltFloatAcc = 0;
+  let lastGroundTile = null;
   // The goods lying on the ground settle, then follow the operator in. This
   // is the only place they reach the bag: DROPS says what was picked up and
   // where it was lying, and the flight and the pop are the ones the typed
@@ -1686,6 +1712,14 @@
     if (!profile) return;
     // the build ghost walks with the operator: re-aim it as they move
     if (placing) updatePlacing();
+    // the caption names the ground as the operator crosses it — a vein, a
+    // site, open field, which no dock event announces
+    const gp = FACTORY.playerPos();
+    const gt = Math.floor(gp.x / 16) + ',' + Math.floor((gp.y - 1) / 16);
+    if (gt !== lastGroundTile) {
+      lastGroundTile = gt;
+      if (!dock && !menu && !buildMenu && !placing && !spool) refreshCaption();
+    }
     const dt = SIM.tick(profile, Date.now());
     if (dt <= 0) return;
     simSaveAcc += dt;
@@ -1831,11 +1865,11 @@
       <div class="card-station">${T.t('blockStation')}</div>
       <h2>${T.t('blockLines', { n: session.linesDone })}</h2>
       <div class="summary-grid">
-        <div><span class="sum-val">${sessionAccuracy() === null ? '—' : (sessionAccuracy() * 100).toFixed(1) + '%'}</span><span class="sum-label">${T.t('sumAccuracy')}</span></div>
-        <div><span class="sum-val">${sessionWPM() === null ? '—' : sessionWPM().toFixed(0)}</span><span class="sum-label">${T.t('sumWpm')}</span></div>
+        <div><span class="sum-val">${sessionAccuracy() === null ? '–' : (sessionAccuracy() * 100).toFixed(1) + '%'}</span><span class="sum-label">${T.t('sumAccuracy')}</span></div>
+        <div><span class="sum-val">${sessionWPM() === null ? '–' : sessionWPM().toFixed(0)}</span><span class="sum-label">${T.t('sumWpm')}</span></div>
         <div><span class="sum-val">${session.bestStreak}</span><span class="sum-label">${T.t('sumStreak')}</span></div>
       </div>
-      <p class="muted">${T.t('weakLetters')} ${weakest || '—'}</p>
+      <p class="muted">${T.t('weakLetters')} ${weakest || '–'}</p>
       ${next ? `<p class="muted">${T.t('nextKeys', { list: next.list, wpm: bar.wpm, acc: Math.round(bar.acc * 100) })}</p>` : `<p class="muted">${T.t('allUnlocked')}</p>`}
       <button id="ov-continue" class="btn-primary">${T.t('blockGo')}</button>
     `);
@@ -1984,7 +2018,7 @@
     E.setLastMap(id);
 
     dock = null; recipe = null; menu = null;
-    buildMenu = null; placing = null; padTiles = null;
+    buildMenu = null; placing = null; siteTiles = null;
     FACTORY.clearBuildGhost();
     pendingUnlock = null;
     unitAcc = 0; unitPaid = false; dryNow = false; lastCorrectTime = null;

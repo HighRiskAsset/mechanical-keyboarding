@@ -1,5 +1,5 @@
 // The overworld, in two dimensions: a frontier the operator walks with all
-// four arrows. Machines stand on plots and ore nodes; walking IS the menu;
+// four arrows. Machines stand on build sites and ore nodes; walking IS the menu;
 // hold Space at a place opens its icon menu (rows drawn here). Global: FACTORY
 //
 // One pixel grid, no exceptions: the canvas upscales by a whole number of
@@ -17,7 +17,7 @@
   let app, cameraC, labelsC, ready = false;
   let mountEl = null;
   let S = 2;                           // device px per world px — integer, set by resize()
-  let stations = {};                   // dock id → {def:{id,x,y,kind,m?,plot?,node?}, root, sp, glow, ...}
+  let stations = {};                   // dock id → {def:{id,x,y,kind,m?,node?}, root, sp, glow, ...}
   let player = null;
   const charTex = { down: [], up: [], side: [], work: [] };
   const idleTex = { down: [], up: [], side: [] };
@@ -40,7 +40,7 @@
   let simProfile = null;               // the save whose belts/items we draw (set by buildWorld)
   let beltViews = {};                  // belt id → {c, items:[sprite], pipe, b}
   let portSprites = [];                // the inlet/outlet plates around every machine
-  let padSprites = [];                 // the surveyed pads and veins (markers only)
+  let siteSprites = [];                // the build sites and free veins (markers only)
   const beltTileIndex = new Map();      // "tx,ty" → belt ids on that tile (two where runs cross)
   let spoolSp = null, spoolOn = false;
   let ghostG = null;
@@ -242,6 +242,26 @@
   // will do (gold = menu, green = lay the belt here, red = drop the spool)
   let chargeColor = 0xf2c14e;
   function setCharge(p, color) { chargeVal = p; chargeColor = color || 0xf2c14e; }
+  // The selector: corner brackets around the docked place — ink under colour,
+  // so it reads on any ground the way the socket chevron does. It replaced
+  // the foot bar (2026-08-27), which vanished against dark tiles and, lying
+  // under the thing instead of around it, never said "this one".
+  const SEL_INK = 0x17161a;
+  function drawSelector(g, box, color) {
+    g.clear();
+    const t = 2, gap = 1;                                   // stroke and breathing room, world px
+    const x0 = box.x - gap - t, y0 = box.y - gap - t;       // the bracket columns sit just outside the box
+    const x1 = box.x + box.w + gap, y1 = box.y + box.h + gap;
+    const L = Math.max(4, Math.min(7, 2 + Math.floor(Math.min(box.w, box.h) / 6)));
+    const arms = [
+      [x0, y0, L, t], [x0, y0, t, L],                       // NW
+      [x1 + t - L, y0, L, t], [x1, y0, t, L],               // NE
+      [x0, y1, L, t], [x0, y1 + t - L, t, L],               // SW
+      [x1 + t - L, y1, L, t], [x1, y1 + t - L, t, L],       // SE
+    ];
+    for (const [x, y, w, h] of arms) g.rect(x - 1, y - 1, w + 2, h + 2).fill(SEL_INK);
+    for (const [x, y, w, h] of arms) g.rect(x, y, w, h).fill(color);
+  }
   // the socket marker: a bouncing green chevron over the machine a carried
   // belt may end at (the place the operator stands)
   let socketTargetId = null, socketG = null;
@@ -606,7 +626,7 @@
     return band(lookOf(m.kind, m.autoLive), m.autoLive ? 'idle' : 'still', SIM.facingOf(m))[0];
   }
 
-  // Build the world from the save: machines on plots and nodes, free plots,
+  // Build the world from the save: machines on sites and nodes, free sites,
   // unbuilt nodes, crossings. `autoLive(m)` says whether a machine is running
   // by itself right now (⚙ bought and its letters sticky).
   // A vein takes the seating of the mine standing on it: a mine faced east or
@@ -635,8 +655,8 @@
     beltViews = {};
     for (const s of portSprites) { cameraC.removeChild(s); s.destroy(); }
     portSprites = [];
-    for (const s of padSprites) { cameraC.removeChild(s); s.destroy(); }
-    padSprites = [];
+    for (const s of siteSprites) { cameraC.removeChild(s); s.destroy(); }
+    siteSprites = [];
     beltTileIndex.clear();
     beltDockId = null;                 // its station goes with the rest, below
     for (const s of Object.values(stateDots)) { cameraC.removeChild(s); s.destroy(); }
@@ -665,11 +685,13 @@
       // a closed crossing is a place: dock beside it, hold Space to repair
       if (!open) {
         const root = new PIXI.Container();
-        const glow = new PIXI.Graphics().rect(0, 0, cr.w, 2).fill(0xc9a24a);
+        const selBox = { x: 0, y: -(cr.h + 1), w: cr.w, h: cr.h };   // the crossing itself, in root space
+        const glow = new PIXI.Graphics();
+        drawSelector(glow, selBox, 0xc9a24a);
         glow.visible = false;
         root.addChild(glow);
         root.position.set(cr.x, cr.y + cr.h + 1);
-        root.zIndex = -650;
+        root.zIndex = cr.y + cr.h + 2;         // the brackets surround the art, so they draw over it
         cameraC.addChild(root);
         // the work spot: centred on the crossing, a step out on the near side
         const horizontal = cr.kind === 'stairs' || cr.dir === 'v';
@@ -678,7 +700,7 @@
         stations['cross:' + cr.id] = {
           def: { id: 'cross:' + cr.id, x: wx, y: wy, kind: 'crossing', crossing: cr },
           root, sp: glow, glow, built: false, auto: false, sqTtl: 0,
-          glowRect: { x: 0, y: 0, w: cr.w, h: 2 },
+          selBox,
         };
       }
     }
@@ -697,7 +719,16 @@
       sp.position.set((bwPx - sp.texture.width) >> 1, bhPx - foot - sp.texture.height);
       root.addChild(sp);
       const bw = bwPx - 2;
-      const glow = new PIXI.Graphics().rect(1, bhPx - 5, bw - 4, 2).fill(0xc9a24a);
+      // the selector surrounds what the eye takes as the machine: its tile
+      // box and the sprite standing on it, whichever sticks out further
+      const sx = Math.min(0, sp.x), sy = Math.min(0, sp.y);
+      const selBox = {
+        x: sx, y: sy,
+        w: Math.max(bwPx, sp.x + sp.texture.width) - sx,
+        h: Math.max(bhPx, sp.y + sp.texture.height) - sy,
+      };
+      const glow = new PIXI.Graphics();
+      drawSelector(glow, selBox, 0xc9a24a);
       glow.visible = false;
       root.addChild(glow);
       // the belt mark: green = a belt from the carried spool can end here,
@@ -713,7 +744,7 @@
         def: { id, x: bx + 1, y: by + bhPx - 5, kind: m.kind, m, bw }, root, sp, glow, mark, built: true, auto: live, sqTtl: 0,
         spBase: sp.y,
         body: { x: bx, y: by, w: bwPx, h: bhPx },   // the ground it covers, for the smoke it arrives in
-        glowRect: { x: 1, y: bhPx - 5, w: bw - 4, h: 2 },
+        selBox,
         simState: live && window.SIM ? SIM.state(profile, m) : 'off',
       };
       if (live) {
@@ -727,32 +758,32 @@
     const relaid = reconcileBelts(profile);
     drawPorts(profile);
     drawBelts(profile);
-    // Free pads and unbuilt veins: surveyed markers on the ground, and
+    // Free build sites and unbuilt veins: survey markers on the ground, and
     // nothing more. They stopped being dockable places when the build ghost
     // arrived (rotation overhaul, 2026-08-21): a long press on open ground
-    // opens the build menu, and the ghost is aimed by walking — so a pad is
+    // opens the build menu, and the ghost is aimed by walking — so a site is
     // just the ground that will take a body, drawn where the zone really is
     // (one size, 3×3, the largest kind every way up).
-    for (const p of CHAIN.freePlots(profile)) {
-      const b = MAPKIT.padBox(p);
-      const sp = new PIXI.Sprite(PIXELS.plotTex(48, 48));
+    for (const p of CHAIN.freeSites(profile)) {
+      const b = MAPKIT.siteBox(p);
+      const sp = new PIXI.Sprite(PIXELS.siteTex(48, 48));
       sp.position.set(b.c0 * T16, b.r0 * T16);
       sp.zIndex = -700;
       sp.alpha = 0.9;
       cameraC.addChild(sp);
-      padSprites.push(sp);
+      siteSprites.push(sp);
     }
     // a vein takes a mine and a mine is two tiles by one, so its mark is
-    // that and not a build pad's — laid across or bedded on end, whichever
+    // that and not a build site's — laid across or bedded on end, whichever
     // way the map seated the seam
     for (const n of CHAIN.unbuiltNodes(profile)) {
       const b = MAPKIT.veinBox(n);
-      const sp = new PIXI.Sprite(PIXELS.plotTex(b.w * T16, b.h * T16));
+      const sp = new PIXI.Sprite(PIXELS.siteTex(b.w * T16, b.h * T16));
       sp.position.set(b.c0 * T16, b.r0 * T16);
       sp.zIndex = -700;
       sp.alpha = 0.6;
       cameraC.addChild(sp);
-      padSprites.push(sp);
+      siteSprites.push(sp);
     }
 
     player = new PIXI.Sprite(charTex.side[0]);
@@ -779,7 +810,7 @@
   // The box is both the tiles no run may lie on and the frame the ports hang
   // off, so a port is never a tile the body covers and a run always meets
   // the machine flush. The arithmetic is CHAIN's (the seated `at` plus the
-  // facing's footprint): dev/verify.html checks every plot on every map
+  // facing's footprint): dev/verify.html checks every site on every map
   // against the same answer this draws from.
   function bodyBox(m) {
     return CHAIN.machineBox(m);
@@ -1275,7 +1306,9 @@
     if (beltDockId === id && stations[id]) { stations[id].def.belts = ids; return id; }
     clearBeltDock();
     const root = new PIXI.Container();
+    const selBox = { x: 5, y: 20, w: T16, h: T16 };   // the one tile underfoot, nothing of the run
     const glow = new PIXI.Graphics();
+    drawSelector(glow, selBox, 0xc9a24a);
     glow.visible = false;
     root.addChild(glow);
     const def = { id, x: tx * T16 - 5, y: ty * T16 + T16, kind: 'belt', tile: [tx, ty], belts: ids };
@@ -1284,7 +1317,7 @@
     cameraC.addChild(root);
     stations[id] = {
       def, root, sp: null, glow, built: true, auto: false, sqTtl: 0,
-      glowRect: { x: 5, y: 34, w: T16, h: 2 },     // a bar along the tile's own foot
+      selBox,
     };
     beltDockId = id;
     return id;
@@ -1639,7 +1672,7 @@
     }
   }
 
-  // the middle of whatever a place is: a body, a pad, a vein. Everything that
+  // the middle of whatever a place is: a body, a site, a vein. Everything that
   // points at a place — the caption's sparks, the socket marker, the walk
   // that decides which place you are standing at — reads it from here, so a
   // kind three tiles across is docked at and lit up on its own centre line.
@@ -1866,6 +1899,8 @@
         .rect(bx + 1, by + 1, Math.round(14 * Math.min(1, chargeVal)), 2).fill(chargeColor);
     }
     drawSocketMarker();
+    // the selector breathes, so it reads as a cursor and not a fence
+    if (dockedId && stations[dockedId]) stations[dockedId].glow.alpha = 0.7 + 0.3 * Math.abs(Math.sin(frameClock * 0.06));
 
     for (const a of ambient) {
       a.sp.alpha = a.base * (0.75 + 0.25 * Math.sin(frameClock * 0.05 + a.phase));
@@ -1957,8 +1992,7 @@
     if (!dockedId) return;
     const st = stations[dockedId];
     if (!st) return;
-    const r = st.glowRect || { x: 0, y: 36, w: 26, h: 2 };
-    st.glow.clear().rect(r.x, r.y, r.w, r.h).fill(color);
+    drawSelector(st.glow, st.selBox || { x: 0, y: 0, w: 26, h: 36 }, color);
   }
 
   window.FACTORY = {

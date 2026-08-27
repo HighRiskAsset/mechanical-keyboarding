@@ -1994,19 +1994,19 @@
     drum: propDrum, bush: propBush, sign: propSign,
   };
 
-  // ---------- buildable pad marker: bold survey outline ----------
+  // ---------- build site marker: bold survey outline ----------
   // Bright: translucent gold fill, thick dashes, red-and-white corner stakes.
-  // A surveyed pad: three tiles by three — the ground the largest machine
+  // A build site: three tiles by three — the ground the largest machine
   // stands on whichever way it faces, so what you see before you build is
   // what you get after. Marked out in surveyor's tape with a peg at each
   // corner. Veins take the 2×1 a mine stands on.
-  function plotMarker(w, h) {
+  function siteMarker(w, h) {
     const W = w || 48, H = h || 32;
     const [c, x] = canvas(W, H);
     x.fillStyle = 'rgba(242, 193, 78, 0.28)';
     x.fillRect(1, 1, W - 2, H - 2);
-    // tape right round, not a dotted suggestion of one: on worn dirt a pad
-    // marked only at intervals read as no pad at all
+    // tape right round, not a dotted suggestion of one: on worn dirt a site
+    // marked only at intervals read as no site at all
     R(x, P.brass1, 0, 0, W, 1); R(x, P.brass1, 0, H - 1, W, 1);
     R(x, P.brass1, 0, 0, 1, H); R(x, P.brass1, W - 1, 0, 1, H);
     for (let i = 3; i < W - 3; i += 6) { R(x, P.brass2, i, 0, 3, 1); R(x, P.brass2, i, H - 1, 3, 1); }
@@ -2481,8 +2481,8 @@
     petalTex: (frame) => cachedTex('petal:' + frame, () => petal(frame)),
     glowHaloTex: () => cachedTex('halo', glowHalo),
     propTex: (kind) => cachedTex('prop:' + kind, PROP_DRAW[kind]),
-    // a build pad is 3x3; an unbuilt vein is the 2x1 a mine stands on
-    plotTex: (w, h) => cachedTex('plot:' + (w || 48) + 'x' + (h || 32), () => plotMarker(w, h)),
+    // a build site is 3x3; an unbuilt vein is the 2x1 a mine stands on
+    siteTex: (w, h) => cachedTex('site:' + (w || 48) + 'x' + (h || 32), () => siteMarker(w, h)),
     // scenery: the meadow set lives here; region sets (pine, boulder, reeds…) in tiles.js
     sceneryTex: (kind) => cachedTex('scenery:' + kind,
       SCENERY_DRAW[kind] || (() => window.TILES.scenery(kind))),

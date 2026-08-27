@@ -102,9 +102,11 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
 - **Building — the menu on you, and the ghost (rotation overhaul,
   2026-08-21):** building happens anywhere. A long press of Space on open
   ground — anywhere a hold would not open something else — raises the
-  **build menu on the operator**: the mine first, then every kind whose
-  price's materials have been held (progressive reveal unchanged), priced
-  in its row. **Affordability is settled here, not at the ghost** (user
+  **build menu on the operator**: the mine first, then every kind with any
+  good of its price in reach, held once or makeable by a machine already
+  standing (progressive reveal, retuned 2026-08-27: the smelter is priced
+  from the first mine, and each machine placed pulls the kinds it feeds
+  into view before they can be paid for), priced in its row. **Affordability is settled here, not at the ghost** (user
   ruling 2026-08-21): an unaffordable kind cannot be picked — its row is
   greyed and every count the bag falls short of prints red, so the row
   says which material is the problem — and the mine's row only offers
@@ -300,19 +302,38 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
 - **Discoverability (2026-08-19):** the in-canvas menus are icons only (the
   bitmap font has no letters), so a **caption** (`#place-caption`, DOM text,
   EN/RU) sits at the bottom of the map: while a menu is open it says what
-  the chosen row does ("Take the belt spool — carry it to a machine that
-  uses copper ore", "Lay the belt here — 3 tiles from the Copper mine", "No
-  belt here — it doesn't use stone", "Mk2: Iron mines reach the keys …",
-  "Automate — …", prices append "not affordable yet"); docked without a
-  menu it names the place and says "hold Space for the menu"; while
-  carrying a spool it states the errand. While carrying, every machine
+  the chosen row does ("Take the belt spool and carry it to a machine that
+  uses copper ore", "Lay the belt here, 3 tiles from the Copper mine", "No
+  belt here: it doesn't use stone", "Mk2: Iron mines reach the keys …",
+  "Automate this recipe: …", prices append "not affordable yet"); docked
+  without a menu it names the place and says "hold Space for the menu";
+  while carrying a spool it states the errand. **Two lines** (2026-08-27,
+  user decision): the caption is the place's name in brass over what can be
+  done with it, either line standing alone. The identity line covers ground
+  that all looks alike (free veins name their ore, build sites say "Build
+  site", tracked by tile as the operator walks), and the action line is
+  omitted rather than padded when there is nothing to do. No hover
+  tooltips, no caption for bare open ground until something is buildable.
+  **Terminology and typography (user rulings 2026-08-27):** the buildable
+  ground is a "build site" everywhere, code identifiers included (was
+  "surveyed plot" / "pad"; only the v1 save spellings `p.plots` and the
+  machine `plot:` anchor stay, as save-readers), and no English string
+  anywhere uses an em dash (Russian keeps its dashes; they are standard
+  Russian typography).
+- **The selector** (2026-08-27, user decision): the docked place (machine,
+  belt, closed crossing) is marked by **corner brackets around the whole
+  object** (ink under colour, `drawSelector` in factory.js, gently
+  breathing), not by the old 2px foot bar, which vanished on dark ground
+  and never read as "this one". A docked belt brackets the one tile
+  underfoot, not the run. Colours keep their meanings: gold = menu, green
+  = rows available / belt may land, red = it may not. While carrying, every machine
   shows a **bar**: green = a belt from this spool may end here (free
   inlet, takes what the source makes), red = not; a beaded **cord** runs
   from the source machine to the operator; the route preview is gold (red
   = no free path). **Carrying is modal** (2026-08-19): there is no menu
   while the spool is on your back — at a machine that can take the belt a
   green chevron bounces over it, its dock glow is green, the caption reads
-  "Hold Space: lay the belt here — N tiles from X", and the hold lays the
+  "Hold Space: lay the belt here, N tiles from X", and the hold lays the
   belt at once (the charge bar fills green); anywhere else — no machine,
   the source, a machine that can't take it (red glow, caption says why) —
   the same hold **drops the spool** (charge bar red, caption "Spool
@@ -413,12 +434,13 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
 - Side panel inventory with pixel icons; fly-to-inventory animations; float
   "+N"; icon rows sit on dark plates (legible over windows); welcome card
   carries a pixel vignette; EN/РУ interface.
-- **The welcome card says three things** (user decision, 2026-08-27): walk
-  with the arrows, type at a machine, hold Space at anything. Everything
-  else — menus, building, belts, prices, pacing — is taught in place by the
-  caption under the map at the moment it applies. The one gap that closed:
-  open ground now carries a dim "hold Space to build" caption, shown only
-  while the build menu has a row the bag can cover.
+- **The welcome card says two things** (user decision, 2026-08-27): walk
+  with arrow keys and interact by short- or long-pressing spacebar; stand
+  at a machine and type. Everything else (menus, building, belts, prices,
+  pacing) is taught in place by the caption under the map at the moment it
+  applies. The one gap that closed: open ground now carries a dim "hold
+  Space to build" caption, shown only while the build menu has a row the
+  bag can cover.
 - **The two switches** (on the map picker, and again in settings): interface
   language and keyboard course, stacked, language above layout. Both are
   flags — drawn in `flags.js` on a 21×14 pixel grid, because Windows ships no
@@ -460,9 +482,9 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   reads the saved interface preference. The map picker replaces it.
 - **Maps — one save per world (user ruling 2026-08-18).** `CHAIN.MAPS` is a
   registry of worlds; the chain (stations, recipes, milestones, belts) is
-  shared, the ground is not: each map brings its own `MAP` rects, `PLOTS`,
-  `SCENERY`, `PROPS`, world size, spawn, the hub's spot, and which plot each
-  pre-built station stands on (`HOME`). A map changes *where* things are,
+  shared, the ground is not: each map brings its own `MAP` rects, `SITES`,
+  `SCENERY`, `PROPS`, world size, spawn, the hub's spot, and which build site
+  each pre-built station stands on (`HOME`). A map changes *where* things are,
   never a rate: yield is not a mechanic (user ruling 2026-08-18 — «plentiful,
   easy resources» means placement, and a ×N multiplier tried that day was
   removed). `CHAIN.useMap(id)`
@@ -505,7 +527,7 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   (what stations exist and what they consume/produce IS the curriculum), but
   the player picks WHICH free dashed plot each earned kit occupies. Solid
   scenery (columns, stock mountains, scrap heaps) makes routes uneven — map
-  variance, bounded strategy, never ratio planning. Data-driven (PLOTS +
+  variance, bounded strategy, never ratio planning. Data-driven (SITES +
   SCENERY in chain.js) so it carries to any future map. (Superseded in
   direction 2026-08-18 by v3 rule 6: the player chooses which machine
   occupies each plot from a build menu, paid from the bag; kits and the Hub
@@ -1845,7 +1867,7 @@ demands a measured pool of ≥25 real words before a recipe is offered.
   which would make "which kinds can I build here?" a question you can only
   answer by walking there and being told no. The pad is drawn as it is:
   48×48 of surveyed ground, taped and pegged, on the exact tiles the zone is
-  (`MAPKIT.padBox`), anchored at the plot's foot and grown upward.
+  (`MAPKIT.siteBox`), anchored at the site's foot and grown upward.
   **The four-facing guarantee:** a pad wants every facing of the largest
   kind seatable with every port usable — some seat of the body inside the
   pad, the port tiles and the tile beyond each free, **and a run able to

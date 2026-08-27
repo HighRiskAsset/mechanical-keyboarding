@@ -279,14 +279,14 @@
     const over = asks.filter(([, n]) => n > cap * 0.8);
     line(!over.length, `no single-material ask crowds the bag: every hold ≤ ${cap * 0.8} of the ${cap} cap`, over.map(([l, n]) => `${l}: ${n}`).join('<br>'));
   }
-  // 18. every plot and node stands on clear ground and is reachable from the spawn (crossings counted open)
+  // 18. every site and node stands on clear ground and is reachable from the spawn (crossings counted open)
   const placeBad = [], placePending = [];
   for (const mapId of C.MAP_IDS) {
     C.useMap(mapId);
     const map = C.MAPS[mapId];
     const W = map.W, H = map.H;
     const grid = TILES.bake(C.MAP, W, H);
-    const spots = [...C.PLOTS.map((p) => ({ id: p.id, kind: 'plot', x: p.x, y: p.y })), ...C.MAP.NODES.filter((nd) => C.ORE_BY_NODE[nd.kind]).map((nd, i) => ({ id: nd.kind + '#' + i, kind: 'vein', x: nd.x + 4, y: nd.y + 12, node: nd }))];
+    const spots = [...C.SITES.map((p) => ({ id: p.id, kind: 'site', x: p.x, y: p.y })), ...C.MAP.NODES.filter((nd) => C.ORE_BY_NODE[nd.kind]).map((nd, i) => ({ id: nd.kind + '#' + i, kind: 'vein', x: nd.x + 4, y: nd.y + 12, node: nd }))];
     const cross = C.MAP.CROSSINGS.map((cr) => ({ x: cr.x, y: cr.y, w: cr.w, h: cr.h }));
     const inRect = (r, x, y) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
     const solidAt = (x, y) => { const tl = TILES.tileAt(grid, x, y); return tl === null || !!(grid.flags[tl] & TILES.FL.SOLID); };
@@ -307,20 +307,20 @@
       }
     }
     const near = (x, y) => { for (let dx = -8; dx <= 8; dx += 4) for (let dy = -8; dy <= 8; dy += 4) if (seenT.has(key(Math.round((x + dx) / step) * step, Math.round((y + dy) / step) * step))) return true; return false; };
-    // What a spot has to hold (rotation overhaul, 2026-08-21): a build pad
+    // What a spot has to hold (rotation overhaul, 2026-08-21): a build site
     // is 3×3 and takes the largest kind at EVERY facing — the four-facing
     // guarantee (ruling 2026-08-20) — a vein takes a mine at every facing.
     // Checked on the real geometry: the seated boxes CHAIN hands factory.js
     // and the body-relative places sim.js hangs off them. Both maps were
     // re-laid to the guarantee in the 2026-08-21 map rework, so a facing
-    // shortfall is a FAILURE now, not a worklist entry — a pad that cannot
-    // take every facing is a pad the build ghost will refuse you at, and
+    // shortfall is a FAILURE now, not a worklist entry — a site that cannot
+    // take every facing is a site the build ghost will refuse you at, and
     // that is a thing to fix in the map file, not to live with.
     const biggest = C.KIND_IDS.filter((k) => k !== 'mine')
       .reduce((a, b) => (C.KINDS[b].size[0] * C.KINDS[b].size[1] > C.KINDS[a].size[0] * C.KINDS[a].size[1] ? b : a));
-    const pads = spots.map((s) => s.kind === 'plot' ? MAPKIT.padBox({ x: s.x, y: s.y }) : MAPKIT.veinBox(s.node));
+    const sites = spots.map((s) => s.kind === 'site' ? MAPKIT.siteBox({ x: s.x, y: s.y }) : MAPKIT.veinBox(s.node));
     const taken = new Set();
-    pads.forEach((b) => { for (let ty = b.r0; ty <= b.r1; ty++) for (let tx = b.c0; tx <= b.c1; tx++) taken.add(tx + ',' + ty); });
+    sites.forEach((b) => { for (let ty = b.r0; ty <= b.r1; ty++) for (let tx = b.c0; tx <= b.c1; tx++) taken.add(tx + ',' + ty); });
     const tileFree = (tx, ty, own, body) => {
       const cx = tx * 16 + 8, cy = ty * 16 + 8;
       if (cx < 0 || cy < 0 || cx >= W || cy >= H) return false;
@@ -332,16 +332,16 @@
     const stepFree = (ax, ay, bx, by) => TILES.passable(grid, ax * 16 + 8, ay * 16 + 8, bx * 16 + 8, by * 16 + 8);
     spots.forEach((s, i) => {
       const issues = new Set(), pending = new Set();
-      const pad = pads[i], own = new Set();
-      for (let ty = pad.r0; ty <= pad.r1; ty++) for (let tx = pad.c0; tx <= pad.c1; tx++) own.add(tx + ',' + ty);
-      for (let ty = pad.r0; ty <= pad.r1; ty++) for (let tx = pad.c0; tx <= pad.c1; tx++) {
+      const site = sites[i], own = new Set();
+      for (let ty = site.r0; ty <= site.r1; ty++) for (let tx = site.c0; tx <= site.c1; tx++) own.add(tx + ',' + ty);
+      for (let ty = site.r0; ty <= site.r1; ty++) for (let tx = site.c0; tx <= site.c1; tx++) {
         const cx = tx * 16 + 8, cy = ty * 16 + 8;
-        if (solidAt(cx, cy)) pending.add('solid ground on the pad');
-        if (wallAt(cx, cy)) pending.add('wall on the pad');
-        if (sceneryAt(cx, cy)) pending.add('scenery on the pad');
-        if (taken.has(tx + ',' + ty) && !own.has(tx + ',' + ty)) pending.add('pad over a neighbour');
+        if (solidAt(cx, cy)) pending.add('solid ground on the site');
+        if (wallAt(cx, cy)) pending.add('wall on the site');
+        if (sceneryAt(cx, cy)) pending.add('scenery on the site');
+        if (taken.has(tx + ',' + ty) && !own.has(tx + ',' + ty)) pending.add('site over a neighbour');
       }
-      // a facing is legal when SOME seat of the body inside the pad leaves
+      // a facing is legal when SOME seat of the body inside the site leaves
       // every port's tile and its way out usable — and a run has to be able
       // to STEP between the two: a belt cannot climb a cliff any more than
       // a walker can (factory.js beltStep), so a port whose way out is the
@@ -352,9 +352,9 @@
       for (const f of MAPKIT.FACINGS) {
         const fp = MAPKIT.footprint(size, f);
         let ok = false;
-        for (let oc = 0; !ok && oc + fp[0] <= pad.c1 - pad.c0 + 1; oc++) {
-          for (let orr = 0; !ok && orr + fp[1] <= pad.r1 - pad.r0 + 1; orr++) {
-            const b = MAPKIT.boxAt([pad.c0 + oc, pad.r0 + orr], size, f);
+        for (let oc = 0; !ok && oc + fp[0] <= site.c1 - site.c0 + 1; oc++) {
+          for (let orr = 0; !ok && orr + fp[1] <= site.r1 - site.r0 + 1; orr++) {
+            const b = MAPKIT.boxAt([site.c0 + oc, site.r0 + orr], size, f);
             const body = new Set();
             for (let ty = b.r0; ty <= b.r1; ty++) for (let tx = b.c0; tx <= b.c1; tx++) body.add(tx + ',' + ty);
             const ps = SIM.ports({ kind, face: f });
@@ -369,8 +369,8 @@
         // row over its edges the way the build ghost allows
         if (!ok && s.kind === 'vein') {
           for (let oc = -1; !ok && oc <= 1; oc++) for (let orr = -1; !ok && orr <= 1; orr++) {
-            const b = MAPKIT.boxAt([pad.c0 + oc, pad.r0 + orr], size, f);
-            if (b.c1 < pad.c0 || b.c0 > pad.c1 || b.r1 < pad.r0 || b.r0 > pad.r1) continue;
+            const b = MAPKIT.boxAt([site.c0 + oc, site.r0 + orr], size, f);
+            if (b.c1 < site.c0 || b.c0 > site.c1 || b.r1 < site.r0 || b.r0 > site.r1) continue;
             const body = new Set();
             for (let ty = b.r0; ty <= b.r1; ty++) for (let tx = b.c0; tx <= b.c1; tx++) body.add(tx + ',' + ty);
             const ps = SIM.ports({ kind, face: f });
@@ -393,9 +393,9 @@
     });
   }
   C.useMap(C.DEFAULT_MAP);
-  line(!placeBad.length, 'every pad and vein can take its machine somehow, on reachable ground', placeBad.join('<br>'));
+  line(!placeBad.length, 'every site and vein can take its machine somehow, on reachable ground', placeBad.join('<br>'));
   line(!placePending.length,
-    `the four-facing guarantee (3×3 pads, every facing legal)${placePending.length ? ' — ' + placePending.length + ' spots short' : ' holds on every pad and vein of every map'}`,
+    `the four-facing guarantee (3×3 sites, every facing legal)${placePending.length ? ' — ' + placePending.length + ' spots short' : ' holds on every site and vein of every map'}`,
     placePending.join('<br>'));
 
   document.getElementById('sum').textContent = `${pass} passed · ${fail} failed · ${warn} to look at`;

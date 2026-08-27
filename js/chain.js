@@ -312,7 +312,7 @@
       // finish); Mk3 after the Crane, in glass and a few crates
       fastener: { 1: { fast: 30, gunmetal: 30 }, 2: { fast: 40, brass: 30 }, 3: { glass: 40, crate: 6 } },
     },
-    // first instance of a kind at a plot — each asks for a material of the
+    // first instance of a kind at a build site — each asks for a material of the
     // era the kind belongs to, which is the only pacing there is. A price
     // names the ore a kind's recipes live on (2026-08-22): the Constructor
     // asks for quartz, the Molder for a coal alloy, the Fastener for oil
@@ -320,7 +320,7 @@
     // Raw ores and bronze / brass / gunmetal / moldings / modules / fastened
     // goods are the price goods every course can make when the rung appears;
     // quartz iron, steel and black iron are not (EN has no vowel on them).
-    // first instance of a kind at a plot. A price names the kind's own first
+    // first instance of a kind at a build site. A price names the kind's own first
     // feed where one exists (the ledger): the Foundry costs bell quartz —
     // "after Quartz Mk2" as an ingredient — the Constructor its quartz
     // bronze, the Crane sealed goods and flash copper. Every good exists in
@@ -617,8 +617,9 @@
   // A machine stands where it was placed: `at` = [c0, r0], the top-left tile
   // of its body box, chosen with the build ghost (rotation overhaul,
   // 2026-08-20). The box turns with the facing. A save from before carries a
-  // plot/node anchor instead; engine.js seats it once on load, and the
-  // anchor fallback here is what it seats from.
+  // site or node anchor instead (the machine field is spelled `plot`, a
+  // save-reader spelling that stays); engine.js seats it once on load, and
+  // the anchor fallback here is what it seats from.
   function machineAnchor(m) {
     if (m.node !== undefined && m.node !== null) {
       const n = cur.MAP.NODES[m.node];
@@ -627,7 +628,7 @@
       // mine seated from it lands on the two tiles the patch is drawn over
       return n.vert ? { x: n.x + 4, y: n.y + 24 } : { x: n.x + 4, y: n.y + 12 };
     }
-    const p = plotById(m.plot);
+    const p = siteById(m.plot);
     return p ? { x: p.x, y: p.y } : { x: 0, y: 0 };
   }
   // the way a mine stands on a vein it was not walked onto: a map that beds
@@ -643,7 +644,7 @@
     return MAPKIT.bodyBox(a.x, a.y, fp[0], fp[1]);
   }
   // the point everything that hangs off a machine reads: just inside the
-  // box's foot-left corner, matching where the old plot anchors stood
+  // box's foot-left corner, matching where the old site anchors stood
   function machinePos(m) {
     const b = machineBox(m);
     return { x: b.c0 * TILE + 1, y: (b.r1 + 1) * TILE - 5 };
@@ -657,17 +658,17 @@
   const machinesOfKind = (profile, kind) => profile.machines.filter((m) => m.kind === kind);
   const machinesOfOre = (profile, ore) => profile.machines.filter((m) => m.kind === 'mine' && m.ore === ore);
   const nodeBuilt = (profile, i) => profile.machines.some((m) => m.node === i);
-  // pads with no body standing on any of their tiles. A plot stopped being a
-  // dockable shop when the build ghost arrived; what is left of it is the
-  // ground it surveys.
-  function freePlots(profile) {
+  // build sites with no body standing on any of their tiles. A site stopped
+  // being a dockable shop when the build ghost arrived; what is left of it
+  // is the ground it zones.
+  function freeSites(profile) {
     const taken = new Set();
     for (const m of profile.machines) {
       const b = machineBox(m);
       for (let ty = b.r0; ty <= b.r1; ty++) for (let tx = b.c0; tx <= b.c1; tx++) taken.add(tx + ',' + ty);
     }
-    return cur.PLOTS.filter((p) => {
-      const b = MAPKIT.padBox(p);
+    return cur.SITES.filter((p) => {
+      const b = MAPKIT.siteBox(p);
       for (let ty = b.r0; ty <= b.r1; ty++) for (let tx = b.c0; tx <= b.c1; tx++) if (taken.has(tx + ',' + ty)) return false;
       return true;
     });
@@ -718,7 +719,7 @@
     return null;
   }
   // the rungs the summary names: for sale, and the player has held at least
-  // half of the goods the price asks for (the same rule as the build menu)
+  // half of the goods the price asks for
   function rungsInView(profile) {
     return nextPairs(profile).filter((p) => {
       const mats = Object.keys(pricePair(p) || {});
@@ -726,18 +727,30 @@
       return mats.length && held * 2 >= mats.length;
     });
   }
-  // machine kinds the build menu lists: ready, and the player has held at
-  // least half of the goods the price asks for — the next machine is always
-  // in view with its price, and the goods it names are the way to it
+  // a price good is in reach: held at least once, or makeable right now by
+  // a machine already standing (a mine's current depth, or a recipe the
+  // machine can run; deeper ore stock answers a shallower ask)
+  function matInReach(profile, pinId) {
+    if (profile.seen[pinId]) return true;
+    const kinds = new Set();
+    for (const m of profile.machines) {
+      if (m.kind === 'mine') { if (matSatisfies(mineMat(profile, m), pinId)) return true; }
+      else kinds.add(m.kind);
+    }
+    for (const k of kinds) if (offerableRecipes(k, profile).some((r) => matSatisfies(r.out, pinId))) return true;
+    return false;
+  }
+  // machine kinds the build menu lists: ready, and any good its price asks
+  // for is in reach. The smelter stands priced from the first mine, and each
+  // machine placed pulls the kinds it feeds into view, so the list grows a
+  // step ahead of the bag and the goods a price names are the way to it.
   function visibleKinds(profile) {
     return KIND_IDS.filter((k) => {
       const kind = KINDS[k];
       if (k === 'mine' || !kind.ready) return false;
       const price = priceMachine(k, machinesOfKind(profile, k).length + 1);
       if (!price) return false;
-      const mats = Object.keys(price);
-      const held = mats.filter((mat) => profile.seen[mat]).length;
-      return held * 2 >= mats.length;
+      return Object.keys(price).some((mat) => matInReach(profile, mat));
     });
   }
   // can this kind run a recipe now — the build row is only live when it can
@@ -757,9 +770,9 @@
   // ---- the worlds ----
   // The maps live in js/maps/ — one file per world, each ending in
   // MAPKIT.register(...) — and load before this file. The chain is shared,
-  // the ground is not: a world brings its own terrain, plots, nodes, scenery,
-  // props and spawn, and keeps its own save (engine.js). Adding a world is a
-  // new file in js/maps/, a script tag, and two i18n strings.
+  // the ground is not: a world brings its own terrain, build sites, nodes,
+  // scenery, props and spawn, and keeps its own save (engine.js). Adding a
+  // world is a new file in js/maps/, a script tag, and two i18n strings.
   const MAPS = MAPKIT.MAPS;
   const MAP_IDS = MAPKIT.IDS;
   const DEFAULT_MAP = MAPKIT.DEFAULT;
@@ -771,9 +784,9 @@
     const C = window.CHAIN;
     C.MAP_ID = cur.id;
     C.MAP = cur.MAP;
-    // plots that coincide with an ore node are the node's (mines stand there)
-    C.PLOTS = cur.PLOTS.filter((p) => !cur.MAP.NODES.some((n) => Math.abs(n.x + 4 - p.x) <= 8 && Math.abs(n.y + 12 - p.y) <= 8));
-    cur.PLOTS = C.PLOTS;
+    // sites that coincide with an ore node are the node's (mines stand there)
+    C.SITES = cur.SITES.filter((p) => !cur.MAP.NODES.some((n) => Math.abs(n.x + 4 - p.x) <= 8 && Math.abs(n.y + 12 - p.y) <= 8));
+    cur.SITES = C.SITES;
     C.SCENERY = cur.SCENERY;
     C.PROPS = cur.PROPS;
     C.WORLD_W = cur.W;
@@ -794,7 +807,7 @@
     }
     return out;
   }
-  function plotById(id) { return cur.PLOTS.find((p) => p.id === id); }
+  function siteById(id) { return cur.SITES.find((p) => p.id === id); }
 
   // a crossing is open once the player has paid to repair it (hold Space at
   // the closed pass / bridge / stairs; the price is that region's goods)
@@ -823,9 +836,9 @@
     priceNode, priceExtraMine, priceMk, priceAt, kindMk, priceMachine, priceAuto, priceCrossing, scaleCost, closedCrossings,
     AT_KINDS, PLACES, placeOf, mkTable, pairOf, pairBought, boughtPairs, oreMk, unlockedKeys, currentTier, nextPairs, nextPair, pricePair, newestPair, targetBar,
     alphabetOf, recipeAlphabet, recipeTilt, recipeFocus, wordPool, offerable, offerableRecipes, matExists, oreOpen, affordable, bagAdd,
-    machinePos, machineFoot, machineBox, machineAnchor, nodeFace, machinesOfKind, machinesOfOre, nodeBuilt, freePlots, unbuiltNodes, visibleKinds, buildableKinds, kindLive, kindEverLive, whatUnlocks, rungsInView, starterNodes,
-    useMap, currentMap, plotById, crossingOpen, regionAt,
-    // per-map fields (MAP, PLOTS, SCENERY, PROPS, WORLD_W, WORLD_H, SPAWN, LEGACY, MAP_ID) are set by useMap
+    machinePos, machineFoot, machineBox, machineAnchor, nodeFace, machinesOfKind, machinesOfOre, nodeBuilt, freeSites, unbuiltNodes, visibleKinds, buildableKinds, kindLive, kindEverLive, whatUnlocks, rungsInView, starterNodes,
+    useMap, currentMap, siteById, crossingOpen, regionAt,
+    // per-map fields (MAP, SITES, SCENERY, PROPS, WORLD_W, WORLD_H, SPAWN, LEGACY, MAP_ID) are set by useMap
   };
   useMap(DEFAULT_MAP);
 })();

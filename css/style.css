@@ -114,6 +114,10 @@ body.night #factory-mount canvas { filter: brightness(0.45) saturate(0.8); }
 #place-caption.no { border-color: var(--err); }
 #place-caption.dim { color: var(--ink-dim); }
 #place-caption b { color: var(--brass); }
+/* the two lines: the place's name, then what can be done with it — the name
+   keeps its brass even when the prompt below it is dimmed */
+#place-caption .cap-name, #place-caption .cap-act { overflow: hidden; text-overflow: ellipsis; }
+#place-caption .cap-name { color: var(--brass); font-weight: 600; }
 #factory-mount {
   flex: 1;
   min-width: 0;

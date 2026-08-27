@@ -3,7 +3,7 @@
 // The engine knows kinds and grammars, never letters (invariant 5): every
 // letter it touches comes from the active course's data (COURSES) or from the
 // chain's alphabet functions. Profile v2: letters unlock in pairs (per ore
-// Mk), the bag holds materials, machines are instances standing on plots and
+// Mk), the bag holds materials, machines are instances standing on build sites and
 // nodes.
 (function () {
   'use strict';
@@ -81,7 +81,7 @@
       collected: {},     // word → {n, clean, at} — the passport
       bag: {},           // material id → count
       seen: {},          // material id → true once held (progressive reveal)
-      machines: sm.machines, // {id, kind, ore?, node?|plot?, auto, recipe?}
+      machines: sm.machines, // {id, kind, ore?, node?|plot? (legacy anchor field), auto, recipe?}
       nextMachineId: sm.nextId,
       drops: [],         // loose materials on the ground: {id, mat, n, x, y}
       nextDropId: 1,
@@ -122,7 +122,7 @@
     for (const [k, v] of Object.entries(p.mats || {})) if (V1_MATS[k] && v > 0) q.bag[V1_MATS[k]] = v;
     for (const k of Object.keys(q.bag)) q.seen[k] = true;
     // machines: starter mines carry the old bench automation; kit stations
-    // become instances on the plots they stood on
+    // become instances on the build sites they stood on
     for (const m of q.machines) {
       // m.ore is a CURRENT id (it is on `q`); p.autoBench is a v1 save's own
       // table and stays spelled the v1 way
@@ -133,14 +133,16 @@
       const node = C().unbuiltNodes(q).find((nd) => nd.ore === 'quartz');
       if (node) q.machines.push({ id: 'm' + (q.nextMachineId++), kind: 'mine', ore: 'quartz', node: node.index, face: C().nodeFace(node.index), auto: !!(p.autoBench && p.autoBench.vedi) });
     }
+    // `p.plots` and the machine's `plot:` anchor are v1 save spellings and
+    // stay spelled the v1 way (like p.autoBench above)
     const built = p.built || {}, plots = p.plots || {};
     for (const [stId, kind] of Object.entries(V1_KIT_KIND)) {
       if (!built[stId]) continue;
-      const free = C().freePlots(q);
+      const free = C().freeSites(q);
       const want = plots[stId] || C().LEGACY[stId];
-      const plot = free.find((pl) => pl.id === want) || free[0];
-      if (!plot) continue;
-      q.machines.push({ id: 'm' + (q.nextMachineId++), kind, plot: plot.id, auto: false });
+      const site = free.find((pl) => pl.id === want) || free[0];
+      if (!site) continue;
+      q.machines.push({ id: 'm' + (q.nextMachineId++), kind, plot: site.id, auto: false });
     }
     return q;
   }
@@ -221,7 +223,7 @@
     }
     if (window.DROPS) DROPS.ensure(p);   // goods lying on the ground; they never expire
     // machines stand on tiles now (rotation overhaul, 2026-08-21): a machine
-    // from before carries a plot or node anchor and no `at` — seat it there
+    // from before carries a site (`plot`) or node anchor and no `at`; seat it there
     // once, at the facing sim.js migrated off its old rot
     for (const m of p.machines) {
       if (Array.isArray(m.at) && m.at.length === 2) continue;

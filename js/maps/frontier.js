@@ -4,18 +4,18 @@
 // The shape of the world (2026-08-20 rebuild; works and seams re-laid
 // 2026-08-21):
 //   · A 60×20-tile grass BASIN sits in the centre. It holds the track, the
-//     landing, thirty plots and the first vein of every ore. Nothing solid
+//     landing, thirty build sites and the first vein of every ore. Nothing solid
 //     stands in it — no cliff, no water, no boulder, not one rock.
 //   · The LANDING CLUSTER: the three mines the player starts with — iron,
 //     copper, stone — stand around the landing, all three inside the camera
 //     the moment the world opens, even at the smallest viewport the zoom
 //     will settle on. The basin's other four veins sit at its corners and
 //     the rest are away in the ring: those are found by looking around.
-//   · SIX WORKS ring the basin, one to a biome: quarry (3 pads on the mesa
+//   · SIX WORKS ring the basin, one to a biome: quarry (3 sites on the mesa
 //     top), peaks (4 on the snowfield), canyon head (4), canyon flank (3),
 //     flats (4) and bog (4). Every one of them is a group you can belt
-//     together — no area gets fewer than three, because one pad on a
-//     headland is a pad no one has a reason to build on. Fifty-two plots in
+//     together — no area gets fewer than three, because one build site on a
+//     headland is a site no one has a reason to build on. Fifty-two sites in
 //     all, every one a full 3x3 with all four facings legal.
 //   · A SEAM LIES THE WAY THE LAND DOES: half the fourteen veins are bedded
 //     on end, so the mine that takes them stands 1x2 rather than 2x1.
@@ -32,7 +32,7 @@
 //     and out; each step carries a wide flight down, and a cut through the
 //     rim gives a way up each side. The PEAKS SHELF and the CANYON SHELF are
 //     the same idea at elev 1, three blocks each; they are seven tiles of
-//     top between their rims, which a pad and the air it needs cannot have,
+//     top between their rims, which a site and the air it needs cannot have,
 //     so they carry seams and views and no works. The ISLAND in the bog has
 //     two lobes and six open crossings, on all four sides.
 //   · Nothing is gated. Every crossing carries `free`, so the bridges and the
@@ -150,53 +150,54 @@
   }
 
   // ======================================================================
-  // plots — thirty in the open basin on an 80px grid, then a WORKS in every
-  // biome of the ring, so a walk out there ends somewhere you can build a
-  // line rather than at one lonely square (user ruling 2026-08-21).
+  // build sites — thirty in the open basin on an 80px grid, then a WORKS in
+  // every biome of the ring, so a walk out there ends somewhere you can
+  // build a line rather than at one lonely square (user ruling 2026-08-21).
   //
-  // A plot is a 3x3 pad and it owes the four-facing guarantee: the largest
+  // A site is a 3x3 and it owes the four-facing guarantee: the largest
   // kind seatable every way up, with every port tile and the tile beyond it
-  // free. That costs the ground around a pad as much as the pad — two clear
-  // tiles off each side — so pads come on an 80px lattice (three tiles of
-  // pad, two of air) and never in a rank of their own out in the weeds.
-  // Every anchor below is checked by dev/verify.html with the whole map
-  // built, so a plot can never be a place you walk to and find you cannot
-  // use.
+  // free. That costs the ground around a site as much as the site — two
+  // clear tiles off each side — so sites come on an 80px lattice (three
+  // tiles of site, two of air) and never in a rank of their own out in the
+  // weeds. Every anchor below is checked by dev/verify.html with the whole
+  // map built, so a site can never be a place you walk to and find you
+  // cannot use.
   //
-  // The rule the ring follows: NO AREA GETS FEWER THAN THREE. A single pad
+  // The rule the ring follows: NO AREA GETS FEWER THAN THREE. A single site
   // on a headland is a place no one has a reason to build on — the belt has
   // nowhere to go — so the outliers were gathered into six works of three
   // and four, each within belting distance of itself and of the vein it was
-  // put there for. The two elev-1 shelves gave their pads up for it: they
-  // are seven tiles of walkable top between their rims, which a 3x3 pad and
-  // its air cannot have, and they keep their veins instead. High ground
+  // put there for. The two elev-1 shelves gave their sites up for it: they
+  // are seven tiles of walkable top between their rims, which a 3x3 site
+  // and its air cannot have, and they keep their veins instead. High ground
   // carries seams and views; the works stand on the flats. The mesa is the
   // exception — elev 2 and wide enough on top to hold its own quarry works.
   // ======================================================================
   const BASIN_COLS = [400, 480, 560, 640, 720, 800, 880, 960, 1040, 1120];
   const BASIN_ROWS = [288, 368, 448];
-  const PLOTS = [];
-  const plot = (x, y, region) => PLOTS.push({ id: 'p' + (PLOTS.length + 1), x, y, region });
-  for (const y of BASIN_ROWS) for (const x of BASIN_COLS) plot(x, y, 'basin');
+  // ids keep the 'p' prefix: legacy saves and LEGACY tables name them by it
+  const SITES = [];
+  const site = (x, y, region) => SITES.push({ id: 'p' + (SITES.length + 1), x, y, region });
+  for (const y of BASIN_ROWS) for (const x of BASIN_COLS) site(x, y, 'basin');
   // the quarry works — a rank of three across the mesa top, joined by the
-  // track that runs over it. Three and not four: a pad on high ground has
+  // track that runs over it. Three and not four: a site on high ground has
   // to keep its whole port ring at its own elevation, because a run cannot
   // step off a cliff, and the mesa's shallow notch (block 3) is two rows
   // short of carrying a fourth.
-  for (const x of [448, 528, 608]) plot(x, 128, 'quarry');
+  for (const x of [448, 528, 608]) site(x, 128, 'quarry');
   // the peaks works — two ranks of two on the snowfield under the shelf
-  for (const y of [368, 464]) for (const x of [192, 272]) plot(x, y, 'peaks');
+  for (const y of [368, 464]) for (const x of [192, 272]) site(x, y, 'peaks');
   // the canyon head works — two ranks of two on the shale bench north of
   // the basin, under the crystal country
-  for (const y of [128, 208]) for (const x of [896, 976]) plot(x, y, 'canyon');
+  for (const y of [128, 208]) for (const x of [896, 976]) site(x, y, 'canyon');
   // the canyon flank works — a rank of three at the foot of the east shelf
-  for (const x of [1328, 1408, 1488]) plot(x, 496, 'canyon');
+  for (const x of [1328, 1408, 1488]) site(x, 496, 'canyon');
   // the tar flats works — a rank of four east of the oil seeps
-  for (const x of [464, 544, 624, 704]) plot(x, 624, 'flats');
+  for (const x of [464, 544, 624, 704]) site(x, 624, 'flats');
   // the bog works — two ranks of two on the west bank, where the causeway
   // out to the island starts. The island itself still holds its coal vein
-  // and nothing else: a mine fits on it, a pad and its air do not.
-  for (const y of [576, 656]) for (const x of [864, 944]) plot(x, y, 'bog');
+  // and nothing else: a mine fits on it, a site and its air do not.
+  for (const y of [576, 656]) for (const x of [864, 944]) site(x, y, 'bog');
 
   // ======================================================================
   // ore nodes. Order matters: starterNodes() builds the FIRST node of each
@@ -219,7 +220,7 @@
   // surveyed mark 1x2, and the mine that takes it 1x2 (MAPKIT.veinBox, and
   // the patch art in pixels.js, which has always cut both ways). Every
   // anchor sits on a tile line, so a vein's two tiles are exactly the tiles
-  // you see, and every one of them is clear of the pad lattices above.
+  // you see, and every one of them is clear of the site lattices above.
   const NODES = [
     { kind: 'iron',   x: 448,  y: 288 },              // ── the landing cluster, all in shot from the spawn
     { kind: 'copper', x: 528,  y: 368, vert: true },
@@ -257,7 +258,7 @@
     {
       // cols 33–40, the deepest, down to row 11. It used to reach row 12,
       // which put its cliff face on the two rows the basin's north rank
-      // needs behind it to face north — a pad is only as good as the air
+      // needs behind it to face north — a site is only as good as the air
       // around it, so the mesa gave the row back (2026-08-21).
       x: 528, y: 48, w: 128, h: 144, elev: 2, face: 2,
       ramps: [...flight(544, 192, 3)],
@@ -400,7 +401,7 @@
   // scenery — solid, and every piece of it out in the ring
   // ======================================================================
   // Scenery frames the works; it never stands in one. Where a piece fell
-  // inside a new pad's air it moved to the nearest edge of the same
+  // inside a new site's air it moved to the nearest edge of the same
   // landmark rather than being dropped — the ring keeps every rock and tree
   // it had (2026-08-21 rework).
   const SCENERY = [
@@ -453,6 +454,6 @@
   K.register({
     id: 'frontier', W, H, spawn: { x: 546, y: 352 },
     LEGACY: { slogi: 'p1', slova: 'p2', stroki: 'p3' },
-    MAP, PLOTS, SCENERY, PROPS,
+    MAP, SITES, SCENERY, PROPS,
   });
 })();

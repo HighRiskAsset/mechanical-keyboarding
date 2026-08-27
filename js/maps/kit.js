@@ -105,20 +105,20 @@
     return out;
   }
 
-  // A worn patch under a station: the plot's own dirt apron. A plot is a 3x3
-  // pad anchored at its foot, so the patch is the three rows the pad zones
+  // A worn patch under a station: the build site's own dirt apron. A site is
+  // a 3x3 anchored at its foot, so the patch is the three rows the site zones
   // and the row in front of them where the outlets are — what a machine and
-  // its traffic actually wear away, and exactly the ground padBox claims.
+  // its traffic actually wear away, and exactly the ground siteBox claims.
   const apron = (x, y, kind) => ({ kind: kind || 'dirt', x, y: y - 48, w: 48, h: 64 });
   // the same for an ore node (the patch art is 36×16 at the node's corner)
   const nodeApron = (x, y, kind) => ({ kind: kind || 'dirt', x: x - 14, y: y - 16, w: 64, h: 48 });
 
   // ---------- the ground a machine claims ----------
   // A kind's size is [tiles across, tiles deep] and its anchor is the point a
-  // plot or a vein names. Turning that into tiles is arithmetic, and it lives
+  // build site or a vein names. Turning that into tiles is arithmetic, and it lives
   // here rather than in the renderer because three things need the same
-  // answer: factory.js to draw and route, dev/verify.html to check every plot
-  // on every map, and a map file to know how much room a pad wants.
+  // answer: factory.js to draw and route, dev/verify.html to check every site
+  // on every map, and a map file to know how much room a site wants.
   //
   // Anchors fall where the land allows and rarely line up with the grid, so
   // of the windows of the right size the box takes the one the drawn body
@@ -176,10 +176,10 @@
   // the step that leads away from the machine, by the world side a port is on
   const PORT_AWAY = { s: [0, 1], e: [1, 0], w: [-1, 0], n: [0, -1] };
   const portTile = (box, facing, bodySide, slot) => PORT_TILE[facing][bodySide](box, slot);
-  // a build plot's pad: one size, the 3x3 of tiles that takes the largest
-  // kind whichever way it faces, anchored at the plot's foot
-  const PAD = 3;
-  const padBox = (p) => bodyBox(p.x, p.y, PAD, PAD);
+  // a build site: one size, the 3x3 of tiles that takes the largest kind
+  // whichever way it faces, anchored at the site's foot
+  const SITE = 3;
+  const siteBox = (p) => bodyBox(p.x, p.y, SITE, SITE);
   // A vein's ground: a mine is two tiles by one, and a seam lies the way the
   // land does — `vert` on a node says it is bedded on end, so the mine that
   // takes it stands 1x2 and the patch art is cut to match (pixels.js). This
@@ -208,7 +208,7 @@
     T, FOOT_W, sc, hash, noise, fbm, field, apron, nodeApron,
     blob, anyOf, box, path,
     bodyBox, portTile, PORT_AWAY,
-    FACINGS, BODY_SIDE, footprint, boxAt, PAD, padBox, veinBox,
+    FACINGS, BODY_SIDE, footprint, boxAt, SITE, siteBox, veinBox,
     register, MAPS, IDS,
     get DEFAULT() { return IDS[0]; },
   };

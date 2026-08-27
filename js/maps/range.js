@@ -1,14 +1,14 @@
 // OPEN RANGE — one flat meadow the width of the frontier, every node in a
-// row, ranks of plots below, nothing in the way. Tests the mechanics (build,
-// deliver, automate, belt) without walking or geography.
+// row, ranks of build sites below, nothing in the way. Tests the mechanics
+// (build, deliver, automate, belt) without walking or geography.
 //
-// Re-laid 2026-08-21 to the four-facing guarantee. A 3x3 pad costs the ground
-// around it as much as the pad itself — two clear tiles off every side, for
-// the port and for the tile the run arrives on — so the ranks moved from a
-// 64px pitch to 80px, matching the columns, and the meadow grew three rows to
-// take them. THIS MAP IS THE EASY ONE: every plot here is a full 3x3 with all
-// four facings legal, so a kind can be put down any way up anywhere, and any
-// shortfall shows up on The Frontier first.
+// Re-laid 2026-08-21 to the four-facing guarantee. A 3x3 site costs the
+// ground around it as much as the site itself — two clear tiles off every
+// side, for the port and for the tile the run arrives on — so the ranks
+// moved from a 64px pitch to 80px, matching the columns, and the meadow grew
+// three rows to take them. THIS MAP IS THE EASY ONE: every site here is a
+// full 3x3 with all four facings legal, so a kind can be put down any way up
+// anywhere, and any shortfall shows up on The Frontier first.
 (function () {
   'use strict';
   const K = window.MAPKIT;
@@ -27,14 +27,14 @@
     ? { kind: NODE_KINDS[k], x, y: 48, vert: true }
     : { kind: NODE_KINDS[k], x, y: 48 }));
 
-  // Ranks of plots below the veins, on the same 80px lattice as the columns
-  // but half a step off it, so no pad ever stands directly under a seam: a
-  // vein bedded on end reaches down to row 4, and a pad in that column would
-  // lose the two rows it needs above it to face east or west.
-  const PLOT_COLS = Array.from({ length: 13 }, (_, k) => 96 + 80 * k);
-  const PLOT_ROWS = [160, 240, 320];              // pads on rows 7–9, 12–14, 17–19
-  const PLOTS = [];
-  for (const y of PLOT_ROWS) for (const x of PLOT_COLS) PLOTS.push({ id: 'p' + (PLOTS.length + 1), x, y });
+  // Ranks of build sites below the veins, on the same 80px lattice as the
+  // columns but half a step off it, so no site ever stands directly under a
+  // seam: a vein bedded on end reaches down to row 4, and a site in that
+  // column would lose the two rows it needs above it to face east or west.
+  const SITE_COLS = Array.from({ length: 13 }, (_, k) => 96 + 80 * k);
+  const SITE_ROWS = [160, 240, 320];              // sites on rows 7–9, 12–14, 17–19
+  const SITES = [];
+  for (const y of SITE_ROWS) for (const x of SITE_COLS) SITES.push({ id: 'p' + (SITES.length + 1), x, y });
 
   const SCENERY = [
     sc('tree', 5, 24), sc('tree2', 12, 25), sc('rock', 19, 24), sc('tree', 26, 25),
@@ -70,8 +70,8 @@
       { kind: 'dirt', x: 80, y: 112, w: 16, h: 16 },
       { kind: 'dirt', x: 128, y: 80, w: 16, h: 16 }, { kind: 'dirt', x: 208, y: 80, w: 16, h: 16 }, { kind: 'dirt', x: 288, y: 80, w: 16, h: 16 },
       { kind: 'dirt', x: 1088, y: 80, w: 16, h: 16 },
-      ...PLOT_ROWS.flatMap((y) => PLOT_COLS.map((x) => apron(x, y))),
-      // the pond sits in the south strip, below every pad's last port row
+      ...SITE_ROWS.flatMap((y) => SITE_COLS.map((x) => apron(x, y))),
+      // the pond sits in the south strip, below every site's last port row
       { kind: 'sand', x: 1008, y: 368, w: 112, h: 64 },
       { kind: 'water', x: 1024, y: 384, w: 80, h: 32 },
     ],
@@ -84,6 +84,6 @@
   K.register({
     id: 'range', W, H, spawn: { x: 84, y: 154 },
     LEGACY: {},
-    MAP, PLOTS, SCENERY, PROPS,
+    MAP, SITES, SCENERY, PROPS,
   });
 })();
