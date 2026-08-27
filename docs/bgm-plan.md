@@ -190,7 +190,55 @@ new style. Generate the Frontier Theme once, get it right, then Cover it per
 biome. Far better than describing the same melody nine times in prose — and
 Remix is available on the free plan.
 
-## The set — 13 tracks
+## The set — CUT TO 7 (user ruling 2026-08-28)
+
+The 13-track set below was over-specified. Judged critically, it was finer
+grained than the games it cites: FF3 does not give every area a theme, and
+Pokémon covers dozens of routes with a couple of route themes. The cut:
+
+**FINAL — in `assets/bgm/picks/`, 7 tracks, 15:02, 16.8 MB.** Every take is
+kept in `assets/bgm/` (33 files) in case a pick is rejected on listening.
+
+| # | File | Covers | Mode · length |
+|---|---|---|---|
+| 1 | `01-basin-a.mp3` | home, T0–T1 | C dorian · 2:03 *(fade trimmed)* |
+| 2 | `02-basin-b.mp3` | home rotation | C dorian · 1:42 |
+| 3 | `03-far-frontier.mp3` | quarry + canyon + flats | C dorian · 2:43 *(fade trimmed)* |
+| 4 | `04-coal-bog.mp3` | the uneasy outlier | G aeolian (conf 0.94) · 3:01 |
+| 5 | `05-snow-peaks.mp3` | finish site | G mixolydian · 2:09 *(fade trimmed)* |
+| 6 | `06-the-works.mp3` | any automated place | D mixolydian · 1:27 |
+| 7 | `07-launch.mp3` | the finish | **C major** (conf 0.90) · 1:57 |
+
+No track in the set is aeolian except the bog, which is the one place the
+*Mode balance* ruling allows it. The mode worry is answered.
+
+**16.8 MB at 112–190 kbps.** Re-encoding the set uniformly at 112 kbps would
+bring it near 12 MB, comfortably inside the deploy budget.
+
+### Two techniques that worked
+
+- **Lead the prompt with the mode.** Three attempts at a bright Works with the
+  key buried mid-prompt gave 2 bright takes out of 6. Moving `BRIGHT MAJOR KEY
+  victory theme in C major. Major third, major sixth, major seventh
+  throughout. Absolutely NO minor chords...` to the *first sentence* gave
+  **2 out of 2** on Launch. Position beats emphasis.
+- **Suno's fade-out is consistently ~3 seconds.** A blanket 3 s trim with a
+  30 ms guard fade removes it; verified by re-measuring the tail against the
+  track mean (`+0.3`, `−3.0`, `+1.3` dB after trimming, from `−21.9`, `−6.6`,
+  `−15.2` before).
+
+**What was cut and why.** Quarry, canyon and flats are one emotional place —
+dry, working, away from home — so they share a track. Basin ×3 → ×2: two
+tracks of 2–3 minutes is real rotation. The Works ×2 → ×1. **Landing** is
+heard once for ninety seconds and "First Light" already carries arrival.
+**The Passport** is cut on *design* grounds, not cost: changing music when an
+overlay opens draws attention to the overlay — duck the current track instead.
+
+The real cost of a big set was never generation, which is cheap on Pro. It was
+**auditioning** — 13 tracks × 2 takes is 26 listens, and that is the user's
+time. Nothing here is irreversible; more can always be made.
+
+## The set as originally specified — 13 tracks (superseded by the cut above)
 
 Sized to where the hours go (T0–T1 ≈ 5–6 h in the basin alone; T5–T6 ≈ 9 h in
 a world already running).
@@ -404,6 +452,46 @@ better — it is headroom for the key clicks. LRA = loudness range in LU.*
   expected from industrial percussion, and are still 11 dB down.
 - **No track swells.** LRA 1.8–6.9 LU across the set; the steady-dynamics rule
   worked without exception.
+
+## Round two — the mixolydian Works, and what Extend actually does (2026-08-28)
+
+**The Works, regenerated.** Take **b is the fix**: `mk09b-works-mixolydian-b`,
+1:10, **D# ionian/major** (natural third 0.131 against flat 0.028). Not
+strictly mixolydian — it has a natural seventh where a flat one was asked for —
+but it solves the real problem: the reward track is no longer minor, so the
+key-locked SFX will resolve upward. **This is the new Works pick.**
+
+Take a ignored the instruction completely and came back *more* minor than the
+original (G aeolian, confidence 0.90). Which is the practical lesson:
+
+> **Suno's mode adherence is roughly a coin flip, even with the mode in
+> capitals and an explicit "NOT minor, no flat third anywhere".** Generate two,
+> measure both, keep the one that landed. The chroma scan is the QA step, not a
+> nicety — without it you cannot tell which take you got.
+
+Confirmed across three attempts at a bright Works (six takes): aeolian, dorian
+· aeolian, ionian · mixolydian, aeolian. **Two of six landed bright.** Budget
+three attempts for any track whose mode actually matters, and measure every
+one. Duration behaves the same way — a 3:00 request returned 1:27, 1:42, 2:06
+and 2:59, so it is a strong hint, not a setting.
+
+**Extend does not lengthen a track.** It returns only the *continuation
+segment* (0:44 original → 0:47 and 0:32 continuations), and the merged track
+requires a separate **"Get Full Song"** step on the extended clip. That merge
+had not propagated to the CDN at time of writing, so the long basin track is
+still pending.
+
+**The better lever is `Duration: Custom`** — under *More Options*, next to
+Weirdness and Style Influence, defaulted to Auto. It sets the target length at
+generation time, producing one coherent long track instead of a chain needing
+merges. **Use it for every future generation**; it is the actual fix for the
+short-track problem and it was there the whole time.
+
+Two cautions learned the hard way: the Remix menu is *Cover / Extend / Reuse
+Prompt / Reverse / Adjust Speed* and mis-clicking one row down yields a
+reversed track (`(Reversed)` in the workspace is that mistake, not a keeper);
+and **the Instrumental toggle silently resets to "Write"** whenever the create
+form clears, so re-check it before every generation.
 
 ## Mix note — SFX is too soft against weather (user, 2026-08-27)
 
