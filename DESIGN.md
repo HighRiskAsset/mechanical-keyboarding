@@ -413,6 +413,12 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
 - Side panel inventory with pixel icons; fly-to-inventory animations; float
   "+N"; icon rows sit on dark plates (legible over windows); welcome card
   carries a pixel vignette; EN/РУ interface.
+- **The welcome card says three things** (user decision, 2026-08-27): walk
+  with the arrows, type at a machine, hold Space at anything. Everything
+  else — menus, building, belts, prices, pacing — is taught in place by the
+  caption under the map at the moment it applies. The one gap that closed:
+  open ground now carries a dim "hold Space to build" caption, shown only
+  while the build menu has a row the bag can cover.
 - **The two switches** (on the map picker, and again in settings): interface
   language and keyboard course, stacked, language above layout. Both are
   flags — drawn in `flags.js` on a 21×14 pixel grid, because Windows ships no

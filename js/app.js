@@ -714,6 +714,9 @@
       if (short.length) { setCaption(T.t('capStarved', { mats: short.join(' / ') }), 'no'); return; }
     }
     if (dock && menuRowsFor(dock).length) { setCaption(T.t('capHold', { place: placeName(dock) }), 'dim'); return; }
+    // open ground: the hold raises the build menu — said only while the menu
+    // would have a row the bag can actually cover, so the hint is never a lie
+    if (buildMenuRows().some((r) => r.enabled)) { setCaption(T.t('capOpenGround'), 'dim'); return; }
     setCaption('');
   }
   // while carrying the spool: a green bar under every machine the belt may
