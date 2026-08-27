@@ -123,6 +123,8 @@
       welcomeRules: [
         '<b>Walk</b> with arrow keys, <b>interact</b> by short-pressing or long-pressing spacebar.',
         '<b>Stand at a machine and type</b>: that is what powers it.',
+        '<b>Use mines and machines</b> to create new materials, and materials to build more advanced machines.',
+        '<b>Discover new recipes</b> and the secrets that lie in the most advanced materials.',
       ],
       welcomeGo: 'Power up →',
       unlockStation: '⚡ Unlocked!',
@@ -340,6 +342,8 @@
       welcomeRules: [
         '<b>Ходите</b> стрелками, <b>взаимодействуйте</b> коротким или долгим нажатием пробела.',
         '<b>Встаньте у машины и печатайте</b> — это её и питает.',
+        '<b>Используйте рудники и машины</b>, чтобы получать новые материалы и строить из них более совершенные машины.',
+        '<b>Открывайте новые рецепты</b> и тайны, что скрыты в самых совершенных материалах.',
       ],
       welcomeGo: 'Запуск →',
       unlockStation: '⚡ Открыто!',

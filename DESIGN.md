@@ -434,9 +434,13 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
 - Side panel inventory with pixel icons; fly-to-inventory animations; float
   "+N"; icon rows sit on dark plates (legible over windows); welcome card
   carries a pixel vignette; EN/РУ interface.
-- **The welcome card says two things** (user decision, 2026-08-27): walk
+- **The welcome card says four things** (user decision, 2026-08-27): walk
   with arrow keys and interact by short- or long-pressing spacebar; stand
-  at a machine and type. Everything else (menus, building, belts, prices,
+  at a machine and type; use mines and machines to create new materials,
+  and materials to build more advanced machines; discover new recipes and
+  the secrets that lie in the most advanced materials. The last two are the
+  goal, added the same day: the card must say what the game is for, not
+  only how it steers. Everything else (menus, building, belts, prices,
   pacing) is taught in place by the caption under the map at the moment it
   applies. The one gap that closed: open ground now carries a dim "hold
   Space to build" caption, shown only while the build menu has a row the
