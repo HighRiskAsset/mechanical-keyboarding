@@ -49,11 +49,16 @@ body {
 #wordmark span { color: var(--ink-dim); }
 #topbar-right { display: flex; align-items: center; gap: 26px; }
 #session-stats { display: flex; gap: 28px; }
-#btn-sound, #btn-settings {
+#btn-sfx, #btn-music, #btn-debug, #btn-settings {
   background: none; border: none; cursor: pointer;
   font-size: 16px; opacity: 0.7;
 }
-#btn-sound:hover, #btn-settings:hover { opacity: 1; }
+#btn-sfx:hover, #btn-music:hover, #btn-debug:hover, #btn-settings:hover { opacity: 1; }
+/* the switches sit as a pair, closer to each other than to the gear */
+#btn-sfx, #btn-music, #btn-debug { margin-right: -18px; }
+#btn-debug { filter: saturate(0.6); }
+/* a switch that is off: dim and drained, and its title says which */
+.btn-off { opacity: 0.28 !important; filter: grayscale(1); }
 .stat { display: flex; flex-direction: column; align-items: center; min-width: 60px; }
 .stat-value { font-size: 20px; color: var(--ink); font-variant-numeric: tabular-nums; }
 .stat-label { font-size: 11px; color: var(--ink-dim); letter-spacing: 1px; }

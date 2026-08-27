@@ -1,10 +1,12 @@
-// MAPPROOF(mapId, name, sx, sy, sw, sh, scale) — bake a world for real and POST
+// MAPPROOF.bake(mapId, outlines) — bake a world for real and hand back the canvas.
+// MAPPROOF(mapId, name, sx, sy, sw, sh, scale) — do that and POST
 // a PNG of it to assets/inbox/ through the dev server's /upload. Everything is
 // drawn the way factory.js draws it (ground chunks, water, cliff band, border
 // forest, nodes, scenery, crossings) so the sheet is what the game shows, with
 // every plot outlined so placements can be checked at a glance.
 // Used by dev/map.html. Not part of the game.
-window.MAPPROOF = async (mapId, name, sx, sy, sw, sh, scale) => {
+// dev/sky.html grades a slice of this, which is why the bake is its own call.
+const bakeWorld = (mapId, outlines) => {
   const T = 16;
   const m = CHAIN.MAPS[mapId];
   const g = TILES.bake(m.MAP, m.W, m.H);
@@ -46,22 +48,35 @@ window.MAPPROOF = async (mapId, name, sx, sy, sw, sh, scale) => {
     const low = /^(rock|boulder|tarpool|scrub|reeds|crystal|spire)/.test(s.kind);
     late.push({ z: low ? s.ty * T : (s.ty + 1) * T, draw: () => x.drawImage(a, Math.round(s.tx * T + (s.fw * T - a.width) / 2), (s.ty + 1) * T - a.height) });
   }
+  // the set dressing, on the same z ladder factory.js sorts it on: the sheet is
+  // missing a lamppost otherwise, and the sky sheet grades one
+  for (const pr of (m.PROPS || [])) {
+    const a = PIXELS.propCanvas(pr.kind);
+    late.push({ z: pr.y + a.height, draw: () => x.drawImage(a, pr.x, pr.y) });
+  }
   late.sort((a, b) => a.z - b.z).forEach((o) => o.draw());
 
   // every build site outlined on the tiles it actually zones (3×3, MAPKIT.siteBox),
   // and every vein on the two tiles its mine takes (MAPKIT.veinBox), so the
-  // sheet shows which seams lie across and which are bedded on end
-  x.strokeStyle = 'rgba(255, 230, 140, 0.85)';
-  for (const p of m.SITES) {
-    const b = MAPKIT.siteBox(p);
-    x.strokeRect(b.c0 * T + 0.5, b.r0 * T + 0.5, b.w * T - 1, b.h * T - 1);
+  // sheet shows which seams lie across and which are bedded on end. The sky
+  // sheet wants the ground clean, so the outlines are optional.
+  if (outlines !== false) {
+    x.strokeStyle = 'rgba(255, 230, 140, 0.85)';
+    for (const p of m.SITES) {
+      const b = MAPKIT.siteBox(p);
+      x.strokeRect(b.c0 * T + 0.5, b.r0 * T + 0.5, b.w * T - 1, b.h * T - 1);
+    }
+    x.strokeStyle = 'rgba(140, 220, 255, 0.85)';
+    for (const n of m.MAP.NODES) {
+      const b = MAPKIT.veinBox(n);
+      x.strokeRect(b.c0 * T + 0.5, b.r0 * T + 0.5, b.w * T - 1, b.h * T - 1);
+    }
   }
-  x.strokeStyle = 'rgba(140, 220, 255, 0.85)';
-  for (const n of m.MAP.NODES) {
-    const b = MAPKIT.veinBox(n);
-    x.strokeRect(b.c0 * T + 0.5, b.r0 * T + 0.5, b.w * T - 1, b.h * T - 1);
-  }
+  return full;
+};
 
+window.MAPPROOF = async (mapId, name, sx, sy, sw, sh, scale) => {
+  const full = bakeWorld(mapId, true);
   const c = document.createElement('canvas');
   c.width = sw * scale; c.height = sh * scale;
   const q = c.getContext('2d');
@@ -70,3 +85,4 @@ window.MAPPROOF = async (mapId, name, sx, sy, sw, sh, scale) => {
   const blob = await new Promise((r) => c.toBlob(r, 'image/png'));
   return (await fetch('/upload?name=' + name, { method: 'POST', body: blob })).text();
 };
+window.MAPPROOF.bake = bakeWorld;

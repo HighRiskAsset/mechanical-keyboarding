@@ -2091,6 +2091,219 @@ above · prices per the pattern above · minimum alphabets · outlet counts (1/2
 · overpass at tier 4 · ⚙ lag one tier · ratio tilt cap 3:1 · hint dimming
 from T4, hint-free from T5 · the ×1.5-while-typing feel layer (off; gravy).
 
+## THE SKY: atmosphere as a layer, not as art (SHIPPED 2026-08-27)
+
+The world got a day and a weather without a single sprite changing. That is
+the whole design constraint: `js/sky.js` draws over the finished picture and
+knows nothing about what is under it, so the Phase 6 art pass (bake to PNG,
+remaster) can replace every pixel in the game and the atmosphere carries over
+untouched. Anything that has to know what a machine looks like does not belong
+in this file.
+
+**Where it sits.** One container on the stage, added between the world and the
+labels. Everything the player has to read (the place menu, the captions, the
+floats, the pixel bag) is added after it and stays at full contrast at
+midnight in a storm. The layer is scaled by the same whole number as the world,
+every position is an integer world pixel, and every soft edge is baked into a
+canvas at one canvas pixel per world pixel. No filters, no rotation, no
+fractional scale: a slanted rain streak is a stepped column of pixels.
+
+Bottom to top: cloud shadows (world-anchored, multiply, daylight only) ·
+the hour (one flat multiply for the dark that falls, one flat add for the
+colour a low sun throws back) · the weather wash (a second multiply the sky
+owns, plus wet ground) · **light pools** (add, and above the grade, which is
+what makes a lamp read as a lamp burning rather than a patch somebody forgot
+to darken) · precipitation · fog banks · lightning · vignette.
+
+**The clock is invisible.** No dial, no number, nothing to manage. One full
+day is twelve minutes of play and the game opens mid-morning, so the first
+thing a new player sees is daylight. Twelve keyframed hours interpolate into
+each other, so nothing steps. Midnight runs the world at about a third of its
+noon brightness and blue; the site tape, the ground and the operator all stay
+legible, which was checked on a full-size frame and not on a contact sheet.
+
+**Light.** Every lamppost the map plants and every machine body the player
+builds hands the sky a pool: world position, radius, and either a colour of its
+own or a machine state. `factory.js` keeps the map's lights and the machines'
+lights in two lists and hands them over together, so building a machine lights
+the ground under it from that second. Lights are the reason night is worth
+having: an empty field at midnight is just dark, but a field with six machines
+burning is a night shift.
+
+**The firebox is the machine's state, in light** (2026-08-27). A pool is not
+decoration. Four heats, and the frame writes one of them into every machine's
+light record each tick, straight off the same `modeOf` the sprite band reads:
+
+| state | what it means | how it burns |
+|---|---|---|
+| **work** | running, automated or with you typing at it | hot and bright, throbbing on the machine's own work beat, and every working body on the map throbs together because they share the sprite clock |
+| **full** | it made the thing and has nowhere to put it | warm, down a third, breathing on the slow idle beat |
+| **starved** | nothing to eat | a dim ember, guttering deep and slow, each one on its own time |
+| **banked** | not automated, nobody there | the pilot light and nothing more |
+
+It is the same fire at four temperatures and **never a different colour per
+kind**: a mine and a smelter at the same heat look the same, so the only thing
+colour can mean is heat. (Colour by kind is a separate idea, parked until the
+machine roster is closed.) The upshot is that you can stand anywhere at night
+and read the whole floor without a single piece of UI: what is running, what is
+blocked, what has run dry. Typing at a machine yourself lights it, which is
+invariant 1 said in light.
+
+**The lantern.** The operator carries a real light, not a glint: `LANTERN_R` 52
+world pixels with the inner `32` (two full tiles every way) held at full before
+it starts to fall off. It reads the dark rather than the lamp clock, so it is
+out at sunset when there is still light to work by and full once the day has
+gone. Those two numbers are the whole answer to "how far can I see at night"
+and they are named at the top of the file for that reason.
+
+**What is in the air** (2026-08-27). Fireflies after dark and motes in a low
+sun: the same system twice, a few dozen specks anchored in the world and
+wrapped around the camera so they sit in the place rather than sliding over the
+screen as you walk. Both go over the grade with the lamps, because a firefly
+the night could darken is not a firefly. Fireflies are mostly off, blinking on
+for a beat at their own times, and they come out well after dusk. Motes ride
+the same warm throw the hour gives the grade, so they are brightest at sunrise
+and at the golden hour and nearly gone at noon. Still air only: rain, snow and
+fog put both out.
+
+**Weather is a chain, never a dice roll.** There are seven skies (clear, cloudy,
+drizzle, rain, storm, fog, snow), and each one holds the weights for the skies
+it can honestly turn into. So an hour walks clear → cloudy → drizzle → rain
+rather than teleporting from sunshine to blizzard. A spell lasts 70 to 190
+seconds and takes 16 to fade into the next. A front arrives from one side or
+the other and the whole spell leans that way, so the rain does not slant the
+same direction all session. Rain leaves the ground wet for a minute and a half
+after it stops. Maps may declare `WEATHER` weights (the frontier has a
+snowfield and a bog, so it sees more snow and fog than the open range does).
+
+**Weather is paint.** It changes no rate, gates nothing, is never a mechanic
+and is never a reason a machine did or did not run. If it ever needs to be
+read by the simulation, that is a different feature with a different name.
+
+**One wind.** `SKY.wind()` is the only wind in the game: rain, snow, fog and
+the drifting petals all read it, so a gust moves everything loose in the frame
+at once.
+
+**The switch.** Settings carries Sky and weather: Full · Calm · Off. Calm
+keeps the hour, the lamps and the frame and stops everything that moves across
+the screen, which is the honest answer for anyone the motion pulls away from
+the line they are typing. Off leaves the world lit flat, exactly as it was.
+The preference lives on the device beside sound and language, not in a save.
+
+**Proof sheet.** `dev/sky.html` grades one slice of a real world through the
+real layer: once per hour, once per sky, or once per firebox state. Every cell
+is a frame out of the renderer, not a mock-up, and it posts the contact sheet
+to `assets/inbox/`. With developer mode on, Ctrl+Alt+T pushes the clock three
+hours and Ctrl+Alt+W steps through the skies and then hands the weather back.
+
+**Fixed on the way through** (2026-08-27): `workTtl` in `factory.js` was set to
+fifty on every keystroke, counted down every frame and never read, so a machine
+you typed at once kept its work animation until you walked away. The countdown
+now ends it, which is what the fifty was always for. Invisible while the only
+thing it drove was a sprite band; obvious the moment the firebox started saying
+the same thing in light across the whole map.
+
+**Cost.** 0.3 ms a frame with the sky off, 1.0 at midnight, 1.9 in a storm at
+midnight, with the particle counts scaled to the viewport.
+
+**Thunder is not a crack** (`AUDIO.thunder`). Two constraints set every number
+in it and neither is realism. It must never be mistaken for `thud`, the error
+sound, which is a short low-passed burst with a hard onset: a thunderclap is
+the same thing in the same band, and *being told you made a mistake you did
+not make* is the one thing a sound in this game may never do. So thunder swells
+over a fifth of a second rather than starting, runs ten times longer and peaks
+well under the thud. And it must not mask a keystroke, so it is brown noise
+under a filter closing from 260 Hz to 70 Hz, with nothing left where the clicks
+live at 1.6 and 5.2 kHz. Every weather sound added later inherits both rules.
+
+**Rulings taken 2026-08-27, in order:**
+
+- **Colour by machine kind: parked.** Forge orange against cooler cyan is worth
+  having, but not until the machine roster is 100% committed. Until then heat
+  is the only thing a firebox colour is allowed to mean.
+- **Seasons: no.** A season clock over the day clock is variety a game with a
+  world gets for free, and this is a typing tutor: nobody plays through
+  multiple seasons of it, so it would be a palette shift with nothing behind
+  it. Not built.
+- **Wet and snow accumulation: built as full-frame grades, on trial.** Both run
+  off one accumulator that climbs while the weather runs and falls back slower
+  than it rose, and neither asks what a tile is, so both are immune to every
+  art change including the Phase 6 remaster. Wet is a moving sheen: three broad
+  bands of light sliding across the frame, which reads as wet because the light
+  MOVES rather than because it knows what is underneath. Snow is a screen wash,
+  because whitening is what settled snow does and a multiply can only take
+  light away. **The snowpack melts inside the spell that dropped it** (up over
+  about a minute of snowfall, gone within another), because with no seasons in
+  the game, snow lying past its own snowfall is a reskin with nothing behind
+  it. Both are on trial behind developer switches; if they survive, the open
+  question is whether to buy a per-tile mask so the lake stops going pale, and
+  that mask should be baked once per map from `TILES.bake` and default to
+  "takes snow" so a tile added later fails safe.
+- **Weather in the ear: built, on the third bus.** See the section below.
+
+**Still on the table** (each is another overlay, none of them touches a
+sprite): heat shimmer over a running smelter, which is the one item here that
+modifies pixels rather than sitting over them.
+
+## THE THREE BUSES, and weather in the ear (SHIPPED 2026-08-27)
+
+`js/audio.js` now has the split `docs/bgm-plan.md` asks for, made while there
+was still nothing to retrofit. Everything the game makes goes through exactly
+one bus and the switches move the bus, never the sounds:
+
+- **sfx** every event: clicks, thuds, dings, whistles, the lot.
+- **music** the typing rhythm layer (the rumble and the clack), and
+  `js/music.js` when it lands. It is the closest thing to a soundtrack the game
+  has today, so it answers the music switch and not the sfx one.
+- **weather** the sky's ambience, and nothing else, ever.
+
+**Two switches in the header, and they are the player's.** 🔊 and 🎵, neither
+hidden, neither behind developer mode. The old single switch keeps its
+storage key as the sfx one, and somebody who had turned it off starts with the
+music switch off too, because what they wanted was silence.
+
+**The weather bed answers the sfx switch as well.** "Sound effects off" has to
+mean the game goes quiet, so it takes the ambience with it. The weather bed's
+own switch is a developer one while the bed is being judged.
+
+**Every number in the bed is set by the key click, not by realism.** The click
+ladder lives at 1.6 kHz (its body) and 5.2 kHz (the sparkle that makes it
+crisp), and that ladder is the atomic reward of the entire game. So:
+
+- **Rain is two cascaded lowpass poles, not one.** Measured on the real graph:
+  one pole at 900 Hz leaves 1.6 kHz only 8 dB down, which is not enough.
+  Cascaded, 1.6 kHz is 18 dB down and 5.2 kHz is 65 dB down, which is absent.
+  What is left is patter and weight, rain heard through a window. It does not
+  sound like rain sounds. That is the price of having rain at all, and it is
+  worth paying.
+- **The bed peaks at about the level of the loudest key click** and no higher,
+  so a storm is present without ever being the loudest thing in the room.
+- **Wind is one wide unresonant band.** Q stays low on purpose: a resonant peak
+  would give the wind a pitch, and a pitch would fight whatever key the
+  soundtrack is in.
+- **The night bed is frogs, not crickets.** Crickets sit at 4 to 5 kHz, which
+  is the click, so the bed stays under 500 Hz. The only things that go higher
+  are the sparse voices over it, a night insect and a day bird, both pitched
+  into the gap between 1.6 and 5.2 kHz and both quiet.
+- **Snow makes no sound of its own**, so a snowfall is heard as wind and as the
+  night bed going quiet under it.
+
+**Typing pushes the weather back.** A run of clean characters ducks the whole
+weather bus, all the way back at a streak of forty. This is the bgm plan's
+guardrail read the only way it may be read: the storm ducks for the keystroke,
+never the keystroke for the storm. And it is carrot with no stick attached,
+because breaking the run takes nothing away, it only stops pushing.
+
+## Developer settings (SHIPPED 2026-08-27)
+
+A second icon (🔧) beside the gear, on screen only with developer mode on, and
+a second panel behind it. Nothing in it is a game setting and nothing in it
+reaches a save: it is the bench the atmosphere is judged on. Weather sound, wet
+ground and lying snow each have a switch, and each switch takes its effect out
+**whole** rather than turning it down, so what is being compared is the effect
+and not a setting of it. Two more rows hold a sky and set the hour, so an A/B
+does not mean waiting for the weather.
+
 ## Next epoch candidates (pick with the user)
 
 - **Build the v3 tree — the core gameplay foundation** (agreed 2026-08-18;
@@ -2110,12 +2323,13 @@ from T4, hint-free from T5 · the ×1.5-while-typing feel layer (off; gravy).
 - Art polish: shoreline fringe tiles. (Smelter-reads-house-like is done —
   it is a tapered blast furnace now, 2026-08-19 steampunk pass.)
 - Polish debt: re-voice the typing-rhythm layer (still train clacks);
-  night runs as a lamp toggle; station relocation fee.
+  station relocation fee. (Night stopped being a toggle: it runs on the day
+  clock now, see THE SKY.)
 
 ## Later epochs (parked, in order)
 
 - Bigram-level skill items; suffix-chunk subassemblies (-ого, -ться).
-- Cosmetics economy (₽ buys décor only). Night-shift lamp toggle.
+- Cosmetics economy (₽ buys décor only).
 - Possible delivery meta (ship листы to market cities — the retired Транссиб
   train content could return here; cut until the core is polished).
 - Further courses beyond EN QWERTY (phonetic ЯВЕРТЫ, other languages
@@ -2148,13 +2362,18 @@ the two worlds · `js/factory.js` Pixi world
 (`loadMap` per world) · `js/pixels.js` sprite kit + the one palette, incl. the
 steampunk machinery parts kit `M` and the three machine animation states ·
 `js/tiles.js` terrain kit (fills, autotile spills, walls, faces, crossings,
-region scenery, `bake`, `minimap`) · `js/app.js` orchestration + the map
+region scenery, `bake`, `minimap`) · `js/sky.js` the atmosphere layer (the day
+clock, the colour grade, the weather chain, light pools that say what a machine
+is doing, the lantern, fireflies), drawn over the world and aware of no sprite
+in it · `js/app.js` orchestration + the map
 picker · `js/audio.js` synth ·
 `js/i18n.js` EN/РУ · `serve.ps1` dev server (+ POST /upload for QA frames) ·
 `js/sim.js` the factory simulation (buffers, jobs, belts, the clock) ·
 `js/drops.js` loose materials on the ground + `DROPS.demolish`, the one door
 everything destroyed goes through ·
-`dev/map.html` + `dev/map-proof.js` world proof sheet · `dev/tiles.html`
+`dev/map.html` + `dev/map-proof.js` world proof sheet · `dev/sky.html` the
+atmosphere proof sheet (a real slice graded once an hour and once per sky) ·
+`dev/tiles.html`
 terrain proof sheet · `dev/machines.html` machinery proof
 sheet (rigs, works, belts, pipes, props, icons on real terrain, and every
 machine in its three animation states) · `dev/mats.html` + `dev/mats-zoom.html`

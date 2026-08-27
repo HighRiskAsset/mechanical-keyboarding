@@ -81,9 +81,13 @@
     NODES,
   };
 
+  // Open meadow, low ground, nothing to make its own weather: mild skies, and
+  // snow only now and then. Weights, not rates; the sky is paint here too.
+  const WEATHER = { snow: 0.3, storm: 0.6, fog: 0.8 };
+
   K.register({
     id: 'range', W, H, spawn: { x: 84, y: 154 },
     LEGACY: {},
-    MAP, SITES, SCENERY, PROPS,
+    MAP, SITES, SCENERY, PROPS, WEATHER,
   });
 })();

@@ -32,6 +32,10 @@
   const particles = [], floats = [], flashes = [], sparks = [], puffs = [], builds = [];
   const petals = [];
   let ambient = [], waterSprites = [], terrain = [], nodeSprites = [];
+  // What burns after dark. The ground's lights come from the map and last as
+  // long as it does; the machines' come and go as they are built, so the two
+  // lists are kept apart and handed to the sky together.
+  let mapLights = [], machineLights = [];
   let waterTexes = [];
   let grid = null;
   let crossSprites = [], openRects = [], closedRects = [];
@@ -162,6 +166,7 @@
     app.canvas.style.width = ((viewW * S) / dpr) + 'px';
     app.canvas.style.height = ((viewH * S) / dpr) + 'px';
     layoutHud();
+    if (window.SKY) SKY.resize(viewW, viewH, S);
   }
 
   // ---------- the pixel HUD: the bag in-canvas, icons + numbers only ----------
@@ -288,6 +293,11 @@
     if (ghostG) ghostG.alpha = 0.7 + 0.3 * Math.abs(Math.sin(frameClock * 0.12));
   }
 
+  // the ground's lights and the machines' lights are one list to the sky
+  function pushLights() {
+    if (window.SKY) SKY.setLights(mapLights.concat(machineLights));
+  }
+
   function addGlow(wx, wy, base) {
     const g = new PIXI.Sprite(PIXELS.glowHaloTex());
     g.anchor.set(0.5);
@@ -315,6 +325,16 @@
     cameraC.scale.set(S);
     cameraC.sortableChildren = true;
     app.stage.addChild(cameraC);
+    // The atmosphere goes on next and nothing else may come between: it grades
+    // the finished world and only the world. Labels, the place menu and the bag
+    // are added after it, so they stay at full contrast at midnight in the rain.
+    const skyRoot = window.SKY ? SKY.init(app) : null;
+    if (skyRoot) {
+      app.stage.addChild(skyRoot);
+      // the two beats the machines animate on, so a firebox throbs in step
+      // with the body standing over it rather than near it
+      SKY.setBeat(PIXELS.WORK_FRAMES * WORK_BEAT, PIXELS.IDLE_FRAMES * IDLE_BEAT);
+    }
     labelsC = new PIXI.Container();
     labelsC.scale.set(S);
     app.stage.addChild(labelsC);
@@ -433,11 +453,17 @@
       const front = row % 2 === 0, col = front ? cols - Math.floor(FOREST.e / T) : cols - 1;
       plant(col, row, row, () => CHAIN.regionAt(W - 8, row * T + 8), 3);
     }
+    mapLights = [];
     for (const pr of CHAIN.PROPS) {
       const sp = keep(new PIXI.Sprite(PIXELS.propTex(pr.kind)));
       sp.position.set(pr.x, pr.y);
       sp.zIndex = pr.y + sp.texture.height;
-      if (pr.glow) addGlow(pr.x + 4, pr.y + 3, 0.9);
+      if (pr.glow) {
+        addGlow(pr.x + 4, pr.y + 3, 0.9);
+        // the same flame again, this time as a pool the sky throws over the
+        // dark: gas white-gold, and wide enough to reach the path
+        mapLights.push({ x: pr.x + 4, y: pr.y + 6, r: 34, tint: 0xffcf80, base: 0.95 });
+      }
     }
     for (const sc of CHAIN.SCENERY) {
       const sp = keep(new PIXI.Sprite(PIXELS.sceneryTex(sc.kind)));
@@ -454,6 +480,11 @@
     facing = 'side'; faceSign = 1; workTtl = 0; working = false;
     for (const k of Object.keys(moving)) moving[k] = false;
     if (player) player.position.set(Math.round(playerX), Math.round(playerY));
+    // a world can have its own weather; the bodies on it are added by
+    // buildWorld a moment later, and it hands the sky the full list then
+    machineLights = [];
+    if (window.SKY) SKY.setClimate(CHAIN.WEATHER);
+    pushLights();
     resize();
   }
 
@@ -709,9 +740,20 @@
     // feet a step up from the box's south edge — the ground the front ports
     // use stays visible, and the tower covers at most half of the row
     // behind (rotation overhaul, 2026-08-21)
+    machineLights = [];
     for (const m of profile.machines) {
       const b = bodyBox(m);
       const bx = b.c0 * T16, by = b.r0 * T16, bwPx = b.w * T16, bhPx = b.h * T16;
+      // Every body that stands on the map throws firelight on the ground around
+      // it once the sun is off, which is what makes a night shift read as a
+      // working factory rather than a dark field with shapes in it. The record
+      // is kept on the station too, and the frame writes `state` into it: the
+      // sky reads that and nothing else, so the light IS the machine's state.
+      const light = {
+        x: bx + (bwPx >> 1), y: by + bhPx - 8,
+        r: m.kind === 'mine' ? 20 : 24, state: 'banked',
+      };
+      machineLights.push(light);
       const foot = m.kind === 'mine' ? 2 : 10;
       const live = !!(autoLive && autoLive(m));
       const root = new PIXI.Container();
@@ -743,6 +785,7 @@
       stations[id] = {
         def: { id, x: bx + 1, y: by + bhPx - 5, kind: m.kind, m, bw }, root, sp, glow, mark, built: true, auto: live, sqTtl: 0,
         spBase: sp.y,
+        light,
         body: { x: bx, y: by, w: bwPx, h: bhPx },   // the ground it covers, for the smoke it arrives in
         selBox,
         simState: live && window.SIM ? SIM.state(profile, m) : 'off',
@@ -791,6 +834,7 @@
     player.position.set(Math.round(playerX), Math.round(playerY));
     cameraC.addChild(player);
     if (dockedId && stations[dockedId]) stations[dockedId].glow.visible = true;
+    pushLights();
     return relaid;   // {moved, lost} — what turning or an older save did to the runs
   }
   // an automated mine changes look without a full rebuild
@@ -1767,7 +1811,11 @@
       idleClock += dt;
       if (idleClock > 16) { idleClock = 0; idleFrame = (idleFrame + 1) % idleTex[facing].length; }
     }
-    if (workTtl > 0) workTtl -= dt;
+    // A machine stops being worked when the keystrokes stop, not only when the
+    // operator walks away. `workTtl` was set and counted down and never read,
+    // so a body you typed at once kept its work animation until you moved off;
+    // now the countdown is what ends it, which is what the fifty was always for.
+    if (workTtl > 0) { workTtl -= dt; if (workTtl <= 0) working = false; }
     // `moving` above is the held keys; walking is whether they moved him
     const walking = vx !== 0 || vy !== 0;
     if (working && dockedId) {
@@ -1787,6 +1835,12 @@
       : Math.max(0, Math.min(CHAIN.WORLD_H - viewH, playerY - viewH / 2 - 8));
     cameraC.position.set(-Math.round(camX) * S, -Math.round(camY) * S);
     labelsC.position.set(-Math.round(camX) * S, -Math.round(camY) * S);
+    // the sky follows the same camera: it is drawn in view pixels, so it takes
+    // the world origin rather than a container position
+    if (window.SKY) {
+      SKY.follow(playerX, playerY);
+      SKY.tick(dt, { x: camX, y: camY });
+    }
 
     // docking: 2D proximity to the place's work spot (front-center)
     let best = null, bestD = 1e9;
@@ -1878,6 +1932,16 @@
         const mode = modeOf(s);
         const t = band(lookOf(s.def.kind, s.auto), mode, SIM.facingOf(s.def.m))[mode === 'work' ? wf : mode === 'idle' ? idf : 0];
         if (s.sp.texture !== t) s.sp.texture = t;
+        // The firebox says the same thing the sprite does, in light: hot and
+        // throbbing while it runs (including while YOU are the one running it),
+        // breathing while it is backed up, guttering while it is starved, and
+        // banked to a pilot light when nobody is working it at all. The sky
+        // owns what each of those looks like; this only names the state.
+        if (s.light) {
+          s.light.state = mode === 'work' ? 'work'
+            : !s.auto ? 'banked'
+              : s.simState === 'starved' ? 'starved' : 'full';
+        }
       }
     }
     for (const s of Object.values(stations)) {
@@ -1902,15 +1966,22 @@
     // the selector breathes, so it reads as a cursor and not a fence
     if (dockedId && stations[dockedId]) stations[dockedId].glow.alpha = 0.7 + 0.3 * Math.abs(Math.sin(frameClock * 0.06));
 
+    // A lamp's own little halo, the one baked into the world layer. The sky
+    // turns it down through the day and back up after dark; with the sky off it
+    // burns the way it always did.
+    const lampK = window.SKY ? (SKY.mode() === 'off' ? 1 : 0.22 + 0.78 * SKY.lamp()) : 1;
     for (const a of ambient) {
-      a.sp.alpha = a.base * (0.75 + 0.25 * Math.sin(frameClock * 0.05 + a.phase));
+      a.sp.alpha = a.base * lampK * (0.75 + 0.25 * Math.sin(frameClock * 0.05 + a.phase));
     }
     if (frameClock % 26 === 0 && waterSprites.length) {
       const f = Math.floor(frameClock / 26) % 2;
       for (const w of waterSprites) w.sp.texture = waterTexes[f][w.seed];
     }
+    // the petals read the same wind as the rain and the fog, so a gust moves
+    // everything loose in the frame at once
+    const wind = window.SKY ? SKY.wind().x : 0;
     for (const m of petals) {
-      m.x += m.vx * dt;
+      m.x += (m.vx + wind * 0.22) * dt;
       m.y += 0.05 * dt;
       const home = CHAIN.MAP.REGIONS[0];
       if (m.x > home.x + home.w) m.x = home.x;

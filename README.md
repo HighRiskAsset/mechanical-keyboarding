@@ -47,6 +47,12 @@ Hold Space anywhere else while carrying to drop the spool.
 Everything is paid from what you have mined and made. Progress is saved in
 your browser (localStorage), one slot per world; switch worlds from ⚙.
 
+The map keeps its own weather and its own clock: about twelve minutes takes it
+from dawn through dark and back, lamps and machine fireboxes light the ground
+once the sun is off, and the sky works its way through clear, cloudy, rain,
+storm, fog and snow on its own. None of it changes what the machines do, and
+all of it can be turned down to Calm or off entirely from ⚙.
+
 No installation, no build step: plain HTML/CSS/JS with a vendored copy of
 [PixiJS](https://pixijs.com/) (MIT) in `libs/`. All art is drawn in code —
 there are no image assets.

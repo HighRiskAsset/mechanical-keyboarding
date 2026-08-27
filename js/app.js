@@ -1502,6 +1502,23 @@
       debugMaterials();
       return;
     }
+    // The sky, by hand. Ctrl+Alt+T walks the day forward an eighth at a time,
+    // Ctrl+Alt+W steps through the skies and then hands the weather back. Both
+    // only exist with developer mode on, and neither touches a save.
+    if (e.ctrlKey && e.altKey && (e.code === 'KeyT' || e.code === 'KeyW') && window.SKY && DEVMODE.isEnabled()) {
+      e.preventDefault();
+      if (e.code === 'KeyT') {
+        SKY.jump(SKY.report().t + 0.125);
+      } else {
+        const r = SKY.report();
+        const i = SKY.SKY_IDS.indexOf(r.weather);
+        const next = r.forced && i === SKY.SKY_IDS.length - 1 ? null : SKY.SKY_IDS[r.forced ? i + 1 : 0];
+        SKY.force(next, true);
+      }
+      const r = SKY.report();
+      console.log('[sky] ' + r.clock + '  ' + r.hour + '  ' + r.weather + (r.forced ? '  (held)' : '  (running)'));
+      return;
+    }
     if (ARROWS[e.code]) {
       e.preventDefault();
       if (overlayOpen) return;
@@ -1565,7 +1582,7 @@
         profile.totalChars++;
 
         A.click();
-        A.onKey(latency);
+        A.onKey(latency, session.streak);      // the streak pushes the weather back
       }
 
       if (expected !== ' ') {
@@ -1611,6 +1628,9 @@
         wordHadError = true;
       }
       A.thud();
+      // the weather comes back in when the run ends. Nothing is taken away for
+      // the miss: the world simply stops being pushed back.
+      A.setDrive(0);
       FACTORY.castLetter(false);
       flashError();
       clearHint();
@@ -1933,6 +1953,20 @@
         + `${FLAGS.svg(l.flag)}</button>`;
     }).join('');
   }
+  // The atmosphere switch: how much of the sky the player wants over the map.
+  // Full is the day, the weather and everything that moves in it; calm keeps
+  // the hour and the lamps and stops the rain, the snow and the drifting cloud
+  // shadow, for anyone the movement pulls away from the line they are typing;
+  // off leaves the world lit flat, the way it was before any of this.
+  const SKY_MODES = ['full', 'calm', 'off'];
+  function skySwitchHTML() {
+    const now = window.SKY ? SKY.mode() : 'off';
+    return SKY_MODES.map((m) => {
+      const on = m === now;
+      return `<button class="seg-btn${on ? ' active' : ''}" data-sky="${m}" aria-pressed="${on}">`
+        + `${T.t('setSkyModes')[m]}</button>`;
+    }).join('');
+  }
   function courseSwitchHTML() {
     return COURSES.list().map((c) => {
       const on = c.id === COURSES.get();
@@ -2100,9 +2134,22 @@
   const thisYear = new Date().getFullYear();
   if (thisYear > 2026) $('colophon-years').textContent = '2026–' + thisYear;
 
-  const soundBtn = $('btn-sound');
-  function refreshSoundBtn() { soundBtn.textContent = A.isEnabled() ? '🔊' : '🔇'; }
-  soundBtn.onclick = () => { A.setEnabled(!A.isEnabled()); refreshSoundBtn(); soundBtn.blur(); };
+  // Two switches in the header, and they are the player's: the events the game
+  // makes at you, and the rhythm layer under them. Neither is hidden and
+  // neither depends on developer mode. The weather bed answers the sfx switch
+  // as well, because "sound effects off" has to mean the game goes quiet; its
+  // own switch is a developer one while the bed is still being judged.
+  const sfxBtn = $('btn-sfx'), musicBtn = $('btn-music');
+  function refreshSoundBtn() {
+    sfxBtn.textContent = A.isSfx() ? '🔊' : '🔇';
+    // there is no struck-through note in the emoji set that renders anywhere,
+    // so the music switch says off by going dim, and its title says it in words
+    musicBtn.classList.toggle('btn-off', !A.isMusic());
+    sfxBtn.title = T.t(A.isSfx() ? 'sndSfxOn' : 'sndSfxOff');
+    musicBtn.title = T.t(A.isMusic() ? 'sndMusicOn' : 'sndMusicOff');
+  }
+  sfxBtn.onclick = () => { A.setSfx(!A.isSfx()); refreshSoundBtn(); sfxBtn.blur(); };
+  musicBtn.onclick = () => { A.setMusic(!A.isMusic()); refreshSoundBtn(); musicBtn.blur(); };
 
   // ---------- settings ----------
   const DONATE = [
@@ -2222,6 +2269,11 @@
           <span class="seg" id="set-course">${courseSwitchHTML()}</span>
         </div>
         <div class="set-row">
+          <span class="set-label">${T.t('setSky')}</span>
+          <span class="seg" id="set-sky">${skySwitchHTML()}</span>
+        </div>
+        <p class="set-note">${T.t('setSkyNote')}</p>
+        <div class="set-row">
           <span class="set-label">${T.t('setSaveFile')}</span>
           <span class="seg"><button class="seg-btn" id="set-export">${T.t('setExport')}</button><button class="seg-btn" id="set-import">${T.t('setImport')}</button></span>
         </div>
@@ -2242,12 +2294,16 @@
       <div><button id="ov-continue" class="btn-primary">${T.t('passportClose')}</button></div>
     `);
     wireSwitches('set', showSettings);
+    document.querySelectorAll('#set-sky .seg-btn').forEach((b) => {
+      b.onclick = () => { if (window.SKY) SKY.setMode(b.dataset.sky); showSettings(); };
+    });
     $('set-map').onclick = () => showMapSelect();
     $('set-export').onclick = () => exportSave();
     $('set-import').onclick = () => pickImportFile();
     $('set-dev').onchange = (e) => {
       DEVMODE.setEnabled(e.target.checked);
       $('set-dev-note').hidden = !e.target.checked;
+      refreshDebugBtn();                       // the 🔧 comes and goes with it
     };
     $('set-reset').onclick = () => showResetConfirm();
     $('ov-continue').onclick = () => hideOverlay();
@@ -2255,11 +2311,91 @@
   }
   $('btn-settings').onclick = () => { $('btn-settings').blur(); if (profile) showSettings(); };
 
+  // ---------- developer settings ----------
+  // A second panel behind a second icon, and the icon is only on screen with
+  // developer mode on. Nothing in here is a game setting: it is the bench the
+  // atmosphere is judged on, so every switch takes its effect out whole rather
+  // than turning it down, and the sky rows drive the same SKY calls the game
+  // does. None of it is written into a save.
+  const debugBtn = $('btn-debug');
+  function refreshDebugBtn() {
+    debugBtn.hidden = !DEVMODE.isEnabled();
+    debugBtn.title = T.t('dbgTitle');
+  }
+  debugBtn.onclick = () => { debugBtn.blur(); showDebug(); };
+
+  function showDebug() {
+    overlayRerender = showDebug;
+    const f = window.SKY ? SKY.fx() : { wet: false, pack: false };
+    const r = window.SKY ? SKY.report() : null;
+    const seg = (id, on, onLabel, offLabel) =>
+      `<span class="seg" id="${id}">`
+      + `<button class="seg-btn${on ? ' active' : ''}" data-on="1">${onLabel}</button>`
+      + `<button class="seg-btn${on ? '' : ' active'}" data-on="0">${offLabel}</button></span>`;
+    const yes = T.t('dbgOn'), no = T.t('dbgOff');
+    showOverlay(`
+      <div class="card-station">🔧 ${T.t('dbgTitle')}</div>
+      <div class="settings-body">
+        <p class="set-note">${T.t('dbgNote')}</p>
+        <div class="set-row">
+          <span class="set-label">${T.t('dbgWeatherSound')}</span>
+          ${seg('dbg-wxsound', A.isWeather(), yes, no)}
+        </div>
+        <div class="set-row">
+          <span class="set-label">${T.t('dbgWet')}</span>
+          ${seg('dbg-wet', f.wet, yes, no)}
+        </div>
+        <div class="set-row">
+          <span class="set-label">${T.t('dbgPack')}</span>
+          ${seg('dbg-pack', f.pack, yes, no)}
+        </div>
+        <p class="set-note">${T.t('dbgFxNote')}</p>
+        <div class="set-row">
+          <span class="set-label">${T.t('dbgSky')}</span>
+          <span class="seg" id="dbg-sky">${
+            (window.SKY ? SKY.SKY_IDS : []).map((id) =>
+              `<button class="seg-btn${r && r.forced && r.weather === id ? ' active' : ''}" data-sky="${id}">${id}</button>`).join('')
+          }<button class="seg-btn${r && !r.forced ? ' active' : ''}" data-sky="">${T.t('dbgSkyAuto')}</button></span>
+        </div>
+        <div class="set-row">
+          <span class="set-label">${T.t('dbgHour')}</span>
+          <span class="seg" id="dbg-hour">${
+            [['06:00', 0.25], ['12:00', 0.50], ['18:00', 0.75], ['00:00', 0.00]].map(([lab, t]) =>
+              `<button class="seg-btn" data-t="${t}">${lab}</button>`).join('')
+          }</span>
+        </div>
+        <p class="set-note" id="dbg-read">${r ? T.t('dbgRead', {
+          clock: r.clock, hour: r.hour, weather: r.weather + (r.forced ? ' *' : ''),
+          wet: r.wet.toFixed(2), pack: r.pack.toFixed(2),
+        }) : ''}</p>
+      </div>
+      <div><button id="ov-continue" class="btn-primary">${T.t('passportClose')}</button></div>
+    `);
+    const wire = (id, set) => {
+      document.querySelectorAll('#' + id + ' .seg-btn').forEach((b) => {
+        b.onclick = () => { set(b.dataset.on === '1'); showDebug(); };
+      });
+    };
+    wire('dbg-wxsound', (on) => A.setWeather(on));
+    wire('dbg-wet', (on) => { if (window.SKY) SKY.setFx('wet', on); });
+    wire('dbg-pack', (on) => { if (window.SKY) SKY.setFx('pack', on); });
+    document.querySelectorAll('#dbg-sky .seg-btn').forEach((b) => {
+      b.onclick = () => { if (window.SKY) SKY.force(b.dataset.sky || null, true); showDebug(); };
+    });
+    document.querySelectorAll('#dbg-hour .seg-btn').forEach((b) => {
+      b.onclick = () => { if (window.SKY) SKY.jump(+b.dataset.t); showDebug(); };
+    });
+    $('ov-continue').onclick = () => hideOverlay();
+    $('ov-continue').focus();
+  }
+
   // ---------- interface language ----------
   function applyI18n() {
     document.documentElement.lang = T.getLang();
     document.title = T.t('docTitle');
     document.querySelectorAll('[data-i18n]').forEach((el) => { el.innerHTML = T.t(el.dataset.i18n); });
+    refreshSoundBtn();                      // the switch titles are words, so they turn over too
+    refreshDebugBtn();
     refreshInventory();
     if (profile) { rebuildWorld(); redock(); }
   }
@@ -2319,6 +2455,7 @@
     buildKeyboard();
     refreshStats();
     refreshSoundBtn();
+    refreshDebugBtn();
     FACTORY.init(document.getElementById('factory-mount')).then(() => {
       if (loadingCard) loadingCard.classList.add('s3');
       clearLine();

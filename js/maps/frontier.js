@@ -451,9 +451,15 @@
     REGIONS, GROUND, PLATEAUS, WALLS, CROSSINGS, NODES,
   };
 
+  // How often each sky turns up here. Weights, not rates: weather in this game
+  // is paint and nothing else, and none of it touches a machine. The frontier
+  // carries a snowfield and a bog, so it gets the lot, with a little more snow
+  // and fog than a bare meadow would see.
+  const WEATHER = { snow: 0.9, fog: 1.2 };
+
   K.register({
     id: 'frontier', W, H, spawn: { x: 546, y: 352 },
     LEGACY: { slogi: 'p1', slova: 'p2', stroki: 'p3' },
-    MAP, SITES, SCENERY, PROPS,
+    MAP, SITES, SCENERY, PROPS, WEATHER,
   });
 })();

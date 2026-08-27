@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MK · sky proof sheet</title>
+<style>
+  body { background: #0e1b21; color: #e8e2d4; font: 14px Georgia, serif; margin: 24px; }
+  h1 { font-size: 20px; margin: 0 0 6px; }
+  p { color: #8fa1a8; max-width: 62em; }
+  .bar { margin: 14px 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  select, button { font: inherit; padding: 4px 10px; background: #1a303a; color: #e8e2d4; border: 1px solid #2c4a58; border-radius: 6px; }
+  #out { image-rendering: pixelated; border: 1px solid #2c4a58; max-width: 100%; }
+  #msg { color: #d4a94e; }
+  #stage { position: absolute; left: -10000px; top: 0; }
+</style>
+</head>
+<body>
+<h1>Sky proof sheet</h1>
+<p>Grades one slice of a real world through the real <code>SKY</code> layer, once per hour of the
+day and once per sky, and POSTs the contact sheet to <code>assets/inbox/</code> through the dev
+server's <code>/upload</code>. The ground under it is the same bake <code>dev/map.html</code>
+shows, with two machine bodies stood on it so the light pools have something to fall on. Every
+cell is a real frame out of the renderer, not a mock-up. Not linked from the game.</p>
+
+<div class="bar">
+  <label>world <select id="map"></select></label>
+  <label>zoom <select id="zoom"><option>1</option><option selected>2</option><option>3</option></select></label>
+  <label>sheet <select id="what">
+    <option value="hours">the day, one cell an hour</option>
+    <option value="skies">the skies, at noon and at midnight</option>
+    <option value="fires">the fireboxes, one cell a machine state</option>
+  </select></label>
+  <button id="go">Render + upload</button>
+  <span id="msg"></span>
+</div>
+<div id="stage"></div>
+<img id="out" alt="">
+
+<script src="../libs/pixi.min.js"></script>
+<script src="../js/board-ansi.js"></script>
+<script src="../js/language-ru.js"></script>
+<script src="../js/language-en.js"></script>
+<script src="../js/layout-ru.js"></script>
+<script src="../js/layout-en.js"></script>
+<script src="../js/courses.js"></script>
+<script src="../js/maps/kit.js"></script>
+<script src="../js/maps/frontier.js"></script>
+<script src="../js/maps/range.js"></script>
+<script src="../js/chain.js"></script>
+<script src="../js/pixels.js"></script>
+<script src="../js/tiles.js"></script>
+<script src="../js/sky.js"></script>
+<script src="map-proof.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  $('map').innerHTML = CHAIN.MAP_IDS.map((id) => `<option>${id}</option>`).join('');
+
+  // the slice each world is graded on: a stretch with a lamppost, some props
+  // and open ground, which is what the light has to work over
+  const SLICE = {
+    frontier: { x: 360, y: 236, w: 300, h: 168 },
+    range: { x: 24, y: 60, w: 300, h: 168 },
+  };
+  // two bodies stood on the slice, in slice coordinates, so the machine light
+  // pools have something under them
+  const BODIES = [
+    { look: 'bigrams', x: 96, y: 84 },
+    { look: 1, x: 208, y: 108 },
+  ];
+  const HOURS = [0.00, 0.08, 0.17, 0.23, 0.27, 0.31, 0.36, 0.45, 0.58, 0.67, 0.72, 0.77, 0.81, 0.85, 0.90, 0.95];
+
+  let app = null, worldSp = null, skyRoot = null, slice = null;
+
+  async function ensureApp(w, h) {
+    if (app) {
+      if (app.renderer.width !== w || app.renderer.height !== h) app.renderer.resize(w, h);
+      return;
+    }
+    app = new PIXI.Application();
+    await app.init({ width: w, height: h, background: 0x17161a, backgroundAlpha: 1, resolution: 1, roundPixels: true });
+    $('stage').appendChild(app.canvas);
+    worldSp = new PIXI.Sprite(PIXI.Texture.EMPTY);
+    app.stage.addChild(worldSp);
+    skyRoot = SKY.init(app);
+    app.stage.addChild(skyRoot);
+    app.ticker.stop();                      // every frame in this page is wound by hand
+  }
+
+  // the slice, with two machine bodies on it, as one texture
+  function sliceTexture(mapId) {
+    const s = SLICE[mapId] || SLICE.range;
+    const full = MAPPROOF.bake(mapId, false);
+    const c = document.createElement('canvas');
+    c.width = s.w; c.height = s.h;
+    const x = c.getContext('2d');
+    x.imageSmoothingEnabled = false;
+    x.drawImage(full, s.x, s.y, s.w, s.h, 0, 0, s.w, s.h);
+    for (const b of BODIES) {
+      const art = typeof b.look === 'number'
+        ? PIXELS.machineCanvas(b.look, 0, 'still', 's')
+        : PIXELS.stationCanvas(b.look, 0, 'still', 's');
+      x.drawImage(art, b.x - (art.width >> 1), b.y - art.height);
+    }
+    slice = s;
+    return PIXELS.util.tex(c);
+  }
+
+  // the lights that slice would hand the sky: the map's lampposts that fall
+  // inside it, plus one under each body
+  // `state` is what factory.js writes into a machine's light record every
+  // frame, and it is the only thing that decides how the firebox looks.
+  function lightsFor(mapId, state) {
+    const s = SLICE[mapId] || SLICE.range;
+    const out = [];
+    for (const pr of (CHAIN.MAPS[mapId].PROPS || [])) {
+      if (!pr.glow) continue;
+      const lx = pr.x + 4 - s.x, ly = pr.y + 6 - s.y;
+      if (lx < -40 || ly < -40 || lx > s.w + 40 || ly > s.h + 40) continue;
+      out.push({ x: lx, y: ly, r: 34, tint: 0xffcf80, base: 0.95 });
+    }
+    for (const b of BODIES) out.push({ x: b.x, y: b.y - 8, r: 24, state: state || 'banked' });
+    return out;
+  }
+
+  // Wind the layer by hand: a cell has to settle before it is worth looking at,
+  // because rain has to fall into frame and a fade has to finish.
+  function settle(frames) {
+    for (let i = 0; i < frames; i++) SKY.tick(1, { x: 0, y: 0 });
+    app.render();
+  }
+
+  function label(x, text, cx, cy, w) {
+    x.fillStyle = 'rgba(8, 14, 18, 0.78)';
+    x.fillRect(cx, cy, w, 16);
+    x.fillStyle = '#e8e2d4';
+    x.font = '11px Georgia, serif';
+    x.fillText(text, cx + 5, cy + 12);
+  }
+
+  async function render() {
+    const mapId = $('map').value, zoom = +$('zoom').value, what = $('what').value;
+    $('msg').textContent = 'baking…';
+    await new Promise((r) => setTimeout(r, 20));
+
+    const tex = sliceTexture(mapId);
+    await ensureApp(slice.w, slice.h);
+    worldSp.texture = tex;
+    SKY.resize(slice.w, slice.h, 1);
+    SKY.setClimate(null);
+    SKY.setLights(lightsFor(mapId));
+    SKY.setMode('full');
+
+    const cells = what === 'hours'
+      ? HOURS.map((t) => ({ t, sky: 'clear', name: SKY.hourAt(t).name }))
+      : what === 'fires'
+        ? ['work', 'full', 'starved', 'banked'].map((st) => ({ t: 0.00, sky: 'clear', state: st, name: 'firebox · ' + st }))
+        : SKY.SKY_IDS.flatMap((id) => [{ t: 0.50, sky: id, name: id + ' · noon' }, { t: 0.00, sky: id, name: id + ' · night' }]);
+
+    const cols = what === 'hours' ? 4 : 2;
+    const rows = Math.ceil(cells.length / cols);
+    const cw = slice.w * zoom, ch = slice.h * zoom, gap = 6;
+    const sheet = document.createElement('canvas');
+    sheet.width = cols * cw + (cols + 1) * gap;
+    sheet.height = rows * ch + (rows + 1) * gap;
+    const q = sheet.getContext('2d');
+    q.imageSmoothingEnabled = false;
+    q.fillStyle = '#0e1b21';
+    q.fillRect(0, 0, sheet.width, sheet.height);
+
+    SKY.hold(true);                           // the clock stands still for a sheet
+    for (let i = 0; i < cells.length; i++) {
+      const cell = cells[i];
+      SKY.jump(cell.t);
+      SKY.force(cell.sky, true);              // whole, not fading in
+      if (cell.state) SKY.setLights(lightsFor(mapId, cell.state));
+      settle(150);                            // long enough for rain to reach the ground
+      // the frame has to be named: the sky's fog and cloud sprites sit far
+      // outside the viewport, so the stage's own bounds are not the picture
+      const frame = app.renderer.extract.canvas({
+        target: app.stage,
+        frame: new PIXI.Rectangle(0, 0, slice.w, slice.h),
+        clearColor: 0x17161a,
+      });
+      const cx = gap + (i % cols) * (cw + gap), cy = gap + Math.floor(i / cols) * (ch + gap);
+      q.drawImage(frame, 0, 0, slice.w, slice.h, cx, cy, cw, ch);
+      const r = SKY.report();
+      label(q, cell.name + '  ' + r.clock + '  lamp ' + r.lamp.toFixed(2) + '  day ' + r.day.toFixed(2), cx, cy, cw);
+    }
+
+    const name = 'sky-' + mapId + '-' + what + '.png';
+    const blob = await new Promise((r) => sheet.toBlob(r, 'image/png'));
+    $('msg').textContent = await (await fetch('/upload?name=' + name, { method: 'POST', body: blob })).text();
+    $('out').src = '../assets/inbox/' + name + '?t=' + performance.now();
+  }
+
+  $('go').onclick = () => render().catch((e) => { $('msg').textContent = String(e); throw e; });
+</script>
+</body>
+</html>

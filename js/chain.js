@@ -793,6 +793,9 @@
     C.WORLD_H = cur.H;
     C.SPAWN = cur.spawn;
     C.LEGACY = cur.LEGACY || {};
+    // the map's own weather odds, if it declares any: cosmetic weights the sky
+    // multiplies into its table, and nothing else in the game ever reads
+    C.WEATHER = cur.WEATHER || null;
     return cur;
   }
   function currentMap() { return cur; }
