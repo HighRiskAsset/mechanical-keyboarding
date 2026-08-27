@@ -168,10 +168,22 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   - every good riding one of its runs falls **where it rides**, not back
     into the machine it came from: a hop in place, as if the ground went out
     from under it.
-  - what lands **never expires** and nothing sweeps it away. It is saved
-    (`profile.drops`, `{id, mat, n, x, y}` once at rest — the wobble and the
-    magnet's jitter are read off the id, not stored) and it is still lying
-    there after a reload. There is no hurry.
+  - what lands **never expires on a timer** and nothing sweeps it away while
+    there is room for it. It is saved (`profile.drops`, `{id, mat, n, x, y}`
+    once at rest — the wobble and the magnet's jitter are read off the id,
+    not stored) and it is still lying there after a reload. There is no hurry.
+  - the ground does have a **cap** (`DROPS.MAX`, 400 stacks at once), because
+    every stack is two sprites a frame and one more distance the magnet works
+    out a tick, and thirty hours of building and taking down can leave more of
+    them lying about than a frame can afford. Over the cap the ground tidies
+    itself: resting stacks of one material standing in one tile fold into one
+    with the count kept whole, which is what a crowded ground almost always
+    needs, since what crowds it is a hand spill piling into the single tile at
+    the foot of the machine that spilled it. Only if folding still leaves too
+    many does the ground let go, oldest first, and that is the one place in
+    this file where materials do not come back. Goods in the air and goods
+    still settling are invisible to both steps, so a burst is always seen
+    whole and a refund still reads as a spray of four.
   - a generous magnet — nearly three tiles, a tug at the edge and a snap up
     close — draws it in when the operator walks near, and it arrives with
     the flight into the HUD and the rising pop the typed goods already use

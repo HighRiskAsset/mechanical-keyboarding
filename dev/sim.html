@@ -132,6 +132,32 @@
   line(riding > 0 && D.count(p) - looseBefore === riding && (iron.buf.out.iron || 0) === ironOut,
     `its ${riding} goods fall where they rode, not into the source (${D.count(p) - looseBefore} landed on the ground)`);
 
+  // the lid: the ground holds at most DROPS.MAX stacks, and it folds before
+  // it lets go. A resting drop is one with no z, no vz and no settle left,
+  // which is what these build by hand.
+  const rest = (n, x, y, i) => ({ id: 'x' + i, mat: 'iron', n, x, y });
+  const total = (q) => q.drops.reduce((a, d) => a + d.n, 0);
+  const heap = { drops: [], nextDropId: 1 };
+  for (let i = 0; i < D.MAX + 200; i++) heap.drops.push(rest(1, 8, 8, i));
+  D.ensure(heap);
+  line(heap.drops.length === 1 && total(heap) === D.MAX + 200,
+    `a pile in one tile folds into one stack and keeps its count (${heap.drops.length} stack worth ${total(heap)})`);
+
+  const spread = { drops: [], nextDropId: 1 };
+  for (let i = 0; i < D.MAX + 50; i++) spread.drops.push(rest(1, i * 16 + 8, 8, i));
+  D.ensure(spread);
+  line(spread.drops.length === D.MAX, `stacks that cannot fold are let go oldest first, down to the cap (${spread.drops.length})`);
+  line(!spread.drops.some((d) => d.id === 'x0') && spread.drops.some((d) => d.id === 'x' + (D.MAX + 49)),
+    'the oldest goes and the newest stays');
+
+  const burst = { drops: [], nextDropId: 1 };
+  for (let i = 0; i < D.MAX; i++) burst.drops.push(rest(1, i * 16 + 8, 8, i));
+  for (let i = 0; i < 20; i++) D.spawn(burst, 'iron', 1, 40, 40);
+  D.ensure(burst);
+  const flying = burst.drops.filter((d) => d.z || d.vz || d.settle).length;
+  line(burst.drops.length === D.MAX && flying === 20,
+    `a burst mid-air is never tidied: all 20 still fly while the cap holds (${flying} in the air, ${burst.drops.length} on the ground)`);
+
   // ports (rotation overhaul, 2026-08-21): body-relative — the whole front
   // discharges, the right flank fills first — and they turn RIGIDLY: a
   // quarter clockwise per turn, the world side of every port stepping

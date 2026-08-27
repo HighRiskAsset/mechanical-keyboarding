@@ -4,9 +4,10 @@
 // Nothing that cost materials is ever simply deleted. Take a machine down,
 // take a run up, and what it cost — with everything standing in its buffers
 // and every good riding its belts — bursts out of it in a soft poof and
-// lands on the ground inside the tile it stood on. There it sits. It never
-// expires and nothing ever sweeps it away: the ground is a bag with no lid,
-// and there is no hurry. Walk near and a generous magnet draws it in; it
+// lands on the ground inside the tile it stood on. There it sits. Nothing
+// expires on a timer, and nothing sweeps a pile away while there is room
+// for it: the ground is a bag with a very large lid (the cap, below), and
+// there is no hurry. Walk near and a generous magnet draws it in; it
 // arrives with the same pop and the same flight the goods make when they are
 // typed out of a machine, because it is the same reward.
 //
@@ -47,11 +48,56 @@
   const hash = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); };
   const jitterOf = (d) => 0.85 + (hash(d.id) % 100) / 300;
 
+  // ---------- the lid ----------
+  // A stack lies where it fell for as long as there is room for it, and MAX
+  // is the room. Nothing here runs on a timer, but every stack is two
+  // sprites the world draws each frame and one more distance the magnet
+  // works out each tick, so a factory built, taken down and built again over
+  // thirty hours can leave more of them lying about than a frame can afford.
+  // Over the cap the ground tidies itself, in this order:
+  //
+  //   1. resting stacks of one material standing in one tile fold into one.
+  //      The count is kept whole, so a heap walked over an hour later is
+  //      still worth exactly what it was: a tidy, not a loss. This is what
+  //      the crowded ground almost always needs, because the thing that
+  //      crowds it is a spill piling up at the foot of the machine that
+  //      spilled it, keystroke by keystroke, into the one tile.
+  //   2. only if that still leaves too many does the ground let go, oldest
+  //      first: the stacks left furthest behind, and the only case in this
+  //      file where materials do not come back.
+  //
+  // Goods still in the air and goods still inside their settle are invisible
+  // to both steps, so a burst is always seen whole, and a refund still reads
+  // as the spray of four that scatter threw.
+  const MAX = 400;               // stacks lying about at once
+  const atRest = (d) => !d.z && !d.vz && !d.settle;
+  function compact(p) {
+    const list = p.drops;
+    if (!Array.isArray(list) || list.length <= MAX) return 0;
+    // newest of a tile keeps its place and its id; the older ones pour in
+    const pile = new Map();
+    for (let i = list.length - 1; i >= 0; i--) {
+      const d = list[i];
+      if (!atRest(d)) continue;
+      const key = d.mat + '@' + Math.floor(d.x / TILE) + ',' + Math.floor(d.y / TILE);
+      const into = pile.get(key);
+      if (into) { into.n += d.n; list.splice(i, 1); }
+      else pile.set(key, d);
+    }
+    let gone = 0;
+    for (let i = 0; i < list.length && list.length > MAX;) {
+      if (atRest(list[i])) { list.splice(i, 1); gone++; }
+      else i++;
+    }
+    return gone;
+  }
+
   function ensure(p) {
     if (!p) return null;
     if (!Array.isArray(p.drops)) p.drops = [];
     if (typeof p.nextDropId !== 'number') p.nextDropId = 1;
     p.drops = p.drops.filter((d) => d && d.mat && d.n > 0);
+    if (p.drops.length > MAX) compact(p);
     return p.drops;
   }
 
@@ -125,11 +171,13 @@
   // they came from, just a hop in place, as if the ground went out from
   // under them
   function spillBelt(p, b) {
+    let made = 0;
     for (const it of b.items || []) {
       const at = beltPos(b, it.pos);
-      if (at) spawn(p, it.mat, 1, at[0], at[1]);
+      if (at) { spawn(p, it.mat, 1, at[0], at[1]); made++; }
     }
     b.items = [];
+    return made;
   }
 
   // ---------- the one door ----------
@@ -148,8 +196,7 @@
     const boxes = [], bundle = {};
     const add = (o) => { for (const [mat, n] of Object.entries(o || {})) if (n > 0) bundle[mat] = (bundle[mat] || 0) + n; };
     add(what.back);
-    const before = p.drops.length;
-    let burst = null;
+    let spilled = 0, burst = null;
 
     if (what.machine) {
       const m = what.machine;
@@ -159,7 +206,7 @@
       if (m.buf) { add(m.buf.in); add(m.buf.out); m.buf.in = {}; m.buf.out = {}; }
       // its runs come up with it, and every good riding one falls on the spot
       const runs = (p.belts || []).filter((b) => b.from === m.id || b.to === m.id);
-      for (const b of runs) { spillBelt(p, b); boxes.push(...beltBoxes(b)); }
+      for (const b of runs) { spilled += spillBelt(p, b); boxes.push(...beltBoxes(b)); }
       if (runs.length) p.belts = p.belts.filter((b) => !runs.includes(b));
       const box = machineBox(m);
       boxes.unshift(box);
@@ -169,16 +216,16 @@
     } else if (what.belt || what.belts) {
       const runs = (what.belts || [what.belt]).filter(Boolean);
       if (!runs.length) return null;
-      for (const b of runs) { spillBelt(p, b); boxes.push(...beltBoxes(b)); }
+      for (const b of runs) { spilled += spillBelt(p, b); boxes.push(...beltBoxes(b)); }
       p.belts = (p.belts || []).filter((x) => !runs.includes(x));
     } else {
       return null;
     }
 
     if (!burst && boxes.length) burst = { x: boxes[0].x + boxes[0].w / 2, y: boxes[0].y + boxes[0].h / 2 };
-    if (burst) scatter(p, bundle, burst.x, burst.y);
+    if (burst) spilled += scatter(p, bundle, burst.x, burst.y);
     poof(boxes);
-    return { bundle, spilled: p.drops.length - before };
+    return { bundle, spilled };
   }
   // the poof itself, guarded: the harnesses run this file with no world and
   // no sound, and a demolition still has to work there
@@ -248,5 +295,5 @@
 
   const count = (p) => (p && Array.isArray(p.drops) ? p.drops.length : 0);
 
-  window.DROPS = { ensure, spawn, scatter, demolish, tick, count, TILE, SPREAD, PULL, GRAB };
+  window.DROPS = { ensure, spawn, scatter, demolish, tick, count, compact, TILE, SPREAD, PULL, GRAB, MAX };
 })();
