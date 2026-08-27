@@ -109,9 +109,14 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   into view before they can be paid for), priced in its row. **Affordability is settled here, not at the ghost** (user
   ruling 2026-08-21): an unaffordable kind cannot be picked — its row is
   greyed and every count the bag falls short of prints red, so the row
-  says which material is the problem — and the mine's row only offers
-  itself while some free vein could actually be paid for (its price lives
-  on the vein). An unaffordable ghost never stands. Arrows choose; a
+  says which material is the problem — and the mine's row says it the
+  same way (retuned 2026-08-27; it used to grey with a bare "no free
+  vein you can pay for yet" even while veins stood free): its price
+  lives on the vein, so while no free vein can be paid for the row greys
+  with the price of the vein needing the least more gathering, that
+  vein's ore in front and the missing counts red; words remain only for
+  the two priceless states (no free vein left, or the free ones not for
+  sale yet). An unaffordable ghost never stands. Arrows choose; a
   **tap** of Space picks; a **hold** over the open menu puts it away (this
   one menu answers the release, because its hold means cancel). The pick
   becomes a **ghost on

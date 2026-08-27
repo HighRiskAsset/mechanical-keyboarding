@@ -159,7 +159,8 @@
       capBuildHere: 'Hold Space to build',
       capBuild: (p) => `Build ${/^[aeiou]/i.test(p.kind) ? 'an' : 'a'} ${p.kind}`,
       capBuildMinePick: 'Build a mine. Must be placed on a free vein.',
-      capBuildMineNone: 'Build a mine: no free vein you can pay for yet',
+      capBuildMineNone: 'Build a mine: no free vein left',
+      capBuildMineLater: 'Build a mine: its veins come later on the ladder',
       capVeinLater: (p) => `A ${p.name} comes later on the ladder`,
       // the build ghost (rotation overhaul, 2026-08-21)
       capPlace: (p) => `${p.name}: Tap space to rotate, hold to place or cancel.`,
@@ -380,7 +381,8 @@
       capBuildHere: 'Зажмите пробел, чтобы строить',
       capBuild: (p) => `Построить: ${p.kind}`,
       capBuildMinePick: 'Построить рудник. Ставится только на свободную жилу.',
-      capBuildMineNone: 'Построить рудник — пока нет свободной жилы, которая вам по карману',
+      capBuildMineNone: 'Построить рудник — свободных жил не осталось',
+      capBuildMineLater: 'Построить рудник — его жилы придут позже по лестнице',
       capVeinLater: (p) => `${p.name} придёт позже по лестнице`,
       // призрак стройки (поворотный ремонт, 2026-08-21)
       capPlace: (p) => `${p.name}: короткий пробел — поворот, зажатый — поставить или отменить.`,

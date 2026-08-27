@@ -790,27 +790,37 @@
   // ground. On bad ground — or over the open menu — the hold cancels
   // instead. Mines are rows in the same menu: their ghost asks to be stood
   // on a free vein, and prices itself off the vein under it.
-  // is there a free vein the bag could put a mine on right now? The mine's
-  // price lives on the vein — an open ore's extra-mine price, or the next
-  // rung's opening price — so the row only offers itself when some vein
-  // could actually be paid for. An unaffordable ghost never happens.
-  function mineBuildable() {
+  // The mine's price lives on the vein — an open ore's extra-mine price, or
+  // the next rung's opening price — so the row carries no one price of its
+  // own: while any vein can be paid for it offers itself bare, and the ghost
+  // prices the vein under it. When veins stand free but the bag covers none
+  // of them, affordability is numbers, never words (the menu ruling,
+  // 2026-08-21; fixed here 2026-08-27 — the old caption said "no free vein"
+  // while veins stood free): the row greys with the price of the vein
+  // needing the least more gathering, that vein's ore in front, the missing
+  // counts red. Words keep only the two priceless states: every vein taken,
+  // or the free ones not for sale yet. An unaffordable ghost never happens.
+  function mineRow() {
+    const priced = [];
+    let free = 0;
     for (const n of CHAIN.unbuiltNodes(profile)) {
-      if (CHAIN.oreOpen(profile, n.ore)) {
-        if (canPay(CHAIN.priceExtraMine(n.ore))) return true;
-      } else if (CHAIN.priceNode(n.ore) && canPay(CHAIN.priceNode(n.ore))) {
-        return true;
-      }
+      free++;
+      const price = CHAIN.oreOpen(profile, n.ore) ? CHAIN.priceExtraMine(n.ore) : CHAIN.priceNode(n.ore);
+      if (!price) continue;
+      if (canPay(price)) return { kind: 'mine', enabled: true, caption: T.t('capBuildMinePick'), action: { type: 'pick', kind: 'mine' } };
+      priced.push({ ore: n.ore, price, gap: Object.entries(price).reduce((a, [mat, k]) => a + Math.max(0, k - CHAIN.bagAvail(profile.bag, mat)), 0) });
     }
-    return false;
+    if (priced.length) {
+      const near = priced.reduce((a, b) => (b.gap < a.gap ? b : a));
+      return { kind: 'mine', ore: near.ore, items: near.price, priced: true, short: shortOf(near.price), enabled: false, caption: T.t('capBuildMinePick'), action: null };
+    }
+    return { kind: 'mine', enabled: false, caption: T.t(free ? 'capBuildMineLater' : 'capBuildMineNone'), action: null };
   }
   // every kind in view stands in the menu with its price — dimmed while the
   // bag cannot cover it, and dimmed with the upgrade it waits for while it
   // would have nothing to make (a machine is never born dead)
   function buildMenuRows() {
-    const rows = [];
-    const mineOK = mineBuildable();
-    rows.push({ kind: 'mine', enabled: mineOK, caption: T.t(mineOK ? 'capBuildMinePick' : 'capBuildMineNone'), action: mineOK ? { type: 'pick', kind: 'mine' } : null });
+    const rows = [mineRow()];
     for (const k of CHAIN.visibleKinds(profile)) {
       const price = CHAIN.priceMachine(k, CHAIN.machinesOfKind(profile, k).length + 1);
       const live = CHAIN.kindLive(k, profile);
