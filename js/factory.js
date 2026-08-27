@@ -56,7 +56,9 @@
   let uiC = null, hudPanel = null;
   let hudRows = {}, hudKeys = [];
   const invValues = {};
+  let invMarks = {};
   const HUD_W = 46, HUD_ROW = 14;
+  const MARK_IN = 0xf06d4f, MARK_OUT = 0x4ba8d8;   // P.orange leaves, P.water1 comes back
   let chargeVal = null, chargeG = null;
 
   // ---------- the grade mark: every sprite that shows a material ----------
@@ -197,6 +199,16 @@
       .fill({ color: 0x221d29, alpha: 0.74 });
     uiC.addChild(hudPanel);
     hudKeys.forEach((k, i) => {
+      // the row's forecast, under everything including the flash: a strip
+      // lit from behind that says which lines the thing in front of you is
+      // about to draw from or fill, before a single good has moved. The
+      // brighter tick down the icon edge is what keeps it a lit row and
+      // not a coloured box.
+      const mark = new PIXI.Graphics()
+        .rect(1, 1 + i * HUD_ROW, HUD_W - 2, HUD_ROW - 1).fill({ color: 0xffffff, alpha: 0.52 })
+        .rect(1, 1 + i * HUD_ROW, 3, HUD_ROW - 1).fill(0xffffff);
+      mark.visible = false;
+      uiC.addChild(mark);
       // the row's own flash, under everything in it: a bar that lights when
       // goods land in this row or a price leaves it, so the bag says which
       // line moved without the number having to be read
@@ -209,8 +221,24 @@
       const t = new PIXI.Sprite(PIXELS.textTex(String(invValues[k] || 0), PIXELS.P.paper));
       t.position.set(HUD_W - 3 - t.texture.width, 6 + i * HUD_ROW);
       uiC.addChild(t);
-      hudRows[k] = { t, ic, flash, iy: ic.y, pulse: null };
+      hudRows[k] = { t, ic, flash, iy: ic.y, pulse: null, mark, mk: invMarks[k] || null, mkA: 0, mkC: invMarks[k] === 'out' ? MARK_OUT : MARK_IN };
     });
+  }
+  // The bag's forecast: `map` is material → 'in' where the row is about to
+  // be drawn from, 'out' where something is about to come back to it, and
+  // anything absent goes dark. Kept here rather than passed every frame, so
+  // a row list rebuilt underneath it (a material seen for the first time)
+  // comes back still lit.
+  function setInvMarks(map) {
+    invMarks = map || {};
+    for (const [k, r] of Object.entries(hudRows)) {
+      const mk = invMarks[k] || null;
+      // a row coming up from dark takes its colour outright: only a row
+      // already lit slides from the one to the other, or every cool row
+      // would flare warm for a few frames on its way in
+      if (mk && r.mkA <= 0.01) r.mkC = mk === 'out' ? MARK_OUT : MARK_IN;
+      r.mk = mk;
+    }
   }
   function setInvValue(key, n) {
     invValues[key] = n;
@@ -233,8 +261,21 @@
     if (!r) return;
     r.pulse = { t: 0, life: 15, out: !!out };
   }
+  const mix8 = (a, b, k) => Math.round(a + (b - a) * k);
+  const mixRGB = (a, b, k) => (mix8(a >> 16 & 255, b >> 16 & 255, k) << 16) | (mix8(a >> 8 & 255, b >> 8 & 255, k) << 8) | mix8(a & 255, b & 255, k);
   function tickHud(dt) {
+    // the mark breathes on the selector's own clock and an eighth as deep,
+    // so the brackets out in the world and the rows in the bag read as the
+    // one cursor rather than two things that happen to be lit
+    const breath = 0.92 + 0.08 * Math.abs(Math.sin(frameClock * 0.06));
     for (const r of Object.values(hudRows)) {
+      // it comes up and goes down rather than snapping, and slides between
+      // the two colours where a menu walks from a price onto a refund
+      const want = r.mk ? 1 : 0;
+      if (r.mkA !== want) r.mkA = want ? Math.min(1, r.mkA + dt / 7) : Math.max(0, r.mkA - dt / 7);
+      if (r.mk) r.mkC = mixRGB(r.mkC, r.mk === 'out' ? MARK_OUT : MARK_IN, Math.min(1, dt / 6));
+      r.mark.visible = r.mkA > 0.01;
+      if (r.mark.visible) { r.mark.tint = r.mkC; r.mark.alpha = r.mkA * 0.85 * breath; }
       const p = r.pulse;
       if (!p) continue;
       p.t += dt;
@@ -2089,7 +2130,7 @@
     screenPos, setDockGlow, showInfo, clearInfo, showMenu, clearMenu, setAutoLook,
     routeBelt, beltReaches, machinePorts, portsOpen, showGhost, clearGhost, setSpool, markStations, setSocketTarget,
     showBuildGhost, clearBuildGhost,
-    setInvValue, invScreenPos, setHudKeys, setCharge, pulseInv,
+    setInvValue, invScreenPos, setHudKeys, setInvMarks, setCharge, pulseInv,
     onDock: null,
   };
 })();

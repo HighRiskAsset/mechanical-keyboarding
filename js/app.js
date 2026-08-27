@@ -1195,6 +1195,79 @@
     FACTORY.showInfo(dock.id, rows.slice(0, 5));
   }
 
+  // ---------- what the bag is about to lose or gain ----------
+  // One glance at the inventory should say which lines the thing in front of
+  // the operator touches: warm where a row is about to be drawn from, cool
+  // where something is about to come back to it. Only one thing ever speaks
+  // at a time, and the nearer it is to happening the louder it is: a ghost
+  // on the ground narrows to the one vein under it, an open menu speaks for
+  // its highlighted row alone, and a machine merely stood at speaks for the
+  // recipe it is running. A row the bag cannot yet cover still lights: what
+  // this would take is worth seeing most when you cannot take it.
+  function invMarksNow() {
+    const marks = {};
+    if (!profile) return marks;
+    // warm wins where a thing both eats and makes the same material: the
+    // price is the half you can come up short on
+    const cost = (o) => { for (const [mat, n] of Object.entries(o || {})) if (n > 0) marks[mat] = 'in'; };
+    const gain = (o) => { for (const [mat, n] of Object.entries(o || {})) if (n > 0 && marks[mat] !== 'in') marks[mat] = 'out'; };
+    if (placing) { cost(placing.price); return marks; }
+    const mm = menu || buildMenu;
+    if (mm) { markRow(mm.rows[mm.sel], cost, gain); return marks; }
+    if (dock && dock.kind === 'machine') {
+      const m = dock.m;
+      if (m.kind === 'mine') gain(one(CHAIN.mineMat(profile, m)));
+      else if (recipe) { cost(recipe.in); gain(one(recipe.out)); }
+    }
+    return marks;
+  }
+  const one = (mat) => (mat ? { [mat]: 1 } : null);
+  function markRow(row, cost, gain) {
+    if (!row) return;
+    const act = row.action;
+    // the build menu: a kind costs its next instance, and the mine row costs
+    // whichever vein it ends up standing on, every one it could still pay
+    // for, until the ghost narrows that to the one underfoot
+    if (buildMenu) {
+      if (row.kind !== 'mine') { cost(row.items); return; }
+      if (!act) { cost(row.items); return; }        // greyed: the vein it named
+      for (const n of CHAIN.unbuiltNodes(profile)) {
+        const p = CHAIN.oreOpen(profile, n.ore) ? CHAIN.priceExtraMine(n.ore) : CHAIN.priceNode(n.ore);
+        if (p && canPay(p)) cost(p);
+      }
+      return;
+    }
+    // ✗ at a machine takes it down and everything standing inside it comes
+    // back; ✗ on a run underfoot refunds nothing, because a run cost nothing
+    // and its goods fall on the ground rather than into the bag
+    if (row.pre === '✗') {
+      if (!dock || dock.kind !== 'machine') return;
+      gain(row.items);
+      SIM.ensureMachine(dock.m);
+      gain(dock.m.buf.in);
+      gain(dock.m.buf.out);
+      return;
+    }
+    // the live machine, not the row: a menu is built once and its buffers
+    // go on filling underneath it
+    if (act && act.type === 'recipe') { cost(act.r.in); gain(one(act.r.out)); return; }
+    if (act && act.type === 'feed') { const r = SIM.recipeOf(profile, act.m); if (r) cost(r.in); return; }
+    if (act && act.type === 'collect') { SIM.ensureMachine(act.m); gain(nonZero(act.m.buf.out)); return; }
+    if (act && (act.type === 'spool' || act.type === 'socket')) return;
+    cost((act && act.price) || row.items);           // Mk, the engine, a crossing repaired
+  }
+  // the marks are recomputed on the frame and pushed only when they change,
+  // so a menu walking down its rows costs nothing and a buffer filling under
+  // a collect row lights the moment it does
+  let invMarksSig = '';
+  function refreshInvMarks() {
+    const marks = invMarksNow();
+    const sig = Object.keys(marks).sort().map((k) => k + marks[k]).join(',');
+    if (sig === invMarksSig) return;
+    invMarksSig = sig;
+    FACTORY.setInvMarks(marks);
+  }
+
   // ---------- line rendering ----------
   function newLine() {
     const lesson = lessonFor();
@@ -1750,6 +1823,8 @@
       lastGroundTile = gt;
       if (!dock && !menu && !buildMenu && !placing && !spool) refreshCaption();
     }
+    // above the sim's own beat: the marks answer the cursor, not the clock
+    refreshInvMarks();
     const dt = SIM.tick(profile, Date.now());
     if (dt <= 0) return;
     simSaveAcc += dt;
