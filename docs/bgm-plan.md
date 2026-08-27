@@ -196,12 +196,12 @@ The 13-track set below was over-specified. Judged critically, it was finer
 grained than the games it cites: FF3 does not give every area a theme, and
 Pokémon covers dozens of routes with a couple of route themes. The cut:
 
-**FINAL — in `assets/bgm/picks/`, 7 tracks, 15:02, 16.8 MB.** Every take is
-kept in `assets/bgm/` (33 files) in case a pick is rejected on listening.
+**FINAL — in `assets/bgm/`, 7 tracks, 15:02, 16.8 MB.** Every take is
+kept in `assets/bgm-takes/` (33 files) in case a pick is rejected on listening.
 
 | # | File | Covers | Mode · length |
 |---|---|---|---|
-| 1 | `01-basin-a.mp3` | home, T0–T1 | C dorian · 2:03 *(fade trimmed)* |
+| 1 | `assets/bgm/01-basin-a.mp3` | home, T0–T1 | C dorian · 2:03 *(fade trimmed)* |
 | 2 | `02-basin-b.mp3` | home rotation | C dorian · 1:42 |
 | 3 | `03-far-frontier.mp3` | quarry + canyon + flats | C dorian · 2:43 *(fade trimmed)* |
 | 4 | `04-coal-bog.mp3` | the uneasy outlier | G aeolian (conf 0.94) · 3:01 |

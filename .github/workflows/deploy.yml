@@ -60,6 +60,10 @@ jobs:
           cp -r assets/maps _site/assets/
           # The sprite sheets + manifests the game renders from (js/sprites.js)
           cp -r assets/sprites _site/assets/
+          # The seven shipped BGM tracks. assets/bgm-takes holds the auditions
+          # they were chosen from and stays off the site: it is four times the
+          # weight and nothing plays it.
+          cp -r assets/bgm _site/assets/
           cp deploy/htaccess _site/.htaccess
           echo "--- staged for upload ---"
           find _site -type f | sort
