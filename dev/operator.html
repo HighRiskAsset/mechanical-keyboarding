@@ -10,11 +10,11 @@
   canvas { image-rendering: pixelated; display: block; margin: 8px; }
   #log { padding: 8px; white-space: pre; }
 </style>
-<div id="log">rendering…</div>
+<div id="log">renderingâ€¦</div>
 <canvas id="out"></canvas>
 <canvas id="zoom"></canvas>
-<script src="../js/pixels.js"></script>
-<script src="../js/tiles.js"></script>
+<script src="gen/pixels.js"></script>
+<script src="gen/tiles.js"></script>
 <script>
 (async function () {
   const log = document.getElementById('log');
@@ -52,7 +52,7 @@
     ['down', (f) => PIXELS.characterCanvas('down', f), 8, false],
     ['up',   (f) => PIXELS.characterCanvas('up', f),   8, false],
     ['side', (f) => PIXELS.characterCanvas('side', f), 8, false],
-    ['side←', (f) => PIXELS.characterCanvas('side', f), 8, true],
+    ['sideâ†', (f) => PIXELS.characterCanvas('side', f), 8, true],
     ['idle', (f) => PIXELS.idleCanvas('down', f),      4, false],
     ['work', (f) => PIXELS.workCanvas(f),              4, false],
   ];

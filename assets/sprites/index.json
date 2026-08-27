@@ -1,0 +1,42 @@
+{
+ "sheets": [
+  "ground",
+  "cliffs",
+  "stairs",
+  "slopes",
+  "crossings",
+  "scenery",
+  "veins",
+  "mine",
+  "station-bigrams",
+  "station-foundry",
+  "station-words",
+  "station-molder",
+  "station-lines",
+  "station-fastener",
+  "station-crane",
+  "station-manufacturer",
+  "character",
+  "belts",
+  "materials",
+  "effects",
+  "props",
+  "font",
+  "vignette"
+ ],
+ "meta": {
+  "tile": 16,
+  "workFrames": 4,
+  "idleFrames": 6,
+  "walkBeats": 8,
+  "idleBeats": 4,
+  "charW": 20,
+  "charH": 28,
+  "beltPitch": 8,
+  "matPx": 10,
+  "sparkFrames": 12,
+  "sparkPeak": 2,
+  "puffFrames": 4,
+  "groundVariants": 4
+ }
+}

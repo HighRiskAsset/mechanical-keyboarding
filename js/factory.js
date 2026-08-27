@@ -19,8 +19,10 @@
   let S = 2;                           // device px per world px — integer, set by resize()
   let stations = {};                   // dock id → {def:{id,x,y,kind,m?,node?}, root, sp, glow, ...}
   let player = null;
-  const charTex = { down: [], up: [], side: [], work: [] };
-  const idleTex = { down: [], up: [], side: [] };
+  // side faces right; left is its own drawn row on the sheet (no mirroring,
+  // so the artist may give the two profiles different art)
+  const charTex = { down: [], up: [], side: [], left: [], work: [] };
+  const idleTex = { down: [], up: [], side: [], left: [] };
   let facing = 'side', faceSign = 1, walkClock = 0, walkFrame = 0;
   let idleClock = 0, idleFrame = 0;
   let workTtl = 0, workClock = 0, working = false;
@@ -126,7 +128,9 @@
     const face = facing || 's';
     const k = look + ':' + mode + ':' + face;
     if (!machineTexCache[k]) {
-      const n = mode === 'work' ? PIXELS.WORK_FRAMES : mode === 'idle' ? PIXELS.IDLE_FRAMES : 1;
+      // frame counts are per animation, read off the sheet's manifest, so one
+      // machine can carry a longer loop without the others hearing about it
+      const n = mode === 'still' ? 1 : PIXELS.animFrames(look, mode, face);
       const draw = typeof look === 'number'
         ? (f) => PIXELS.machineTex(look, f, mode, face)
         : (f) => PIXELS.stationTex(look, f, mode, face);
@@ -312,6 +316,8 @@
 
   async function init(mount) {
     if (typeof PIXI === 'undefined') return;
+    // the sheets in assets/sprites are the art; nothing draws before they land
+    await PIXELS.ready;
     app = new PIXI.Application();
     await app.init({
       width: viewW * S, height: viewH * S,
@@ -340,7 +346,7 @@
     app.stage.addChild(labelsC);
 
     const tx = PIXELS.util.tex;
-    waterTexes = [0, 1].map((f) => Array.from({ length: 23 }, (_, s) => tx(TILES.fill('water', s, f))));
+    waterTexes = [0, 1].map((f) => Array.from({ length: PIXELS.GROUND_VARIANTS }, (_, s) => tx(TILES.fill('water', s, f))));
 
     for (let i = 0; i < 14; i++) {
       const m = new PIXI.Sprite(PIXELS.petalTex(0));
@@ -356,12 +362,14 @@
       charTex.down.push(PIXELS.characterTex('down', f));
       charTex.up.push(PIXELS.characterTex('up', f));
       charTex.side.push(PIXELS.characterTex('side', f));
+      charTex.left.push(PIXELS.characterTex('left', f));
     }
     // Standing still is not a still frame: four slow beats of breath.
     for (let f = 0; f < PIXELS.IDLE_BEATS; f++) {
       idleTex.down.push(PIXELS.characterIdleTex('down', f));
       idleTex.up.push(PIXELS.characterIdleTex('up', f));
       idleTex.side.push(PIXELS.characterIdleTex('side', f));
+      idleTex.left.push(PIXELS.characterIdleTex('left', f));
     }
     charTex.work = [0, 1, 2, 3].map((f) => PIXELS.characterWorkTex(f));
 
@@ -393,10 +401,10 @@
     grid = TILES.bake(CHAIN.MAP, W, H);
     const tx = PIXELS.util.tex;
     for (const wt of grid.water) {
-      const s = keep(new PIXI.Sprite(waterTexes[0][wt.seed % 23]));
+      const s = keep(new PIXI.Sprite(waterTexes[0][wt.seed % PIXELS.GROUND_VARIANTS]));
       s.position.set(wt.x, wt.y);
       s.zIndex = -1100;
-      waterSprites.push({ sp: s, seed: wt.seed % 23 });
+      waterSprites.push({ sp: s, seed: wt.seed % PIXELS.GROUND_VARIANTS });
     }
     for (const ch of grid.chunks) {
       const s = keep(new PIXI.Sprite(tx(ch.canvas)));
@@ -1821,10 +1829,10 @@
     if (working && dockedId) {
       workClock += dt;
       player.texture = charTex.work[Math.floor(workClock / 8) % charTex.work.length];
-      player.scale.x = 1;
     } else {
-      player.texture = walking ? charTex[facing][walkFrame] : idleTex[facing][idleFrame];
-      player.scale.x = facing === 'side' ? faceSign : 1;
+      // walking left is its own sheet row, not the right profile mirrored
+      const dirKey = facing === 'side' && faceSign < 0 ? 'left' : facing;
+      player.texture = walking ? charTex[dirKey][walkFrame] : idleTex[dirKey][idleFrame];
     }
     player.position.set(Math.round(playerX), Math.round(playerY));
     player.zIndex = playerY;
@@ -1925,12 +1933,15 @@
     // every machine on the map, in its state, on the right clock: the work
     // beat is quick, the idle breath slow, so the two never read alike
     {
-      const wf = Math.floor(frameClock / WORK_BEAT) % PIXELS.WORK_FRAMES;
-      const idf = Math.floor(frameClock / IDLE_BEAT) % PIXELS.IDLE_FRAMES;
+      // the beat steps run on the raw clock and each band wraps at its own
+      // length, so animations of different frame counts share the one cadence
+      const wf = Math.floor(frameClock / WORK_BEAT);
+      const idf = Math.floor(frameClock / IDLE_BEAT);
       for (const s of Object.values(stations)) {
         if (!s.def.m) continue;
         const mode = modeOf(s);
-        const t = band(lookOf(s.def.kind, s.auto), mode, SIM.facingOf(s.def.m))[mode === 'work' ? wf : mode === 'idle' ? idf : 0];
+        const arr = band(lookOf(s.def.kind, s.auto), mode, SIM.facingOf(s.def.m));
+        const t = arr[(mode === 'work' ? wf : mode === 'idle' ? idf : 0) % arr.length];
         if (s.sp.texture !== t) s.sp.texture = t;
         // The firebox says the same thing the sprite does, in light: hot and
         // throbbing while it runs (including while YOU are the one running it),

@@ -27,7 +27,8 @@
 <script src="../js/maps/range.js"></script>
 <script src="../js/chain.js"></script>
 <script src="../js/engine.js"></script>
-<script src="../js/pixels.js"></script>
+<script>window.SPRITES_BASE = '../assets/sprites/';</script>
+<script src="../js/sprites.js"></script>
 <script src="../js/tiles.js"></script>
 <script src="../js/sim.js"></script>
 <script src="../js/drops.js"></script>
@@ -35,6 +36,7 @@
 <script src="ore-load.js"></script>
 <script>
 (async () => {
+  await PIXELS.ready;                       // check 18 bakes real terrain, which needs the sheets
   const L = window.LANG_RU, LAY = window.LAYOUT_RU, C = window.CHAIN, E = window.ENGINE;
   const out = document.getElementById('out');
   let pass = 0, fail = 0, warn = 0;

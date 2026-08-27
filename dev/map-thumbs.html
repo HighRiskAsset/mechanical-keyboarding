@@ -54,7 +54,8 @@
 <script src="../js/maps/kit.js"></script>
 <script src="../js/maps/frontier.js"></script>
 <script src="../js/maps/range.js"></script>
-<script src="../js/pixels.js"></script>
+<script>window.SPRITES_BASE = '../assets/sprites/';</script>
+<script src="../js/sprites.js"></script>
 <script src="../js/tiles.js"></script>
 <script>
 (function () {
@@ -126,12 +127,16 @@
 
   btn.onclick = async () => {
     btn.disabled = true;
+    await PIXELS.ready;
     bakeAll();
     await saveAll();
     btn.disabled = false;
   };
 
-  bakeAll();
-  if (new URLSearchParams(location.search).has('save')) saveAll();
+  // the sheets have to land before the first bake
+  PIXELS.ready.then(() => {
+    bakeAll();
+    if (new URLSearchParams(location.search).has('save')) saveAll();
+  });
 })();
 </script>

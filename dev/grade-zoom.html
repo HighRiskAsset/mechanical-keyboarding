@@ -1,6 +1,6 @@
 <!doctype html>
 <!-- Grade twinkle, close up (dev only). One ore family, its grades stacked,
-     the first frames of the cycle across — big enough to count pixels on.
+     the first frames of the cycle across â€” big enough to count pixels on.
      Open: http://localhost:8123/dev/grade-zoom.html?fam=quartz  (&s=8&name=x.png) -->
 <meta charset="utf-8">
 <title>grade zoom</title>
@@ -11,8 +11,8 @@
 </style>
 <div id="log"></div>
 <canvas id="out"></canvas>
-<script src="../js/pixels.js"></script>
-<script src="../js/tiles.js"></script>
+<script src="gen/pixels.js"></script>
+<script src="gen/tiles.js"></script>
 <script src="../js/layout-en.js"></script>
 <script src="../js/language-en.js"></script>
 <script src="../js/courses.js"></script>
@@ -36,7 +36,7 @@
   x.fillStyle = '#26262e'; x.fillRect(0, 0, W, HH);
   const label = (s, px, py, col) => { x.fillStyle = col || '#fff4dc'; x.font = '6px monospace'; x.fillText(s, px, py); };
 
-  label(FAM + ' — frames 0-' + (NF - 1) + ', then on grass', 4, 8);
+  label(FAM + ' â€” frames 0-' + (NF - 1) + ', then on grass', 4, 8);
   MATS.forEach((id, i) => {
     const y = 12 + i * ROW;
     const g = PIXELS.matGrade(id);

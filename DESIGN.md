@@ -2245,6 +2245,54 @@ live at 1.6 and 5.2 kHz. Every weather sound added later inherits both rules.
 sprite): heat shimmer over a running smelter, which is the one item here that
 modifies pixels rather than sitting over them.
 
+## THE ART IS PNG NOW: the Phase 6 bake (SHIPPED 2026-08-27)
+
+The game stopped drawing its art in code. Every pixel it shows comes from the
+sheets in `assets/sprites/` (PNGs with JSON manifests beside them), loaded
+and sliced by `js/sprites.js`, which serves the exact API the old pixels.js
+served, so factory.js and app.js never learned where a texture comes from.
+The sheets were baked pixel-for-pixel from the code generator (moved whole to
+`dev/gen/`) by `dev/bake.html`, and from here the artists own them: edit a
+PNG, reload, done. The generator stays as the scaffold: prototype a new
+frame or machine there, bake to `assets/inbox/`, the artist paints over. It
+never writes into `assets/sprites/` unless deliberately asked (`?to=sprites`).
+
+**What stayed code, deliberately (composition, never pixels):**
+
+- The autotile. `js/tiles.js` still cuts edge spills out of the fill tiles
+  through its masks, composes cliff tops from the ground sheet, and bakes the
+  grid. So the combinatorial space (every kind against every kind, every
+  cliff against every biome) never reaches the artist: they paint 4 variants
+  of a 16x16 fill and one set of cliff cells, and every transition follows.
+- Text. The font sheet holds glyph cells (ink outline + pure #ffffff fill);
+  strings are composed and tinted at run time. An artist can reshape the
+  glyphs and restyle the outline; #ffffff is the one reserved colour.
+- The survey-tape site marker (sized at run time), the cliff shade, the sky.
+
+**The rulings under it (2026-08-27):**
+
+- **Collapse the seeds.** The procedural variety was barely noticeable
+  (user), so 23 ground seeds became 4 static variants per kind, cliff and
+  stair jitter one drawing per configuration. Variety comes back as artists
+  make the variants actually differ.
+- **No mirrors.** West-facing machines and the operator walking left are
+  their own sheet rows (baked flipped for now). The artist redraws them
+  independently; nothing on screen is a run-time flip of something else.
+- **One sheet per station kind**, so parallel artists never collide.
+- **Frame counts are data.** A band's length is read off its manifest entry
+  (`n`), and factory indexes the raw clock modulo that length, so one machine
+  can grow an eight-frame work loop while the rest keep four. The shared
+  numbers (tile, beats, walk frames) ride in `index.json`'s meta block.
+- **A redo of an animation** goes: prototype the timing in `dev/gen/`, bake
+  that one sheet to `assets/inbox/` as a scaffold (padding new frames with
+  copies of the nearest), artist paints over, JSON `n` goes up. Artist files
+  are never regenerated over.
+
+The bake also proved the pipeline: both worlds render from sheets with zero
+missing-cell warnings, the thumbnails re-baked through the same path
+(`dev/map-thumbs.html`, now sheet-fed, 216 ms for the frontier), and the
+deploy ships `assets/sprites/` next to `assets/maps/`.
+
 ## THE THREE BUSES, and weather in the ear (SHIPPED 2026-08-27)
 
 `js/audio.js` now has the split `docs/bgm-plan.md` asks for, made while there
@@ -2359,10 +2407,16 @@ keyboard marks that label the switches ·
 `js/chain.js` chain/economy data (the chain only) · `js/maps/kit.js`
 the map kit + world registry, `js/maps/frontier.js` + `js/maps/range.js`
 the two worlds · `js/factory.js` Pixi world
-(`loadMap` per world) · `js/pixels.js` sprite kit + the one palette, incl. the
-steampunk machinery parts kit `M` and the three machine animation states ·
-`js/tiles.js` terrain kit (fills, autotile spills, walls, faces, crossings,
-region scenery, `bake`, `minimap`) · `js/sky.js` the atmosphere layer (the day
+(`loadMap` per world) · `js/sprites.js` the sprite library: loads the PNG
+sheets in `assets/sprites/`, slices them by their JSON manifests, and serves
+the old PIXELS API (plus the one palette, run-time text composition over the
+font sheet, and the survey-tape site marker) ·
+`js/tiles.js` the terrain composer (grid bake, autotile spills masked out of
+the artist's fills, cliff connectivity, walkability, `minimap`; the pixels
+come from the sheets) · `dev/gen/pixels.js` + `dev/gen/tiles.js` THE GENERATOR:
+the original code-drawn art, dev-only, rendered into the sheets by
+`dev/bake.html` (+ `dev/bake.js`); prototype here, bake a scaffold to
+`assets/inbox/`, artists paint over · `js/sky.js` the atmosphere layer (the day
 clock, the colour grade, the weather chain, light pools that say what a machine
 is doing, the lantern, fireflies), drawn over the world and aware of no sprite
 in it · `js/app.js` orchestration + the map
@@ -2387,7 +2441,10 @@ shim) · `libs/pixi.min.js` vendored Pixi 8 ·
 board, material ladder, simulation, transport) · `docs/build-plan.md` the
 phased build order for v3.
 `assets/maps/<id>.png` the picker's baked thumbnails — tracked, shipped, and
-written only by `dev/map-thumbs.html`. `assets/inbox/` (upload target) and
+written only by `dev/map-thumbs.html`. `assets/sprites/` the sprite sheets +
+manifests the game renders from: tracked, shipped, owned by the artists once
+hand-edited (see its README; `dev/bake.html?to=sprites` overwrites it and is
+for deliberate re-bakes only). `assets/inbox/` (upload target) and
 `assets/ref/` (style references, study only) are gitignored.
 
 The `-ru` suffix is the convention, not an afterthought (invariant 5): a new

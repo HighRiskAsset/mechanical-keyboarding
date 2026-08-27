@@ -56,9 +56,10 @@ jobs:
           # Baked art, named folder by folder rather than `cp -r assets`: the
           # working copy also holds assets/inbox and assets/ref, which are
           # gitignored scratch and reference and have no business on the site.
-          # Phase 6's remastered sprites get their own line here when they land.
           mkdir -p _site/assets
           cp -r assets/maps _site/assets/
+          # The sprite sheets + manifests the game renders from (js/sprites.js)
+          cp -r assets/sprites _site/assets/
           cp deploy/htaccess _site/.htaccess
           echo "--- staged for upload ---"
           find _site -type f | sort

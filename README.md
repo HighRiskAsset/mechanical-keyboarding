@@ -54,8 +54,10 @@ storm, fog and snow on its own. None of it changes what the machines do, and
 all of it can be turned down to Calm or off entirely from ⚙.
 
 No installation, no build step: plain HTML/CSS/JS with a vendored copy of
-[PixiJS](https://pixijs.com/) (MIT) in `libs/`. All art is drawn in code —
-there are no image assets.
+[PixiJS](https://pixijs.com/) (MIT) in `libs/`. All art lives as PNG sprite
+sheets in `assets/sprites/` (see the README there), originally baked from a
+code generator kept in `dev/gen/` and editable by hand ever since: repaint a
+sheet, reload the game.
 
 Interface language and course language are independent axes: the interface is
 available in English or Russian, and two courses are playable — Russian
@@ -97,6 +99,14 @@ tagline in `js/i18n.js`. The shared kit (`js/maps/kit.js`) gives a world
 deterministic noise, blobs, wandering paths and the tile-field helper, so
 biomes and coastlines can be shaped rather than drawn as rectangles.
 `dev/map.html` renders any world to a PNG for review.
+
+**Art is edited in `assets/sprites/`, not in code.** The game renders from
+those PNG sheets and their JSON manifests (`js/sprites.js` loads them,
+`js/tiles.js` composes terrain out of them); the folder's README explains the
+format and the rules. The original code-drawn art survives as a generator in
+`dev/gen/`: prototype new sprites or animation timing there and bake a
+scaffold with `dev/bake.html` (writes to `assets/inbox/` for review; only
+`?to=sprites` overwrites the live sheets, which are the artists' files).
 
 **Every map edit ends with a thumbnail bake.** The picker's world thumbnails
 are static files in `assets/maps/`, never drawn at run time — drawing them

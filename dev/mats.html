@@ -1,7 +1,7 @@
 <!doctype html>
 <!-- Material proof sheet (dev only). Every material once: the sprite the bag
      shows, the same sprite riding a straight run, and the same sprite round
-     a corner — which is where a good that is too big rides out over the
+     a corner â€” which is where a good that is too big rides out over the
      grass. Then a full run loaded with the whole ladder, to see whether
      twenty-five goods going past can be told apart at speed.
      Open: http://localhost:8123/dev/mats.html  (optionally ?name=x.png&s=4) -->
@@ -14,8 +14,8 @@
 </style>
 <div id="log"></div>
 <canvas id="out"></canvas>
-<script src="../js/pixels.js"></script>
-<script src="../js/tiles.js"></script>
+<script src="gen/pixels.js"></script>
+<script src="gen/tiles.js"></script>
 <script src="../js/layout-en.js"></script>
 <script src="../js/language-en.js"></script>
 <script src="../js/courses.js"></script>
@@ -44,7 +44,7 @@
   };
   const good = (mat, gx, gy) => x.drawImage(PIXELS.matCanvas(mat), gx - HM, gy - HM);
 
-  label('every material — in the bag, on a straight, round a corner. ' + PIXELS.MAT_PX + 'px', 4, 8);
+  label('every material â€” in the bag, on a straight, round a corner. ' + PIXELS.MAT_PX + 'px', 4, 8);
   label('form', 4, 18); label('id', 32, 18); label('bag', 80, 18); label('on the run', 108, 18);
 
   IDS.forEach((id, i) => {
@@ -63,13 +63,13 @@
     x.drawImage(PIXELS.beltTileCanvas(0, 'sw', false, false), bx + 32, by);
     good(id, bx + 8, by + 8);
     good(id, bx + 24, by + 8);
-    good(id, bx + 32 + 5.66, by + 10.34);      // the worst point of the turn: 45°
+    good(id, bx + 32 + 5.66, by + 10.34);      // the worst point of the turn: 45Â°
     // and against the grass it flies over on its way to the bag
     bed('grass', bx + 52, by, 1, 1);
     good(id, bx + 60, by + 8);
   });
 
-  // the whole ladder going past on one run — can you read it at speed?
+  // the whole ladder going past on one run â€” can you read it at speed?
   const ly = 30 + IDS.length * ROW;
   label('the whole ladder on one run, a tile apart, as it actually goes past', 4, ly - 4);
   bed('dirt', 0, ly, 17, 6);

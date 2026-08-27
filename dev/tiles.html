@@ -12,8 +12,8 @@
 </style>
 <div id="log"></div>
 <canvas id="out"></canvas>
-<script src="../js/pixels.js"></script>
-<script src="../js/tiles.js"></script>
+<script src="gen/pixels.js"></script>
+<script src="gen/tiles.js"></script>
 <script>
 (async function () {
   const T = TILES.T, SCALE = 3;
@@ -94,7 +94,7 @@
   cy += 6 * T + 12;
 
   // 5. crossings
-  label('crossings: bridge open/closed · boardwalk open/closed · rockslide tan/grey/violet · snowdrift', 4, cy - 2);
+  label('crossings: bridge open/closed Â· boardwalk open/closed Â· rockslide tan/grey/violet Â· snowdrift', 4, cy - 2);
   let cx0 = 4;
   const putX = (spec, over) => {
     if (!spec) { cx0 += 40; return; }
@@ -111,7 +111,7 @@
   cy += 48;
 
   // 6. scenery + ore patches
-  label('scenery: pine snowpine deadtree boulder boulder2 spire crystal scrub reeds tarpool · meadow tree/tree2/rock · ore ×7', 4, cy - 2);
+  label('scenery: pine snowpine deadtree boulder boulder2 spire crystal scrub reeds tarpool Â· meadow tree/tree2/rock Â· ore Ã—7', 4, cy - 2);
   cx0 = 4;
   for (const k of ['pine', 'snowpine', 'deadtree', 'boulder', 'boulder2', 'spire', 'crystal', 'scrub', 'reeds', 'tarpool', 'tree', 'tree2', 'rock', 'rock2']) {
     const cc = PIXELS.sceneryCanvas(k);

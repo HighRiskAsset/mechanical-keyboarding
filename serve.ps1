@@ -32,11 +32,13 @@ while ($listener.IsListening) {
     continue
   }
 
-  # POST /upload?name=<file>[&dir=inbox|maps] — save request body to disk.
+  # POST /upload?name=<file>[&dir=inbox|maps|sprites] — save request body to disk.
   #
-  #   inbox  assets/inbox, the concept-art drop target (gitignored)
-  #   maps   assets/maps, the baked map thumbnails, which ship with the game
-  #          and are written only by dev/map-thumbs.html
+  #   inbox    assets/inbox, the concept-art drop target (gitignored)
+  #   maps     assets/maps, the baked map thumbnails, which ship with the game
+  #            and are written only by dev/map-thumbs.html
+  #   sprites  assets/sprites, the game's sprite sheets + manifests, written
+  #            only by dev/bake.html when it is opened with ?to=sprites
   #
   # `dir` selects a key from a fixed table rather than being joined onto the
   # path, so a crafted value cannot walk out of the repo. `name` is still
@@ -44,7 +46,7 @@ while ($listener.IsListening) {
   if ($ctx.Request.HttpMethod -eq 'POST' -and $path -eq '/upload') {
     try {
       $name = $ctx.Request.QueryString['name']
-      $dirs = @{ 'inbox' = 'assets\inbox'; 'maps' = 'assets\maps' }
+      $dirs = @{ 'inbox' = 'assets\inbox'; 'maps' = 'assets\maps'; 'sprites' = 'assets\sprites' }
       $which = $ctx.Request.QueryString['dir']
       if (-not $which) { $which = 'inbox' }
       if ($name -and $name -match '^[A-Za-z0-9_.-]+$' -and $dirs.ContainsKey($which)) {

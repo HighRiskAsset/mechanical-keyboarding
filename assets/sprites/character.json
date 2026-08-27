@@ -1,0 +1,77 @@
+{
+ "image": "character.png",
+ "sprites": {
+  "walk.down": {
+   "x": 0,
+   "y": 0,
+   "w": 20,
+   "h": 28,
+   "n": 8,
+   "clock": "walk"
+  },
+  "idle.down": {
+   "x": 160,
+   "y": 0,
+   "w": 20,
+   "h": 28,
+   "n": 4,
+   "clock": "breath"
+  },
+  "walk.up": {
+   "x": 240,
+   "y": 0,
+   "w": 20,
+   "h": 28,
+   "n": 8,
+   "clock": "walk"
+  },
+  "idle.up": {
+   "x": 400,
+   "y": 0,
+   "w": 20,
+   "h": 28,
+   "n": 4,
+   "clock": "breath"
+  },
+  "walk.side": {
+   "x": 0,
+   "y": 28,
+   "w": 20,
+   "h": 28,
+   "n": 8,
+   "clock": "walk"
+  },
+  "idle.side": {
+   "x": 160,
+   "y": 28,
+   "w": 20,
+   "h": 28,
+   "n": 4,
+   "clock": "breath"
+  },
+  "walk.left": {
+   "x": 240,
+   "y": 28,
+   "w": 20,
+   "h": 28,
+   "n": 8,
+   "clock": "walk"
+  },
+  "idle.left": {
+   "x": 400,
+   "y": 28,
+   "w": 20,
+   "h": 28,
+   "n": 4,
+   "clock": "breath"
+  },
+  "work": {
+   "x": 0,
+   "y": 56,
+   "w": 20,
+   "h": 28,
+   "n": 4,
+   "clock": "work"
+  }
+ }
+}

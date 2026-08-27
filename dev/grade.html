@@ -2,7 +2,7 @@
 <!-- Grade proof sheet (dev only). The twinkle that says how deep a good was
      dug: none on Mk1, a small warm one on Mk2, a wider cold one on Mk3.
      Every frame of the cycle, in the bag's plate and on the belt's band,
-     for every ore the ladder mints — plus the three grades of each family
+     for every ore the ladder mints â€” plus the three grades of each family
      side by side, which is the read the player actually has to make.
      Open: http://localhost:8123/dev/grade.html  (optionally ?name=x.png&s=4) -->
 <meta charset="utf-8">
@@ -14,8 +14,8 @@
 </style>
 <div id="log"></div>
 <canvas id="out"></canvas>
-<script src="../js/pixels.js"></script>
-<script src="../js/tiles.js"></script>
+<script src="gen/pixels.js"></script>
+<script src="gen/tiles.js"></script>
 <script src="../js/layout-en.js"></script>
 <script src="../js/language-en.js"></script>
 <script src="../js/courses.js"></script>
@@ -45,7 +45,7 @@
     }
   };
 
-  label('the grade twinkle — every frame of the cycle, on the band it rides', 4, 8);
+  label('the grade twinkle â€” every frame of the cycle, on the band it rides', 4, 8);
   label('Mk1 plain / Mk2 warm / Mk3 cold. ' + F + ' frames, one second', 4, 16, '#c3ab84');
 
   // every ore the ladder mints, one row each: the whole cycle on the belt
@@ -63,7 +63,7 @@
 
   // the read the player makes: one family's three grades together, at peak
   const ly = 30 + ORES.length * ROW;
-  label('the three grades of a family together — bag plate, then grass, at the widest frame', 4, ly + 4);
+  label('the three grades of a family together â€” bag plate, then grass, at the widest frame', 4, ly + 4);
   FAMS.forEach((fam, i) => {
     const y = ly + 12 + i * 20;
     label(fam, 4, y + 12, '#fff4dc');

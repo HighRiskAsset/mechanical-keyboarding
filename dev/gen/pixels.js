@@ -1,7 +1,11 @@
-// Code-authored pixel sprites for the machine frontier. Deterministic,
-// palette-disciplined, no binary assets. The visual target is a dense,
-// jewel-toned anime frontier: readable CrossCode-like ground strata, warm
-// settlement materials, and SNES-scale character silhouettes. Global: PIXELS
+// THE GENERATOR (dev only, moved out of the game 2026-08-27). Code-authored
+// pixel sprites: deterministic, palette-disciplined. The game no longer runs
+// this file; it runs js/sprites.js over the sheets in assets/sprites/, which
+// dev/bake.html renders FROM this file. This is the scaffold: prototype a new
+// frame or a new machine here, bake it to assets/inbox, and the artist paints
+// over the scaffold. The visual target is a dense, jewel-toned anime frontier:
+// readable CrossCode-like ground strata, warm settlement materials, and
+// SNES-scale character silhouettes. Global: PIXELS
 (function () {
   'use strict';
 
@@ -2509,5 +2513,20 @@
     propCanvas: (kind) => PROP_DRAW[kind](), kindIconCanvas: kindIcon,
     pressTex: (frame, mode) => tex(press(frame, mode)),
     vignetteURL: () => vignette().toDataURL(),
+    // ---- canvas-level access for dev/bake.js (the sheet baker) ----
+    GLYPHS,
+    textCanvas,
+    matBodyCanvas: matBody,
+    gradeCanvas: gradeMark,
+    spoolCanvas: spool,
+    matDotCanvas: matDot,
+    stateDotCanvas: stateDot,
+    sparkCanvas: spark,
+    puffCanvas: puff,
+    dropShadowCanvas: dropShadow,
+    petalCanvas: petal,
+    glowHaloCanvas: glowHalo,
+    flowerCanvas: flower,
+    vignetteCanvas: vignette,
   };
 })();

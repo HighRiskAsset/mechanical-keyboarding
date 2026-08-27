@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>bake: sprite sheets from the generator</title>
+<style>
+  body { background: #14181c; color: #cfd6ce; font: 13px/1.5 Consolas, monospace; padding: 16px; }
+  #log { white-space: pre-wrap; color: #9fb8a2; }
+  #sheets div { margin: 14px 0 4px; color: #d9b45a; }
+  #sheets canvas { image-rendering: pixelated; background: #23282e; outline: 1px solid #2e353c; }
+</style>
+</head>
+<body>
+<h3>dev/bake.html: sheets from dev/gen/ → /upload</h3>
+<p>Default target is assets/inbox (review). Open with <code>?to=sprites</code> to
+write assets/sprites — the live sheets the game loads and the artists own.</p>
+<div id="log"></div>
+<div id="sheets"></div>
+<!-- the GENERATOR, not the game's sprite library -->
+<script src="gen/pixels.js"></script>
+<script src="gen/tiles.js"></script>
+<!-- live data, to enumerate materials, kinds, maps, crossings, scenery -->
+<script src="../js/i18n.js"></script>
+<script src="../js/board-ansi.js"></script>
+<script src="../js/language-ru.js"></script>
+<script src="../js/layout-ru.js"></script>
+<script src="../js/layout-en.js"></script>
+<script src="../js/courses.js"></script>
+<script src="../js/maps/kit.js"></script>
+<script src="../js/maps/frontier.js"></script>
+<script src="../js/maps/range.js"></script>
+<script src="../js/chain.js"></script>
+<script src="bake.js"></script>
+</body>
+</html>
