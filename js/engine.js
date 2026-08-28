@@ -87,7 +87,7 @@
       nextDropId: 1,
       crossings: {},     // crossing id → true once repaired (bought at the place)
       heavy: 0,          // heavy modules toward the finish
-      // the layout this save's coordinates are in — see relayProfile below. A
+      // the layout this save's coordinates are in (see relayProfile below). A
       // new save is born in the current one and is never shifted.
       relay: (C().MAPS[mapId] && C().MAPS[mapId].RELAY || {}).tag || null,
     };
@@ -95,14 +95,14 @@
 
   // ---- a world that moved inside a larger frame (2026-08-28) ----
   // The Frontier's rim grew and the whole map slid ten columns east and eight
-  // rows south to make room. Everything a save remembers by position — where a
-  // machine stands, the tiles a belt runs over, a good lying on the ground —
+  // rows south to make room. Everything a save remembers by position (where a
+  // machine stands, the tiles a belt runs over, a good lying on the ground)
   // is in the OLD frame until this runs, and it only makes sense in the new
   // one, so a save is moved exactly as far as the ground was. It is a shift
   // and nothing else: no machine is re-homed, no belt is re-routed, and a
   // factory comes back standing where it was built.
   //
-  // A mine is not touched here — it is anchored to a node index, and the pass
+  // A mine is not touched here: it is anchored to a node index, and the pass
   // below re-seats it on whatever tiles its seam now occupies.
   function relayProfile(p, relay) {
     const { dc, dr } = relay;

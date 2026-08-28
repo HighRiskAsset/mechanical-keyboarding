@@ -511,10 +511,10 @@ is the one place a node becomes tiles, and eight Frontier seams and six Open
 Range seams are bedded on end. Neither world needed to grow wider in the
 end — there was room once the pads stopped being scattered.
 
-**Done 2026-08-28 — the vein cut and the rim (user ruling):** `dev/ore-load.js`
+**Done 2026-08-28: the vein cut and the rim (user ruling):** `dev/ore-load.js`
 had been failing both courses on *short of copper* since the tree last moved,
 so both worlds were re-cut to **iron 3 · copper 4 · stone 3 · quartz 3 · coal 3
-· oil 3 — nineteen seams, short for neither course**. The Frontier grew to take
+· oil 3, nineteen seams, short for neither course**. The Frontier grew to take
 them and to give its ring a reason to exist: **1920×960**, with all of the
 growth in the rim (ten columns east and west, eight rows north and south) and
 the basin unchanged, so every ring biome now has at least two works (twelve
@@ -525,10 +525,10 @@ the ground moved, once. **The Open Range** grew east to **1648×464** for its
 own nineteen-seam row and three ranks of nineteen plots (57), keeping p1..p39
 on the ground they were on. **The outskirts are the interesting part (same
 day, second ruling):** the first pass left the deep edges as bare biome floor,
-so each of the five got a landmark — the Summit (elev 2, far north-west), the
+so each of the five got a landmark: the Summit (elev 2, far north-west), the
 mesa's flooded pit, two crystal benches over the canyon head, a dry wash down
 the east corner, the badland butte in the flats, a second crevasse, a third
-tar seep and the reed lagoon past the bog lake — and the five new seams moved
+tar seep and the reed lagoon past the bog lake, and the five new seams moved
 out onto them, four of the five onto high ground.
 
 ## 6. Gravy (after the foundation, in no order)

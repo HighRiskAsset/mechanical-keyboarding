@@ -682,7 +682,7 @@
   // IN the ground and its name says which ore; a site is the absence of
   // anything, and its survey outline already says what it is for. Naming it
   // spends the caption's first line highlighting a lack. The second line
-  // still offers the build when the bag can cover one — that is the half
+  // still offers the build when the bag can cover one, and that is the half
   // that carries information.
   function groundName() {
     const at = FACTORY.playerPos();

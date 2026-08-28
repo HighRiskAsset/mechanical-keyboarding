@@ -1,4 +1,4 @@
-// OPEN RANGE — one flat meadow, every node in a row, ranks of build sites
+// OPEN RANGE: one flat meadow, every node in a row, ranks of build sites
 // below, nothing in the way. Tests the mechanics (build, deliver, automate,
 // belt) without walking or geography.
 //
@@ -21,14 +21,14 @@
   // 8+5k when it lies across) on row 3, the first row inside the treeline.
   //
   // The row was thirteen until 2026-08-28 and carried the pre-2026-08-25 cut
-  // — iron 3, copper 2, and one of everything else — which `dev/ore-load.js`
+  // (iron 3, copper 2, and one of everything else) which `dev/ore-load.js`
   // called SHORT OF COPPER on both courses. It is nineteen now and carries
   // the same cut The Frontier does (iron 3 · copper 4 · stone 3 · quartz 3 ·
   // coal 3 · oil 3): the test map is where a player tries the mechanics
   // without walking, and it cannot test a supply the real world has and it
   // does not. Three full turns of the six ores, then the fourth copper the
-  // tree leans on. How many of each is not authored here — see DESIGN.md,
-  // *Veins follow the tree*; the map only lays out what the check asks for.
+  // tree leans on. How many of each is not authored here (see DESIGN.md,
+  // *Veins follow the tree*); the map only lays out what the check asks for.
   // The map grew east to take them, six columns of meadow on the same 80px
   // pitch, and nothing else about it moved: every seam and site that was
   // here is on the ground it was on, so a save comes back untouched.
