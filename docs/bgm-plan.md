@@ -513,6 +513,72 @@ reversed track (`(Reversed)` in the workspace is that mistake, not a keeper);
 and **the Instrumental toggle silently resets to "Write"** whenever the create
 form clears, so re-check it before every generation.
 
+## Round three — too upbeat, and drums at twice the useful rate (2026-08-28)
+
+Two user rulings on the shipped seven, and both are corrections to *my* work
+rather than to the plan.
+
+### 1. The mode was fixed; the idiom never was
+
+Verdict: several tracks read as **a platformer like Kirby, not a fantasy
+engineer building contraptions in a mysterious forest on a strange world.**
+
+Dorian does not rescue a track when everything around it says cheerful
+village. 92 BPM, a flute lead, a *walking pizzicato bass*, and this document's
+own instruction — "a clear singable melody with a rising hopeful contour…
+the feeling of rebuilding a village" — is a request for town music. **Pizzicato
+at 92 BPM is the bounce**, whatever the chroma scan reports. That is how a
+track passed the mode test and still came out as a platformer.
+
+The Bravely Default reference was not at fault: Norende is a music box, slow
+and sparse and delicate. Its *melodic contour* was taken and hung on a briskly
+plucked arrangement, which is a different animal.
+
+**Added references:** **Machinarium** (Tomáš Dvořák) — the closest fit of any
+so far: contraptions, junk-metal percussion, dusty and strange, whimsical
+without being cute. **Outer Wilds** — strange planet, wonder with an edge.
+**Hollow Knight** (Greenpath, Fungal Wastes). **Laputa** (Hisaishi) — fantasy
+engineering, wonder plus melancholy.
+
+**The four inversions:** 68 BPM not 92 · low and sustained (bass clarinet,
+cello, bassoon) not flute and celesta on top · an unresolved three-note motif
+not a singable melody · junk-metal percussion, with pizzicato and staccato
+mallets banned outright. Plus stacked fourths and a flat second, so the world
+reads strange rather than cosy.
+
+### 2. Half-time — measured, not guessed
+
+Verdict: the tracks are good **in half-time**, and too often carry drums at
+twice the useful rate. Measured with an onset counter over the 1.5–6 kHz
+transient band (`scratchpad/onsets.ps1`):
+
+| Track | onsets/s | per min | feel |
+|---|---|---|---|
+| `06-the-works` | 3.26 | 196 | **double-time** |
+| `04-coal-bog` | 3.00 | 180 | **double-time** |
+| `01-basin-a` | 2.68 | 161 | **double-time** |
+| `02-basin-b` | 2.25 | 135 | medium |
+| `05-snow-peaks` | 2.06 | 124 | medium |
+| `07-launch` | 1.61 | 97 | medium |
+| `03-far-frontier` | **1.40** | 84 | **half-time — the reference** |
+
+At 88 BPM `the-works` lands ~2.2 attacks per beat, which is eighth notes.
+`far-frontier` sits at ~0.93 per beat — one hit per beat — and is the only one
+already right. **Target ≈1.4 onsets/s.**
+
+This one is not only a feel fix. Half the transients in the 1.5–6 kHz band is
+half the collisions with the key clicks, so it buys the typing layer room at
+the same time. It should have been in the brief from the start.
+
+**The clause, which goes with the mode near the front of the prompt:**
+
+> HALF-TIME GROOVE: percussion only on beat one and the back half of the bar,
+> at most one attack per beat, never eighth notes, never a busy pattern.
+
+**Measure, do not trust the prompt.** The onset scan is now the second QA step
+beside the chroma scan — between them they catch the two ways a track has
+actually gone wrong so far.
+
 ## Mix note — SFX is too soft against weather (user, 2026-08-27)
 
 Playtest observation: **the SFX read as soft, especially next to the weather
