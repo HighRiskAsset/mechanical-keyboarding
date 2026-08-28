@@ -1650,14 +1650,16 @@ is the Deep-Ore Ledger (artifact); this is the binding record.
   heavy modules take bound goods instead of moldings — the finish itself
   demands the last punctuation lesson. Sealing is 1 fastened + 1 glass (a
   tax, not a pyramid — 2 doubled the endgame in the bot).
-- **⚙ is per recipe, with a run-in.** A machine's automation belongs to the
-  recipe it runs (`m.autoOn[key]`); a mine's key is the material of its
-  depth, so a Mk retools by construction — nothing is switched off, the
-  deeper seam is simply new work. ⚙ goes on sale once the machine has made
-  the price's own-output count by hand since learning the recipe
-  (`m.handMade`, shown on the row as "run it in: N more by hand"), and the
-  purchase then consumes those units — no stockpile skips the review.
-  A v2 save's per-machine `auto` migrates to its current recipe's key once.
+- **⚙ is per recipe, and its price is the whole gate.** A machine's
+  automation belongs to the recipe it runs (`m.autoOn[key]`); a mine's key
+  is the material of its depth, so a Mk retools by construction: nothing is
+  switched off, the deeper seam is simply new work. The price asks for the
+  recipe's own output plus a later good, and affordable means buyable
+  (ruling 2026-08-28: no hidden costs, ever; all required typing
+  corresponds to materials earned). The hand-made run-in that once held ⚙
+  off sale was removed then; old saves may still carry a `m.handMade`
+  tally, and nothing reads it. A v2 save's per-machine `auto` migrates to
+  its current recipe's key once.
 - **No rung is skippable to the finish** (the no-terminal rule): oil's
   price carries rivet iron (⇒ Iron Mk2) and modules (⇒ the whole early
   set); ? ! costs brass (⇒ the deep pair, Copper+Stone Mk2); the Crane

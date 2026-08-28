@@ -21,7 +21,7 @@
   const keyFor = (mapId) => STORAGE_PREFIX + COURSES.saveTag() + mapId;
 
   // Tuning constants
-  const MIN_SAMPLES = 30;                    // presses before a letter can pass its gate
+  const MIN_SAMPLES = 30;                    // presses before a letter reads fully ready (readiness is display + sampling weight, never a lock)
   const ACC_SPAN = 0.07;                     // readiness 0 at (bar.acc − span) … 1 at bar.acc
   const EW_ALPHA_LAT = 0.10;                 // exponential weight for latency
   const EW_ALPHA_ERR = 0.05;                 // exponential weight for error rate

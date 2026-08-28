@@ -267,7 +267,7 @@
   }
   line(!autoBad.length, 'automation prices: never heavy modules, and every side-good is in the course\'s book', autoBad.join('<br>'));
   // 17e. the bag cap: no single-material ask (paced) may crowd what the
-  // operator can hold — every price and run-in fits with ≥20% headroom
+  // operator can hold — every price fits with ≥20% headroom
   {
     const asks = [];
     const take = (label, cost) => { for (const [mat, n] of Object.entries(cost || {})) asks.push([label + ' · ' + mat, n]); };

@@ -288,21 +288,27 @@
       // quartz in the price: the seam (ring finger) follows the vein (middle)
       coal: { quartz: 40, bronze: 60 },
       // rivet iron forces Iron Mk2 before the pinky — with modules (which
-      // force everything else early), the derrick leaves no rung behind
-      oil: { modules: 60, rivetiron: 40 },
+      // force everything else early), the derrick leaves no rung behind.
+      // modules 60→40 (keystroke ledger, 2026-08-28): the oil wall was a
+      // 6-hour desert with no new key; the rule only needs modules PRESENT
+      oil: { modules: 40, rivetiron: 40 },
     },
     // Mk levels per ore (gunmetal pins deep copper now, so Copper/Stone Mk2
     // ask for raw coal instead; naphtha bronze gives Oil Mk2's alloy its
-    // consumer at Coal Mk2; sealed goods put the last letters after ? !)
+    // consumer at Coal Mk2; sealed goods put the last letters after ? !).
+    // Counts balanced against the keystroke ledger (2026-08-28): a rung's
+    // price IS the practice its new keys get, so no rung may cost minutes
+    // (bronze/glass terms raise the floors) and none may cost a desert
+    // (the `fast` terms came down — fastened goods are 121 keystrokes each)
     mk: {
       iron: { 2: { iron: 80, bronze: 30 } },
-      copper: { 2: { copper: 80, coal: 30 } },
-      stone: { 2: { stone: 80, coal: 30 } },
+      copper: { 2: { copper: 80, coal: 30, bronze: 30 } },
+      stone: { 2: { stone: 80, coal: 30, bronze: 30 } },
       quartz: { 2: { quartz: 60, bronze: 40 }, 3: { quartz: 60, modules: 30 } },   // Mk3 in modules: the middle finger's top row waits for the Assembler's era
-      coal: { 2: { fast: 40, naphtha: 40 }, 3: { coal: 60, glass: 25 } },
+      coal: { 2: { fast: 30, naphtha: 40 }, 3: { coal: 60, glass: 60 } },
       // No place goes past Mk3 (user ruling 2026-08-22): RU's rare pinky
       // tail folded into Mk2/Mk3 as four-key sweeps — see language-ru.js
-      oil: { 2: { oil: 60, glass: 30 }, 3: { oil: 60, sealed: 20 } },
+      oil: { 2: { oil: 80, glass: 80 }, 3: { oil: 60, sealed: 20 } },
     },
     // Mk levels on a machine kind (the Fastener: punctuation keys) — its own
     // output, typed by hand right before the keys arrive, plus a tier good
@@ -310,7 +316,7 @@
       // comma in gunmetal (deep copper); ? ! in brass — the deep PAIR, so
       // Stone Mk2 stands on the critical path (no rung is skippable to the
       // finish); Mk3 after the Crane, in glass and a few crates
-      fastener: { 1: { fast: 30, gunmetal: 30 }, 2: { fast: 40, brass: 30 }, 3: { glass: 40, crate: 6 } },
+      fastener: { 1: { fast: 25, gunmetal: 30 }, 2: { fast: 30, brass: 30 }, 3: { glass: 40, crate: 6 } },
     },
     // first instance of a kind at a build site — each asks for a material of the
     // era the kind belongs to, which is the only pacing there is. A price
@@ -329,16 +335,15 @@
       smelter: { iron: 30, copper: 30, stone: 30 },
       foundry: { bellquartz: 40, bronze: 40 },
       constructor: { qzbronze: 40, bronze: 40 },
-      molder: { parts: 60, gunmetal: 30 },
-      assembler: { mold: 60, parts: 40 },
+      molder: { parts: 50, gunmetal: 30 },
+      assembler: { mold: 40, parts: 40 },
       fastener: { oil: 40, modules: 40 },
-      crane: { sealed: 50, flashcopper: 30 },
+      crane: { sealed: 40, flashcopper: 30 },
       manufacturer: { crate: 80, mold: 60, parts: 60 },   // 80: no single ask may crowd the 300 bag (240 paced is the game-wide ceiling)
     },
     // automation is PER RECIPE (the ledger): its price is the recipe's own
-    // output (`own` — which is also the run-in: that many units by hand
-    // since the machine learned the recipe, and the price then consumes
-    // them) plus a later good. priceAuto() assembles it.
+    // output (`own`) plus a later good, and the price is the whole gate.
+    // priceAuto() assembles it.
     auto: {
       smelter: { own: 40, plus: { parts: 20 } },
       foundry: { own: 30, plus: { parts: 30 } },
@@ -385,9 +390,11 @@
   // automation is per recipe (the ledger, 2026-08-22). A mine's "recipe" is
   // the material its depth yields — so a Mk retools by construction: the new
   // depth's product has no ⚙ yet. The price asks for the recipe's own
-  // output, which doubles as the run-in: the machine must have made that
-  // many units by hand since it learned the recipe, and the purchase then
-  // consumes them. No stockpile skips the review.
+  // output plus a later good, and the price is the WHOLE gate (no hidden
+  // costs, 2026-08-28): there is no hand-made run-in any more. The own-output
+  // term already means this tier's work was done somewhere; which hands did
+  // it is not the machine's business. Old saves may still carry a
+  // `m.handMade` tally from the run-in era; nothing reads it.
   function priceAuto(m, r, profile) {
     if (m.kind === 'mine') {
       const own = profile ? mineMat(profile, m) : m.ore;
@@ -397,17 +404,9 @@
     if (!spec || !r) return null;
     return paced(Object.assign({ [r.out]: spec.own }, spec.plus));
   }
-  // the key a recipe's ⚙ and run-in hang on (per machine instance)
+  // the key a recipe's ⚙ hangs on (per machine instance)
   const autoKey = (m, r, profile) => (m.kind === 'mine' ? (profile ? mineMat(profile, m) : m.ore) : (r ? r.out + '|' + JSON.stringify(r.in) : null));
   const autoOn = (m, key) => !!(key && m.autoOn && m.autoOn[key]);
-  // units still to hand-work before this recipe's ⚙ goes on sale
-  function runInLeft(m, r, profile) {
-    const price = priceAuto(m, r, profile);
-    if (!price) return 0;
-    const own = m.kind === 'mine' ? (profile ? mineMat(profile, m) : m.ore) : r.out;
-    const done = (m.handMade && m.handMade[autoKey(m, r, profile)]) || 0;
-    return Math.max(0, (price[own] || 0) - done);
-  }
   const priceCrossing = (c) => paced(PRICES.crossing[c.id] || null);
 
   // ---- the curriculum position, from the save ----
@@ -833,7 +832,7 @@
 
   window.CHAIN = {
     TILE, ORES, ORE_IDS, ORE_BY_NODE, ORE_GOOD, ORE_MATS, KINDS, KIND_IDS, MATS, MAT_IDS, INGOT_IDS, RECIPES, BARS, TIER_GOOD, TUNING, PRICES,
-    matOfDepth, matSatisfies, bagAvail, spendCost, mineMat, bookRecipes, autoKey, autoOn, runInLeft,
+    matOfDepth, matSatisfies, bagAvail, spendCost, mineMat, bookRecipes, autoKey, autoOn,
     MAPS, MAP_IDS, DEFAULT_MAP,
     oreLetters, oreMaxMk, recipesFor, recipeFor, matTier,
     priceNode, priceExtraMine, priceMk, priceAt, kindMk, priceMachine, priceAuto, priceCrossing, scaleCost, closedCrossings,

@@ -431,7 +431,8 @@ full run; data checks green; the EN stub loads.
 - **Deep ores landed 2026-08-22** (same day as the branch; DESIGN.md "Deep
   ores" is the record): 9 deep ore materials + 6 signature alloys + sealed/
   bound goods; constant per-course recipe books replace every runtime
-  content floor; ⚙ per recipe with a hand-made run-in; family-aware bag,
+  content floor; ⚙ per recipe with a hand-made run-in (the run-in was
+  removed 2026-08-28: prices are the whole gate); family-aware bag,
   belts and prices. The pacing bot reads 31.1 h at PACE 3. Content grew
   with it (clusters 108, RU +105 words, +40 dash sentences, EN 841 words).
 - **`dev/ladder-walk.js`** (2026-08-22, the branch) — walks every Mk table

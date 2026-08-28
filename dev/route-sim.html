@@ -297,8 +297,9 @@ function produceByHand(mat, qty, depth) {
 window.SIMDBG = { P, built, auto, autoMat, handMade, produceByHand, recipeToMake, makeable, deficit, stints };
 
 // ---------- automation shopping ----------
-// every ⚙ the operator could be saving toward, best-worked first. The run-in
-// (the price's `own` term) must already be served by hand.
+// every ⚙ the operator could be saving toward, best-worked first. The price
+// is the whole gate (the run-in was removed 2026-08-28); hand-worked recipes
+// still lead the list because those are the ones worth freeing hands from.
 function autoOptions() {
   const out = [];
   for (const [key, done] of Object.entries(handMade).sort((a, b) => b[1] - a[1])) {
@@ -314,7 +315,6 @@ function autoOptions() {
     }
     if (!price) continue;
     const own = ore ? C.matOfDepth(ore, Math.max(1, C.oreMk(P, ore))) : r.out;
-    if (done < (price[own] || 0)) continue;                                   // run-in not served
     if (!Object.keys(price).every((m) => makeable(m))) continue;
     // a ⚙ needs a body to stand in: one running recipe per machine
     const needsBody = !ore && autoSeats(r.kind) <= 0 ? r.kind : null;
@@ -384,8 +384,8 @@ while (!finished && guard++ < 4000) {
     continue;
   }
 
-  // the industrialist stops carrying water and builds the pipe: a served
-  // run-in becomes the shopping list before the next rung does
+  // the industrialist stops carrying water and builds the pipe: an
+  // affordable ⚙ becomes the shopping list before the next rung does
   if (POLICY === 'industry') {
     if (tryAutomate()) continue;
     const o = autoOptions()[0];

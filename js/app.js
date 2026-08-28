@@ -400,12 +400,6 @@
   // ⚙ is per recipe (the deep-ore ledger): live automation = the machine's
   // CURRENT work has its engine. A mine that deepens is back in your hands.
   const autoLive = (m) => !!(m && SIM.autoLive(profile, m));
-  // record a unit made by hand — the run-in every recipe's ⚙ waits on
-  function recordHandMade(m, key, n) {
-    if (!key) return;
-    if (!m.handMade) m.handMade = {};
-    m.handMade[key] = (m.handMade[key] || 0) + n;
-  }
   // the belt spool on the operator's back: {from: machine id} while carrying
   let spool = null;
   let spoolRoute = null;         // the route to the docked machine while carrying, or null
@@ -474,9 +468,7 @@
   function workKeystroke() {
     const m = dock.m;
     if (m.kind === 'mine') {
-      const mat = CHAIN.mineMat(profile, m);
-      produce(m, mat, 1);
-      recordHandMade(m, mat, 1);
+      produce(m, CHAIN.mineMat(profile, m), 1);
       return;
     }
     if (!recipe) return;
@@ -489,7 +481,6 @@
     unitAcc++;
     if (unitAcc >= kind.perUnit) {
       unitAcc = 0; unitPaid = false;
-      recordHandMade(m, CHAIN.autoKey(m, recipe, profile), 1);
       produce(m, recipe.out, 1);
     }
   }
@@ -500,7 +491,7 @@
     const rows = [];
     if (d.kind === 'crossing') {
       const price = CHAIN.priceCrossing(d.crossing) || {};
-      rows.push({ pre: '→', items: price, enabled: canPay(price), priced: true, short: shortOf(price), caption: T.t('capRepair'), action: { type: 'repair', id: d.crossing.id, price } });
+      rows.push({ pre: '→', items: price, enabled: canPay(price), priced: true, short: shortOf(price), title: T.t('titleRepair'), caption: T.t('capRepair'), action: { type: 'repair', id: d.crossing.id, price } });
     } else if (d.kind === 'belt') {
       // the run underfoot — both of them where two cross. Its own menu, so
       // taking one up is a hold and then a press, never a stray press.
@@ -511,6 +502,7 @@
         rows.push({
           pre: '✗', kind: from ? from.kind : undefined, ore: from && from.kind === 'mine' ? from.ore : undefined,
           enabled: true,
+          title: T.t(isPipe(from) ? 'titleUnpipe' : 'titleUnbelt'),
           caption: T.t('capUnbelt', { from: machineName(from), to: machineName(to) }),
           action: { type: 'unbelt', id },
         });
@@ -524,15 +516,13 @@
       const np = CHAIN.pairOf(ore, mk + 1);
       if (np) {
         const price = CHAIN.pricePair(np) || {};
-        rows.push({ pre: 'MK' + np.mk, items: price, enabled: canPay(price), priced: true, short: shortOf(price), caption: T.t('capMk', { level: np.mk, name: mineName(ore), keys: pairKeys(np) }), action: { type: 'mk', ore, level: np.mk, price } });
+        rows.push({ pre: 'MK' + np.mk, items: price, enabled: canPay(price), priced: true, short: shortOf(price), title: T.t('capAtPlace', { name: mineName(ore), level: np.mk }), caption: T.t('capMk', { level: np.mk, name: mineName(ore), keys: pairKeys(np) }), action: { type: 'mk', ore, level: np.mk, price } });
       }
       if (!autoLive(m)) {
-        // ⚙ for the depth the mine now works: run it in by hand first, then
-        // the price consumes the very units you ran it in on
+        // ⚙ for the depth the mine now works. The price is the whole gate
+        // (no hidden costs, 2026-08-28): affordable means buyable.
         const price = CHAIN.priceAuto(m, null, profile);
-        const left = CHAIN.runInLeft(m, null, profile);
-        const caption = T.t('capAuto') + (left > 0 ? T.t('capRunIn', { left }) : '');
-        rows.push({ pre: '⚙', items: price, enabled: left <= 0 && canPay(price), priced: left <= 0, short: shortOf(price), caption, action: left <= 0 ? { type: 'auto', m, price, key: CHAIN.autoKey(m, null, profile) } : null });
+        rows.push({ pre: '⚙', items: price, enabled: canPay(price), priced: true, short: shortOf(price), title: T.t('titleAuto'), caption: T.t('capAuto'), action: { type: 'auto', m, price, key: CHAIN.autoKey(m, null, profile) } });
       }
       beltRows(m, rows);
       removeRow(m, rows);
@@ -548,22 +538,21 @@
         // a recipe whose engine this machine already owns wears the gear:
         // switching to it means the machine runs itself again
         const owned = CHAIN.autoOn(m, CHAIN.autoKey(m, r, profile));
-        rows.push({ pre: owned ? '⚙' : undefined, items: r.in, out: r.out, ok: SIM.canTake(profile, m, r.in) ? undefined : false, enabled: true, caption: T.t('capRecipe', { out: matName(r.out), inputs: Object.entries(r.in).map(([mat, k]) => `${k} ${matName(mat)}`).join(' + ') }) + (owned ? T.t('capEngineOwned') : ''), action: { type: 'recipe', m, r } });
+        rows.push({ pre: owned ? '⚙' : undefined, items: r.in, out: r.out, ok: SIM.canTake(profile, m, r.in) ? undefined : false, enabled: true, title: T.t('titleRecipe', { out: matName(r.out) }), caption: T.t('capRecipe', { out: matName(r.out), inputs: recipeInputList(r) }) + (owned ? T.t('capEngineOwned') : ''), action: { type: 'recipe', m, r } });
       }
       // keys bought at this kind of machine (the Fastener's punctuation):
       // its next level, always for sale here at its price
       const np = CHAIN.pairOf(m.kind, CHAIN.kindMk(profile, m.kind) + 1);
       if (np) {
         const price = CHAIN.pricePair(np) || {};
-        rows.push({ pre: 'MK' + np.mk, items: price, enabled: canPay(price), priced: true, short: shortOf(price), caption: T.t('capMkAt', { level: np.mk, name: kindName(m.kind), keys: pairKeys(np) }), action: { type: 'mk-at', kind: m.kind, level: np.mk, price } });
+        rows.push({ pre: 'MK' + np.mk, items: price, enabled: canPay(price), priced: true, short: shortOf(price), title: T.t('capAtPlace', { name: kindName(m.kind), level: np.mk }), caption: T.t('capMkAt', { level: np.mk, name: kindName(m.kind), keys: pairKeys(np) }), action: { type: 'mk-at', kind: m.kind, level: np.mk, price } });
       }
       if (active && !autoLive(m)) {
-        // ⚙ for the recipe it is running now — every recipe earns its own
+        // ⚙ for the recipe it is running now — every recipe earns its own.
+        // The price is the whole gate (no hidden costs, 2026-08-28).
         const price = CHAIN.priceAuto(m, active, profile);
-        const left = CHAIN.runInLeft(m, active, profile);
         if (price) {
-          const caption = T.t('capAuto') + (left > 0 ? T.t('capRunIn', { left }) : '');
-          rows.push({ pre: '⚙', items: price, enabled: left <= 0 && canPay(price), priced: left <= 0, short: shortOf(price), caption, action: left <= 0 ? { type: 'auto', m, price, key: CHAIN.autoKey(m, active, profile) } : null });
+          rows.push({ pre: '⚙', items: price, enabled: canPay(price), priced: true, short: shortOf(price), title: T.t('titleAuto'), caption: T.t('capAuto'), action: { type: 'auto', m, price, key: CHAIN.autoKey(m, active, profile) } });
         }
       }
       beltRows(m, rows);
@@ -586,11 +575,14 @@
     // the last mine on an ore stays: a new one is paid for in that same ore,
     // so taking it down could leave the vein out of reach for good
     if (m.kind === 'mine' && CHAIN.machinesOfOre(profile, m.ore).length <= 1) {
-      rows.push({ ...row, ok: false, enabled: false, caption: T.t('capRemoveLast', { name: machineName(m) }), action: null });
+      rows.push({ ...row, ok: false, enabled: false, title: T.t('titleRemove', { name: machineName(m) }), caption: T.t('capRemoveLast', { name: machineName(m) }), action: null });
       return;
     }
-    rows.push({ ...row, enabled: true, caption: T.t('capRemove', { name: machineName(m) }), action: { type: 'remove-machine', m, back } });
+    rows.push({ ...row, enabled: true, title: T.t('titleRemove', { name: machineName(m) }), caption: T.t('capRemove'), action: { type: 'remove-machine', m, back } });
   }
+  // a run out of an oil derrick draws as a pipe rather than a belt
+  // (factory.js drawBelts): the rows that build and take one up say so too
+  const isPipe = (from) => !!(from && from.kind === 'mine' && from.ore === 'oil');
   // the rows every machine shares (phase 3): socket / put the spool back /
   // take the spool, feed, collect, and one row per belt to remove it
   function beltRows(m, rows) {
@@ -598,10 +590,10 @@
     // (while carrying a spool there is no menu: the hold lays the belt here
     // or drops the spool — see startSpace)
     // feed and collect come before the spool: the everyday rows first
-    if (autoLive(m) && m.kind !== 'mine') rows.push({ pre: '→', items: recipeInputsIcons(m), enabled: SIM.canFeed(profile, m), caption: T.t('capFeed'), action: { type: 'feed', m } });
-    if (SIM.hasOutput(m)) rows.push({ pre: '↓', items: nonZero(m.buf.out), enabled: true, caption: T.t('capCollect'), action: { type: 'collect', m } });
+    if (autoLive(m) && m.kind !== 'mine') rows.push({ pre: '→', items: recipeInputsIcons(m), enabled: SIM.canFeed(profile, m), title: T.t('titleFeed'), caption: T.t('capFeed'), action: { type: 'feed', m } });
+    if (SIM.hasOutput(m)) rows.push({ pre: '↓', items: nonZero(m.buf.out), enabled: true, title: T.t('titleCollect'), caption: T.t('capCollect'), action: { type: 'collect', m } });
     if (!spool && SIM.beltsFrom(profile, m).length < SIM.outletsOf(m) && (m.kind === 'mine' || SIM.produces(profile, m).length)) {
-      rows.push({ pre: '→', enabled: true, caption: T.t('capSpool', { mats: matList(SIM.produces(profile, m)) }), action: { type: 'spool', m } });
+      rows.push({ pre: '→', enabled: true, title: T.t(isPipe(m) ? 'titlePipe' : 'titleBelt'), caption: T.t('capSpool', { mats: matList(SIM.produces(profile, m)) }), action: { type: 'spool', m } });
     }
     // There is no turn row (user ruling 2026-08-21): a machine's facing is
     // chosen at the build ghost and it is final — turning a standing
@@ -636,6 +628,16 @@
     const need = CHAIN.whatUnlocks(kind, profile);
     if (!need || !need.length) return need ? '' : T.t('capAfterDeeper');
     return T.t('capAfter', { list: need.map(rungName).join(' + ') });
+  }
+  const recipeInputList = (r) => Object.entries(r.in).map(([mat, k]) => `${k} ${matName(mat)}`).join(' + ');
+  // what a kind would make once it stands there: the first recipe it offers,
+  // read out. This is the build row's second line — the row is named for the
+  // machine, so the line under it is worth spending on what the machine does.
+  function makesLine(kind) {
+    const offered = CHAIN.offerableRecipes(kind, profile);
+    if (!offered.length) return '';
+    const r = offered[0];
+    return T.t('capMakes', { out: matName(r.out), inputs: recipeInputList(r) });
   }
   function beltWhy(why, from) {
     const table = T.t('beltWhy') || {};
@@ -692,6 +694,13 @@
     if (captionFlash) return;
     if (autoTyping) { setCaption('', T.t('capDebugAuto'), 'ok'); return; }
     if (!profile) { setCaption('', ''); return; }
+    // While a menu is open the caption speaks for the MENU, not for the place
+    // behind it (2026-08-28): the brass line names the chosen row — "Build
+    // Smelter", "Remove Conveyor Belt" — and the line under it says what
+    // choosing it would do, or why it cannot be chosen. Whatever is in front
+    // of the operator has the caption, and a menu is nearer than the place it
+    // was opened on: the ghost while one is walked, the row while a menu is
+    // up, the place underfoot otherwise.
     if (menu || buildMenu) {
       const mm = menu || buildMenu;
       const row = mm.rows[mm.sel] || {};
@@ -700,7 +709,7 @@
       if (row.enabled === false) { cls = 'dim'; if (row.priced) text += T.t('capUnaffordable'); }
       else if (row.action && row.action.type === 'socket') cls = 'ok';
       if (row.ok === false && row.action === null && spool) cls = 'no';
-      setCaption(menu ? placeName(dock) : groundName() || T.t('capOpenGround'), text, cls);
+      setCaption(row.title || '', text, cls);
       return;
     }
     if (placing) {
@@ -801,20 +810,21 @@
   // counts red. Words keep only the two priceless states: every vein taken,
   // or the free ones not for sale yet. An unaffordable ghost never happens.
   function mineRow() {
+    const title = T.t('capBuild', { kind: kindName('mine') });
     const priced = [];
     let free = 0;
     for (const n of CHAIN.unbuiltNodes(profile)) {
       free++;
       const price = CHAIN.oreOpen(profile, n.ore) ? CHAIN.priceExtraMine(n.ore) : CHAIN.priceNode(n.ore);
       if (!price) continue;
-      if (canPay(price)) return { kind: 'mine', enabled: true, caption: T.t('capBuildMinePick'), action: { type: 'pick', kind: 'mine' } };
+      if (canPay(price)) return { kind: 'mine', enabled: true, title, caption: T.t('capBuildMinePick'), action: { type: 'pick', kind: 'mine' } };
       priced.push({ ore: n.ore, price, gap: Object.entries(price).reduce((a, [mat, k]) => a + Math.max(0, k - CHAIN.bagAvail(profile.bag, mat)), 0) });
     }
     if (priced.length) {
       const near = priced.reduce((a, b) => (b.gap < a.gap ? b : a));
-      return { kind: 'mine', ore: near.ore, items: near.price, priced: true, short: shortOf(near.price), enabled: false, caption: T.t('capBuildMinePick'), action: null };
+      return { kind: 'mine', ore: near.ore, items: near.price, priced: true, short: shortOf(near.price), enabled: false, title, caption: T.t('capBuildMinePick'), action: null };
     }
-    return { kind: 'mine', enabled: false, caption: T.t(free ? 'capBuildMineLater' : 'capBuildMineNone'), action: null };
+    return { kind: 'mine', enabled: false, title, caption: T.t(free ? 'capBuildMineLater' : 'capBuildMineNone'), action: null };
   }
   // every kind in view stands in the menu with its price — dimmed while the
   // bag cannot cover it, and dimmed with the upgrade it waits for while it
@@ -824,8 +834,10 @@
     for (const k of CHAIN.visibleKinds(profile)) {
       const price = CHAIN.priceMachine(k, CHAIN.machinesOfKind(profile, k).length + 1);
       const live = CHAIN.kindLive(k, profile);
-      const caption = T.t('capBuild', { kind: kindName(k) }) + (live ? '' : afterTail(k));
-      rows.push({ kind: k, items: price, enabled: live && canPay(price), priced: live, short: shortOf(price), caption, action: live ? { type: 'pick', kind: k } : null });
+      // the row is named "Build Smelter"; the line under it says what the
+      // Smelter would then do — its first recipe — or what it waits for
+      const caption = live ? makesLine(k) : T.t('capNothingToMake') + afterTail(k);
+      rows.push({ kind: k, items: price, enabled: live && canPay(price), priced: live, short: shortOf(price), title: T.t('capBuild', { kind: kindName(k) }), caption, action: live ? { type: 'pick', kind: k } : null });
     }
     return rows;
   }
@@ -1175,12 +1187,21 @@
     refreshMarks();
     refreshCaption();
   }
+  // what the info rows were last drawn from: the docked machine's two bins,
+  // as one string. The clock compares this every beat and redraws the moment
+  // a count moves, so a bin fed by a belt climbs by ones under the eye rather
+  // than in whatever lumps a redraw timer happened to catch (2026-08-28).
+  let bufShown = '';
+  const bufSig = (m) => (m && m.buf ? JSON.stringify([m.buf.in, m.buf.out]) : '');
   // info rows above the docked machine: the one recipe it is running now
-  // (with ✗ while the bag can't pay for it). Every other choice — the other
-  // recipes, the spool, ⚙, taking it down — waits in the menu behind the hold.
+  // (with ✗ while the bag can't pay for it), then what stands in its bins.
+  // Every other choice — the other recipes, the spool, ⚙, taking it down —
+  // waits in the menu behind the hold.
   function refreshInfo() {
-    if (!dock || dock.kind !== 'machine') { FACTORY.clearInfo(); return; }
+    if (!dock || dock.kind !== 'machine') { bufShown = ''; FACTORY.clearInfo(); return; }
     const m = dock.m;
+    SIM.ensureMachine(m);
+    bufShown = bufSig(m);
     const rows = [];
     if (m.kind !== 'mine') {
       if (!recipe) rows.push({ pre: '✗', enabled: false });
@@ -1237,15 +1258,14 @@
       }
       return;
     }
-    // ✗ at a machine takes it down and everything standing inside it comes
-    // back; ✗ on a run underfoot refunds nothing, because a run cost nothing
-    // and its goods fall on the ground rather than into the bag
+    // ✗ at a machine marks what the machine cost, and only that. Its buffers
+    // come out with it too, but those were never consumed to put it there:
+    // handing them back is not a refund, and marking them would price the
+    // row at more than it is worth. ✗ on a run underfoot marks nothing at
+    // all, because a run cost nothing to lay.
     if (row.pre === '✗') {
       if (!dock || dock.kind !== 'machine') return;
       gain(row.items);
-      SIM.ensureMachine(dock.m);
-      gain(dock.m.buf.in);
-      gain(dock.m.buf.out);
       return;
     }
     // the live machine, not the row: a menu is built once and its buffers
@@ -1830,14 +1850,19 @@
     simSaveAcc += dt;
     if (sweepDrops(dt)) simSaveAcc += 16000;   // the ground changed: bank it on this beat
     if (simSaveAcc > 15000) { simSaveAcc = 0; E.saveProfile(profile); }
-    // the docked machine's buffers change under you; redraw its rows now and then
+    // what the hands have rolled onto an exit belt gathers into one float on
+    // a slow beat: a stream of "+1"s over a worked machine is noise, not news
     beltFloatAcc += dt;
     if (beltFloatAcc > 1000) {
       beltFloatAcc = 0;
       const parts = Object.entries(beltFloat).filter(([, k]) => k > 0);
       if (parts.length && dock) { FACTORY.floatText('→' + parts.map(([, k]) => k).join('+'), dock.id, 0xeacc78); beltFloat = {}; }
-      if (dock && dock.kind === 'machine') refreshInfo();
     }
+    // the counts themselves answer the simulation, not a beat: the docked
+    // machine's bins change under you, and the rows redraw on the frame a
+    // count moves rather than on the next tick of a timer. Nothing is rebuilt
+    // while the numbers stand still.
+    if (dock && dock.kind === 'machine' && bufSig(dock.m) !== bufShown) refreshInfo();
   }
   function startClock() {
     if (simRaf) cancelAnimationFrame(simRaf);
