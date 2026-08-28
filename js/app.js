@@ -2451,6 +2451,11 @@
         </div>
         <p class="set-note">${T.t('dbgFxNote')}</p>
         <div class="set-row">
+          <span class="set-label">${T.t('dbgLightmap')}</span>
+          ${seg('dbg-lightmap', f.lightmap, T.t('dbgLightNew'), T.t('dbgLightOld'))}
+        </div>
+        <p class="set-note">${T.t('dbgLightNote')}</p>
+        <div class="set-row">
           <span class="set-label">${T.t('dbgSky')}</span>
           <span class="seg" id="dbg-sky">${
             (window.SKY ? SKY.SKY_IDS : []).map((id) =>
@@ -2479,6 +2484,7 @@
     wire('dbg-wxsound', (on) => A.setWeather(on));
     wire('dbg-wet', (on) => { if (window.SKY) SKY.setFx('wet', on); });
     wire('dbg-pack', (on) => { if (window.SKY) SKY.setFx('pack', on); });
+    wire('dbg-lightmap', (on) => { if (window.SKY) SKY.setFx('lightmap', on); });
     document.querySelectorAll('#dbg-sky .seg-btn').forEach((b) => {
       b.onclick = () => { if (window.SKY) SKY.force(b.dataset.sky || null, true); showDebug(); };
     });

@@ -12,17 +12,33 @@
 // per world pixel. No smoothing, no rotation, no half pixels. A slanted rain
 // streak is a stepped column of pixels, not a rotated sprite.
 //
+// LIGHT MULTIPLIES A SURFACE. It is never added to one. That is the single
+// rule the whole lighting model turns on, and getting it wrong once already
+// cost this file a rewrite: an additive lamp adds the same constant to every
+// pixel under it regardless of what the pixel is, so every surface converges
+// on the colour of the lamp. Measured on the additive build, under a firebox
+// at midnight, grass came out red-dominant, so did water, so did an iron
+// machine, and water gave up 78% of its saturation. There is no tuning that
+// fixes an operator that is wrong.
+//
+// So the dark and the lamps are ONE layer. The hour's ambient level is the
+// floor of an offscreen light map; every light is added onto that map, because
+// lights genuinely sum in the air; and the finished map multiplies the world
+// exactly once. Lit ground multiplies by about (0.82, 0.72, 0.70) against an
+// unlit (0.29, 0.33, 0.49): brighter, warmer, and still its own colour.
+//
 // The layer, bottom to top:
 //   1. cloud shadows     world-anchored soft blots, multiply, daylight only
-//   2. the hour          one flat multiply and one flat add: the time of day
-//   3. the weather wash  a second multiply the weather owns, plus wet ground
-//   4. light pools       add: lamps, fireboxes and the operator's lantern,
-//                        drawn ABOVE the grade so they burn through the dark
-//   5. what is in the air fireflies after dark, motes in a low sun
-//   6. precipitation     rain streaks and the splashes they land in, or snow
-//   7. fog banks         soft wisps drifting across the frame
-//   8. lightning         a full-frame add flash
-//   9. vignette          a permanent soft frame, a touch heavier at night
+//   2. THE LIGHT MAP     the hour and every lamp on it, multiplied on in one
+//   3. emissive cores    add: the sources themselves, small and hot, because a
+//                        multiply can never take a surface past its daylight
+//   4. the hour's throw  a faint add: the colour a low sun scatters back
+//   5. the weather wash  a multiply the weather owns, plus wet ground
+//   6. what is in the air fireflies after dark, motes in a low sun
+//   7. precipitation     rain streaks and the splashes they land in, or snow
+//   8. fog banks         soft wisps drifting across the frame
+//   9. lightning         a full-frame add flash
+//  10. vignette          a permanent soft frame, a touch heavier at night
 //
 // The clock is invisible on purpose: no dial, no number, nothing to manage.
 // One full day is DAY_LEN seconds of play, and the game opens mid-morning so
@@ -45,23 +61,29 @@
   const PREF_KEY = 'mk.sky';    // 'full' | 'calm' | 'off'
 
   // ---------- the hours ----------
-  // One key per hour worth naming. `mul` is a multiply wash (the dark that
-  // falls), `add` is an additive one (the colour a low sun throws back), and
-  // `lamp` is how hard every light on the map burns. Between two keys all four
-  // numbers lerp, so the day has no steps in it.
+  // One key per hour worth naming. `mul` and `ma` are the sun: the colour and
+  // the depth the sky multiplies the world by, which is illumination and
+  // therefore keeps every surface its own. `add`/`aa` is only scatter, the
+  // haze a low sun leaves hanging in the air, and it is deliberately small.
+  //
+  // The `aa` column used to be three times this and was doing the golden hour
+  // on its own, which is the same mistake the lamps made: an additive wash
+  // pulls every surface toward the colour of the wash. The warmth moved into
+  // `mul` where it belongs, so sunset now TINTS the world instead of painting
+  // over it, and `add` was left with the little that is genuinely airborne.
   const HOURS = [
-    { t: 0.00, name: 'night',   mul: 0x1c2a5c, ma: 0.80, add: 0x1e3468, aa: 0.10, lamp: 1.00 },
-    { t: 0.15, name: 'night',   mul: 0x1f2e60, ma: 0.77, add: 0x1e3468, aa: 0.10, lamp: 1.00 },
-    { t: 0.21, name: 'dawn',    mul: 0x3a3d68, ma: 0.64, add: 0x2b2452, aa: 0.08, lamp: 0.90 },
-    { t: 0.27, name: 'sunrise', mul: 0x8f6d74, ma: 0.38, add: 0xff9a5a, aa: 0.13, lamp: 0.55 },
-    { t: 0.34, name: 'morning', mul: 0xd9c7aa, ma: 0.15, add: 0xffd08a, aa: 0.07, lamp: 0.18 },
-    { t: 0.44, name: 'day',     mul: 0xffffff, ma: 0.00, add: 0xfff4d6, aa: 0.05, lamp: 0.04 },
-    { t: 0.60, name: 'day',     mul: 0xffffff, ma: 0.00, add: 0xfff4d6, aa: 0.05, lamp: 0.04 },
-    { t: 0.70, name: 'gold',    mul: 0xffd3a2, ma: 0.14, add: 0xffb45a, aa: 0.10, lamp: 0.20 },
-    { t: 0.77, name: 'sunset',  mul: 0xc27b5c, ma: 0.33, add: 0xff7a3a, aa: 0.16, lamp: 0.62 },
-    { t: 0.84, name: 'dusk',    mul: 0x4a4c80, ma: 0.58, add: 0x3c2c5c, aa: 0.09, lamp: 0.92 },
-    { t: 0.91, name: 'night',   mul: 0x243158, ma: 0.75, add: 0x1e3468, aa: 0.10, lamp: 1.00 },
-    { t: 1.00, name: 'night',   mul: 0x1c2a5c, ma: 0.80, add: 0x1e3468, aa: 0.10, lamp: 1.00 },
+    { t: 0.00, name: 'night',   mul: 0x1c2a5c, ma: 0.80, add: 0x1e3468, aa: 0.05, lamp: 1.00 },
+    { t: 0.15, name: 'night',   mul: 0x1f2e60, ma: 0.77, add: 0x1e3468, aa: 0.05, lamp: 1.00 },
+    { t: 0.21, name: 'dawn',    mul: 0x3a3d68, ma: 0.64, add: 0x2b2452, aa: 0.04, lamp: 0.90 },
+    { t: 0.27, name: 'sunrise', mul: 0xa8705a, ma: 0.40, add: 0xff9a5a, aa: 0.05, lamp: 0.55 },
+    { t: 0.34, name: 'morning', mul: 0xdcc4a0, ma: 0.17, add: 0xffd08a, aa: 0.03, lamp: 0.18 },
+    { t: 0.44, name: 'day',     mul: 0xffffff, ma: 0.00, add: 0xfff4d6, aa: 0.03, lamp: 0.04 },
+    { t: 0.60, name: 'day',     mul: 0xffffff, ma: 0.00, add: 0xfff4d6, aa: 0.03, lamp: 0.04 },
+    { t: 0.70, name: 'gold',    mul: 0xffc078, ma: 0.18, add: 0xffb45a, aa: 0.04, lamp: 0.20 },
+    { t: 0.77, name: 'sunset',  mul: 0xd07a4a, ma: 0.36, add: 0xff7a3a, aa: 0.06, lamp: 0.62 },
+    { t: 0.84, name: 'dusk',    mul: 0x4a4c80, ma: 0.58, add: 0x3c2c5c, aa: 0.05, lamp: 0.92 },
+    { t: 0.91, name: 'night',   mul: 0x243158, ma: 0.75, add: 0x1e3468, aa: 0.05, lamp: 1.00 },
+    { t: 1.00, name: 'night',   mul: 0x1c2a5c, ma: 0.80, add: 0x1e3468, aa: 0.05, lamp: 1.00 },
   ];
   const DARKEST = 0.80;         // the ma at midnight, so `day` below reads 0..1
 
@@ -134,7 +156,9 @@
   } catch (e) { /* full stands */ }
 
   let app = null, root = null;
-  let cloudC, hourMulSp, hourAddSp, wxMulSp, packSp, sheenC, lightC, airC, wxC, fogC, boltSp, vigSp;
+  let cloudC, hourAddSp, wxMulSp, packSp, sheenC, airC, wxC, fogC, boltSp, vigSp;
+  // the light map and the pieces that build it
+  let lightScene, ambientSp, lightC, lightMapSp, lightRT, emitC;
   let vw = 430, vh = 230, S = 2, vigKey = '';
 
   let clock = START_T * DAY_LEN;
@@ -156,8 +180,8 @@
   let sheenPh = 0;
   // A/B switches, developer only: either effect can be taken out without
   // touching the other or the rest of the sky.
-  const FX_KEYS = { wet: 'mk.fx.wet', pack: 'mk.fx.pack' };
-  const fx = { wet: true, pack: true };
+  const FX_KEYS = { wet: 'mk.fx.wet', pack: 'mk.fx.pack', lightmap: 'mk.fx.lightmap' };
+  const fx = { wet: true, pack: true, lightmap: true };
   try {
     for (const k of Object.keys(FX_KEYS)) fx[k] = localStorage.getItem(FX_KEYS[k]) !== 'off';
   } catch (e) { /* both on */ }
@@ -213,7 +237,14 @@
   // the light starts to fall away. A fire wants 0 (it is brightest at its
   // middle and dies out); a lantern wants a plateau, because a lantern in a
   // top-down game is a radius you can see by and not a bright spot on a hat.
-  const HALO_PEAK = 0.62;
+  // How hard a light burns at its middle. This was 0.62 while lights were
+  // added on top of the world, where every extra point of it was another point
+  // of wash, so it was held down. Multiplied into a map it cannot wash
+  // anything and it cannot take a surface past its own daylight, so it can be
+  // generous: at 0.95 a lantern brings the ground under it back to about
+  // nine tenths of noon, warmed, which is what standing under a lamp looks
+  // like. It is the single number that says how bright a light is.
+  const HALO_PEAK = 0.95;
   function haloCanvas(r, hold) {
     const d = r * 2 + 1;
     const [c, x] = cv(d, d);
@@ -412,7 +443,32 @@
     root.eventMode = 'none';
 
     cloudC = new PIXI.Container(); cloudC.blendMode = 'multiply';
-    hourMulSp = flat('multiply');
+    // ---------- the light map ----------
+    // Light MULTIPLIES a surface, it is never added to it. Adding a constant
+    // to every pixel regardless of what the pixel is has one result: every
+    // surface converges on the colour of the lamp. Measured on the shipped
+    // additive build, under a firebox at night, grass, water and an iron
+    // machine all came out RED-dominant, and water lost 78% of its saturation.
+    // That is what washed out means, and no amount of tuning fixes an operator
+    // that is wrong.
+    //
+    // So the darkness and the lamps are one layer, not two. Into an offscreen
+    // map the size of the viewport goes the hour's ambient level, and every
+    // light is ADDED on top of it, because lights really do sum in the air.
+    // The finished map then multiplies the world exactly once. A lit patch
+    // multiplies by about (0.82, 0.72, 0.70) where an unlit one multiplies by
+    // (0.29, 0.33, 0.49): brighter and warmer, and the surface keeps its own
+    // hue and its own contrast, which is the whole difference between a place
+    // being lit and a place being painted over.
+    lightScene = new PIXI.Container();          // never on the stage: it renders to a texture
+    ambientSp = new PIXI.Sprite(PIXI.Texture.WHITE);
+    lightC = new PIXI.Container();
+    lightScene.addChild(ambientSp, lightC);
+    lightMapSp = new PIXI.Sprite(PIXI.Texture.EMPTY);
+    lightMapSp.blendMode = 'multiply';
+    // the sources themselves, over the map: a lamp has to look brighter than
+    // the ground it lights, and that IS what additive is for
+    emitC = new PIXI.Container(); emitC.blendMode = 'add';
     hourAddSp = flat('add');
     wxMulSp = flat('multiply');
     // snow that has settled: a screen wash, because whitening is what settled
@@ -425,14 +481,17 @@
       sheenC.addChild(sp);
       sheens.push({ sp, x: rnd(-400, 400), v: 0.10 + i * 0.055, a: 1 - i * 0.28 });
     }
-    lightC = new PIXI.Container(); lightC.blendMode = 'add';
     airC = new PIXI.Container(); airC.blendMode = 'add';
     wxC = new PIXI.Container();
     fogC = new PIXI.Container();
     boltSp = flat('add');
     vigSp = new PIXI.Sprite(PIXI.Texture.EMPTY);
 
-    root.addChild(cloudC, hourMulSp, hourAddSp, wxMulSp, packSp, sheenC, lightC, airC, wxC, fogC, boltSp, vigSp);
+    // The map carries the hour AND the lamps, so it stands where the old flat
+    // darkness stood and the old light layer is gone from here entirely. What
+    // follows it is weather and atmosphere: things between the eye and the
+    // world rather than light falling on it.
+    root.addChild(cloudC, lightMapSp, emitC, hourAddSp, wxMulSp, packSp, sheenC, airC, wxC, fogC, boltSp, vigSp);
 
     // What is in the air. Both are lit things, so they go over the grade with
     // the lamps: a firefly that the night grade could darken is not a firefly.
@@ -467,6 +526,7 @@
       fogC.addChild(sp);
       fogs.push({ sp, x: rnd(-220, 460), y: rnd(-10, 210), v: rnd(0.06, 0.30), a: rnd(0.5, 1) });
     }
+    applyLightPath();
     applyMode();
     return root;
   }
@@ -475,8 +535,17 @@
     vw = w; vh = h; S = s;
     if (!root) return;
     root.scale.set(S);
-    const sheet = [hourMulSp, hourAddSp, wxMulSp, boltSp];
+    const sheet = [hourAddSp, wxMulSp, boltSp, ambientSp];
     for (let i = 0; i < sheet.length; i++) { sheet[i].width = vw; sheet[i].height = vh; }
+    // The map is one texel per world pixel, drawn back at the world's own whole
+    // scale with nearest sampling, so it never softens the grid it lies on.
+    if (!lightRT || lightRT.width !== vw || lightRT.height !== vh) {
+      const old = lightRT;
+      lightRT = PIXI.RenderTexture.create({ width: vw, height: vh });
+      lightRT.source.scaleMode = 'nearest';
+      lightMapSp.texture = lightRT;
+      if (old) old.destroy(true);
+    }
     const key = vw + 'x' + vh;
     if (key !== vigKey) {
       vigKey = key;
@@ -503,6 +572,28 @@
     try { localStorage.setItem(FX_KEYS[key], fx[key] ? 'on' : 'off'); } catch (e) { /* non-fatal */ }
     if (key === 'wet' && !fx.wet) { wet = 0; if (sheenC) sheenC.visible = false; }
     if (key === 'pack' && !fx.pack) { pack = 0; if (packSp) packSp.alpha = 0; }
+    if (key === 'lightmap') applyLightPath();
+  }
+
+  // The A/B, and the whole difference between the two ways of lighting a
+  // world is one question: where does the light container live?
+  //
+  //   in the map    the lights are added to the hour's floor and the finished
+  //                 map multiplies the world once. Light scales a surface, so
+  //                 the surface keeps its colour. This is the right one.
+  //   on the stage  the hour multiplies the world, and the lights are then
+  //                 added over the top of it. Every surface converges on the
+  //                 colour of the lamp. This is what shipped, kept only so the
+  //                 two can be put side by side.
+  function applyLightPath() {
+    if (!lightC || !root || !lightScene) return;
+    if (fx.lightmap) {
+      if (lightC.parent !== lightScene) lightScene.addChild(lightC);
+    } else if (lightC.parent !== root) {
+      root.addChildAt(lightC, root.getChildIndex(emitC));
+    }
+    // the emissive cores belong to the new way; the old way never had them
+    emitC.renderable = fx.lightmap;
   }
   function setMode(m) {
     mode = (m === 'calm' || m === 'off') ? m : 'full';
@@ -515,23 +606,36 @@
   // {x, y, r, tint, base}, in world coordinates. This layer moves them with the
   // camera and lights them by the hour. One spare pool sprite past the end of
   // the list is the operator's lantern.
+  // Every light is two sprites: the pool it throws, which goes into the map and
+  // multiplies the ground, and a much smaller core over the top, which is the
+  // source itself and is the one thing here that is honestly additive. A lamp
+  // has to look brighter than what it lights, and a multiply can never take a
+  // surface past its own daylight, so the core is what carries the glow.
+  const EMIT_R = 0.22;                    // the core, as a fraction of the pool
   function setLights(list) {
     lightDefs = (list || []).slice();
     if (!lightC) return;
     while (pools.length < lightDefs.length + 1) {
       const sp = new PIXI.Sprite(PIXI.Texture.EMPTY);
       sp.visible = false;
+      sp.blendMode = 'add';               // additive INSIDE the map: lights sum in air
       lightC.addChild(sp);
-      pools.push({ sp, ph: Math.random() * 6.28, def: null });
+      const em = new PIXI.Sprite(PIXI.Texture.EMPTY);
+      em.visible = false;
+      emitC.addChild(em);
+      pools.push({ sp, em, ph: Math.random() * 6.28, def: null });
     }
     for (let i = 0; i < pools.length; i++) {
       const d = lightDefs[i];
       pools[i].def = d || null;
       if (d) {
-        pools[i].sp.texture = haloTex(d.r || 24);
+        const r = d.r || 24;
+        pools[i].sp.texture = haloTex(r);
+        pools[i].em.texture = haloTex(Math.max(4, Math.round(r * EMIT_R)));
         pools[i].sp.tint = d.tint || 0xffcf80;
       } else {
         pools[i].sp.visible = false;
+        pools[i].em.visible = false;
       }
     }
   }
@@ -601,8 +705,11 @@
     warmK = H.aa;
     dayK = 1 - clamp01(H.ma / DARKEST);
 
-    // the hour
-    hourMulSp.tint = H.mul; hourMulSp.alpha = H.ma;
+    // The hour is no longer a flat multiply of its own: it is the floor of the
+    // light map, the level the world sits at where no lamp reaches. Folding
+    // `mul` and `ma` into one multiplier here is what lets a light add into
+    // the same map and come out as illumination rather than as paint.
+    ambientSp.tint = ambientOf(H);
     hourAddSp.tint = H.add; hourAddSp.alpha = H.aa;
 
     // the sky, and how far through becoming the next one it is
@@ -661,13 +768,36 @@
 
     // the frame closes in after dark and in heavy weather
     vigSp.alpha = 0.17 + 0.15 * (1 - dayK) + 0.10 * clamp01(rainN / 210);
+
+    // Last, once everything that goes into the map has been placed: bake it.
+    // This runs inside the ticker, which is before the stage is drawn, so the
+    // sprite showing the map is already holding this frame's light by the time
+    // anything looks at it.
+    bakeLightMap();
+  }
+
+  // One offscreen pass: the hour's floor, with every light summed onto it.
+  function bakeLightMap() {
+    if (!app || !lightRT || !lightMapSp.visible) return;
+    app.renderer.render({ container: lightScene, target: lightRT, clear: true });
   }
 
   // Light pools ride above the grade, so a lamp reads as a lamp burning and not
   // as a bright patch somebody forgot to darken.
+  // What the hour multiplies the world by where nothing is lighting it. This
+  // is the same number the old flat multiply arrived at, `c*a + (1-a)` per
+  // channel, but held as a colour instead of a blend, so lights can be added
+  // to it before it is ever applied.
+  function ambientOf(H) {
+    const c = H.mul, a = H.ma;
+    const ch = (shift) => Math.round((((c >> shift) & 255) / 255 * a + (1 - a)) * 255);
+    return (ch(16) << 16) | (ch(8) << 8) | ch(0);
+  }
+
   function tickLights() {
     const on = lampK > 0.03;
     lightC.visible = on;
+    emitC.visible = on;
     if (!on) return;
     const ox = -Math.round(camX), oy = -Math.round(camY);
     // the two rhythms the machines animate on, in radians per frame
@@ -677,9 +807,15 @@
       if (!d) { p.sp.visible = false; continue; }
       const r = d.r || 24;
       const sx = Math.round(d.x) + ox - r, sy = Math.round(d.y) + oy - r;
-      if (sx > vw || sy > vh || sx < -r * 2 || sy < -r * 2) { p.sp.visible = false; continue; }
+      if (sx > vw || sy > vh || sx < -r * 2 || sy < -r * 2) {
+        p.sp.visible = false; p.em.visible = false; continue;
+      }
       p.sp.visible = true;
       p.sp.position.set(sx, sy);
+      // the core rides the middle of the pool and answers whatever the pool does
+      const er = Math.max(4, Math.round(r * EMIT_R));
+      p.em.visible = true;
+      p.em.position.set(Math.round(d.x) + ox - er, Math.round(d.y) + oy - er);
       const st = d.state ? FIRE[d.state] : null;
       if (!st) {
         // a lamp: gas burns unevenly, so a slow breath on each one, out of
@@ -687,6 +823,8 @@
         // repeated
         p.sp.tint = d.tint || 0xffcf80;
         p.sp.alpha = (d.base || 1) * lampK * (0.86 + 0.14 * Math.sin(flick + p.ph));
+        p.em.tint = 0xfff2cc;             // the flame itself, hotter than its pool
+        p.em.alpha = p.sp.alpha * 0.55;
         continue;
       }
       // A firebox says what the machine is doing. Running, it throbs on the
@@ -700,6 +838,10 @@
             : 0.5 + 0.5 * Math.sin(flick * 0.6 + p.ph);
       p.sp.tint = st.tint;
       p.sp.alpha = st.base * lampK * (st.lo + (1 - st.lo) * b);
+      // the mouth of the firebox: the same beat, hotter, and it is the only
+      // part of a machine's light allowed to go brighter than daylight
+      p.em.tint = mixColor(st.tint, 0xffffff, 0.45);
+      p.em.alpha = p.sp.alpha * 0.6;
     }
     // The operator carries one, and it lights only once the day has gone. This
     // one is a real light and not a glint on him: the ground stays plainly lit
@@ -712,14 +854,19 @@
     // spotlight. It comes up through dusk and is full once the day has gone.
     const k = clamp01((1 - dayK - 0.45) / 0.35);
     lantern.sp.visible = k > 0.02;
+    lantern.em.visible = lantern.sp.visible;
     if (!lantern.sp.visible) return;
     lantern.sp.texture = haloTex(LANTERN_R, LANTERN_HOLD);
     lantern.sp.tint = 0xffd89a;
-    lantern.sp.position.set(
-      Math.round(followX) + ox - LANTERN_R,
-      Math.round(followY) + oy - LANTERN_R - 8,          // hung at his waist, not at his feet
-    );
-    lantern.sp.alpha = 0.52 * k * (0.93 + 0.07 * Math.sin(flick * 1.7));
+    const lx = Math.round(followX) + ox, ly = Math.round(followY) + oy - 8;
+    lantern.sp.position.set(lx - LANTERN_R, ly - LANTERN_R);
+    lantern.sp.alpha = 0.62 * k * (0.93 + 0.07 * Math.sin(flick * 1.7));
+    // the lamp in his hand: small, hot, and the only thing on him that glows
+    const lr = 7;
+    lantern.em.texture = haloTex(lr);
+    lantern.em.tint = 0xfff0cc;
+    lantern.em.position.set(lx - lr, ly - lr);
+    lantern.em.alpha = 0.7 * k;
   }
 
   // Wet ground: three broad bands of light sliding across the frame at
@@ -985,7 +1132,7 @@
   // ---------- what the rest of the game asks ----------
   window.SKY = {
     init, resize, tick, setLights, follow, setBeat, setClimate, setMode, setFx,
-    fx: () => ({ wet: fx.wet, pack: fx.pack }),
+    fx: () => ({ wet: fx.wet, pack: fx.pack, lightmap: fx.lightmap }),
     mode: () => mode,
     // 0..1: how hard every light on the map should burn right now
     lamp: () => (mode === 'off' ? 0 : lampK),

@@ -2136,6 +2136,50 @@ each other, so nothing steps. Midnight runs the world at about a third of its
 noon brightness and blue; the site tape, the ground and the operator all stay
 legible, which was checked on a full-size frame and not on a contact sheet.
 
+**LIGHT MULTIPLIES A SURFACE. It is never added to one.** (Rewritten
+2026-08-28, after a look at it said the lamps washed the world out rather than
+lighting it.) This is the one rule the whole lighting model turns on, and the
+first build got it wrong: the lamps were an additive layer over the grade, and
+additive adds the same constant to every pixel under it *regardless of what
+the pixel is*, so every surface converges on the colour of the lamp. Measured
+on that build, under a firebox at midnight:
+
+| surface | daylight | additive lamp | light map |
+|---|---|---|---|
+| grass | (108,172,80) green | (169,160,102) **red** | (88,123,56) green |
+| water | (52,104,140) blue | (153,138,131) **red** | (43,74,98) blue |
+| iron machine | (60,66,92) blue | (155,125,108) **red** | (49,47,64) blue |
+
+Water gave up 78% of its saturation and grass stopped being green. No tuning
+fixes an operator that is wrong.
+
+So the dark and the lamps are **one layer, not two**. The hour's ambient level
+is the floor of an offscreen light map the size of the viewport; every light is
+added onto *that map*, because lights genuinely do sum in the air; and the
+finished map multiplies the world exactly once. Lit ground multiplies by about
+(0.82, 0.72, 0.70) against an unlit (0.29, 0.33, 0.49): brighter, warmer, and
+still its own colour. It costs nothing measurable, 0.54 ms a frame against the
+additive build's 0.55.
+
+Three things follow from the operator being right:
+
+- **A light can be generous now.** `HALO_PEAK` was held at 0.62 while every
+  extra point of it was another point of wash. Multiplied it cannot wash
+  anything and cannot take a surface past its own daylight, so it is 0.95 and a
+  lantern brings the ground back to about nine tenths of noon.
+- **Emissive cores.** A multiply can never make a lamp brighter than daylight,
+  so the source itself is a second, much smaller additive sprite over the map,
+  about a fifth of the pool's radius. That is the honest use of additive: the
+  source, never the illumination.
+- **The hour's warmth moved into `mul`.** The golden hour was being done by the
+  `add` column, which is the same mistake at a smaller scale. `aa` is down to a
+  third of what it was and now carries only genuine airborne scatter; sunset
+  tints the world multiplicatively instead of painting over it.
+
+`SKY.setFx('lightmap', false)` puts the old additive path back for comparison,
+and the whole difference between the two is one question: is the light
+container inside the map, or on the stage above it? The debug panel flips it.
+
 **Light.** Every lamppost the map plants and every machine body the player
 builds hands the sky a pool: world position, radius, and either a colour of its
 own or a machine state. `factory.js` keeps the map's lights and the machines'
@@ -2203,6 +2247,11 @@ keeps the hour, the lamps and the frame and stops everything that moves across
 the screen, which is the honest answer for anyone the motion pulls away from
 the line they are typing. Off leaves the world lit flat, exactly as it was.
 The preference lives on the device beside sound and language, not in a save.
+
+**Developer switches** (the panel behind 🔧): weather sound, wet ground, lying
+snow, and **how light works** (multiplied or added). Each takes its effect out
+whole rather than turning it down, so what is being compared is the thing and
+not a setting of it.
 
 **Proof sheet.** `dev/sky.html` grades one slice of a real world through the
 real layer: once per hour, once per sky, or once per firebox state. Every cell
