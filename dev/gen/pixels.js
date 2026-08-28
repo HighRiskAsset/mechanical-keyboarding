@@ -158,6 +158,13 @@
     '✓': ['00001', '00010', '10100', '01000', '00000'],
     '✗': ['101', '010', '101', '000', '000'],
     '⇧': ['00100', '01110', '11111', '01110', '01110'],
+    // back out of the menu without choosing anything. A return arrow and
+    // not a cross: ✗ already means "take this thing down", and the two must
+    // never be read for one another in the same list of rows.
+    '↩': ['00101', '01001', '11111', '01000', '00100'],
+    // into the machine, and drawn as ↓ upside down on purpose: loading and
+    // collecting are one move each way, and the pair should say so.
+    '↑': ['00100', '01110', '10101', '00100', '00100'],
   };
 
   const textCache = new Map();
@@ -2374,9 +2381,93 @@
     return matMask(art.m, art.t);
   }
 
+  // ---------- what a menu row buys, as icons 12x12 ----------
+  // A row that builds a run shows the run, not an arrow: an arrow is the
+  // direction goods travel and the game already spends it on loading a
+  // machine. The two runs are the same objects the ground shows, in the same
+  // colours, close enough that the picture in the menu and the thing that
+  // lands are recognisably one thing. The belt's slats are brass here where
+  // the ground draws them in the band's own violet: at twelve pixels a dark
+  // slat on a dark band is a window in a wall, and the eye needs the warm
+  // metal to read the row as belting at all.
+  //
+  // `auto` is the engine a machine buys to run itself: a brass cog with a
+  // live firebox in it, because that is what automation is in this world,
+  // something bought and fitted that then burns coal instead of keystrokes.
+  // It replaces the ⚙ glyph, which at five pixels was a ring with two bars
+  // through it and read as nothing in particular.
+  //
+  // Painted rather than stacked out of rects, because a miniature this size
+  // is a drawing and the letters are easier to move than coordinates.
+  // Key: O ink · I lit rail · 2 rail · 3 shaded rail · b band · A brass ·
+  // C brass highlight · B brass shade · H/c/d/D copper light to dark ·
+  // o soot · X fire · g its hot core.
+  const UI_ART = {
+    belt: [
+      '............',
+      '............',
+      'OOOOOOOOOOOO',
+      'IIIIIIIIIIII',
+      '222222222222',
+      'bAbbAbbAbbAb',
+      'bAbbAbbAbbAb',
+      'bAbbAbbAbbAb',
+      '333333333333',
+      'OOOOOOOOOOOO',
+      '............',
+      '............',
+    ],
+    pipe: [
+      '............',
+      '............',
+      'OOOOOOOOOOOO',
+      'HHCCHHHHCCHH',
+      'ccAAccccAAcc',
+      'ccAAccccAAcc',
+      'ddAAddddAAdd',
+      'ddBBddddBBdd',
+      'DDBBDDDDBBDD',
+      'OOOOOOOOOOOO',
+      '............',
+      '............',
+    ],
+    auto: [
+      '..C..CC..C..',
+      '..CCCCCCAA..',
+      '.CCCAAAAAAB.',
+      'CCAAooooAAAB',
+      'CAAoXXXXoAAB',
+      '.AAoXggXoAB.',
+      '.AAoXggXoAB.',
+      'AAAoXXXXoABB',
+      'AAAAooooABBB',
+      '.AAAABBBBBB.',
+      '..AABBBBBB..',
+      '..B..BB..B..',
+    ],
+  };
+  const UI_KEY = {
+    O: P.ironO, I: P.iron, 2: P.iron2, 3: P.iron3, b: P.beltD,
+    A: P.brass2, B: P.brass1, C: P.brass3,
+    H: P.copper3, c: P.copper, d: P.copper2, D: P.copper4,
+    o: P.soot, X: P.orange, g: P.glow,
+  };
+  function uiIcon(name) {
+    const [c, x] = canvas(12, 12);
+    const art = UI_ART[name];
+    art.forEach((row, y) => {
+      for (let px = 0; px < row.length; px++) {
+        const col = UI_KEY[row[px]];
+        if (col) R(x, col, px, y, 1, 1);
+      }
+    });
+    return c;
+  }
+
   // ---------- machine-kind icons 12x12 (build menus) ----------
   // Miniatures of the real machines: iron body, brass fitting, one fire.
   function kindIcon(kind) {
+    if (UI_ART[kind]) return uiIcon(kind);
     const [c, x] = canvas(12, 12);
     if (kind === 'mine') {
       // a pick over a spoil mound

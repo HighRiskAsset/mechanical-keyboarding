@@ -486,6 +486,14 @@
   }
 
   // ---------- place menus ----------
+  // The last row of every menu is the way back out of it. Escape closes one
+  // too, but the whole game is meant to be playable on the arrows and the
+  // space bar alone, and a player who never reaches past those should never
+  // be shut in a menu. It is added when a menu is opened, never by
+  // menuRowsFor or buildMenuRows: those two answer "is there anything to do
+  // at this place", and a way out is not something to do.
+  const closeRow = () => ({ pre: '↩', enabled: true, title: T.t('titleClose'), caption: T.t('capClose'), action: { type: 'close' } });
+  const isCloseRow = (r) => !!(r && r.action && r.action.type === 'close');
   function menuRowsFor(d) {
     if (!d) return [];
     const rows = [];
@@ -522,7 +530,7 @@
         // ⚙ for the depth the mine now works. The price is the whole gate
         // (no hidden costs, 2026-08-28): affordable means buyable.
         const price = CHAIN.priceAuto(m, null, profile);
-        rows.push({ pre: '⚙', items: price, enabled: canPay(price), priced: true, short: shortOf(price), title: T.t('titleAuto'), caption: T.t('capAuto'), action: { type: 'auto', m, price, key: CHAIN.autoKey(m, null, profile) } });
+        rows.push({ icon: 'auto', items: price, enabled: canPay(price), priced: true, short: shortOf(price), title: T.t('titleAuto'), caption: T.t('capAuto'), action: { type: 'auto', m, price, key: CHAIN.autoKey(m, null, profile) } });
       }
       beltRows(m, rows);
       removeRow(m, rows);
@@ -538,7 +546,7 @@
         // a recipe whose engine this machine already owns wears the gear:
         // switching to it means the machine runs itself again
         const owned = CHAIN.autoOn(m, CHAIN.autoKey(m, r, profile));
-        rows.push({ pre: owned ? '⚙' : undefined, items: r.in, out: r.out, ok: SIM.canTake(profile, m, r.in) ? undefined : false, enabled: true, title: T.t('titleRecipe', { out: matName(r.out) }), caption: T.t('capRecipe', { out: matName(r.out), inputs: recipeInputList(r) }) + (owned ? T.t('capEngineOwned') : ''), action: { type: 'recipe', m, r } });
+        rows.push({ icon: owned ? 'auto' : undefined, items: r.in, out: r.out, ok: SIM.canTake(profile, m, r.in) ? undefined : false, enabled: true, title: T.t('titleRecipe', { out: matName(r.out) }), caption: T.t('capRecipe', { out: matName(r.out), inputs: recipeInputList(r) }) + (owned ? T.t('capEngineOwned') : ''), action: { type: 'recipe', m, r } });
       }
       // keys bought at this kind of machine (the Fastener's punctuation):
       // its next level, always for sale here at its price
@@ -552,7 +560,7 @@
         // The price is the whole gate (no hidden costs, 2026-08-28).
         const price = CHAIN.priceAuto(m, active, profile);
         if (price) {
-          rows.push({ pre: '⚙', items: price, enabled: canPay(price), priced: true, short: shortOf(price), title: T.t('titleAuto'), caption: T.t('capAuto'), action: { type: 'auto', m, price, key: CHAIN.autoKey(m, active, profile) } });
+          rows.push({ icon: 'auto', items: price, enabled: canPay(price), priced: true, short: shortOf(price), title: T.t('titleAuto'), caption: T.t('capAuto'), action: { type: 'auto', m, price, key: CHAIN.autoKey(m, active, profile) } });
         }
       }
       beltRows(m, rows);
@@ -590,10 +598,16 @@
     // (while carrying a spool there is no menu: the hold lays the belt here
     // or drops the spool — see startSpace)
     // feed and collect come before the spool: the everyday rows first
-    if (autoLive(m) && m.kind !== 'mine') rows.push({ pre: '→', items: recipeInputsIcons(m), enabled: SIM.canFeed(profile, m), title: T.t('titleFeed'), caption: T.t('capFeed'), action: { type: 'feed', m } });
+    // ↑ into the machine, ↓ out of it: one move each way, and the marks are
+    // each other upside down so the pair reads at a glance. (The action and
+    // SIM.feed keep the older word.)
+    if (autoLive(m) && m.kind !== 'mine') rows.push({ pre: '↑', items: recipeInputsIcons(m), enabled: SIM.canFeed(profile, m), title: T.t('titleLoad'), caption: T.t('capLoad'), action: { type: 'feed', m } });
     if (SIM.hasOutput(m)) rows.push({ pre: '↓', items: nonZero(m.buf.out), enabled: true, title: T.t('titleCollect'), caption: T.t('capCollect'), action: { type: 'collect', m } });
     if (!spool && SIM.beltsFrom(profile, m).length < SIM.outletsOf(m) && (m.kind === 'mine' || SIM.produces(profile, m).length)) {
-      rows.push({ pre: '→', enabled: true, title: T.t(isPipe(m) ? 'titlePipe' : 'titleBelt'), caption: T.t('capSpool', { mats: matList(SIM.produces(profile, m)) }), action: { type: 'spool', m } });
+      // the run itself, not an arrow: → is the direction goods travel, and
+      // it is already the feed row's mark two lines above this one
+      const pipe = isPipe(m);
+      rows.push({ icon: pipe ? 'pipe' : 'belt', enabled: true, title: T.t(pipe ? 'titlePipe' : 'titleBelt'), caption: T.t('capSpool', { mats: matList(SIM.produces(profile, m)) }), action: { type: 'spool', m } });
     }
     // There is no turn row (user ruling 2026-08-21): a machine's facing is
     // chosen at the build ghost and it is final — turning a standing
@@ -845,7 +859,7 @@
     return rows;
   }
   function openBuildMenu() {
-    buildMenu = { rows: buildMenuRows(), sel: 0 };
+    buildMenu = { rows: buildMenuRows().concat(closeRow()), sel: 0 };
     FACTORY.showMenu('@player', buildMenu.rows, 0);
     refreshCaption();
     A.click();
@@ -859,6 +873,7 @@
     if (!buildMenu) return;
     const row = buildMenu.rows[buildMenu.sel];
     if (!row || row.enabled === false || !row.action) { A.thud(); return; }
+    if (isCloseRow(row)) { closeBuildMenu(); A.click(); return; }
     closeBuildMenu();
     startPlacing(row.action.kind);
   }
@@ -987,8 +1002,11 @@
   function openMenu() {
     const rows = menuRowsFor(dock);
     if (!rows.length) return false;
+    rows.push(closeRow());
     // the highlight opens on the first row you could act on — but never on
-    // the removal, which a stray tap would otherwise take down
+    // the removal, which a stray tap would otherwise take down. A place whose
+    // only offer is the removal opens on the way out instead, which is where
+    // that rule was always headed.
     const open = (r) => r.enabled !== false && !(r.action && r.action.type === 'remove-machine');
     let sel = rows.findIndex(open);
     if (sel < 0) sel = rows.findIndex((r) => r.enabled !== false);
@@ -1017,6 +1035,7 @@
     if (!menu) return;
     const row = menu.rows[menu.sel];
     if (!row || row.enabled === false || !row.action) { A.thud(); return; }
+    if (isCloseRow(row)) { closeMenu(); A.click(); return; }
     performAction(row.action);
     closeMenu();
   }
@@ -1084,7 +1103,7 @@
       const moved = SIM.feed(profile, act.m);
       const total = Object.values(moved).reduce((a, b) => a + b, 0);
       if (!total) return;
-      FACTORY.floatText(`→${total}`, dock.id, 0xeacc78);
+      FACTORY.floatText(`↑${total}`, dock.id, 0xeacc78);
       A.mint();
       E.saveProfile(profile);
       refreshInventory();
@@ -1176,7 +1195,8 @@
   function refreshStatus() {
     if (!profile) return;
     const rows = menu ? menu.rows : menuRowsFor(dock);
-    const any = rows.some((r) => r.enabled !== false);
+    // the way out sits in every open menu and is never work waiting here
+    const any = rows.some((r) => r.enabled !== false && !isCloseRow(r));
     if (spool && dock) {
       // carrying: the place is a socket (green) or not (red) — nothing else
       const here = socketHere();
@@ -1213,7 +1233,7 @@
     // what is inside the machine: inputs waiting, outputs made
     SIM.ensureMachine(m);
     const inb = nonZero(m.buf.in), outb = nonZero(m.buf.out);
-    if (Object.keys(inb).length) rows.push({ pre: '→', items: inb, enabled: true });
+    if (Object.keys(inb).length) rows.push({ pre: '↑', items: inb, enabled: true });
     if (Object.keys(outb).length) rows.push({ pre: '↓', items: outb, enabled: true });
     if (!rows.length) { FACTORY.clearInfo(); return; }
     FACTORY.showInfo(dock.id, rows.slice(0, 5));

@@ -84,7 +84,11 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   vein its mine, a mine its next Mk / automation / collect, a processor the
   recipes it is *not* running (the one it runs stands under the machine
   itself), its ⚙ and its removal, a closed crossing its repair — arrows
-  choose, a tap of Space confirms, Escape closes. Glow turns green when a row
+  choose, a tap of Space confirms. **Every menu ends with a ↩ row that closes
+  it** (2026-08-28), so the whole game is playable on the arrows and the space
+  bar; Escape is a shortcut to that row, never the only way out. The build
+  menu's ↩ answers a tap the way its other rows do, and its hold still cancels.
+  Glow turns green when a row
   is affordable. Everything is paid from the bag; no Hub, kits, contracts or
   Depot remain (v3, 2026-08-19, build-plan phases 1–2).
 - **All game UI is pixels in-canvas**: the inventory HUD (icons + bitmap
@@ -227,8 +231,11 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   run bridges the earlier and throws a shadow on it. A belt carries only
   what its consumer's chosen recipe accepts, one item per tile at
   `TUNING.BELT_SPEED`; a belt from an oil derrick draws as a pipe. Menus:
-  feed (bag → an automated machine's inputs), collect (output buffer →
-  bag), spool / socket / put back. **A run is taken up from the run**, not
+  load ↑ (bag → an automated machine's inputs), collect ↓ (output buffer →
+  bag), spool / socket / put back. The two marks are each other upside down
+  because they are one move each way (2026-08-28; the row used to read "Feed"
+  under a → that the game already spends on other things). The engine keeps
+  the older word: the action is still `feed`, `SIM.feed`, `SIM.canFeed`. **A run is taken up from the run**, not
   from a machine: stand on any of its tiles, hold Space for its own menu,
   and the ✗ row there removes it (both rows where two cross). A machine
   with runs coming and going gave a list there was no reading, and the
@@ -1156,10 +1163,11 @@ If a recipe or a tier disagrees with a rule, the recipe is wrong.
 6. **Everything is built from the bag, at the place — and nothing is locked
    behind a tier number.** No Hub, no kits, no contracts, no Depot. Hold
    Space at a plot, a node, a machine or a closed crossing and its icon menu
-   opens: arrows choose, a tap of Space confirms, Escape closes. A plot
+   opens: arrows choose, a tap of Space confirms, and a ↩ row at the foot of
+   every menu closes it (Escape is the shortcut, never the only way out). A plot
    lists the machines you could build there (greyed when unaffordable; a
    machine appears once you have held the materials it costs); a vein lists
-   its mine; a mine lists its next Mk, automation, collect (later feed and
+   its mine; a mine lists its next Mk, automation, collect (later load and
    spool); a processor lists every other recipe it could run, affordable or
    not, its ⚙ and its removal; a closed pass or bridge lists its repair. A
    machine wears only the recipe it is running now; the choices live behind
@@ -1722,7 +1730,7 @@ is the Deep-Ore Ledger (artifact); this is the binding record.
   endgame needs the wide factory by arithmetic, and every full-set bench
   feels the same pull earlier. Scale buys unbroken typing time, and dead
   air is the enemy. UX: when hands outrun supply, the caption names the
-  starving input and the three cures (belt · feed · another maker) —
+  starving input and the three cures (belt · load · another maker) —
   never a silent ✗. Held for later, both liked: rolling orders (contracts
   for surplus, the sanctioned gravy) and coal-fired automation upkeep (a
   continuous sink; a new mechanic, decided separately).

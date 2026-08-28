@@ -538,12 +538,19 @@
   }
 
   // ---------- icon rows and the place menu (pixel UI in labelsC) ----------
-  // A row: {pre?: text, kind?: kind id (12px icon), items?: {mat:n} sprites+counts,
-  //         out?: mat, gauge?: 0..1, enabled?: bool, ok?: bool}
+  // A row: {pre?: text, icon?: 12px icon name, kind?: kind id (12px icon),
+  //         items?: {mat:n} sprites+counts, out?: mat, gauge?: 0..1,
+  //         enabled?: bool, ok?: bool}
+  // `icon` is the row's own mark and stands where `pre` would: a row that
+  // offers a thing shows the thing, the way a build row shows its machine.
   function rowContainer(row, dimText) {
     const c = new PIXI.Container();
     let ix = 0;
     const put = (spr, dy) => { spr.position.set(ix, dy); c.addChild(spr); };
+    if (row.icon) {
+      const ic = new PIXI.Sprite(PIXELS.kindIconTex(row.icon));
+      put(ic, 0); ix += 14;
+    }
     if (row.pre) {
       const t = new PIXI.Sprite(PIXELS.textTex(row.pre, dimText || PIXELS.P.brass3));
       put(t, 3); ix += t.texture.width + 3;

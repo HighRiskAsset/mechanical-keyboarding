@@ -245,6 +245,10 @@
       b.add('grade.2', Array.from({ length: PIXELS.MAT_SPARK_FRAMES }, (_, f) => PIXELS.gradeCanvas(2, f)), { clock: 'spark' });
       const icons = new Set(['mine', 'smelter', 'foundry', 'constructor', 'molder', 'assembler', 'fastener', 'crane', 'manufacturer', 'default']);
       for (const k of Object.keys(CHAIN.KINDS || {})) icons.add(k);
+      // the runs and the automation cog ride in the same family: a menu row
+      // that offers one shows it the way a build row shows a machine. Kept
+      // last so the shelf packs them past the kinds it already had.
+      for (const k of ['belt', 'pipe', 'auto']) icons.add(k);
       for (const k of icons) b.add('icon.' + k, PIXELS.kindIconCanvas(k));
       await run(b);
     }

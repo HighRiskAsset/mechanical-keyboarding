@@ -318,6 +318,8 @@
     siteTex: (w, h) => cachedTex('site:' + (w || 48) + 'x' + (h || 32), () => siteMarker(w, h)),
     // text and icons
     textTex: (str, fg) => cachedTex('t:' + fg + '|' + str, () => textCanvas(str, fg)),
+    // the 12px menu icons: one per machine kind, plus 'belt' and 'pipe' for
+    // the rows that build a run
     kindIconTex: (kind) => cellTex('materials', entry('materials', 'icon.' + kind) ? 'icon.' + kind : 'icon.default', 0),
     // materials
     MAT_PX: 10, MAT_SPARK_FRAMES: 12, MAT_SPARK_PEAK: 2, matGrade,

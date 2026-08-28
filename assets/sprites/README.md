@@ -43,7 +43,10 @@ width (font.png), `dx`/`dy` are a crossing's draw offsets.
   Frame counts are per animation; one machine can run a 6-frame work loop
   while the rest keep 4.
 - **A new row or facing:** add the cells to the PNG and one entry to the
-  JSON. Names follow the pattern of their neighbours.
+  JSON. Names follow the pattern of their neighbours. A developer adding one
+  should also add it to `dev/gen/` and `dev/bake.js` in the position the
+  shelf-packer would land it (last in its family, growing the sheet right),
+  so a future scaffold bake reproduces this sheet instead of shifting it.
 - **A redo from scratch:** ask a developer to prototype it in the code
   generator (`dev/gen/`) and bake a scaffold into `assets/inbox/` for you
   to paint over. Nothing in this folder is overwritten by that.
