@@ -36,7 +36,7 @@
 //   5. the weather wash  a multiply the weather owns, plus wet ground
 //   6. what is in the air fireflies after dark, motes in a low sun
 //   7. precipitation     rain streaks and the splashes they land in, or snow
-//   8. fog banks         soft wisps drifting across the frame
+//   8. fog banks         soft wisps drifting through the place
 //   9. lightning         a full-frame add flash
 //  10. vignette          a permanent soft frame, a touch heavier at night
 //
@@ -46,6 +46,15 @@
 // chain: every sky picks the next one from a short table of the skies it can
 // honestly turn into, so an hour walks clear, cloudy, drizzle, rain rather
 // than teleporting from sunshine to blizzard.
+//
+// Everything on that list that is a THING IN THE AIR is anchored in the world
+// and drawn at world minus camera, then wrapped around the camera so the field
+// never runs out: cloud shadows, fireflies, motes, rain, snow and fog alike.
+// The screen is a window, not a windscreen. Held in screen coordinates instead,
+// a drop is nailed to the glass and the camera drags it along, which is how the
+// rain came to fall sideways whenever the player walked and straight down again
+// the moment they stopped. What is exempt is only what has no place to be: the
+// grade, the wet sheen, the lightning and the vignette are the frame itself.
 //
 // Nothing here touches the simulation. Weather is weather: it changes no rate,
 // gates nothing, and is never a mechanic.
@@ -996,6 +1005,12 @@
 
   const area = () => (vw * vh) / (430 * 230);
 
+  // Rain falls in the WORLD, not on the glass. Every drop keeps a world
+  // position and is drawn at world minus camera, the same way the cloud
+  // shadows and the fireflies already are. Held in screen coordinates instead,
+  // a drop is nailed to the viewport and the camera carries it along, so
+  // walking left drags the whole shower left with you and the rain only falls
+  // straight down while you stand still.
   function tickRain(dt, n) {
     const want = Math.min(MAX_RAIN, Math.round(n * area()));
     while (rain.length < want) {
@@ -1008,6 +1023,12 @@
       return;
     }
     const len = Math.max(2, Math.round(fld('len', 4)));
+    // The streak leans with the WIND and with nothing else. Leaning it into the
+    // camera's travel as well was tried and is wrong: the whole complaint about
+    // this rain is that walking tilts it, and a streak that tips over the
+    // moment you take a step is that complaint drawn as a sprite. The drops
+    // pass you at an angle because you are moving through them; the water
+    // itself is still falling straight down, and it goes on looking like it.
     const aw = Math.abs(windX), sgn = windX < 0 ? -1 : 1;
     const slant = (aw > 1.0 ? 2 : aw > 0.45 ? 1 : 0) * sgn;
     const tex = rainTex(len, slant);
@@ -1026,35 +1047,45 @@
         const f = d.st < 4 ? 0 : 1;
         if (f !== d.sf) { d.sf = f; d.sp.texture = splashTex(f); }
         d.sp.alpha = alpha * (1 - d.st / 9);
+        // a splash is ON the ground, so it stays on the spot it wet while the
+        // ground carries it past
+        d.sp.position.set(Math.round(d.x - camX) - 2, Math.round(d.y - camY));
         if (d.st >= 9) respawnDrop(d, tex);
         continue;
       }
-      if (d.y < -90) { respawnDrop(d, tex); continue; }
       if (d.sp.texture !== tex) d.sp.texture = tex;
       d.sp.alpha = alpha;
       d.x += windX * 0.9 * dt;
       d.y += d.v * dt;
-      if (d.y >= d.hy) {
+      const sx = Math.round(d.x - camX), sy = Math.round(d.y - camY);
+      // `hy` is a depth in the FRAME, not a row in the world. A drop is meant
+      // to land where the player can watch it land, and a world row cannot do
+      // that: walk down the map and every drop would be landing above the top
+      // of the screen, leaving the near half of the frame with no rain in it.
+      if (sy >= d.hy) {
         if (splashes) {
-          d.st = 0; d.sf = -1; d.y = d.hy;
-          d.sp.position.set(Math.round(d.x) - 2, Math.round(d.y));
+          d.st = 0; d.sf = -1;
+          d.y = camY + d.hy;                  // and only now is it a wet spot on the ground
+          d.sp.position.set(sx - 2, d.hy);
         } else respawnDrop(d, tex);
         continue;
       }
-      if (d.x < -60 || d.x > vw + 60) { respawnDrop(d, tex); continue; }
-      d.sp.position.set(Math.round(d.x), Math.round(d.y));
+      if (sx < -60 || sx > vw + 60 || sy < -90) { respawnDrop(d, tex); continue; }
+      d.sp.position.set(sx, sy);
     }
   }
+  // A drop spawns over whatever the camera is looking at now, so the ground
+  // coming in at the leading edge is already being rained on.
   function respawnDrop(d, tex) {
     d.st = -1; d.sf = -1;
     d.sp.texture = tex;
-    d.x = rnd(-50, vw + 50);
-    d.y = rnd(-30, -2);
+    d.x = camX + rnd(-50, vw + 50);
+    d.y = camY + rnd(-30, -2);
     // every drop lands at its own depth in the frame, which is what makes flat
     // rain read as rain falling through a place
     d.hy = rnd(vh * 0.10, vh + 6);
     d.v = fld('fall', 4) * rnd(0.85, 1.2);
-    d.sp.position.set(Math.round(d.x), Math.round(d.y));
+    d.sp.position.set(Math.round(d.x - camX), Math.round(d.y - camY));
   }
 
   function tickSnow(dt, n) {
@@ -1062,7 +1093,9 @@
     while (snow.length < want) {
       const sp = new PIXI.Sprite(flakeTex(1));
       wxC.addChild(sp);
-      snow.push({ sp, x: rnd(0, 430), y: rnd(-40, 230), v: 1, ph: Math.random() * 6.28, s: 1 });
+      const f = { sp, x: camX + rnd(-20, vw + 20), y: camY + rnd(-60, vh), ph: Math.random() * 6.28, s: 1, k: 1 };
+      rollFlake(f);
+      snow.push(f);
     }
     if (!want) {
       for (let i = 0; i < snow.length; i++) snow[i].sp.visible = false;
@@ -1070,6 +1103,10 @@
     }
     const tint = mixColor(0xa8bcd8, 0xffffff, dayK);
     const alpha = 0.55 + 0.35 * dayK;
+    const fall = fld('fall', 0.85);
+    // The two spans are exactly the distance between the two edges they wrap
+    // between, so a wrap always lands back inside the band.
+    const spanX = vw + 40, spanY = vh + 84;
     for (let i = 0; i < snow.length; i++) {
       const f = snow[i];
       if (i >= want) { f.sp.visible = false; continue; }
@@ -1078,16 +1115,33 @@
       f.sp.alpha = alpha;
       f.ph += 0.02 * dt;
       f.x += (windX * 0.7 + Math.sin(f.ph) * 0.35) * dt;
-      f.y += f.v * dt;
-      if (f.y > vh + 4 || f.x < -20 || f.x > vw + 20) {
-        f.x = rnd(-20, vw + 20);
-        f.y = rnd(-30, -2);
-        f.s = Math.random() < 0.2 ? 2 : Math.random() < 0.5 ? 0 : 1;
-        f.sp.texture = flakeTex(f.s);
-        f.v = fld('fall', 0.85) * (0.6 + f.s * 0.35) * rnd(0.8, 1.3);
-      }
-      f.sp.position.set(Math.round(f.x), Math.round(f.y));
+      f.y += fall * f.k * dt;
+      // The field WRAPS on all four edges: a flake leaving one side is the same
+      // flake, at the same weight, arriving at the other. A wrap is a straight
+      // slide of the whole field, so the snow holds its density and its mix of
+      // weights no matter how far the camera walks. Retiring a flake at the
+      // edge and issuing a fresh one at the top cannot do that: walk down the
+      // map at about the speed the snow falls and the heavy flakes hang almost
+      // still against the glass, so they pile into the band they entered by and
+      // the bottom of the frame goes bare. Measured, that was 62 of 150 flakes
+      // stacked above the top edge and the lower third all but empty.
+      let sx = Math.round(f.x - camX), sy = Math.round(f.y - camY);
+      while (sx > vw + 20) { f.x -= spanX; sx -= spanX; }
+      while (sx < -20) { f.x += spanX; sx += spanX; }
+      while (sy > vh + 4) { f.y -= spanY; sy -= spanY; }
+      while (sy < -80) { f.y += spanY; sy += spanY; }
+      f.sp.position.set(sx, sy);
     }
+  }
+  // A flake is given its size and its weight once and keeps both for life, so
+  // that wrapping can be the pure slide it has to be. `k` is the weight on its
+  // own: the sky's fall speed is read fresh every frame and multiplied through,
+  // so a flake made while the snow was still fading in is not stuck crawling
+  // for the rest of the spell.
+  function rollFlake(f) {
+    f.s = Math.random() < 0.2 ? 2 : Math.random() < 0.5 ? 0 : 1;
+    f.sp.texture = flakeTex(f.s);
+    f.k = (0.6 + f.s * 0.35) * rnd(0.8, 1.3);
   }
 
   function tickFog(dt, power) {
@@ -1097,14 +1151,22 @@
     // fog takes the colour of whatever light there is: near white at noon, blue
     // at three in the morning, amber for the ten minutes the sun is on the deck
     const tint = mixColor(0x63708f, 0xdfe6ee, dayK);
+    const spanX = vw + 260, spanY = vh + 120;
     for (let i = 0; i < fogs.length; i++) {
       const f = fogs[i];
       f.x += (f.v + windX * 0.45) * dt;
-      if (f.x > vw + 20) { f.x = -240; f.y = rnd(-14, vh - 10); }
+      let sx = Math.round(f.x - camX), sy = Math.round(f.y - camY);
+      // anchored and wrapped like the cloud shadows: a bank lies over the
+      // ground it is on, and walking takes you through it rather than pushing
+      // it along in front of you
+      while (sx > vw + 20) { f.x -= spanX; sx -= spanX; }
+      while (sx < -240) { f.x += spanX; sx += spanX; }
+      while (sy > vh + 10) { f.y -= spanY; sy -= spanY; }
+      while (sy < -56) { f.y += spanY; sy += spanY; }
       f.sp.visible = true;
       f.sp.tint = tint;
       f.sp.alpha = Math.min(0.70, power * 0.62 * f.a);
-      f.sp.position.set(Math.round(f.x), Math.round(f.y));
+      f.sp.position.set(sx, sy);
     }
   }
 
