@@ -47,6 +47,24 @@
   };
   const DEFAULT_POOL = 'basin';
 
+  // The map is not fixed and is not supposed to be — biomes are placeable and
+  // CHAIN.MAP is explicitly never locked to one shape, so a table keyed only
+  // by region id would go quietly wrong the day someone adds a region rather
+  // than moving one. (Coordinates have already shifted once under this file;
+  // the ids happened to survive, which is luck, not design.)
+  //
+  // So the id is the override and the *ground* is the rule. Every region
+  // declares a `base` kind, and every kind tiles.js can draw is spoken for
+  // here, which means a new biome gets music that suits it on the day it is
+  // authored and nobody has to remember this file exists.
+  const BY_GROUND = {
+    grass: 'basin',  pad: 'basin',   board: 'basin',   // home, and ground somebody built
+    dirt: 'quarry',  rock: 'quarry', shale: 'quarry',  // dry working country
+    sand: 'quarry',  crack: 'quarry',
+    snow: 'peaks',   frost: 'peaks', ice: 'peaks',     // high and thin
+    marsh: 'bog',    water: 'bog',   tar: 'bog',       // wet and uneasy
+  };
+
   let out = null;             // { ctx, bus } from AUDIO
   let duck = null;            // one node between every voice and the bus
   let voice = null;           // { src, gain, name, startedAt, dur }
@@ -175,12 +193,17 @@
 
   // ---------- where the operator is standing ----------
 
+  // Named region first, its ground second, home last. The middle step is the
+  // one that makes this survive an expanding map.
   function placeNow() {
     try {
       const p = window.FACTORY && FACTORY.playerPos && FACTORY.playerPos();
       if (!p) return null;
       const r = window.CHAIN && CHAIN.regionAt && CHAIN.regionAt(p.x, p.y);
-      return r && r.id ? r.id : null;
+      if (!r) return null;
+      if (r.id && POOLS[r.id]) return r.id;
+      if (r.base && BY_GROUND[r.base]) return BY_GROUND[r.base];
+      return null;
     } catch (e) { return null; }
   }
 
