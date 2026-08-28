@@ -1,7 +1,8 @@
-// Synthesized sound: key clicks, error thuds, arrival whistle, collect ding,
-// the soft poof of a thing coming apart and the assemble that runs it
-// backwards, the pickup run off the ground and the shimmer it lands on,
-// and the train rhythm — steady typing makes the ride sound smooth.
+// Synthesized sound: key clicks, error thuds, the quiet no of a row that
+// cannot be taken, arrival whistle, collect ding, the soft poof of a thing
+// coming apart and the assemble that runs it backwards, the pickup run off
+// the ground and the shimmer it lands on, and the train rhythm, where
+// steady typing makes the ride sound smooth.
 // No audio assets; everything is WebAudio. Global namespace: AUDIO
 (function () {
   'use strict';
@@ -362,6 +363,21 @@
     noiseBurst(0.09, 260, 0.30, 'lowpass');
     tone(120, 0.10, 0.055, 0, 'sine');
   }
+  // A row the player asked for and cannot have. Deliberately not `thud`: the
+  // thud means you mistyped, and somebody who pressed Space on a dimmed row
+  // made no mistake. They asked a question, and this is the answer, so it is
+  // a small two-note fall rather than an impact. Every number keeps it clear
+  // of the two sounds it sits between. It opens on a ramp and carries no low
+  // body, which is what a thud is made of; it falls a minor third at 360 and
+  // 300 Hz, better than two octaves under the click's 1600, so it is no
+  // keystroke either. And measured on the master it peaks at 0.071 against
+  // the thud's 0.109 and the click's 0.227: the game says yes loudly and no
+  // quietly, never the other way round.
+  function nope() {
+    ensureCtx();
+    tone(360, 0.10, 0.040, 0, 'sine');
+    tone(300, 0.20, 0.032, 0.085, 'sine');
+  }
   function ding() { ensureCtx(); tone(1320, 0.25, 0.08); tone(1760, 0.35, 0.05, 0.07); }
   function press() { ensureCtx(); noiseBurst(0.14, 130, 0.24, 'lowpass'); tone(90, 0.16, 0.1, 0.02, 'sine'); }
   // material pickup: quick pitch-up pop
@@ -655,7 +671,7 @@
   }
 
   window.AUDIO = {
-    click, thud, ding, whistle, press, mint, build, countTick, fanfare, poof,
+    click, thud, nope, ding, whistle, press, mint, build, countTick, fanfare, poof,
     assemble, pickup, arrive, pay, thunder, onKey, setMuted,
     // the sky drives these two; nothing else may
     weather, setDrive,

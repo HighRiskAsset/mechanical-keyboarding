@@ -54,6 +54,10 @@
   let placing = null;            // {kind, face, at, ok, vein, price, …} — the build ghost
   let pendingUnlock = null;      // a pair just unlocked, card queued
   let producedSinceFloat = {};
+  // goods made this batch that never flew to the bag: onto a run, into the
+  // machine's own bin behind a backed-up run, or onto the ground when
+  // everything is full. They are still made, so they still pop.
+  let madeElsewhere = 0;
 
   // ---- DOM ----
   const $ = (id) => document.getElementById(id);
@@ -202,14 +206,20 @@
   // the materials of a price the bag falls short of — their counts print
   // red in the menu rows, so an unaffordable row says which is the problem
   const shortOf = (cost) => Object.keys(cost || {}).filter((mat) => (profile.bag[mat] || 0) < cost[mat]);
+  // The pop belongs to the making, not to the landing. The float and the
+  // flight stay the bag's alone — nothing flies to a row that did not climb —
+  // but a good that goes onto a run, into a bin or onto the ground was made
+  // by the same keystroke as one that lands in the bag, and it used to be
+  // made in silence.
   function flushFloats() {
     const parts = Object.entries(producedSinceFloat).filter(([, n]) => n > 0);
     if (parts.length && dock) {
       FACTORY.floatText(parts.map(([, n]) => `+${n}`).join(' '), dock.id);
       for (const [m, n] of parts) flyMat(m, dock.id, Math.min(n, 3));
-      A.mint();
     }
+    if (parts.length || madeElsewhere) A.mint();
     producedSinceFloat = {};
+    madeElsewhere = 0;
   }
 
   // The bag lives inside the game canvas as a pixel HUD (icons + bitmap
@@ -447,7 +457,8 @@
     const res = SIM.emit(profile, m, mat, n);
     profile.seen[mat] = true;
     if (res.where === 'bag') producedSinceFloat[mat] = (producedSinceFloat[mat] || 0) + n - res.spilled;
-    else beltFloat[mat] = (beltFloat[mat] || 0) + n - res.spilled;
+    else { beltFloat[mat] = (beltFloat[mat] || 0) + n - res.spilled; madeElsewhere += n - res.spilled; }
+    madeElsewhere += res.spilled;
     if (res.spilled > 0 && window.DROPS) {
       const at = CHAIN.machineFoot(m);
       DROPS.scatter(profile, { [mat]: res.spilled }, at.x, at.y + 8);
@@ -872,7 +883,7 @@
   function confirmBuildMenu() {
     if (!buildMenu) return;
     const row = buildMenu.rows[buildMenu.sel];
-    if (!row || row.enabled === false || !row.action) { A.thud(); return; }
+    if (!row || row.enabled === false || !row.action) { A.nope(); return; }
     if (isCloseRow(row)) { closeBuildMenu(); A.click(); return; }
     closeBuildMenu();
     startPlacing(row.action.kind);
@@ -1034,7 +1045,7 @@
   function confirmMenu() {
     if (!menu) return;
     const row = menu.rows[menu.sel];
-    if (!row || row.enabled === false || !row.action) { A.thud(); return; }
+    if (!row || row.enabled === false || !row.action) { A.nope(); return; }
     if (isCloseRow(row)) { closeMenu(); A.click(); return; }
     performAction(row.action);
     closeMenu();
@@ -2189,7 +2200,7 @@
     FACTORY.clearBuildGhost();
     pendingUnlock = null;
     unitAcc = 0; unitPaid = false; dryNow = false; lastCorrectTime = null;
-    producedSinceFloat = {};
+    producedSinceFloat = {}; madeElsewhere = 0;
     for (const k of Object.keys(invPrev)) delete invPrev[k];
     for (const k of Object.keys(invShown)) delete invShown[k];
     for (const k of Object.keys(countHint)) delete countHint[k];
