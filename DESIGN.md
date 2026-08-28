@@ -327,10 +327,15 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   while carrying a spool it states the errand. **Two lines** (2026-08-27,
   user decision): the caption is the place's name in brass over what can be
   done with it, either line standing alone. The identity line covers ground
-  that all looks alike (free veins name their ore, build sites say "Build
-  site", tracked by tile as the operator walks), and the action line is
-  omitted rather than padded when there is nothing to do. No hover
-  tooltips, no caption for bare open ground until something is buildable.
+  that all looks alike — free veins name their ore, tracked by tile as the
+  operator walks — and the action line is omitted rather than padded when
+  there is nothing to do. No hover tooltips, no caption for bare open ground
+  until something is buildable. **A build site is not named** (user ruling
+  2026-08-28; it used to say "Build site"): a vein is something *in* the
+  ground and its name says which ore, but a site is the absence of anything,
+  its survey outline already says what it is for, and naming it spends the
+  brass line highlighting a lack. Standing on one, the caption is the offer
+  to build or nothing at all.
   **Terminology and typography (user rulings 2026-08-27):** the buildable
   ground is a "build site" everywhere, code identifiers included (was
   "surveyed plot" / "pad"; only the v1 save spellings `p.plots` and the
@@ -521,14 +526,14 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   (`TILES.minimap`), the world's promise, its save's progress line, and
   Begin/Continue; the last-played world is focused so Enter resumes at once;
   ← → move, EN/РУ sits on the card. Two worlds today:
-  **The Frontier** (`frontier`, 1600×720) — the open basin below, the game
-  proper: one wide meadow to build in with all six biomes, every terrain and
-  every obstacle wrapped around its rim. **Open
-  Range** (`range`, 1168×464 since 2026-08-21, the frontier's width) — one
-  flat meadow ringed by forest on a 13-column grid at an 80px pitch: the
-  vein row holds thirteen seams, alternating across and on end so both
-  seatings get walked into on the easy map; three ranks of thirteen plots
-  below it (39 in all, generated in code from the grid), each a full 3×3
+  **The Frontier** (`frontier`, 1920×960 since 2026-08-28) — the open basin
+  below, the game proper: one wide meadow to build in with all six biomes,
+  every terrain and every obstacle wrapped around its rim. **Open
+  Range** (`range`, 1648×464 since 2026-08-28) — one
+  flat meadow ringed by forest on a 19-column grid at an 80px pitch: the
+  vein row holds nineteen seams, alternating across and on end so both
+  seatings get walked into on the easy map; three ranks of nineteen plots
+  below it (57 in all, generated in code from the grid), each a full 3×3
   with every facing legal; the landing sits west, a worn road runs under the
   vein row, nothing stands in any route, a pond in the SE corner for colour.
   The ranks are half a step off the seam columns so no pad ever stands
@@ -945,10 +950,41 @@ the meadow ✔ → 2 regions east + 4 ore patches + ~6 plots + closed crossings 
   rows, pick)` turns a per-tile decision back into GROUND rects, run
   together along each row. **The schema is still rects. The shapes are not.**
 - **The world — THE FRONTIER (rebuilt 2026-08-20, works and seams re-laid
-  2026-08-21; 1600×720 = 100×45 tiles)**.
+  2026-08-21, the rim grown 2026-08-28; 1920×960 = 120×60 tiles)**.
   A 60×20-tile grass **basin** in the middle holds the landing, a wandering
   track, thirty plots on an 80px grid and the first vein of every ore.
   Nothing solid stands in it — no cliff, no water, no boulder, not one rock.
+  **The rim grew and the basin did not (user ruling 2026-08-28).** The world
+  was 1600×720 and the ring was a strip — the quarry and the two southern
+  biomes eleven or twelve rows deep, which is a corridor you cross, not a
+  place you work in. Every tile of the growth went to the rim: ten columns
+  east and west, eight rows north and south, and the whole map slid +160,
+  +128 into the larger frame so the basin came through unchanged in shape,
+  position relative to its landmarks, and plot count. A save crosses with it
+  — `MAPKIT.register` carries a `RELAY {tag, dc, dr}` and `engine.js`
+  normalize shifts every machine, belt tile and dropped good by the same ten
+  columns and eight rows, once, so a factory built before the growth comes
+  back standing where it was built. The new depth is spent, not left as
+  scenery: **every ring biome has at least two works now** (twelve over the
+  five, forty-three sites to the basin's thirty), five more seams, and the
+  Great Mesa reaching north to the treeline — which it had to, because
+  `tiles.js` only skips a plateau's north rim above the treeline, so a mesa
+  left eight rows short of it would have woken up with a cliff facing the
+  wrong way.
+  **The outskirts are the interesting part (user ruling 2026-08-28).** The
+  first pass spent the depth on works and left the deep edges as biome floor,
+  which is exactly what a biome is past the fifteen-tile ramp band — and it
+  read as flat nothing. That is backwards: the corner of the world should be
+  the thing worth walking to, not the ground you cross on the way to the
+  works. So every outer edge got a landmark — **the Summit** (elev 2, the far
+  north-west, the peaks' own high ground, run up under the treeline so it
+  shows no back wall), the **flooded pit** on the mesa, the two **crystal
+  benches** along the top of the canyon with the creek between them, the **dry
+  wash** down the east corner, the **badland butte** in the flats, a second
+  broken **crevasse**, a third **tar seep**, and the **reed lagoon** past the
+  bog lake — and the five seams the growth added were moved out onto them.
+  **Four of the five stand on high ground**: the walk to a rim seam is a climb
+  and the belt home from it is a long one, which is the trade an edge is for.
   **The landing cluster (user ruling 2026-08-20): the three mines the player
   starts with must all be on screen when the world opens.** Iron, copper and
   stone stand around the landing pad, authored against the worst case the
@@ -1904,8 +1940,12 @@ demands a measured pool of ≥25 real words before a recipe is offered.
   every side, because a body seated at a pad's edge puts its flank port one
   tile out and the run's arrival tile two. So pads come **80px apart in both
   axes** and never in a rank of their own. Neither map grew wider or (the
-  Frontier) taller in the end: there was room once the pads stopped being
-  scattered.
+  Frontier) taller for that re-lay: there was room once the pads stopped being
+  scattered. Both grew on **2026-08-28** for a different reason — the new vein
+  cut and the rim — and the guarantee was re-asserted over every new plot as
+  it went in: the east-shale works moved north of the canyon shelf when the
+  check called it three facings of four, because a port ring backing onto the
+  shelf's east rim is a port ring a run cannot leave.
 - **The facing is final (user ruling 2026-08-21).** A machine is turned at
   the build ghost — a tap of Space, a quarter clockwise per tap — and never
   after: there is no turn row on a standing machine, because turning one
@@ -1999,7 +2039,16 @@ must be added to the meadow**, quartz, iron #2); **Quarry hills** open at T1
 canyon + the stairs + Coal bog** open by T2 (the coal seam is the T2 node;
 quartz #2 in the canyon); **Oil flats** open at T3 (oil seam); **Titanium
 peaks** open at T4 as the finish site with extra nodes (the titanium seam
-becomes a late iron/coal/oil node or a landmark). Crossings are repaired at
+becomes a late iron/coal/oil node or a landmark). **Settled 2026-08-28: it is
+a seam, not a landmark, and it holds copper.** A landmark was tried and it
+does not survive contact — the frontier drew the titanium patch in the ground
+with no survey mark, no mine and no name in the caption, and a vein the player
+can see and cannot take reads as a bug, not as scenery. Which ore it holds was
+not chosen here either: *Veins follow the tree* chose it, and the tree wanted
+copper. **The peaks are a place now, not a finish site**: with the rim grown
+they carry three seams (iron on the shelf, copper on the snowfield, coal out
+west) and two works, which is what the T4 line above was reaching for and never
+had the ground to hold. Crossings are repaired at
 the place for a price in the goods of the regions behind you (2026-08-19:
 no tier locks anywhere — pacing is prices and the readiness bar). Nodes per
 ore are not named here — see *Veins follow the tree* below; plots as many as
@@ -2066,6 +2115,35 @@ Measured 2026-08-25, the tree as it stands wants **iron 2 · copper 4 · stone 2
 short of copper on both courses by about a fifth, and whose third iron seam
 can be removed for **0.0%**. That is a reading, not a new spec: it is what the
 check said on the day, and it is expected to move.
+
+It moved on **2026-08-28**, in two steps. First the frontier's old titanium
+landmark out on the snowfield became a copper seam — the check named copper, so
+copper is what the ground gave up — which took the bill from 9.67 h to 7.53 h
+(RU) and 8.35 h to 6.70 h (EN) and still read short, because the seam iron was
+holding is the one copper wanted. Then **both maps were re-cut to
+`iron 3 · copper 4 · stone 3 · quartz 3 · coal 3 · oil 3` — nineteen seams,
+short for neither course**: 6.22 h (RU) and 4.86 h (EN), against a floor cut of
+6.92 h and 5.73 h. Open Range's row went from thirteen to nineteen with it: the
+test map is where the mechanics are tried without walking, and it cannot test a
+supply the real world has and it does not.
+
+Nineteen is well past the fourteen the greedy cut asks for, and it is meant to
+be. **The pass condition is short for nobody, and padding is a report** — at
+nineteen the check names one seam (coal's third) whose removal costs 0%, which
+is what any cut above the optimum will do when two courses want opposite
+fourth seams. The extra seams buy something the diagnostic does not model, and
+that the map is for: a reason to walk into every biome, and a mine near enough
+to belt in each of them. The LP assumes mines never stall, that everything
+raised is consumed, and it ignores the hands. **Plenty is placement**, and the
+rule that places them is: *the basin holds one of every ore and the second
+iron* — that one stays in reach because it is the first extra mine the ladder
+sells, and the purchase that teaches what an extra mine is should not also be
+a trek — *and every other seam is out in the ring*, two or three to a biome,
+each biome the place you go for its own ores rather than a copy of its
+neighbour. Iron, copper and coal in the peaks; copper and stone on the mesa;
+oil and copper on the flats; coal and oil in the bog; and the canyon, which is
+two regions wide, is quartz country at both ends with the stone seam on the
+shelf between them.
 
 The same rule governs plots, and always did — *as many as the tree can use*.
 What the tree can use is roughly twelve to finish and twenty-five to thirty

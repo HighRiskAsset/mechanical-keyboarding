@@ -65,11 +65,18 @@
   const log = (s) => { logEl.textContent += s + '\n'; };
 
   // The same rule the picker used when it drew these live: the widest world
-  // is held to 224px, and every map is baked at that one scale so the cards
+  // is held to a cap, and every map is baked at that one scale so the cards
   // read as a set rather than each finding its own zoom.
+  //
+  // The cap was 224 and became 256 when the Frontier's rim grew (2026-08-28).
+  // The number is not a size, it is the width at which the integer scale steps
+  // down: a 120-tile world at 224 bakes at 1x, and the card then stretches a
+  // 60px-tall image over its 100px frame — a pixel-art thumbnail upscaled by
+  // 1.67 is a smear. At 256 it bakes at 2x and comes down to the frame
+  // instead, the way every thumbnail here has.
   function thumbScale() {
     const widest = Math.max(...MAPKIT.IDS.map((k) => Math.ceil(MAPKIT.MAPS[k].W / 16)));
-    return Math.max(1, Math.min(4, Math.floor(224 / widest)));
+    return Math.max(1, Math.min(4, Math.floor(256 / widest)));
   }
 
   const canvases = {};

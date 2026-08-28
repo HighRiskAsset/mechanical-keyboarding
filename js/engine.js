@@ -87,7 +87,33 @@
       nextDropId: 1,
       crossings: {},     // crossing id → true once repaired (bought at the place)
       heavy: 0,          // heavy modules toward the finish
+      // the layout this save's coordinates are in — see relayProfile below. A
+      // new save is born in the current one and is never shifted.
+      relay: (C().MAPS[mapId] && C().MAPS[mapId].RELAY || {}).tag || null,
     };
+  }
+
+  // ---- a world that moved inside a larger frame (2026-08-28) ----
+  // The Frontier's rim grew and the whole map slid ten columns east and eight
+  // rows south to make room. Everything a save remembers by position — where a
+  // machine stands, the tiles a belt runs over, a good lying on the ground —
+  // is in the OLD frame until this runs, and it only makes sense in the new
+  // one, so a save is moved exactly as far as the ground was. It is a shift
+  // and nothing else: no machine is re-homed, no belt is re-routed, and a
+  // factory comes back standing where it was built.
+  //
+  // A mine is not touched here — it is anchored to a node index, and the pass
+  // below re-seats it on whatever tiles its seam now occupies.
+  function relayProfile(p, relay) {
+    const { dc, dr } = relay;
+    const list = (v) => (Array.isArray(v) ? v : []);
+    for (const m of list(p.machines)) if (Array.isArray(m.at)) m.at = [m.at[0] + dc, m.at[1] + dr];
+    for (const b of list(p.belts)) if (Array.isArray(b.path)) b.path = b.path.map((t) => [t[0] + dc, t[1] + dr]);
+    for (const d of list(p.drops)) {
+      for (const k of ['x', 'ox']) if (typeof d[k] === 'number') d[k] += dc * 16;
+      for (const k of ['y', 'oy']) if (typeof d[k] === 'number') d[k] += dr * 16;
+    }
+    p.relay = relay.tag;
   }
 
   // ---- v1 → v2 migration (one-shot, on load) ----
@@ -150,6 +176,10 @@
   // v2 forward-compat: fill anything a newer build added
   function normalize(p, mapId) {
     p.map = mapId;
+    // first of all, before anything reads a coordinate or writes one: a save
+    // from an older layout of this world is moved into the current frame
+    const relay = (C().MAPS[mapId] || {}).RELAY;
+    if (relay && p.relay !== relay.tag) relayProfile(p, relay);
     if (typeof p.savedAt !== 'number') p.savedAt = null;
     for (const ch of L.UNLOCK_ORDER) if (!p.letters[ch]) p.letters[ch] = newLetterStats();
     // the ladder branched (2026-08-22): a save from before carries a count

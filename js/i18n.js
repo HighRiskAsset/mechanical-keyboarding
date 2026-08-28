@@ -167,7 +167,6 @@
       autoNoteProcessor: 'This machine now runs itself on the clock, from what its belts bring it, or what you feed it by hand (hold Space → feed). Collect its output at the machine (↓), or take its spool (→) and belt it onward. It no longer takes your typing; its newer recipes are still yours at other machines.',
       // captions under the map: what the place is, what the chosen row does
       veinNames: { iron: 'Iron vein', copper: 'Copper vein', stone: 'Stone vein', quartz: 'Quartz vein', coal: 'Coal seam', oil: 'Oil seep' },
-      capSite: 'Build site',
       capCrossing: 'Closed crossing',
       capAutomated: 'automated',
       // the caption's two lines: the name of the place (line 1) and what can
@@ -423,7 +422,6 @@
       unlockRetool: 'Все рудники этой руды снова в ваших руках, пока вы не купите их автоматику заново.',
       autoNoteProcessor: 'Эта машина теперь работает сама, по часам, из того, что приносят ленты — или того, что вы положите в неё вручную (зажмите пробел → загрузить). Заберите продукцию у машины (↓) или возьмите катушку (→) и пустите её дальше по ленте. Вашу печать она больше не принимает.',
       veinNames: { iron: 'Железная жила', copper: 'Медная жила', stone: 'Каменная жила', quartz: 'Кварцевая жила', coal: 'Угольный пласт', oil: 'Нефтяной выход' },
-      capSite: 'Стройплощадка',
       capCrossing: 'Закрытый проход',
       capAutomated: 'автомат',
       capHold: 'Зажмите пробел: меню',

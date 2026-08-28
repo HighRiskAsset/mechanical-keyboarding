@@ -674,19 +674,22 @@
     setCaption('', text, 'ok');
     captionFlash = setTimeout(() => { captionFlash = null; refreshCaption(); }, 1600);
   }
-  // what the operator stands on when no place holds them: a free vein, a
-  // build site, or nothing worth a name. The identity line for ground that
-  // all looks alike from above
+  // what the operator stands on when no place holds them: a free vein, or
+  // nothing worth a name. The identity line for ground that all looks alike
+  // from above.
+  //
+  // A build site goes unnamed (user ruling 2026-08-28). A vein is something
+  // IN the ground and its name says which ore; a site is the absence of
+  // anything, and its survey outline already says what it is for. Naming it
+  // spends the caption's first line highlighting a lack. The second line
+  // still offers the build when the bag can cover one — that is the half
+  // that carries information.
   function groundName() {
     const at = FACTORY.playerPos();
     const tx = Math.floor(at.x / 16), ty = Math.floor((at.y - 1) / 16);
     for (const n of CHAIN.unbuiltNodes(profile)) {
       const b = MAPKIT.veinBox(n);
       if (tx >= b.c0 && tx <= b.c1 && ty >= b.r0 && ty <= b.r1) return (T.t('veinNames') || {})[n.ore] || '';
-    }
-    for (const p of CHAIN.freeSites(profile)) {
-      const b = MAPKIT.siteBox(p);
-      if (tx >= b.c0 && tx <= b.c1 && ty >= b.r0 && ty <= b.r1) return T.t('capSite');
     }
     return '';
   }

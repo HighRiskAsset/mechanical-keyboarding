@@ -317,8 +317,10 @@
 
   // the seams a map carries, keyed by material name — which is what a map
   // file already calls them (`{ kind: 'copper', … }`), so this is a count,
-  // not a translation. A node kind with no ore behind it (the titan landmark)
-  // is not a seam and is not counted.
+  // not a translation. A node kind with no ore behind it is not a seam and is
+  // not counted; no map authors one any more (the frontier's `titan` landmark
+  // became a copper seam on 2026-08-28), and the guard stays because a node
+  // the game cannot mine must never quietly count as supply here.
   function veinsOf(C, mapId) {
     const was = C.MAP_ID;
     C.useMap(mapId);
