@@ -11,6 +11,11 @@
   const MIN_VW = 300, MIN_VH = 170;
   let viewW = 430, viewH = 230;        // world pixels currently visible
   const LIM = { n: 48, e: 0, s: 0, w: 0 };
+  // the same fence again, in tiles and for bodies rather than for feet: the
+  // treeline is painted, not solid, and what keeps the operator out of it is
+  // LIM above. Nothing may be BUILT in there either, or a free-build map
+  // would take a smelter into the trees where nobody can walk to it.
+  const FENCE = { c0: 0, c1: 0, r0: 0, r1: 0 };
   const DOCK_RANGE = 20;
   const SPEED = 1.35;
 
@@ -439,6 +444,8 @@
     const W = CHAIN.WORLD_W, H = CHAIN.WORLD_H, T = PIXELS.TILE;
     const FOREST = CHAIN.MAP.FOREST || { n: 48 };
     LIM.n = FOREST.n || 0; LIM.e = W - (FOREST.e || 0) - 8; LIM.s = H - (FOREST.s || 0) - 6; LIM.w = (FOREST.w || 0) + 8;
+    FENCE.c0 = Math.ceil((FOREST.w || 0) / T); FENCE.c1 = Math.floor((W - (FOREST.e || 0)) / T) - 1;
+    FENCE.r0 = Math.ceil((FOREST.n || 0) / T); FENCE.r1 = Math.floor((H - (FOREST.s || 0)) / T) - 1;
     grid = TILES.bake(CHAIN.MAP, W, H);
     const tx = PIXELS.util.tex;
     for (const wt of grid.water) {
@@ -965,24 +972,59 @@
     if (!axis || here.length > 1) return false;   // no heading yet, or already a crossing
     return here[0] !== null && here[0] !== axis;  // it must go straight, and the other way
   }
-  // can a belt lie on this tile: in bounds, not solid (an open crossing
-  // overrides), not under a machine, not in scenery, and either clear of
-  // other runs or square across a single one
-  function beltFree(profile, tx, ty, blocked, beltAt, axis) {
+  // ---------- what the ground itself allows ----------
+  // Is this tile clear ground: in bounds, not a closed crossing (an open one
+  // overrides everything under it), not solid, not in scenery. One answer,
+  // asked by two things: a belt looking for a lane, and, on a free-build
+  // map, a body looking for somewhere to stand. An obstacle is an obstacle
+  // whichever is asking, and that is the whole reason this is one function.
+  function groundFree(tx, ty) {
     if (!grid || tx < 0 || ty < 0 || tx >= grid.cols || ty >= grid.rows) return false;
-    if (blocked.has(key(tx, ty))) return false;
-    if (!crossable(beltAt.get(key(tx, ty)), axis)) return false;
     const cx = tx * T16 + 8, cy = ty * T16 + 8;
     const inRect = (r) => cx >= r.x && cx < r.x + r.w && cy >= r.y && cy < r.y + r.h;
     if (closedRects.some(inRect)) return false;
     if (openRects.some(inRect)) return true;
-    const i = ty * grid.cols + tx;
-    if (grid.flags[i] & TILES.FL.SOLID) return false;
+    if (grid.flags[ty * grid.cols + tx] & TILES.FL.SOLID) return false;
     for (const sc of CHAIN.SCENERY) {
       const b = sc.box;
       if (cx >= b.x - 2 && cx < b.x + b.w + 2 && cy >= b.y - 2 && cy < b.y + b.h + 2) return false;
     }
     return true;
+  }
+  // the storey a tile is on, or null where a body has no business standing:
+  // off the map, on a ramp, or on a crossing. A bridge and a flight of
+  // stairs are the way through, and a machine parked on one corks it.
+  function groundLevel(tx, ty) {
+    if (!grid || tx < 0 || ty < 0 || tx >= grid.cols || ty >= grid.rows) return null;
+    const cx = tx * T16 + 8, cy = ty * T16 + 8;
+    const inRect = (r) => cx >= r.x && cx < r.x + r.w && cy >= r.y && cy < r.y + r.h;
+    if (closedRects.some(inRect) || openRects.some(inRect)) return null;
+    const i = ty * grid.cols + tx;
+    if (grid.flags[i] & TILES.FL.RAMP) return null;
+    return grid.elev[i];
+  }
+  // The tiles of `box` a body may stand on, on a map that has no build sites
+  // (free build, 2026-08-28). Clear ground inside the treeline, and all of
+  // it on ONE storey, the storey under the middle of the machine's foot, so
+  // a body never straddles a cliff edge or squats on a ramp. Everything
+  // else about a placement (other bodies, the veins, the price) is app.js's
+  // to say; this is only the ground's half, the half sites used to give.
+  function buildZone(box) {
+    const out = new Set();
+    const lv = groundLevel(box.c0 + (box.w >> 1), box.r1);
+    if (lv === null) return out;
+    for (let ty = box.r0; ty <= box.r1; ty++) for (let tx = box.c0; tx <= box.c1; tx++) {
+      if (tx < FENCE.c0 || tx > FENCE.c1 || ty < FENCE.r0 || ty > FENCE.r1) continue;
+      if (groundFree(tx, ty) && groundLevel(tx, ty) === lv) out.add(tx + ',' + ty);
+    }
+    return out;
+  }
+  // can a belt lie on this tile: clear ground, not under a machine, and
+  // either clear of other runs or square across a single one
+  function beltFree(profile, tx, ty, blocked, beltAt, axis) {
+    if (blocked.has(key(tx, ty))) return false;
+    if (!crossable(beltAt.get(key(tx, ty)), axis)) return false;
+    return groundFree(tx, ty);
   }
   // may a belt step between two adjacent tiles (elevation: ramps only)
   function beltStep(ax, ay, bx, by) {
@@ -2136,7 +2178,7 @@
     scale: () => S,                    // device px per world px, so the DOM can match the canvas
     screenPos, setDockGlow, showInfo, clearInfo, showMenu, clearMenu, setAutoLook,
     routeBelt, beltReaches, machinePorts, portsOpen, showGhost, clearGhost, setSpool, markStations, setSocketTarget,
-    showBuildGhost, clearBuildGhost,
+    showBuildGhost, clearBuildGhost, buildZone,
     setInvValue, invScreenPos, setHudKeys, setInvMarks, setCharge, pulseInv,
     onDock: null,
   };

@@ -55,9 +55,14 @@
   const copper = add({ kind: 'mine', ore: 'copper', node: 1, autoOn: { copper: true } });
   const quartz = add({ kind: 'mine', ore: 'quartz', node: 3, autoOn: { quartz2: true } });
   const rkey = (out, inn) => out + '|' + JSON.stringify(inn);
-  const smelter = add({ kind: 'smelter', plot: 'p1', autoOn: { [rkey('bronze', { iron: 2, copper: 1 })]: true }, recipe: 'bronze', recipeIn: JSON.stringify({ iron: 2, copper: 1 }) });
-  const foundry = add({ kind: 'foundry', plot: 'p2', autoOn: { [rkey('qzbronze', { bronze: 2, quartz2: 1 })]: true }, recipe: 'qzbronze', recipeIn: JSON.stringify({ bronze: 2, quartz2: 1 }) });
-  const cons = add({ kind: 'constructor', plot: 'p3', autoOn: { [rkey('parts', { qzbronze: 2 })]: true }, recipe: 'parts', recipeIn: JSON.stringify({ qzbronze: 2 }) });
+  // seated on tiles, not on sites: the Open Range went free-build on
+  // 2026-08-28 and has no `plot` ids left to name. Nothing here reads a
+  // position anyway (the belts below are fake paths); these are three
+  // clear 2x2 patches of the meadow, and they are here so the harness
+  // describes a world that could exist.
+  const smelter = add({ kind: 'smelter', at: [10, 10], autoOn: { [rkey('bronze', { iron: 2, copper: 1 })]: true }, recipe: 'bronze', recipeIn: JSON.stringify({ iron: 2, copper: 1 }) });
+  const foundry = add({ kind: 'foundry', at: [16, 10], autoOn: { [rkey('qzbronze', { bronze: 2, quartz2: 1 })]: true }, recipe: 'qzbronze', recipeIn: JSON.stringify({ bronze: 2, quartz2: 1 }) });
+  const cons = add({ kind: 'constructor', at: [22, 10], autoOn: { [rkey('parts', { qzbronze: 2 })]: true }, recipe: 'parts', recipeIn: JSON.stringify({ qzbronze: 2 }) });
   const fakePath = (n) => Array.from({ length: n }, (_, i) => [i, 0]);
   const link = (a, b, n) => { const ok = S.canLink(p, a, b); if (!ok.ok) { line(false, `canLink ${a.kind}→${b.kind}: ${ok.why}`); return null; } return S.addBelt(p, a, b, fakePath(n)); };
   S.ensure(p);

@@ -1,18 +1,23 @@
-// OPEN RANGE: one flat meadow, every node in a row, ranks of build sites
-// below, nothing in the way. Tests the mechanics (build, deliver, automate,
-// belt) without walking or geography.
+// OPEN RANGE: one flat meadow, every node in a row, and below them nothing
+// at all, bare grass to lay a factory out on however you like. Tests the
+// mechanics (build, deliver, automate, belt) without walking or geography.
 //
-// Re-laid 2026-08-21 to the four-facing guarantee. A 3x3 site costs the
-// ground around it as much as the site itself — two clear tiles off every
-// side, for the port and for the tile the run arrives on — so the ranks
-// moved from a 64px pitch to 80px, matching the columns, and the meadow grew
-// three rows to take them. THIS MAP IS THE EASY ONE: every site here is a
-// full 3x3 with all four facings legal, so a kind can be put down any way up
-// anywhere, and any shortfall shows up on The Frontier first.
+// FREE BUILD since 2026-08-28. The map used to carry fifty-seven surveyed
+// sites in three ranks, and a machine could only stand on one of them; the
+// sites are gone and `freeBuild` says so, so a body may go down on any clear
+// ground. The obstacles still rule: the treeline, the scenery, the pond and
+// the seams themselves refuse a placement, and belts still have to find a
+// lane between whatever you put in their way. THIS MAP IS THE OPEN ONE:
+// the Frontier keeps its sites, and the two are meant to be played against
+// each other.
+//
+// (The ranks were laid on an 80px pitch in the 2026-08-21 rework to give
+// every site all four facings; that geometry is what set the meadow's size,
+// and the meadow keeps it. The pitch survives in the vein row above.)
 (function () {
   'use strict';
   const K = window.MAPKIT;
-  const { sc, apron } = K;
+  const { sc } = K;
 
   const W = 1648, H = 464;                        // 103 × 29 tiles
   // The vein row: nineteen seams on tile lines, alternating across and on
@@ -30,8 +35,8 @@
   // tree leans on. How many of each is not authored here (see DESIGN.md,
   // *Veins follow the tree*); the map only lays out what the check asks for.
   // The map grew east to take them, six columns of meadow on the same 80px
-  // pitch, and nothing else about it moved: every seam and site that was
-  // here is on the ground it was on, so a save comes back untouched.
+  // pitch, and nothing else about it moved: every seam that was here is on
+  // the ground it was on, so a save comes back untouched.
   const COLS = Array.from({ length: 19 }, (_, k) => 112 + 80 * k);
   const NODE_KINDS = ['iron', 'copper', 'stone', 'quartz', 'coal', 'oil',
     'iron', 'copper', 'stone', 'quartz', 'coal', 'oil',
@@ -41,20 +46,6 @@
   const NODES = COLS.map((x, k) => (VERT.has(k)
     ? { kind: NODE_KINDS[k], x, y: 48, vert: true }
     : { kind: NODE_KINDS[k], x, y: 48 }));
-
-  // Ranks of build sites below the veins, on the same 80px lattice as the
-  // columns but half a step off it, so no site ever stands directly under a
-  // seam: a vein bedded on end reaches down to row 4, and a site in that
-  // column would lose the two rows it needs above it to face east or west.
-  const SITE_COLS = Array.from({ length: 19 }, (_, k) => 96 + 80 * k);
-  const SITE_ROWS = [160, 240, 320];              // sites on rows 7–9, 12–14, 17–19
-  const SITES = [];
-  // Site ids are positional, so the thirteen columns that were here keep
-  // p1..p39 and the six new ones are appended after them rather than
-  // renumbering the map out from under an old save.
-  const rank = (cols) => { for (const y of SITE_ROWS) for (const x of cols) SITES.push({ id: 'p' + (SITES.length + 1), x, y }); };
-  rank(SITE_COLS.slice(0, 13));
-  rank(SITE_COLS.slice(13));
 
   const SCENERY = [
     sc('tree', 5, 24), sc('tree2', 12, 25), sc('rock', 19, 24), sc('tree', 26, 25),
@@ -92,8 +83,12 @@
       { kind: 'dirt', x: 80, y: 112, w: 16, h: 16 },
       { kind: 'dirt', x: 128, y: 80, w: 16, h: 16 }, { kind: 'dirt', x: 208, y: 80, w: 16, h: 16 }, { kind: 'dirt', x: 288, y: 80, w: 16, h: 16 },
       { kind: 'dirt', x: 1568, y: 80, w: 16, h: 16 },
-      ...SITE_ROWS.flatMap((y) => SITE_COLS.map((x) => apron(x, y))),
-      // the pond sits in the south strip, below every site's last port row
+      // The meadow below the row is bare on purpose. The worn aprons that
+      // marked the three ranks went out with the sites: a patch of laid
+      // dirt reads as an invitation to stand on it, and this ground has no
+      // favourites any more.
+      //
+      // the pond sits in the south strip, well clear of the vein row
       { kind: 'sand', x: 1008, y: 368, w: 112, h: 64 },
       { kind: 'water', x: 1024, y: 384, w: 80, h: 32 },
     ],
@@ -110,6 +105,7 @@
   K.register({
     id: 'range', W, H, spawn: { x: 84, y: 154 },
     LEGACY: {},
-    MAP, SITES, SCENERY, PROPS, WEATHER,
+    freeBuild: true, SITES: [],
+    MAP, SCENERY, PROPS, WEATHER,
   });
 })();

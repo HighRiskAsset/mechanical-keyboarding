@@ -30,12 +30,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File serve.ps1
 then visit http://localhost:8123.
 
 Pick a **world** first — *The Frontier* (one wide meadow to build in, six
-lands around its rim) or *Open Range* (one flat plain, every node in reach,
-room to build) —
+lands around its rim, machines on surveyed sites) or *Open Range* (one flat
+plain, every node in reach, no sites at all: build wherever the ground
+allows) —
 each keeps its own save, so nothing mined, built or unlocked carries over.
 Then walk with the **arrow keys**, stand at a machine and **type** to run
-it, **hold Space** to open the menu of the place you stand at — build a
-machine on a plot, open an ore vein, give a mine new keys, give a machine a
+it, **hold Space** to open the menu of the place you stand at — raise a
+machine where you stand, open an ore vein, give a mine new keys, give a machine a
 different recipe, automate it, feed or empty it, take it down again (arrows
 choose, a tap of Space confirms, Escape closes; a caption under the map says
 what the chosen row does). **Belts**: take a

@@ -784,8 +784,13 @@
     C.MAP_ID = cur.id;
     C.MAP = cur.MAP;
     // sites that coincide with an ore node are the node's (mines stand there)
-    C.SITES = cur.SITES.filter((p) => !cur.MAP.NODES.some((n) => Math.abs(n.x + 4 - p.x) <= 8 && Math.abs(n.y + 12 - p.y) <= 8));
+    C.SITES = (cur.SITES || []).filter((p) => !cur.MAP.NODES.some((n) => Math.abs(n.x + 4 - p.x) <= 8 && Math.abs(n.y + 12 - p.y) <= 8));
     cur.SITES = C.SITES;
+    // A world with no surveyed sites is built on freely: the ground itself
+    // says where a body may stand (factory.buildZone). A world with sites
+    // keeps them. Free build is the Open Range's since 2026-08-28, and it is
+    // the map file that declares it, not the chain.
+    C.FREE_BUILD = !!cur.freeBuild;
     C.SCENERY = cur.SCENERY;
     C.PROPS = cur.PROPS;
     C.WORLD_W = cur.W;
@@ -840,7 +845,7 @@
     alphabetOf, recipeAlphabet, recipeTilt, recipeFocus, wordPool, offerable, offerableRecipes, matExists, oreOpen, affordable, bagAdd,
     machinePos, machineFoot, machineBox, machineAnchor, nodeFace, machinesOfKind, machinesOfOre, nodeBuilt, freeSites, unbuiltNodes, visibleKinds, buildableKinds, kindLive, kindEverLive, whatUnlocks, rungsInView, starterNodes,
     useMap, currentMap, siteById, crossingOpen, regionAt,
-    // per-map fields (MAP, SITES, SCENERY, PROPS, WORLD_W, WORLD_H, SPAWN, LEGACY, MAP_ID) are set by useMap
+    // per-map fields (MAP, SITES, FREE_BUILD, SCENERY, PROPS, WORLD_W, WORLD_H, SPAWN, LEGACY, MAP_ID) are set by useMap
   };
   useMap(DEFAULT_MAP);
 })();

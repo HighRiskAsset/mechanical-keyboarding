@@ -136,12 +136,30 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   like any bad ground, the caption saying why. A **tap** of Space turns it
   a quarter clockwise; a **hold**
   builds it on good ground, and on bad ground the same hold cancels;
-  Escape cancels too. Valid ground **for now** is the
-  surveyed pads (mines: a free vein the body covers — the mine row prices
-  itself off the vein under the ghost, and an unopened ore's first mine
-  still unlocks its keys); free placement over open terrain is a later mode
-  that swaps exactly that one zone test for a terrain answer (big rocks
-  invalid, stairs invalid though belts may cross them). Machines are seated
+  Escape cancels too. **Valid ground is the map's own answer, and there
+  are two of them (2026-08-28, user decision; the two styles are being
+  played against each other).** A world with surveyed sites takes a body
+  only on one of them. A **free-build** world (`freeBuild` in the map file
+  → `CHAIN.FREE_BUILD`, the Open Range, whose fifty-seven sites and their
+  worn aprons came out with it) has no sites at all and asks the ground
+  instead: `FACTORY.buildZone` answers for the box under the ghost, and
+  what it refuses is what a belt is refused (off the map, solid tiles like
+  water, tar or a cliff face, scenery, a closed crossing) plus two things
+  only a body cares about. The whole footprint must sit on **one storey**,
+  so nothing straddles a cliff edge or corks a ramp or a bridge; and
+  nothing may stand **inside the treeline**, which is painted rather than
+  solid and is otherwise only a fence on the operator's feet. An unopened
+  **seam is not building ground** for anything but its mine, on either kind
+  of world: a smelter parked over one would bury the ore for good. Mines
+  are unchanged and map-agnostic: a free vein the body covers, the mine
+  row pricing itself off the vein under the ghost, and an unopened ore's
+  first mine still unlocking its keys. Both rules meet in one `zone` set in
+  app.js, so everything downstream still only asks whether a tile is in it.
+  A free-build world makes bad placements possible on purpose (a body that
+  boxes in its own ports), and the ghost says so at the time, in red, before
+  anything is spent. The four-facing guarantee that `dev/verify.html` holds
+  the Frontier's sites to was only ever a promise the *surveyed* ground
+  made. Machines are seated
   in the save as tiles (`m.at` + `m.face`), and pads and veins stopped
   being dockable places — their markers survey the ground, the menu came to
   the operator. **The ghost is the only place a machine turns** (user
@@ -231,11 +249,13 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   run bridges the earlier and throws a shadow on it. A belt carries only
   what its consumer's chosen recipe accepts, one item per tile at
   `TUNING.BELT_SPEED`; a belt from an oil derrick draws as a pipe. Menus:
-  load ↑ (bag → an automated machine's inputs), collect ↓ (output buffer →
-  bag), spool / socket / put back. The two marks are each other upside down
-  because they are one move each way (2026-08-28; the row used to read "Feed"
-  under a → that the game already spends on other things). The engine keeps
-  the older word: the action is still `feed`, `SIM.feed`, `SIM.canFeed`. **A run is taken up from the run**, not
+  load ↓ (bag → an automated machine's inputs), collect ↑ (output buffer →
+  bag), spool / socket / put back. **An inbox and an outbox** (user ruling,
+  2026-08-28): ↓ drops goods into the machine, ↑ lifts them back out, and the
+  two marks are each other upside down because they are one move each way.
+  The machine's own buffer rows carry the same pair. (The row used to read
+  "Feed" under a → that the game already spends on other things.) The engine
+  keeps the older word: the action is still `feed`, `SIM.feed`, `SIM.canFeed`. **A run is taken up from the run**, not
   from a machine: stand on any of its tiles, hold Space for its own menu,
   and the ✗ row there removes it (both rows where two cross). A machine
   with runs coming and going gave a list there was no reading, and the
@@ -1954,6 +1974,13 @@ demands a measured pool of ≥25 real words before a recipe is offered.
   it went in: the east-shale works moved north of the canyon shelf when the
   check called it three facings of four, because a port ring backing onto the
   shelf's east rim is a port ring a run cannot leave.
+  **The Open Range gave its ranks up later the same day** (2026-08-28, user
+  decision): it went free-build, so its fifty-seven sites and the worn aprons
+  under them are gone, and the guarantee has nothing left to hold there but
+  its veins. The 80px lattice is still why the meadow is the size it is, and
+  the vein row stands on it. The guarantee is a promise *surveyed* ground
+  makes; where the player picks the ground it is theirs to get right, and the
+  ghost's red tiles are the check.
 - **The facing is final (user ruling 2026-08-21).** A machine is turned at
   the build ghost — a tap of Space, a quarter clockwise per tap — and never
   after: there is no turn row on a standing machine, because turning one

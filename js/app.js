@@ -29,6 +29,9 @@
   const session = {
     chars: 0, errors: 0, streak: 0, bestStreak: 0,
     activeMs: 0, linesDone: 0, wordsTyped: 0, collectedThisSession: 0,
+    // characters whose interval was credited to activeMs, and only those.
+    // The WPM readout divides these two, so its halves cannot drift apart.
+    timedChars: 0,
   };
   let lastSoftStopAt = 0;
 
@@ -609,11 +612,12 @@
     // (while carrying a spool there is no menu: the hold lays the belt here
     // or drops the spool — see startSpace)
     // feed and collect come before the spool: the everyday rows first
-    // ↑ into the machine, ↓ out of it: one move each way, and the marks are
-    // each other upside down so the pair reads at a glance. (The action and
-    // SIM.feed keep the older word.)
-    if (autoLive(m) && m.kind !== 'mine') rows.push({ pre: '↑', items: recipeInputsIcons(m), enabled: SIM.canFeed(profile, m), title: T.t('titleLoad'), caption: T.t('capLoad'), action: { type: 'feed', m } });
-    if (SIM.hasOutput(m)) rows.push({ pre: '↓', items: nonZero(m.buf.out), enabled: true, title: T.t('titleCollect'), caption: T.t('capCollect'), action: { type: 'collect', m } });
+    // An inbox and an outbox (user ruling, 2026-08-28): ↓ drops goods into
+    // the machine, ↑ lifts them back out. One move each way, and the two
+    // marks are each other upside down so the pair reads at a glance.
+    // (The action and SIM.feed keep the older word.)
+    if (autoLive(m) && m.kind !== 'mine') rows.push({ pre: '↓', items: recipeInputsIcons(m), enabled: SIM.canFeed(profile, m), title: T.t('titleLoad'), caption: T.t('capLoad'), action: { type: 'feed', m } });
+    if (SIM.hasOutput(m)) rows.push({ pre: '↑', items: nonZero(m.buf.out), enabled: true, title: T.t('titleCollect'), caption: T.t('capCollect'), action: { type: 'collect', m } });
     if (!spool && SIM.beltsFrom(profile, m).length < SIM.outletsOf(m) && (m.kind === 'mine' || SIM.produces(profile, m).length)) {
       // the run itself, not an arrow: → is the direction goods travel, and
       // it is already the feed row's mark two lines above this one
@@ -908,9 +912,13 @@
     A.thud();
     redock();
   }
-  // The zone, as tiles: for now a machine may only stand on a build site
-  // (CURRENT RULE; free placement over open terrain is a later mode, and
-  // this set is the one thing it will replace with a terrain answer).
+  // The zone, as tiles. A world with surveyed sites lets a machine stand on
+  // one and nowhere else; a free-build world (CHAIN.FREE_BUILD, the Open
+  // Range since 2026-08-28) hands the question to the ground instead, and
+  // FACTORY.buildZone answers it for the box under the ghost: clear of
+  // solids and scenery, all on one storey. That is the terrain answer this
+  // set was always going to be replaced by; both rules still meet here, so
+  // everything downstream only ever asks `zone.has(tile)`.
   let siteTiles = null, siteTilesMap = null;
   function siteZone() {
     if (siteTiles && siteTilesMap === mapId) return siteTiles;
@@ -941,7 +949,7 @@
     placing.at = [c0, r0];
     const phantom = { kind: placing.kind, at: [c0, r0], face: placing.face };
     const box = CHAIN.machineBox(phantom);
-    const zone = siteZone();
+    const zone = CHAIN.FREE_BUILD ? FACTORY.buildZone(box) : siteZone();
     const bodies = new Set();
     for (const om of profile.machines) {
       const ob = CHAIN.machineBox(om);
@@ -950,11 +958,14 @@
     const mine = placing.kind === 'mine';
     // a mine stands on a vein: the first free vein its body covers claims it
     let vein = null;
-    if (mine) {
-      for (const n of CHAIN.unbuiltNodes(profile)) {
-        const vb = MAPKIT.veinBox(n);
-        if (box.c0 <= vb.c1 && box.c1 >= vb.c0 && box.r0 <= vb.r1 && box.r1 >= vb.r0) { vein = n; break; }
-      }
+    const veins = new Set();
+    for (const n of CHAIN.unbuiltNodes(profile)) {
+      const vb = MAPKIT.veinBox(n);
+      if (mine && !vein && box.c0 <= vb.c1 && box.c1 >= vb.c0 && box.r0 <= vb.r1 && box.r1 >= vb.r0) vein = n;
+      // an unopened seam is not building ground for anything else: a smelter
+      // parked over one buries the ore for good. The site maps kept a site
+      // and a vein apart by hand; free build has to say it out loud.
+      else if (!mine) for (let ty = vb.r0; ty <= vb.r1; ty++) for (let tx = vb.c0; tx <= vb.c1; tx++) veins.add(tx + ',' + ty);
     }
     // the price: a machine's is its kind's next instance; a mine prices
     // itself off the vein under it — an open ore's extra-mine price, or the
@@ -975,7 +986,7 @@
     let ground = true;
     for (let ty = box.r0; ty <= box.r1; ty++) for (let tx = box.c0; tx <= box.c1; tx++) {
       const k = tx + ',' + ty;
-      const ok = !bodies.has(k) && (mine ? !!vein : zone.has(k)) && !later && !poor;
+      const ok = !bodies.has(k) && (mine ? !!vein : zone.has(k) && !veins.has(k)) && !later && !poor;
       if (!ok) ground = false;
       tiles.push([tx, ty, ok]);
     }
@@ -1114,7 +1125,7 @@
       const moved = SIM.feed(profile, act.m);
       const total = Object.values(moved).reduce((a, b) => a + b, 0);
       if (!total) return;
-      FACTORY.floatText(`↑${total}`, dock.id, 0xeacc78);
+      FACTORY.floatText(`↓${total}`, dock.id, 0xeacc78);
       A.mint();
       E.saveProfile(profile);
       refreshInventory();
@@ -1244,8 +1255,8 @@
     // what is inside the machine: inputs waiting, outputs made
     SIM.ensureMachine(m);
     const inb = nonZero(m.buf.in), outb = nonZero(m.buf.out);
-    if (Object.keys(inb).length) rows.push({ pre: '↑', items: inb, enabled: true });
-    if (Object.keys(outb).length) rows.push({ pre: '↓', items: outb, enabled: true });
+    if (Object.keys(inb).length) rows.push({ pre: '↓', items: inb, enabled: true });
+    if (Object.keys(outb).length) rows.push({ pre: '↑', items: outb, enabled: true });
     if (!rows.length) { FACTORY.clearInfo(); return; }
     FACTORY.showInfo(dock.id, rows.slice(0, 5));
   }
@@ -1402,7 +1413,7 @@
   }
   function sessionWPM() {
     if (session.activeMs < 10000) return null;
-    return (session.chars / 5) / (session.activeMs / 60000);
+    return (session.timedChars / 5) / (session.activeMs / 60000);
   }
   function refreshStats() {
     const acc = sessionAccuracy();
@@ -1691,9 +1702,18 @@
     if (typed === expected) {
       const now = performance.now();
       let latency = null;
-      if (lastCorrectTime !== null) {
+      // The hands' clock. A gap is credited up to MAX_LATENCY rather than
+      // discarded: a think at the keys is still practice, and the cap is the
+      // only thing keeping a walk-away out of the total. Time and characters
+      // are counted in the same breath, so the WPM readout can never bill a
+      // keystroke it did not also charge for. The skill model stays stricter
+      // and still learns only from gaps under the cap, so a long hesitation
+      // teaches it nothing instead of teaching it a lie.
+      if (lastCorrectTime !== null && !autoTyping) {
         const gap = now - lastCorrectTime;
-        if (gap <= E.MAX_LATENCY) { latency = gap; session.activeMs += gap; }
+        session.activeMs += Math.min(gap, E.MAX_LATENCY);
+        session.timedChars++;
+        if (gap <= E.MAX_LATENCY) latency = gap;
       }
       // The autotyper drives the world but never signs the register: no
       // latency, no letter stat, no character on the session's count. What it
@@ -1769,7 +1789,10 @@
   // ---------- line completion / world progression ----------
   function finishLine() {
     session.linesDone++;
-    lastCorrectTime = null;
+    // The clock deliberately does not reset here. The step from the last
+    // character of one line to the first of the next is time at the keys like
+    // any other, and the cap above is what keeps a long look away from
+    // counting. Nulling it here threw out every line transition whole.
     FACTORY.stamp();
     if (!autoTyping) {
       A.press();

@@ -313,11 +313,17 @@
     // is 3×3 and takes the largest kind at EVERY facing — the four-facing
     // guarantee (ruling 2026-08-20) — a vein takes a mine at every facing.
     // Checked on the real geometry: the seated boxes CHAIN hands factory.js
-    // and the body-relative places sim.js hangs off them. Both maps were
+    // and the body-relative places sim.js hangs off them. The Frontier was
     // re-laid to the guarantee in the 2026-08-21 map rework, so a facing
     // shortfall is a FAILURE now, not a worklist entry — a site that cannot
     // take every facing is a site the build ghost will refuse you at, and
     // that is a thing to fix in the map file, not to live with.
+    //
+    // A free-build map (the Open Range since 2026-08-28) declares no sites,
+    // so all this has to say about it is its veins. The guarantee was only
+    // ever a promise the surveyed ground made; where the player picks the
+    // ground, a bad facing is their own placement and the ghost says so at
+    // the time, in red, before anything is spent.
     const biggest = C.KIND_IDS.filter((k) => k !== 'mine')
       .reduce((a, b) => (C.KINDS[b].size[0] * C.KINDS[b].size[1] > C.KINDS[a].size[0] * C.KINDS[a].size[1] ? b : a));
     const sites = spots.map((s) => s.kind === 'site' ? MAPKIT.siteBox({ x: s.x, y: s.y }) : MAPKIT.veinBox(s.node));

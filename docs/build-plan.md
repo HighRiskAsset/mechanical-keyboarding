@@ -531,6 +531,24 @@ the east corner, the badland butte in the flats, a second crevasse, a third
 tar seep and the reed lagoon past the bog lake, and the five new seams moved
 out onto them, four of the five onto high ground.
 
+**Done 2026-08-28: the Open Range goes free-build (user decision).** Its
+three ranks are gone (all 57 sites and the worn aprons under them) and the
+map declares `freeBuild`, so a body may stand on any clear ground there. The
+two styles are now side by side to be played against each other: **The
+Frontier keeps its 73 surveyed sites**, unchanged. Where a map has no sites,
+`FACTORY.buildZone` gives the ground's answer for the box under the ghost and
+app.js swaps it in for the site zone (one `zone` set, so nothing downstream
+changed). It refuses what a belt is refused (off the map, solid tiles,
+scenery, a closed crossing) and two more things only a body cares about: the
+footprint must sit on one storey, no straddling a cliff edge and no corking a
+ramp or a bridge; and nothing may stand inside the treeline, which is painted
+rather than solid. An **unopened seam is not building ground** for anything
+but its mine, on either kind of world. Mines are untouched. What the sites
+used to guarantee, every facing seatable with every port usable, is now the
+player's to get right on that map, and the ghost's red tiles are the check.
+`dev/verify.html` still holds the Frontier to it and now holds the Range only
+to its veins. The picker's `range.png` was re-baked for the lost aprons.
+
 ## 6. Gravy (after the foundation, in no order)
 
 Guidance checklist ("what to build next" — UI, not a mechanic) · the
