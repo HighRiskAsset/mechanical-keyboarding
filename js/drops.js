@@ -174,7 +174,7 @@
     let made = 0;
     for (const it of b.items || []) {
       const at = beltPos(b, it.pos);
-      if (at) { spawn(p, it.mat, 1, at[0], at[1]); made++; }
+      if (at && !(window.CHAIN && CHAIN.isFluid && CHAIN.isFluid(it.mat))) { spawn(p, it.mat, 1, at[0], at[1]); made++; }
     }
     b.items = [];
     return made;
@@ -194,7 +194,10 @@
     if (!p || !what) return null;
     ensure(p);
     const boxes = [], bundle = {};
-    const add = (o) => { for (const [mat, n] of Object.entries(o || {})) if (n > 0) bundle[mat] = (bundle[mat] || 0) + n; };
+    // a fluid never lies on the ground: what a machine held of one is gone
+    // with the machine (it could not have been carried anyway)
+    const fluid = (mat) => !!(window.CHAIN && CHAIN.isFluid && CHAIN.isFluid(mat));
+    const add = (o) => { for (const [mat, n] of Object.entries(o || {})) if (n > 0 && !fluid(mat)) bundle[mat] = (bundle[mat] || 0) + n; };
     add(what.back);
     let spilled = 0, burst = null;
 

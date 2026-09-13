@@ -305,20 +305,20 @@
   // anchor sits on a tile line, so a vein's two tiles are exactly the tiles
   // you see, and every one of them is clear of the site lattices above.
   const NODES = [
-    { kind: 'iron',   x: 608,  y: 416 },              // ── the landing cluster, all in shot from the spawn
-    { kind: 'copper', x: 688,  y: 496, vert: true },
-    { kind: 'stone',  x: 768,  y: 416 },
-    { kind: 'quartz', x: 496,  y: 352, vert: true },  // ── the basin's corners: found by looking around
-    { kind: 'coal',   x: 1360, y: 352 },
-    { kind: 'oil',    x: 512,  y: 544, vert: true },
-    { kind: 'iron',   x: 1360, y: 544 },
-    { kind: 'copper', x: 752,  y: 272, vert: true },  // ── the ring: a reason to walk to each landmark
-    { kind: 'stone',  x: 1520, y: 400, vert: true },  // the canyon shelf
-    { kind: 'quartz', x: 1552, y: 224 },              // the canyon head, beside the creek
-    { kind: 'coal',   x: 1328, y: 704 },              // the island
-    { kind: 'oil',    x: 512,  y: 720, vert: true },  // the tar flats
-    { kind: 'iron',   x: 272,  y: 304, vert: true },  // the peaks shelf
-    { kind: 'copper', x: 224,  y: 464, vert: true },  // the snowfield, out past the tarn
+    { kind: 'R1',   x: 608,  y: 416 },              // ── the landing cluster, all in shot from the spawn
+    { kind: 'R2', x: 688,  y: 496, vert: true },
+    { kind: 'R3',  x: 768,  y: 416 },
+    { kind: 'R4', x: 496,  y: 352, vert: true },  // ── the basin's corners: found by looking around
+    { kind: 'R5',   x: 1360, y: 352 },
+    { kind: 'R6',    x: 512,  y: 544, vert: true },
+    { kind: 'R7',   x: 1360, y: 544 },
+    { kind: 'R8', x: 752,  y: 272, vert: true },  // ── the ring: a reason to walk to each landmark
+    { kind: 'R9',  x: 1520, y: 400, vert: true },  // the canyon shelf
+    { kind: 'R10', x: 1552, y: 224 },              // the canyon head, beside the creek
+    { kind: 'R11',   x: 1328, y: 704 },              // the island
+    { kind: 'R12',    x: 512,  y: 720, vert: true },  // the tar flats
+    { kind: 'R13',   x: 272,  y: 304, vert: true },  // the peaks shelf
+    { kind: 'R1', x: 224,  y: 464, vert: true },  // the snowfield, out past the tarn
     // ---- the rim's seams (2026-08-28) ----
     // These five are the OUTSKIRTS SEAMS and they are deliberately the
     // furthest things on the map from the landing. Four of the five sit on
@@ -327,11 +327,11 @@
     // lake. A works is never more than a belt run away from its seam, but the
     // walk to stand on one is the longest walk in the world, and that is what
     // an edge is for.
-    { kind: 'stone',  x: 640,  y: 80 },               // the mesa's north edge, up under the treeline
-    { kind: 'coal',   x: 128,  y: 96,  vert: true },  // the summit, the highest seam on the map
-    { kind: 'quartz', x: 1792, y: 96 },               // the east crystal bench, over the east works
-    { kind: 'copper', x: 96,   y: 768, vert: true },  // the badland butte, the far south-west
-    { kind: 'oil',    x: 1600, y: 832, vert: true },  // the reed lagoon's west shore, past the lake
+    { kind: 'R2',  x: 640,  y: 80 },               // the mesa's north edge, up under the treeline
+    { kind: 'R3',   x: 128,  y: 96,  vert: true },  // the summit, the highest seam on the map
+    { kind: 'R4', x: 1792, y: 96 },               // the east crystal bench, over the east works
+    { kind: 'R5', x: 96,   y: 768, vert: true },  // the badland butte, the far south-west
+    { kind: 'R6',    x: 1600, y: 832, vert: true },  // the reed lagoon's west shore, past the lake
   ];
 
   // ======================================================================

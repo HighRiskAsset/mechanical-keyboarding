@@ -42,9 +42,9 @@
     wxOn = localStorage.getItem(WX_KEY) !== 'off';
   } catch { /* defaults on */ }
 
-  // A second, non-persisted switch, held down by the debug autotyper: at
-  // machine speed the key clicks are a buzzsaw, and the preference the player
-  // actually set has to survive being talked over.
+  // A second, non-persisted switch that silences every bus without touching
+  // the preferences the player actually set. Nothing in the game holds it
+  // down; it is there for testing from the console.
   let muted = false;
 
   // ---------- the balance between the buses ----------

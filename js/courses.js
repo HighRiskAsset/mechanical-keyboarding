@@ -20,9 +20,13 @@
   // Order here is the order the switch shows. QWERTY leads so the two
   // switches read as one choice: English interface, English keyboard, both
   // first. ЙЦУКЕН sits beside it, not beneath it.
+  // A course is playable once it has all three: the glyphs on the caps, the
+  // course data, and its tree (js/tree-<code>.js, generated from the lesson
+  // plan by dev/tech-tree-v4-build.js). EN has no tree yet, so it stays
+  // greyed until its plan is built.
   const ROWS = [
-    { id: 'en-qwerty', layout: 'LAYOUT_EN', course: 'LANG_EN' },
-    { id: 'ru-jcuken', layout: 'LAYOUT_RU', course: 'LANG_RU' },
+    { id: 'en-qwerty', layout: 'LAYOUT_EN', course: 'LANG_EN', tree: 'TREE_EN' },
+    { id: 'ru-jcuken', layout: 'LAYOUT_RU', course: 'LANG_RU', tree: 'TREE_RU' },
   ];
 
   const byId = {};
@@ -33,9 +37,10 @@
       flag: (layout && layout.flag) || null,
       shortName: (layout && layout.shortName) || row.id.toUpperCase(),
       name: (layout && layout.name) || row.id,
-      ready: !!(layout && window[row.course] && !window[row.course].stub),   // stub courses stay greyed
+      ready: !!(layout && window[row.course] && !window[row.course].stub && window[row.tree]),   // stub courses and treeless ones stay greyed
       _layout: row.layout,
       _course: row.course,
+      _tree: row.tree,
     };
     byId[entry.id] = entry;
     return entry;
@@ -71,6 +76,7 @@
   function active() { return byId[id]; }
   function layout() { return window[byId[id]._layout]; }
   function course() { return window[byId[id]._course]; }
+  function tree() { return window[byId[id]._tree]; }
 
   // Saves are per world *and* per course — a QWERTY frontier is a different
   // game from a ЙЦУКЕН one, so their profiles must not collide.
@@ -88,6 +94,6 @@
 
   window.COURSES = {
     list: () => list.slice(),
-    get, set, active, layout, course, saveTag, DEFAULT_ID,
+    get, set, active, layout, course, tree, saveTag, DEFAULT_ID,
   };
 })();

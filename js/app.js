@@ -121,7 +121,12 @@
   // half as bright; from tier 5 it never comes — by then every key is known
   // and the rescue would only teach the eye to drop. Presentation only:
   // nothing is locked behind it.
-  const hintTier = () => (profile ? CHAIN.currentTier(profile) : 0);
+  // the tree's columns (the core runs to 24) mapped onto the taper's steps
+  const hintTier = () => {
+    if (!profile) return 0;
+    const col = CHAIN.currentTier(profile);
+    return col >= 22 ? 5 : col >= 17 ? 4 : Math.floor(col / 4);
+  };
   let hintTimer = null;
   function clearHint() {
     if (hintTimer) { clearTimeout(hintTimer); hintTimer = null; }
@@ -132,7 +137,7 @@
     if (expected === undefined) return;
     const code = expected === ' ' ? 'Space' : LAYOUT.CHAR_TO_CODE[expected];
     const cap = keycapEls[code];
-    if (!cap) return;
+    if (!cap) { composeHint(expected); return; }
     cap.classList.add('hint');
     if (hintTier() >= 4) cap.classList.add('dim');
     if (LAYOUT.NEEDS_SHIFT.has(expected)) {
@@ -140,6 +145,27 @@
       const shiftCode = LAYOUT.FINGER[code]?.[0] === 'r' ? 'ShiftLeft' : 'ShiftRight';
       keycapEls[shiftCode]?.classList.add('hint');
     }
+  }
+  // a glyph no key prints (the em dash, the guillemets): the hint is the
+  // stroke that composes it — Birman's right Alt chord — said in the gloss
+  // line, with the key it rides lit. A numpad code or a macOS Option chord
+  // passes just the same, since only the glyph is ever checked.
+  function composeHint(ch) {
+    const stroke = LAYOUT.COMPOSED && LAYOUT.COMPOSED[ch];
+    let text;
+    if (stroke) {
+      const parts = stroke.split('+');
+      const cap = keycapEls[parts[parts.length - 1]];
+      if (cap) cap.classList.add('hint');
+      const names = T.t('strokeNames') || {};
+      text = parts.map((k) => names[k] || k).join(' + ');
+    } else if (ch !== undefined && ch !== ' ' && LAYOUT.CHAR_TO_CODE[ch] === undefined) {
+      text = T.t('noKeyHint');   // an extended mark this layout leaves to the Latin one
+    } else return;
+    glossLine.innerHTML = `<b>${ch}</b> · ${text}`;
+    glossLine.classList.add('visible');
+    clearTimeout(glossTimer);
+    glossTimer = setTimeout(() => glossLine.classList.remove('visible'), 3500);
   }
   function scheduleHint() {
     clearHint();
@@ -156,8 +182,8 @@
   // a mine's Mk lights that mine's colour across the board, and the keyboard
   // reads as the economy rather than as a finger chart.
   function bandFor(ch) {
-    const ore = ch === undefined ? null : L.ORE_OF[ch];
-    return ore ? `var(--ore-${ore})` : 'var(--band-free)';
+    const origin = ch === undefined ? null : CHAIN.keyOrigin(ch);
+    return origin && origin.ore ? `var(--ore-${origin.ore})` : 'var(--band-free)';
   }
   function paintBand(cap, ch, unlocked) {
     cap.classList.toggle('locked', !unlocked);
@@ -167,7 +193,7 @@
     const unlockedSet = new Set(E.unlockedLetters(profile));
     // Shift belongs to no ore. It lights when the course has handed out
     // something that needs it — in ЙЦУКЕН that is the comma, at the Fastener.
-    const shiftReady = [...LAYOUT.NEEDS_SHIFT].some((c) => unlockedSet.has(c));
+    const shiftReady = CHAIN.capsUnlocked(profile) || [...LAYOUT.NEEDS_SHIFT].some((c) => unlockedSet.has(c));
     for (const [code, cap] of Object.entries(keycapEls)) {
       if (cap.classList.contains('inert')) continue;
       const isShift = code === 'ShiftLeft' || code === 'ShiftRight';
@@ -187,8 +213,8 @@
   function refreshLessonLights() {
     const set = canTypeHere() ? new Set(alphabet) : null;
     for (const [code, cap] of Object.entries(keycapEls)) {
-      const ch = LAYOUT.CODE_TO_CHAR[code];
-      cap.classList.toggle('lesson', !!(set && ch && set.has(ch)));
+      const ch = LAYOUT.CODE_TO_CHAR[code], sh = LAYOUT.SHIFTED_CODE_TO_CHAR[code];
+      cap.classList.toggle('lesson', !!(set && ((ch && set.has(ch)) || (sh && set.has(sh)))));
     }
   }
 
@@ -273,7 +299,7 @@
   function refreshInventory() {
     if (!profile) return;
     const keys = hudKeys();
-    if (keys.join() !== hudKeysShown.join()) {
+    if (!hudKeysShown || keys.join() !== hudKeysShown.join()) {
       hudKeysShown = keys;
       FACTORY.setHudKeys(keys);
       for (const k of keys) { if (!iconURLs[k]) iconURLs[k] = PIXELS.matURL(k, PIXELS.MAT_SPARK_PEAK); showInv(k, invPrev[k] === undefined ? invValue(k) : invPrev[k]); }
@@ -425,28 +451,23 @@
     if (!m || m.kind === 'mine') return null;
     const offered = CHAIN.offerableRecipes(m.kind, profile);
     if (!offered.length) return null;
-    const chosen = m.recipe ? offered.find((r) => r.out === m.recipe && JSON.stringify(r.in) === m.recipeIn) : null;
+    const chosen = m.recipe ? offered.find((r) => r.out === m.recipe) : null;
     if (chosen) return chosen;
-    const r = offered[0];
+    // a machine is never born dead: the default is its earliest recipe
+    // whose inputs have been held, else simply its earliest
+    const r = offered.find((x) => CHAIN.inputsExist(x, profile)) || offered[0];
     m.recipe = r.out; m.recipeIn = JSON.stringify(r.in);
     return r;
   }
+  // what is typed here: the mine's lesson, or the running recipe's — the
+  // spec the plan wrote for it (mode, alphabet, focus, family, capitals,
+  // the page text), read through the chain over the keys this save has
   function lessonFor() {
     if (!dock || dock.kind !== 'machine') return null;
     const m = dock.m;
-    if (m.kind === 'mine') {
-      const letters = CHAIN.oreLetters(m.ore, CHAIN.oreMk(profile, m.ore));
-      const mode = letters.filter((c) => !L.PUNCT.has(c)).length <= 2 ? 'keys' : 'letters';
-      return { mode, alphabet: letters, tilt: null };
-    }
+    if (m.kind === 'mine') return CHAIN.lessonSpec(CHAIN.mineLesson(m.ore), profile);
     if (!recipe) return null;
-    const kind = CHAIN.KINDS[m.kind];
-    if (kind.full) {
-      // Molder and up: the whole unlocked set; the flux sets the focus
-      const focus = CHAIN.recipeFocus(recipe, profile);
-      return { mode: kind.grammar, alphabet: CHAIN.recipeAlphabet(recipe, profile), tilt: focus.tilt, family: focus.family };
-    }
-    return { mode: kind.grammar, alphabet: CHAIN.recipeAlphabet(recipe, profile), tilt: CHAIN.recipeTilt(recipe, profile) };
+    return CHAIN.lessonSpec(recipe.lesson, profile);
   }
   const canTypeHere = () => !!(dock && dock.kind === 'machine' && !autoLive(dock.m) && (dock.m.kind === 'mine' || recipe)) && !placing && !buildMenu;
 
@@ -468,15 +489,6 @@
       const now = Date.now();
       if (now - lastSpillFloat > 4000 && dock) { FACTORY.floatText(T.t('floatBagFull'), dock.id, 0xd8905f); lastSpillFloat = now; }
     }
-    // the finish: K heavy modules, hand-made here — a count, never a lock
-    if (mat === 'heavy') {
-      profile.heavy = (profile.heavy || 0) + n;
-      if (!profile.finishedAt && profile.heavy >= CHAIN.TUNING.K_HEAVY) {
-        profile.finishedAt = Date.now();
-        E.saveProfile(profile);
-        showFinishCard();
-      }
-    }
   }
   let beltFloat = {};
   function workKeystroke() {
@@ -486,16 +498,17 @@
       return;
     }
     if (!recipe) return;
-    const kind = CHAIN.KINDS[m.kind];
     if (!unitPaid) {
       // a worked machine uses what is inside it first, then the bag
       if (SIM.takeInput(profile, m, recipe.in)) { unitPaid = true; if (dryNow) { dryNow = false; refreshInfo(); refreshCaption(); } }
       else { if (!dryNow) { dryNow = true; refreshInfo(); refreshCaption(); } return; }   // starved: runs dry, still trains
     }
     unitAcc++;
-    if (unitAcc >= kind.perUnit) {
+    if (unitAcc >= CHAIN.perUnit(recipe)) {
       unitAcc = 0; unitPaid = false;
-      produce(m, recipe.out, 1);
+      // every output of the recipe at once: the main material and the
+      // byproduct beside it
+      for (const [mat, q] of Object.entries(SIM.outsOf(recipe))) produce(m, mat, q);
     }
   }
 
@@ -530,21 +543,12 @@
         });
       }
     } else if (d.kind === 'machine' && d.m.kind === 'mine') {
-      const m = d.m, ore = m.ore;
-      const mk = CHAIN.oreMk(profile, ore);
-      // the next Mk of this ore is always for sale here at its real price —
-      // the ladder branches between places; what orders them is the goods
-      // the price asks for
-      const np = CHAIN.pairOf(ore, mk + 1);
-      if (np) {
-        const price = CHAIN.pricePair(np) || {};
-        rows.push({ pre: 'MK' + np.mk, items: price, enabled: canPay(price), priced: true, short: shortOf(price), title: T.t('capAtPlace', { name: mineName(ore), level: np.mk }), caption: T.t('capMk', { level: np.mk, name: mineName(ore), keys: pairKeys(np) }), action: { type: 'mk', ore, level: np.mk, price } });
-      }
+      const m = d.m;
       if (!autoLive(m)) {
-        // ⚙ for the depth the mine now works. The price is the whole gate
+        // ⚙ for the raw the mine yields. The price is the whole gate
         // (no hidden costs, 2026-08-28): affordable means buyable.
         const price = CHAIN.priceAuto(m, null, profile);
-        rows.push({ icon: 'auto', items: price, enabled: canPay(price), priced: true, short: shortOf(price), title: T.t('titleAuto'), caption: T.t('capAuto'), action: { type: 'auto', m, price, key: CHAIN.autoKey(m, null, profile) } });
+        if (price) rows.push({ icon: 'auto', items: price, enabled: canPay(price), priced: true, short: shortOf(price), title: T.t('titleAuto'), caption: T.t('capAuto'), action: { type: 'auto', m, price, key: CHAIN.autoKey(m, null, profile) } });
       }
       beltRows(m, rows);
       removeRow(m, rows);
@@ -555,19 +559,38 @@
       // belt rows, and taking it down again.
       const m = d.m;
       const active = SIM.recipeOf(profile, m);
-      for (const r of CHAIN.offerableRecipes(m.kind, profile)) {
-        if (r === active) continue;
+      // The recipe list (user ruling 2026-09-13): only the recipes whose
+      // inputs have all been held are offered, plus the first whose inputs
+      // have not, greyed with the unfound inputs in red, so the next thing
+      // to hunt for is in sight; the rest stay hidden until then. Newest at
+      // the top, earliest at the bottom (the old work is the long scroll),
+      // and the recipe running now is always in the list, wearing the bracket
+      // that says it is the standing choice (factory.js drawMenu).
+      const all = CHAIN.recipesFor(m.kind);
+      const reach = (r) => CHAIN.inputsExist(r, profile);
+      const next = all.find((r) => !reach(r));
+      const shown = all.filter((r) => r === active || reach(r) || r === next).reverse();
+      for (const r of shown) {
+        const current = r === active;
+        const title = T.t('titleRecipe', { out: matName(r.out) });
+        const base = T.t('capRecipe', { inputs: recipeInputList(r) });
+        if (!reach(r) && !current) {
+          const missing = Object.keys(r.in).filter((mat) => !CHAIN.matExists(profile, mat));
+          // the row is unselectable and the unfound inputs are already red;
+          // the caption does not say so a second time (user, 2026-09-13)
+          rows.push({ items: r.in, out: r.out, enabled: false, short: missing, title, caption: base, action: null });
+          continue;
+        }
         // a recipe whose engine this machine already owns wears the gear:
         // switching to it means the machine runs itself again
         const owned = CHAIN.autoOn(m, CHAIN.autoKey(m, r, profile));
-        rows.push({ icon: owned ? 'auto' : undefined, items: r.in, out: r.out, ok: SIM.canTake(profile, m, r.in) ? undefined : false, enabled: true, title: T.t('titleRecipe', { out: matName(r.out) }), caption: T.t('capRecipe', { out: matName(r.out), inputs: recipeInputList(r) }) + (owned ? T.t('capEngineOwned') : ''), action: { type: 'recipe', m, r } });
+        rows.push({ current, icon: owned ? 'auto' : undefined, items: r.in, out: r.out, grey: !SIM.canTake(profile, m, r.in), enabled: true, title, caption: base + (current ? T.t('capRecipeCurrent') : '') + (owned ? T.t('capEngineOwned') : ''), action: { type: 'recipe', m, r } });
       }
-      // keys bought at this kind of machine (the Fastener's punctuation):
-      // its next level, always for sale here at its price
-      const np = CHAIN.pairOf(m.kind, CHAIN.kindMk(profile, m.kind) + 1);
-      if (np) {
-        const price = CHAIN.pricePair(np) || {};
-        rows.push({ pre: 'MK' + np.mk, items: price, enabled: canPay(price), priced: true, short: shortOf(price), title: T.t('capAtPlace', { name: kindName(m.kind), level: np.mk }), caption: T.t('capMkAt', { level: np.mk, name: kindName(m.kind), keys: pairKeys(np) }), action: { type: 'mk-at', kind: m.kind, level: np.mk, price } });
+      // the finish is bought where the last of the completion pages is
+      // made: the easier half of the pages once more, and the course is done
+      if (m.kind === CHAIN.completionKind() && !profile.finishedAt) {
+        const price = CHAIN.priceCompletion() || {};
+        rows.push({ pre: '✦', items: price, enabled: canPay(price), priced: true, short: shortOf(price), title: T.t('titleComplete'), caption: T.t('capComplete'), action: { type: 'complete', price } });
       }
       if (active && !autoLive(m)) {
         // ⚙ for the recipe it is running now — every recipe earns its own.
@@ -602,9 +625,9 @@
     }
     rows.push({ ...row, enabled: true, title: T.t('titleRemove', { name: machineName(m) }), caption: T.t('capRemove'), action: { type: 'remove-machine', m, back } });
   }
-  // a run out of an oil derrick draws as a pipe rather than a belt
+  // a run that carries a fluid draws as a pipe rather than a belt
   // (factory.js drawBelts): the rows that build and take one up say so too
-  const isPipe = (from) => !!(from && from.kind === 'mine' && from.ore === 'oil');
+  const isPipe = (from) => !!(from && SIM.pipeFrom(profile, from));
   // the rows every machine shares (phase 3): socket / put the spool back /
   // take the spool, feed, collect, and one row per belt to remove it
   function beltRows(m, rows) {
@@ -617,7 +640,7 @@
     // marks are each other upside down so the pair reads at a glance.
     // (The action and SIM.feed keep the older word.)
     if (autoLive(m) && m.kind !== 'mine') rows.push({ pre: '↓', items: recipeInputsIcons(m), enabled: SIM.canFeed(profile, m), title: T.t('titleLoad'), caption: T.t('capLoad'), action: { type: 'feed', m } });
-    if (SIM.hasOutput(m)) rows.push({ pre: '↑', items: nonZero(m.buf.out), enabled: true, title: T.t('titleCollect'), caption: T.t('capCollect'), action: { type: 'collect', m } });
+    if (SIM.hasCollectable(m)) rows.push({ pre: '↑', items: nonZero(m.buf.out), enabled: true, title: T.t('titleCollect'), caption: T.t('capCollect'), action: { type: 'collect', m } });
     if (!spool && SIM.beltsFrom(profile, m).length < SIM.outletsOf(m) && (m.kind === 'mine' || SIM.produces(profile, m).length)) {
       // the run itself, not an arrow: → is the direction goods travel, and
       // it is already the feed row's mark two lines above this one
@@ -643,30 +666,40 @@
     return out;
   }
   // ---------- names and the caption under the map ----------
-  const kindName = (k) => (T.t('kindNames') || {})[k] || k;
-  const mineName = (ore) => (T.t('oreMineNames') || {})[ore] || ore;
-  const matName = (mat) => (T.t('matNames') || {})[mat] || mat;
+  // names: the interface's own where it has one, else the tree's (the
+  // names file beside the plan; placeholders until the naming pass)
+  const kindName = (k) => (T.t('kindNames') || {})[k] || CHAIN.kindName(k);
+  const mineName = (ore) => (T.t('oreMineNames') || {})[ore] || CHAIN.mineName(ore);
+  const matName = (mat) => (T.t('matNames') || {})[mat] || CHAIN.matName(mat);
   const matList = (mats) => (mats || []).map(matName).join(' / ');
   const machineName = (m) => (m ? (m.kind === 'mine' ? mineName(m.ore) : kindName(m.kind)) : '?');
-  const pairKeys = (pair) => (pair && pair.keys ? pair.keys.map((c) => c.toUpperCase()).join(' ') : '');
-  // a rung named as a purchase: "Quartz vein" (opening it), "Quartz mine Mk2", "Fastener Mk1"
-  const placeName_ = (pair) => (pair.ore ? (pair.mk === 1 ? ((T.t('veinNames') || {})[pair.ore] || mineName(pair.ore)) : mineName(pair.ore)) : kindName(pair.at));
-  const rungName = (pair) => (pair.ore && pair.mk === 1 ? placeName_(pair) : T.t('capAtPlace', { name: placeName_(pair), level: pair.mk }));
-  // what a kind with nothing to make is waiting for, as a caption tail
+  const pairKeys = (pair) => (pair && pair.keys ? pair.keys.map((c) => (c === 'Shift' ? '⇧' : c.toUpperCase())).join(' ') : '');
+  // an introduction named as the place that opens it: the mine of its raw,
+  // or the machine whose recipe reaches it
+  const placeName_ = (pair) => (pair.ore ? mineName(pair.ore) : pair.at ? kindName(pair.at) : pair.id);
+  // what a machine with nothing to make is waiting for, as a caption tail:
+  // the inputs its starting recipe still lacks, in the recipe list's words
   function afterTail(kind) {
-    const need = CHAIN.whatUnlocks(kind, profile);
-    if (!need || !need.length) return need ? '' : T.t('capAfterDeeper');
-    return T.t('capAfter', { list: need.map(rungName).join(' + ') });
+    const r = startingRecipe(kind);
+    if (!r) return '';
+    const missing = Object.keys(r.in).filter((mat) => !CHAIN.matExists(profile, mat));
+    return missing.length ? T.t('capRecipeLater', { mats: missing.map(matName).join(' / ') }) : '';
   }
   const recipeInputList = (r) => Object.entries(r.in).map(([mat, k]) => `${k} ${matName(mat)}`).join(' + ');
-  // what a kind would make once it stands there: the first recipe it offers,
-  // read out. This is the build row's second line — the row is named for the
-  // machine, so the line under it is worth spending on what the machine does.
-  function makesLine(kind) {
+  // the recipe a kind would start on once it stands there: its earliest
+  // whose inputs have been held, else simply its earliest (pickRecipe)
+  const startingRecipe = (kind) => {
     const offered = CHAIN.offerableRecipes(kind, profile);
-    if (!offered.length) return '';
-    const r = offered[0];
-    return T.t('capMakes', { out: matName(r.out), inputs: recipeInputList(r) });
+    return offered.find((r) => CHAIN.inputsExist(r, profile)) || offered[0] || null;
+  };
+  // what a kind would make once it stands there, read out, with any input
+  // not found yet named. This is the build row's second line — the row is
+  // named for the machine, so the line under it is worth spending on what
+  // the machine does.
+  function makesLine(kind) {
+    const r = startingRecipe(kind);
+    if (!r) return '';
+    return T.t('capMakes', { out: matName(r.out), inputs: recipeInputList(r) }) + afterTail(kind);
   }
   function beltWhy(why, from) {
     const table = T.t('beltWhy') || {};
@@ -718,10 +751,11 @@
     const tx = Math.floor(at.x / 16), ty = Math.floor((at.y - 1) / 16);
     for (const n of CHAIN.unbuiltNodes(profile)) {
       const b = MAPKIT.veinBox(n);
-      if (tx >= b.c0 && tx <= b.c1 && ty >= b.r0 && ty <= b.r1) return (T.t('veinNames') || {})[n.ore] || '';
+      if (tx >= b.c0 && tx <= b.c1 && ty >= b.r0 && ty <= b.r1) return veinName(n.ore);
     }
     return '';
   }
+  const veinName = (ore) => (T.t('veinNames') || {})[ore] || T.t('veinOf', { name: matName(ore) });
   function refreshCaption() {
     if (captionFlash) return;
     if (autoTyping) { setCaption('', T.t('capDebugAuto'), 'ok'); return; }
@@ -738,19 +772,19 @@
       const row = mm.rows[mm.sel] || {};
       let text = row.caption || '';
       let cls = '';
-      if (row.enabled === false) { cls = 'dim'; if (row.priced) text += T.t('capUnaffordable'); }
+      if (row.enabled === false || row.grey) cls = 'dim';
       else if (row.action && row.action.type === 'socket') cls = 'ok';
       if (row.ok === false && row.action === null && spool) cls = 'no';
       setCaption(row.title || '', text, cls);
       return;
     }
     if (placing) {
-      if (placing.kind === 'mine' && !placing.vein) { setCaption('', T.t('capPlaceMine'), 'no'); return; }
-      if (placing.later) { setCaption('', T.t('capVeinLater', { name: mineName(placing.vein.ore) }), 'no'); return; }
-      const name = placing.kind === 'mine' ? mineName(placing.vein.ore) : kindName(placing.kind);
+      const name = placing.kind === 'mine' ? mineName(placing.ore) : kindName(placing.kind);
+      if (placing.kind === 'mine' && !placing.vein) { setCaption('', T.t('capPlaceMine', { name, vein: veinName(placing.ore) }), 'no'); return; }
+      if (placing.later) { setCaption('', T.t('capVeinLater', { name }), 'no'); return; }
       if (placing.poor) { setCaption('', T.t('capPlacePoor', { name }), 'no'); return; }
       if (!placing.ground) { setCaption('', T.t('capPlaceBad'), 'no'); return; }
-      setCaption('', placing.kind === 'mine' ? T.t('capPlaceMine') : T.t('capPlace', { name }), 'ok');
+      setCaption('', placing.kind === 'mine' ? T.t('capPlaceMine', { name, vein: veinName(placing.ore) }) : T.t('capPlace', { name }), 'ok');
       return;
     }
     if (spool && dock && dock.kind === 'machine' && dock.m.id !== spool.from) {
@@ -830,51 +864,57 @@
   // Space turns it a quarter clockwise, and a hold builds it on good
   // ground. On bad ground — or over the open menu — the hold cancels
   // instead. Mines are rows in the same menu: their ghost asks to be stood
-  // on a free vein, and prices itself off the vein under it.
-  // The mine's price lives on the vein — an open ore's extra-mine price, or
-  // the next rung's opening price — so the row carries no one price of its
-  // own: while any vein can be paid for it offers itself bare, and the ghost
-  // prices the vein under it. When veins stand free but the bag covers none
-  // of them, affordability is numbers, never words (the menu ruling,
-  // 2026-08-21; fixed here 2026-08-27 — the old caption said "no free vein"
-  // while veins stood free): the row greys with the price of the vein
-  // needing the least more gathering, that vein's ore in front, the missing
-  // counts red. Words keep only the two priceless states: every vein taken,
-  // or the free ones not for sale yet. An unaffordable ghost never happens.
-  function mineRow() {
-    const title = T.t('capBuild', { kind: kindName('mine') });
-    const priced = [];
-    let free = 0;
-    for (const n of CHAIN.unbuiltNodes(profile)) {
-      free++;
-      const price = CHAIN.oreOpen(profile, n.ore) ? CHAIN.priceExtraMine(n.ore) : CHAIN.priceNode(n.ore);
+  // on a free vein of their own raw.
+  // Every raw's mine is its own building with its own price (2026-09-13):
+  // an Iron Ore Mine and a Copper Ore Mine cost different things, so they
+  // stand as different rows, each with the one price it will charge. That
+  // price is an open raw's extra-mine price, or the raw's opening price
+  // while no mine of it stands yet. The rows follow the machines' rule for
+  // what is in view: every raw already open, every one whose price names a
+  // material in reach, and always the next one to open. A row with no free
+  // vein of its raw left says so in words; otherwise affordability is
+  // numbers (the menu ruling, 2026-08-21), the missing counts red.
+  function mineRows() {
+    const free = CHAIN.unbuiltNodes(profile);
+    const rows = [];
+    let nextShown = false;
+    for (const mn of CHAIN.MINES) {
+      const ore = mn.raw;
+      const open = CHAIN.oreOpen(profile, ore);
+      const price = open ? CHAIN.priceExtraMine(ore) : CHAIN.priceNode(ore);
       if (!price) continue;
-      if (canPay(price)) return { kind: 'mine', enabled: true, title, caption: T.t('capBuildMinePick'), action: { type: 'pick', kind: 'mine' } };
-      priced.push({ ore: n.ore, price, gap: Object.entries(price).reduce((a, [mat, k]) => a + Math.max(0, k - CHAIN.bagAvail(profile.bag, mat)), 0) });
-    }
-    if (priced.length) {
-      const near = priced.reduce((a, b) => (b.gap < a.gap ? b : a));
-      return { kind: 'mine', ore: near.ore, items: near.price, priced: true, short: shortOf(near.price), enabled: false, title, caption: T.t('capBuildMinePick'), action: null };
-    }
-    return { kind: 'mine', enabled: false, title, caption: T.t(free ? 'capBuildMineLater' : 'capBuildMineNone'), action: null };
-  }
-  // every kind in view stands in the menu with its price — dimmed while the
-  // bag cannot cover it, and dimmed with the upgrade it waits for while it
-  // would have nothing to make (a machine is never born dead)
-  function buildMenuRows() {
-    const rows = [mineRow()];
-    for (const k of CHAIN.visibleKinds(profile)) {
-      const price = CHAIN.priceMachine(k, CHAIN.machinesOfKind(profile, k).length + 1);
-      const live = CHAIN.kindLive(k, profile);
-      // the row is named "Build Smelter"; the line under it says what the
-      // Smelter would then do — its first recipe — or what it waits for
-      const caption = live ? makesLine(k) : T.t('capNothingToMake') + afterTail(k);
-      rows.push({ kind: k, items: price, enabled: live && canPay(price), priced: live, short: shortOf(price), title: T.t('capBuild', { kind: kindName(k) }), caption, action: live ? { type: 'pick', kind: k } : null });
+      if (!open && !Object.keys(price).some((mat) => CHAIN.matInReach(profile, mat))) {
+        if (nextShown) continue;
+        nextShown = true;
+      }
+      const veins = free.some((n) => n.ore === ore);
+      rows.push({
+        kind: 'mine', ore, opens: mn.opens, items: price, enabled: veins && canPay(price), priced: veins, short: shortOf(price),
+        title: T.t('capBuild', { kind: mineName(ore) }), caption: T.t(veins ? 'capBuildMinePick' : 'capBuildMineNone'),
+        action: veins ? { type: 'pick', kind: 'mine', ore } : null,
+      });
     }
     return rows;
   }
+  // every kind in view stands in the menu with its price, dimmed only while
+  // the bag cannot cover it. Mines and machines share one list, in the
+  // order they open.
+  function buildMenuRows() {
+    const rows = mineRows();
+    // A building is never gated behind the materials its recipes take (user
+    // ruling 2026-09-13): its price is the whole gate, and one built before
+    // its inputs exist simply stands with nothing to make until they do.
+    // The line under the row says what it would make first, and names any
+    // input not found yet.
+    for (const k of CHAIN.visibleKinds(profile)) {
+      const price = CHAIN.priceMachine(k, CHAIN.machinesOfKind(profile, k).length + 1);
+      rows.push({ kind: k, opens: CHAIN.KINDS[k].opens, items: price, enabled: canPay(price), priced: true, short: shortOf(price), title: T.t('capBuild', { kind: kindName(k) }), caption: makesLine(k), action: { type: 'pick', kind: k } });
+    }
+    return rows.sort((a, b) => (a.opens || 0) - (b.opens || 0));
+  }
   function openBuildMenu() {
     buildMenu = { rows: buildMenuRows().concat(closeRow()), sel: 0 };
+    refreshInfo();
     FACTORY.showMenu('@player', buildMenu.rows, 0);
     refreshCaption();
     A.click();
@@ -882,6 +922,7 @@
   function closeBuildMenu() {
     buildMenu = null;
     FACTORY.clearMenu();
+    refreshInfo();
     refreshCaption();
   }
   function confirmBuildMenu() {
@@ -890,10 +931,10 @@
     if (!row || row.enabled === false || !row.action) { A.nope(); return; }
     if (isCloseRow(row)) { closeBuildMenu(); A.click(); return; }
     closeBuildMenu();
-    startPlacing(row.action.kind);
+    startPlacing(row.action.kind, row.action.ore);
   }
-  function startPlacing(kind) {
-    placing = { kind, face: 's', at: null, ok: false, vein: null, price: null, unlock: false };
+  function startPlacing(kind, ore) {
+    placing = { kind, ore: ore || null, face: 's', at: null, ok: false, vein: null, price: null, unlock: false };
     clearLine();
     refreshLessonLights();
     updatePlacing(true);
@@ -945,7 +986,34 @@
     else if (dir === 'n') { c0 = ptx - ((fp[0] - 1) >> 1); r0 = pty - fp[1]; }
     else if (dir === 'e') { c0 = ptx + 1; r0 = pty - ((fp[1] - 1) >> 1); }
     else { c0 = ptx - fp[0]; r0 = pty - ((fp[1] - 1) >> 1); }
-    if (!force && placing.at && placing.at[0] === c0 && placing.at[1] === r0) return;
+    if (!force && placing.aim && placing.aim[0] === c0 && placing.aim[1] === r0) return;
+    placing.aim = [c0, r0];
+    const mine = placing.kind === 'mine';
+    const aimBox = MAPKIT.boxAt([c0, r0], CHAIN.KINDS[placing.kind].size, placing.face);
+    const overlaps = (a, b) => a.c0 <= b.c1 && a.c1 >= b.c0 && a.r0 <= b.r1 && a.r1 >= b.r0;
+    // a mine stands exactly on a vein of its own raw (a Copper Ore Mine over
+    // an iron vein is no mine), so it is not made to be lined up by hand:
+    // once the ghost touches such a free vein it snaps onto the vein's tiles,
+    // seated the way the mine faces (reseatVeins turns the vein to match).
+    // Veins never lie close together, so the nearest touched one is the one
+    // meant.
+    let vein = null;
+    const veins = new Set();
+    let best = Infinity;
+    for (const n of CHAIN.unbuiltNodes(profile)) {
+      const vb = MAPKIT.veinBox(n);
+      if (mine) {
+        if (n.ore !== placing.ore) continue;
+        const seat = MAPKIT.veinBox({ ...n, vert: fp[1] > fp[0] });
+        if (!overlaps(aimBox, vb) && !overlaps(aimBox, seat)) continue;
+        const d = Math.abs(seat.c0 - c0) + Math.abs(seat.r0 - r0);
+        if (d < best) { best = d; vein = n; c0 = seat.c0; r0 = seat.r0; }
+      }
+      // an unopened seam is not building ground for anything else: a smelter
+      // parked over one buries the ore for good. The site maps kept a site
+      // and a vein apart by hand; free build has to say it out loud.
+      else for (let ty = vb.r0; ty <= vb.r1; ty++) for (let tx = vb.c0; tx <= vb.c1; tx++) veins.add(tx + ',' + ty);
+    }
     placing.at = [c0, r0];
     const phantom = { kind: placing.kind, at: [c0, r0], face: placing.face };
     const box = CHAIN.machineBox(phantom);
@@ -954,18 +1022,6 @@
     for (const om of profile.machines) {
       const ob = CHAIN.machineBox(om);
       for (let ty = ob.r0; ty <= ob.r1; ty++) for (let tx = ob.c0; tx <= ob.c1; tx++) bodies.add(tx + ',' + ty);
-    }
-    const mine = placing.kind === 'mine';
-    // a mine stands on a vein: the first free vein its body covers claims it
-    let vein = null;
-    const veins = new Set();
-    for (const n of CHAIN.unbuiltNodes(profile)) {
-      const vb = MAPKIT.veinBox(n);
-      if (mine && !vein && box.c0 <= vb.c1 && box.c1 >= vb.c0 && box.r0 <= vb.r1 && box.r1 >= vb.r0) vein = n;
-      // an unopened seam is not building ground for anything else: a smelter
-      // parked over one buries the ore for good. The site maps kept a site
-      // and a vein apart by hand; free build has to say it out loud.
-      else if (!mine) for (let ty = vb.r0; ty <= vb.r1; ty++) for (let tx = vb.c0; tx <= vb.c1; tx++) veins.add(tx + ',' + ty);
     }
     // the price: a machine's is its kind's next instance; a mine prices
     // itself off the vein under it — an open ore's extra-mine price, or the
@@ -1008,7 +1064,7 @@
     if (!placing.ok) { cancelPlacing(); return; }
     const { kind, face, at, price, vein, unlock } = placing;
     let pair = null;
-    if (unlock) pair = E.unlockPair(profile, CHAIN.pairOf(vein.ore, 1));
+    if (unlock) pair = E.unlockIntro(profile, CHAIN.mineLesson(vein.ore));
     if (price) spend(price);
     const m = { id: 'm' + (profile.nextMachineId++), kind, at: at.slice(), face, auto: false };
     if (kind === 'mine') { m.ore = vein.ore; m.node = vein.index; }
@@ -1034,6 +1090,7 @@
     if (sel < 0) sel = rows.findIndex((r) => r.enabled !== false);
     if (sel < 0) sel = 0;
     menu = { rows, sel };
+    refreshInfo();
     FACTORY.showMenu(dock.id, rows, sel);
     refreshCaption();
     A.click();
@@ -1042,6 +1099,7 @@
   function closeMenu() {
     menu = null;
     FACTORY.clearMenu();
+    refreshInfo();
     refreshCaption();
   }
   function moveMenu(dir) {
@@ -1064,27 +1122,12 @@
 
   // ---------- actions ----------
   function performAction(act) {
-    if (act.type === 'mk') {
-      if (!canPay(act.price)) return;
-      const np = CHAIN.pairOf(act.ore, act.level);
-      if (!np || CHAIN.oreMk(profile, act.ore) + 1 !== act.level) return;
-      // a Mk retools by construction now: the mines' new depth-product has
-      // no ⚙ yet, so they are back in your hands until it is run in and
-      // bought — nothing is switched off, the deeper seam is simply new work
-      const retooled = CHAIN.machinesOfOre(profile, act.ore).some((m) => autoLive(m));
-      const site = dock ? { dockId: dock.id } : null;
+    if (act.type === 'complete') {
+      if (!canPay(act.price) || profile.finishedAt) return;
       spend(act.price);
-      const pair = E.unlockPair(profile, np);
-      const landed = afterPurchase(site, act.price);
-      if (pair) { pendingUnlock = pair; setTimeout(() => showUnlockCard(pair, retooled), landed + 140); }
-    } else if (act.type === 'mk-at') {
-      if (!canPay(act.price)) return;
-      const np = CHAIN.pairOf(act.kind, act.level);
-      if (!np || CHAIN.kindMk(profile, act.kind) + 1 !== act.level) return;
-      spend(act.price);
-      const pair = E.unlockPair(profile, np);
+      profile.finishedAt = Date.now();
       const landed = afterPurchase(dock ? { dockId: dock.id } : null, act.price);
-      if (pair) { pendingUnlock = pair; setTimeout(() => showUnlockCard(pair, false), landed + 140); }
+      setTimeout(showFinishCard, landed + 140);
     } else if (act.type === 'auto') {
       if (!canPay(act.price) || !act.key) return;
       spend(act.price);
@@ -1094,6 +1137,9 @@
       const landed = afterPurchase({ dockId: 'm:' + act.m.id }, act.price);
       setTimeout(() => showBenchAutoCard(act.m), landed + 140);
     } else if (act.type === 'recipe') {
+      // the recipe already running: choosing it changes nothing, and the
+      // unit in progress is not thrown away
+      if (recipe === act.r && act.m.recipe === act.r.out) { A.click(); return; }
       act.m.recipe = act.r.out; act.m.recipeIn = JSON.stringify(act.r.in);
       recipe = act.r;
       unitAcc = 0; unitPaid = false; dryNow = false;
@@ -1113,7 +1159,7 @@
     } else if (act.type === 'collect') {
       // the machine empties whether or not the bag can take it all; a stack
       // already at the cap swallows nothing, and the surplus is gone
-      if (!SIM.hasOutput(act.m)) return;
+      if (!SIM.hasCollectable(act.m)) return;
       const got = SIM.collect(profile, act.m);
       const total = Object.values(got).reduce((a, b) => a + b, 0);
       for (const mat of Object.keys(got)) { profile.seen[mat] = true; flyMat(mat, dock.id, 3); }
@@ -1121,6 +1167,7 @@
       E.saveProfile(profile);
       refreshInventory();
       refreshStatus();
+      checkIntroUnlocks();
     } else if (act.type === 'feed') {
       const moved = SIM.feed(profile, act.m);
       const total = Object.values(moved).reduce((a, b) => a + b, 0);
@@ -1241,17 +1288,18 @@
   // info rows above the docked machine: the one recipe it is running now
   // (with ✗ while the bag can't pay for it), then what stands in its bins.
   // Every other choice — the other recipes, the spool, ⚙, taking it down —
-  // waits in the menu behind the hold.
+  // waits in the menu behind the hold. A mine's recipe is its raw. While a
+  // menu is open the rows stand down, so the two never stack (2026-09-13).
   function refreshInfo() {
     if (!dock || dock.kind !== 'machine') { bufShown = ''; FACTORY.clearInfo(); return; }
     const m = dock.m;
     SIM.ensureMachine(m);
     bufShown = bufSig(m);
+    if (menu || buildMenu) { FACTORY.clearInfo(); return; }
     const rows = [];
-    if (m.kind !== 'mine') {
-      if (!recipe) rows.push({ pre: '✗', enabled: false });
-      else rows.push({ items: recipe.in, out: recipe.out, enabled: true, ok: !SIM.canTake(profile, m, recipe.in) && !unitPaid ? false : undefined });
-    }
+    if (m.kind === 'mine') rows.push({ outs: { [CHAIN.mineMat(profile, m)]: 1 }, enabled: true });
+    else if (!recipe) rows.push({ pre: '✗', enabled: false });
+    else rows.push({ items: recipe.in, outs: SIM.outsOf(recipe), enabled: true, ok: !SIM.canTake(profile, m, recipe.in) && !unitPaid ? false : undefined });
     // what is inside the machine: inputs waiting, outputs made
     SIM.ensureMachine(m);
     const inb = nonZero(m.buf.in), outb = nonZero(m.buf.out);
@@ -1283,7 +1331,7 @@
     if (dock && dock.kind === 'machine') {
       const m = dock.m;
       if (m.kind === 'mine') gain(one(CHAIN.mineMat(profile, m)));
-      else if (recipe) { cost(recipe.in); gain(one(recipe.out)); }
+      else if (recipe) { cost(recipe.in); gain(SIM.outsOf(recipe)); }
     }
     return marks;
   }
@@ -1291,18 +1339,8 @@
   function markRow(row, cost, gain) {
     if (!row) return;
     const act = row.action;
-    // the build menu: a kind costs its next instance, and the mine row costs
-    // whichever vein it ends up standing on, every one it could still pay
-    // for, until the ghost narrows that to the one underfoot
-    if (buildMenu) {
-      if (row.kind !== 'mine') { cost(row.items); return; }
-      if (!act) { cost(row.items); return; }        // greyed: the vein it named
-      for (const n of CHAIN.unbuiltNodes(profile)) {
-        const p = CHAIN.oreOpen(profile, n.ore) ? CHAIN.priceExtraMine(n.ore) : CHAIN.priceNode(n.ore);
-        if (p && canPay(p)) cost(p);
-      }
-      return;
-    }
+    // the build menu: every row, a mine's included, costs its one price
+    if (buildMenu) { cost(row.items); return; }
     // ✗ at a machine marks what the machine cost, and only that. Its buffers
     // come out with it too, but those were never consumed to put it there:
     // handing them back is not a refund, and marking them would price the
@@ -1315,7 +1353,7 @@
     }
     // the live machine, not the row: a menu is built once and its buffers
     // go on filling underneath it
-    if (act && act.type === 'recipe') { cost(act.r.in); gain(one(act.r.out)); return; }
+    if (act && act.type === 'recipe') { cost(act.r.in); gain(SIM.outsOf(act.r)); return; }
     if (act && act.type === 'feed') { const r = SIM.recipeOf(profile, act.m); if (r) cost(r.in); return; }
     if (act && act.type === 'collect') { SIM.ensureMachine(act.m); gain(nonZero(act.m.buf.out)); return; }
     if (act && (act.type === 'spool' || act.type === 'socket')) return;
@@ -1506,6 +1544,8 @@
       placing: placing ? { kind: placing.kind, face: placing.face, at: placing.at, ok: placing.ok } : null,
       spool, spoolRoute: spoolRoute ? spoolRoute.length : null,
     }),
+    // the live save, for the harnesses; developer mode only
+    live: () => (DEVMODE.isEnabled() ? profile : null),
   };
 
   // debug: Ctrl+Alt+M — 500 of every material in the tree, whether or not this
@@ -1598,7 +1638,6 @@
     autoLastFrame = performance.now();
     autoSavedAt = autoLastFrame;
     clearHint();
-    A.setMuted(true);            // a few hundred key clicks a second is a buzzsaw
     refreshCaption();            // the caption says so for as long as the key is down
     autoRaf = requestAnimationFrame(autoTypeFrame);
   }
@@ -1607,7 +1646,6 @@
     autoTyping = false;
     if (autoRaf) cancelAnimationFrame(autoRaf);
     autoRaf = null;
-    A.setMuted(false);
     if (profile) E.saveProfile(profile);
     renderLine();
     flushFloats();
@@ -1678,6 +1716,28 @@
       return;
     }
     if (overlayOpen || menu || buildMenu || placing) return;
+    // a composed glyph — the em dash, the guillemets — arrives as the
+    // character itself, whatever stroke made it (Birman's right Alt chord,
+    // a numpad code, macOS Option): the glyph is what is checked, never
+    // the stroke (ruling 2026-09-10)
+    if (LAYOUT.COMPOSED && typeof e.key === 'string' && LAYOUT.COMPOSED[e.key] !== undefined) {
+      if (!canTypeHere()) return;
+      e.preventDefault();
+      composedAt = performance.now();
+      noteCompose(e.altKey || e.ctrlKey ? 'chord' : 'key');
+      handleTyped(e.key);
+      return;
+    }
+    // a glyph this layout has no key for at all (the extended marks the
+    // standard Russian layout leaves to the Latin one): the character the
+    // OS sends is what is checked, so a player types it the way they
+    // really would — in whatever layout produces it
+    if (canTypeHere() && lineText[pos] !== undefined && lineText[pos] !== ' ' && LAYOUT.CHAR_TO_CODE[lineText[pos]] === undefined
+      && typeof e.key === 'string' && e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      handleTyped(e.key);
+      return;
+    }
     if (e.ctrlKey || e.altKey || e.metaKey) return;
     if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') return;
     if (!canTypeHere()) return;
@@ -1694,6 +1754,32 @@
     if (ARROWS[e.code]) FACTORY.setMove(ARROWS[e.code], false);
     if (e.code === 'Space') endSpace();
   });
+  // a numpad Alt code hands its character over on keypress rather than on
+  // a keydown of its own; the keydown above marks the time it took a glyph
+  // so a chord is never counted twice
+  let composedAt = 0;
+  window.addEventListener('keypress', (e) => {
+    if (!LAYOUT.COMPOSED || typeof e.key !== 'string' || LAYOUT.COMPOSED[e.key] === undefined) return;
+    if (performance.now() - composedAt < 120) return;
+    if (!overlay.classList.contains('hidden') || menu || buildMenu || placing || !canTypeHere()) return;
+    e.preventDefault();
+    composedAt = performance.now();
+    noteCompose('code');
+    handleTyped(e.key);
+  });
+  // how this machine composes the glyphs no key prints, as last seen: a
+  // right Alt chord (a typographic layout is installed), a numpad code, or
+  // a key of its own. Shown in the settings, so a player can tell whether
+  // the layout they installed is the one the game is hearing.
+  const COMPOSE_KEY = 'mk.compose';
+  function noteCompose(how) {
+    try { if (localStorage.getItem(COMPOSE_KEY) !== how) localStorage.setItem(COMPOSE_KEY, how); } catch { /* non-fatal */ }
+  }
+  function composeStatus() {
+    let how = null;
+    try { how = localStorage.getItem(COMPOSE_KEY); } catch { /* unknown */ }
+    return (T.t('setComposeStates') || {})[how || 'none'] || '';
+  }
 
   function handleTyped(typed) {
     const expected = lineText[pos];
@@ -1800,6 +1886,7 @@
       refreshInventory();
       E.saveProfile(profile);   // the autotyper saves on its own beat instead
     }
+    checkIntroUnlocks();
     // the bag may now pay for a different recipe
     if (dock && dock.kind === 'machine' && dock.m.kind !== 'mine') recipe = pickRecipe(dock.m);
     if (!autoTyping) refreshStatus();
@@ -1813,6 +1900,30 @@
   }
   function proceedAfterLine() {
     newLine();
+  }
+
+  // ---------- keys opened at a machine ----------
+  // A key group's recipe costs its inputs, and that is the whole price of
+  // the keys: the first time every input has been held, the keys open and
+  // the card says so. Mines open their keys when they are built (placeNow).
+  function checkIntroUnlocks() {
+    if (!profile) return;
+    for (const l of CHAIN.INTROS) {
+      if (l.kind !== 'keys' || profile.unlocked[l.id]) continue;
+      const r = CHAIN.recipeOfLesson(l.id);
+      if (!r || !CHAIN.inputsExist(r, profile)) continue;
+      const pair = E.unlockIntro(profile, l.id);
+      if (!pair) continue;
+      E.saveProfile(profile);
+      refreshKeyboard();
+      const show = () => {
+        if (!overlay.classList.contains('hidden') || (pendingUnlock && pendingUnlock !== pair)) { setTimeout(show, 400); return; }
+        pendingUnlock = pair;
+        showUnlockCard(pair);
+      };
+      setTimeout(show, 200);
+      return;   // one card at a time; the next call finds the next
+    }
   }
 
   // ---------- docking ----------
@@ -1874,7 +1985,7 @@
     const at = FACTORY.playerPos();
     // a stack the bag has no room for stays lying where it is (canTake);
     // a partly-taken one falls back with the remainder
-    const got = DROPS.tick(profile, dt, at.x, at.y, (mat) => (profile.bag[mat] || 0) < CHAIN.TUNING.BAG_CAP);
+    const got = DROPS.tick(profile, dt, at.x, at.y, (mat) => !CHAIN.isFluid(mat) && (profile.bag[mat] || 0) < CHAIN.TUNING.BAG_CAP);
     if (!got) return false;
     for (const g of got) {
       const kept = CHAIN.bagAdd(profile.bag, g.mat, g.n);
@@ -1886,6 +1997,7 @@
     }
     refreshInventory();
     refreshStatus();
+    checkIntroUnlocks();
     return true;
   }
   function simTick() {
@@ -1959,17 +2071,22 @@
   function showUnlockCard(pair, retooled) {
     overlayRerender = () => showUnlockCard(pair, retooled);
     const keys = pair.keys;
-    const first = keys[0];
-    const code = LAYOUT.CHAR_TO_CODE[first];
-    let finger = T.fingerName(LAYOUT.FINGER[code]);
-    if (LAYOUT.NEEDS_SHIFT.has(first)) finger = T.t('shiftFinger', { finger });
+    const first = keys.find((k) => k !== 'Shift') || keys[0];
+    const composed = LAYOUT.COMPOSED && LAYOUT.COMPOSED[first];
+    const code = composed ? composed.split('+').pop() : LAYOUT.CHAR_TO_CODE[first];
+    let finger = code && LAYOUT.FINGER[code] ? T.fingerName(LAYOUT.FINGER[code]) : '';
+    if (first === 'Shift') finger = T.t('shiftBoth');
+    else if (composed) finger = ((T.t('strokeNames') || {})[composed.split('+')[0]] || composed.split('+')[0]) + ' + ' + finger;
+    else if (LAYOUT.NEEDS_SHIFT.has(first)) finger = T.t('shiftFinger', { finger });
     const freq = keys.reduce((a, k) => a + (L.LETTER_FREQ[k] || 0), 0).toFixed(1);
-    const big = keys.map((k) => (L.PUNCT.has(k) ? k : k.toUpperCase() + ' ' + k)).join(' · ');
+    const big = keys.map((k) => (k === 'Shift' ? '⇧' : (L.PUNCT.has(k) || /^\d$/.test(k)) ? k : k.toUpperCase() + ' ' + k)).join(' · ');
     const title = T.t('unlockTitlePair', { keys: `<span class="big-letter">${big}</span>` });
+    // marks and digits carry no share of the letter count: the finger alone
+    const meta = +freq > 0 ? T.t('unlockMeta', { finger, freq }) : finger;
     showOverlay(`
       <div class="card-station">${T.t('unlockStation')}</div>
       <h2>${title}</h2>
-      <p class="muted">${T.t('unlockMeta', { finger, freq })}</p>
+      <p class="muted">${meta}</p>
       <p>${T.t('unlockNote')}</p>
       ${retooled ? `<p class="muted">${T.t('unlockRetool')}</p>` : ''}
       <button id="ov-continue" class="btn-primary">${T.t('unlockGo')}</button>
@@ -1978,11 +2095,14 @@
     // key is already wearing the colour of the mine that paid for it
     const caps = [];
     for (const k of keys) {
-      const cap = keycapEls[LAYOUT.CHAR_TO_CODE[k]];
-      if (!cap) continue;
-      paintBand(cap, k, true);
-      cap.classList.add('unlock-glow');
-      caps.push(cap);
+      const codes = k === 'Shift' ? ['ShiftLeft', 'ShiftRight'] : [LAYOUT.CHAR_TO_CODE[k]];
+      for (const c of codes) {
+        const cap = keycapEls[c];
+        if (!cap) continue;
+        paintBand(cap, k === 'Shift' ? undefined : k, true);
+        cap.classList.add('unlock-glow');
+        caps.push(cap);
+      }
     }
     $('ov-continue').onclick = () => {
       for (const cap of caps) cap.classList.remove('unlock-glow');
@@ -1998,7 +2118,7 @@
     A.fanfare();
     showOverlay(`
       <div class="card-station">${T.t('benchAutoStation')}</div>
-      <h2>${T.t('benchAutoTitle', { name: m.kind === 'mine' ? (T.t('oreMineNames')[m.ore] || m.ore) : (T.t('kindNames')[m.kind] || m.kind) })}</h2>
+      <h2>${T.t('benchAutoTitle', { name: machineName(m) })}</h2>
       <p>${T.t(m.kind === 'mine' ? 'benchAutoNote' : 'autoNoteProcessor')}</p>
       <button id="ov-continue" class="btn-primary">${T.t('automationGo')}</button>
     `);
@@ -2014,7 +2134,7 @@
     showOverlay(`
       <div class="card-station">${T.t('finishStation')}</div>
       <h2>${T.t('finishTitle')}</h2>
-      <p>${T.t('finishNote', { k: CHAIN.TUNING.K_HEAVY })}</p>
+      <p>${T.t('finishNote', { k: CHAIN.COMPLETION.pages.length })}</p>
       ${hours ? `<p class="muted">${T.t('finishHours', { hours })}</p>` : ''}
       <button id="ov-continue" class="btn-primary">${T.t('finishGo')}</button>
     `);
@@ -2228,7 +2348,9 @@
     for (const k of Object.keys(invShown)) delete invShown[k];
     for (const k of Object.keys(countHint)) delete countHint[k];
     for (const k of new Set([...Object.keys(countTimers), ...Object.keys(countWaits)])) stopCount(k);
-    hudKeysShown = [];
+    // null, not []: a world with nothing seen yet (a fresh reset) must still
+    // clear the rows the last world left on the HUD
+    hudKeysShown = null;
     cancelCharge(); spaceDown = false;
 
     spool = null; spoolRoute = null; FACTORY.setSpool(false);
@@ -2362,7 +2484,7 @@
   function handleImportText(text) {
     let data = null;
     try { data = JSON.parse(text); } catch { /* invalid JSON → error card below */ }
-    if (!data || data.app !== 'mechanical-keyboarding' || !data.profile || (data.profile.version !== 1 && data.profile.version !== 2)) {
+    if (!data || data.app !== 'mechanical-keyboarding' || !data.profile || data.profile.version !== 4) {
       showImportError();
       return;
     }
@@ -2430,6 +2552,11 @@
           <span class="seg" id="set-sky">${skySwitchHTML()}</span>
         </div>
         <p class="set-note">${T.t('setSkyNote')}</p>
+        <div class="set-row">
+          <span class="set-label">${T.t('setCompose')}</span>
+          <span class="seg"><span class="seg-cur">${composeStatus()}</span></span>
+        </div>
+        <p class="set-note">${T.t('setComposeNote')}</p>
         <div class="set-row">
           <span class="set-label">${T.t('setSaveFile')}</span>
           <span class="seg"><button class="seg-btn" id="set-export">${T.t('setExport')}</button><button class="seg-btn" id="set-import">${T.t('setImport')}</button></span>

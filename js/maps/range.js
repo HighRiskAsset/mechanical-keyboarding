@@ -38,9 +38,9 @@
   // pitch, and nothing else about it moved: every seam that was here is on
   // the ground it was on, so a save comes back untouched.
   const COLS = Array.from({ length: 19 }, (_, k) => 112 + 80 * k);
-  const NODE_KINDS = ['iron', 'copper', 'stone', 'quartz', 'coal', 'oil',
-    'iron', 'copper', 'stone', 'quartz', 'coal', 'oil',
-    'iron', 'copper', 'stone', 'quartz', 'coal', 'oil', 'copper'];
+  const NODE_KINDS = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6',
+    'R7', 'R8', 'R9', 'R10', 'R11', 'R12',
+    'R13', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6'];
   // every ore gets at least one of each seating, on both of its first two turns
   const VERT = new Set([0, 3, 4, 7, 8, 11, 13, 14, 16, 17]);
   const NODES = COLS.map((x, k) => (VERT.has(k)

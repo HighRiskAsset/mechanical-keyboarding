@@ -217,11 +217,43 @@
   // ---------- materials ----------
   // A material is one cell; its grade is a second sprite laid over it, never
   // baked in (two grades, twelve frames, shared by the whole game).
+  // The v4 tree's materials, machines and veins have no cells of their own
+  // yet (placeholder art, 2026-09-12): each rides an old cell chosen by its
+  // pool and number, so the bag, the belts and the menus stay legible until
+  // the art is drawn. A cell named for the id itself wins the moment it is
+  // in the sheet, so the art lands one material at a time.
+  const RAW_ART = { R1: 'iron', R2: 'copper', R3: 'stone', R4: 'coal', R5: 'oil3', R6: 'quartz2', R7: 'quartz', R8: 'coal3', R9: 'oil', R10: 'stone2', R11: 'quartz3', R12: 'oil2', R13: 'iron2' };
+  const POOL_ART = {
+    S: ['bronze', 'castiron', 'qziron', 'steel', 'brass', 'blackiron', 'gunmetal', 'glass', 'naphtha', 'cokebrass', 'petrolglass', 'flashcopper', 'qzbronze', 'caststeel'],
+    K: ['copper2', 'iron2', 'stone2', 'coal2', 'quartz2', 'oil2', 'quartz3', 'coal3'],
+    W: ['parts', 'mold', 'rivetiron', 'bellquartz'],
+    P: ['modules', 'fast'],
+    T: ['sealed', 'bound', 'blackbrass', 'qzsteel', 'cokeiron'],
+    B: ['coal2', 'stone2', 'coal3', 'copper2', 'iron2', 'quartz2', 'oil2'],
+    G: ['crate', 'heavy'],
+  };
+  function artOf(kind) {
+    const m = /^([A-Z])(\d+)$/.exec(kind || '');
+    if (!m) return null;
+    if (m[1] === 'R') return RAW_ART[kind] || null;
+    const list = POOL_ART[m[1]];
+    return list ? list[(+m[2] - 1) % list.length] : null;
+  }
   const matName = (kind) => {
     if (entry('materials', 'mat.' + kind)) return 'mat.' + kind;
+    const art = artOf(kind);
+    if (art && entry('materials', 'mat.' + art)) return 'mat.' + art;
     console.warn('sprites: no material cell for ' + kind);
     return 'mat.crate';
   };
+  const VEIN_ART = { R1: 'iron', R2: 'copper', R3: 'stone', R4: 'coal', R5: 'oil', R6: 'titan', R7: 'quartz', R8: 'coal', R9: 'oil', R10: 'stone', R11: 'quartz', R12: 'oil', R13: 'titan' };
+  const veinName = (kind, vert) => {
+    const s = '.' + (vert ? 'v' : 'h');
+    if (entry('veins', 'vein.' + kind + s)) return 'vein.' + kind + s;
+    return 'vein.' + (VEIN_ART[kind] || 'iron') + s;
+  };
+  const KIND_ART = { M1: 'smelter', M2: 'foundry', M3: 'manufacturer', M4: 'constructor', M5: 'molder', M6: 'assembler', M7: 'foundry', M8: 'assembler', M9: 'molder', M10: 'fastener', M11: 'crane', M12: 'manufacturer' };
+  const iconName = (kind) => (entry('materials', 'icon.' + kind) ? 'icon.' + kind : entry('materials', 'icon.' + KIND_ART[kind]) ? 'icon.' + KIND_ART[kind] : 'icon.default');
   // 0 = plain (Mk1, and everything past the ore level), 1 = deep, 2 = pure
   function matGrade(kind) {
     const spec = (window.CHAIN && window.CHAIN.MATS && window.CHAIN.MATS[kind]) || null;
@@ -302,7 +334,7 @@
     spoolTex: () => cellTex('belts', 'spool', 0),
     matDotTex: () => cellTex('belts', 'dot', 0),
     // veins, scenery, props
-    nodeTex: (kind, vert) => cellTex('veins', 'vein.' + kind + '.' + (vert ? 'v' : 'h'), 0),
+    nodeTex: (kind, vert) => cellTex('veins', veinName(kind, vert), 0),
     flowerTex: (s) => cellTex('scenery', 'flower.' + (((s | 0) % 4 + 4) % 4), 0),
     sceneryTex: (kind) => cellTex('scenery', kind, 0),
     propTex: (kind) => cellTex('props', kind, 0),
@@ -320,7 +352,7 @@
     textTex: (str, fg) => cachedTex('t:' + fg + '|' + str, () => textCanvas(str, fg)),
     // the 12px menu icons: one per machine kind, plus 'belt' and 'pipe' for
     // the rows that build a run
-    kindIconTex: (kind) => cellTex('materials', entry('materials', 'icon.' + kind) ? 'icon.' + kind : 'icon.default', 0),
+    kindIconTex: (kind) => cellTex('materials', iconName(kind), 0),
     // materials
     MAT_PX: 10, MAT_SPARK_FRAMES: 12, MAT_SPARK_PEAK: 2, matGrade,
     matTex: (kind) => cellTex('materials', matName(kind), 0),
@@ -329,7 +361,7 @@
     matURL: (kind, frame) => matFlat(kind, frame).toDataURL(),
     vignetteURL: () => cell('vignette', 'vignette').toDataURL(),
     // raw canvases for the dev proof pages (dev/map.html, dev/sky.html)
-    nodeCanvas: (kind, vert) => cell('veins', 'vein.' + kind + '.' + (vert ? 'v' : 'h')),
+    nodeCanvas: (kind, vert) => cell('veins', veinName(kind, vert)),
     sceneryCanvas: (kind) => cell('scenery', kind),
     propCanvas: (kind) => cell('props', kind),
     machineCanvas: (tier, frame, mode, facing) => cell('mine', tier + '.' + (facing || 's') + '.' + (mode || 'work'), frame),

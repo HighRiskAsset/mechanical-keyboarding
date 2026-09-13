@@ -2445,12 +2445,32 @@
       '..AABBBBBB..',
       '..B..BB..B..',
     ],
+    // `pick` is never shown alone: a mine row lays it over the ore the mine
+    // digs, so the row keeps one icon's width and the ore beside a price
+    // cannot be read as part of the price. The pick hugs the top right
+    // corner and leaves the ore's lower left clear, where its grade spark is.
+    // Key: S steel · L the head's worn points · T the haft.
+    pick: [
+      '.....OOOOO..',
+      '....OLSSSSO.',
+      '.....OOOOSSO',
+      '.......OTOSO',
+      '......OTOOSO',
+      '.....OTO.OLO',
+      '....OTO...O.',
+      '....OO......',
+      '............',
+      '............',
+      '............',
+      '............',
+    ],
   };
   const UI_KEY = {
     O: P.ironO, I: P.iron, 2: P.iron2, 3: P.iron3, b: P.beltD,
     A: P.brass2, B: P.brass1, C: P.brass3,
     H: P.copper3, c: P.copper, d: P.copper2, D: P.copper4,
     o: P.soot, X: P.orange, g: P.glow,
+    S: P.steel, L: P.ironL, T: P.trunk,
   };
   function uiIcon(name) {
     const [c, x] = canvas(12, 12);

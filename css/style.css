@@ -18,6 +18,10 @@
      cap. --band-free is for the keys no mine sells: space and Shift. */
   --ore-iron: #8fb0d6; --ore-copper: #d8814e; --ore-stone: #b8ab8e;
   --ore-quartz: #e59ae0; --ore-coal: #7f8494; --ore-oil: #8b6fc4;
+  /* the v4 tree's raws (js/tree-ru.js), one band colour each */
+  --ore-R1: #8fb0d6; --ore-R2: #d8814e; --ore-R3: #b8ab8e; --ore-R4: #7f8494; --ore-R5: #4ba8d8;
+  --ore-R6: #e8c25a; --ore-R7: #e59ae0; --ore-R8: #d6d25a; --ore-R9: #8b6fc4; --ore-R10: #c98b6a;
+  --ore-R11: #8fd66e; --ore-R12: #a9d8e8; --ore-R13: #d67ab8;
   --band-free: #4f6f7a;
   --hand-l-bg: #12242e; --hand-r-bg: #1c2527;
 }

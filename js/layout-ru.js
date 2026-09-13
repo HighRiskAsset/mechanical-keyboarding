@@ -14,18 +14,28 @@
     KeyJ: 'о', KeyK: 'л', KeyL: 'д', Semicolon: 'ж', Quote: 'э',
     KeyZ: 'я', KeyX: 'ч', KeyC: 'с', KeyV: 'м', KeyB: 'и', KeyN: 'т',
     KeyM: 'ь', Comma: 'б', Period: 'ю', Slash: '.',
-    Minus: '-',
+    Minus: '-', Equal: '=', Backslash: '\\',
+    // the digits are keys like any other (lesson plan v4, 2026-09-12)
+    Digit1: '1', Digit2: '2', Digit3: '3', Digit4: '4', Digit5: '5', Digit6: '6', Digit7: '7', Digit8: '8', Digit9: '9', Digit0: '0',
     Space: ' ',
   };
 
-  // code → glyph when Shift is held (only the trainable ones). The comma at
-  // the Fastener's Mk1; the number row's marks at its Mk2 (? ! -) and Mk3
-  // (: ; " ( )) — where the standard Russian layout puts them; capitals of
-  // every letter at the Crane.
+  // code → glyph when Shift is held: the comma on the period key (the
+  // layout's signature hurdle), the number row's marks where the standard
+  // Russian layout puts them (№ on 3, % on 5, * on 8, + on =), capitals of
+  // every letter.
   const SHIFTED_CODE_TO_CHAR = {
     Slash: ',',
-    Digit1: '!', Digit2: '"', Digit4: ';', Digit6: ':', Digit7: '?', Digit9: '(', Digit0: ')',
+    Digit1: '!', Digit2: '"', Digit3: '№', Digit4: ';', Digit5: '%', Digit6: ':', Digit7: '?', Digit8: '*', Digit9: '(', Digit0: ')',
+    Equal: '+', Backslash: '/',
   };
+
+  // Glyphs no key on the standard layout produces: the em dash and the
+  // guillemets. The game checks the glyph, never the stroke (ruling
+  // 2026-09-10): whatever the OS composes — Birman's right Alt strokes, a
+  // numpad Alt code, macOS Option — arrives as the character itself, and
+  // that is what the listener reads. The hint shown is the Birman stroke.
+  const COMPOSED = { '—': 'AltRight+Minus', '«': 'AltRight+Comma', '»': 'AltRight+Period' };
   for (const [code, ch] of Object.entries(CODE_TO_CHAR)) {
     const up = ch.toUpperCase();
     if (up !== ch) SHIFTED_CODE_TO_CHAR[code] = up;
@@ -44,6 +54,6 @@
     name: 'Русская (ЙЦУКЕН)',
     shortName: 'ЙЦУКЕН',   // the chip on the layout switch
     flag: 'ru',
-    CODE_TO_CHAR, SHIFTED_CODE_TO_CHAR, NEEDS_SHIFT, CHAR_TO_CODE,
+    CODE_TO_CHAR, SHIFTED_CODE_TO_CHAR, NEEDS_SHIFT, CHAR_TO_CODE, COMPOSED,
   });
 })();

@@ -128,7 +128,12 @@
   // The state is read off the world each tick, never stored in the save. A
   // band is the texture per frame of one (look, state); the art is in pixels.js.
   const WORK_BEAT = 9, IDLE_BEAT = 12;   // ticks per frame of the beat / the breath
-  const STATION_LOOK = { smelter: 'bigrams', foundry: 'foundry', constructor: 'words', molder: 'molder', fastener: 'fastener', crane: 'crane', manufacturer: 'manufacturer' };
+  // the v4 tree's twelve machines wear the eight station sheets there are
+  // (placeholder art, 2026-09-12: each machine's own sheet is still ahead)
+  const STATION_LOOK = {
+    M1: 'bigrams', M2: 'foundry', M3: 'manufacturer', M4: 'words', M5: 'molder', M6: 'lines',
+    M7: 'foundry', M8: 'words', M9: 'molder', M10: 'fastener', M11: 'crane', M12: 'manufacturer',
+  };
   // an automated mine is a different machine to look at, not a different state
   const lookOf = (kind, auto) => kind === 'mine' ? (auto ? 3 : 1) : (STATION_LOOK[kind] || 'lines');
   function band(look, mode, facing) {
@@ -547,7 +552,10 @@
   // ---------- icon rows and the place menu (pixel UI in labelsC) ----------
   // A row: {pre?: text, icon?: 12px icon name, kind?: kind id (12px icon),
   //         items?: {mat:n} sprites+counts, out?: mat, gauge?: 0..1,
-  //         enabled?: bool, ok?: bool}
+  //         enabled?: bool, ok?: bool, current?: bool}
+  // `current` is the row the place is already set to: the menu draws a thin
+  // pale bracket around it, a frame and not a fill, so it cannot be taken for
+  // the amber cursor that walks the list.
   // `icon` is the row's own mark and stands where `pre` would: a row that
   // offers a thing shows the thing, the way a build row shows its machine.
   function rowContainer(row, dimText) {
@@ -562,13 +570,15 @@
       const t = new PIXI.Sprite(PIXELS.textTex(row.pre, dimText || PIXELS.P.brass3));
       put(t, 3); ix += t.texture.width + 3;
     }
-    if (row.kind) {
+    // a mine is one icon: the ore it digs with a pick laid over it. Two
+    // icons side by side made the row wider than every other, and the ore
+    // standing next to the price read as part of the price.
+    if (row.kind === 'mine' && row.ore) {
+      put(matIcon(row.ore), 2);
+      put(new PIXI.Sprite(PIXELS.kindIconTex('pick')), 0); ix += 14;
+    } else if (row.kind) {
       const ic = new PIXI.Sprite(PIXELS.kindIconTex(row.kind));
       put(ic, 0); ix += 14;
-    }
-    if (row.ore) {
-      const ic = matIcon(row.ore);
-      put(ic, 1); ix += 12;
     }
     for (const [mat, n] of Object.entries(row.items || {})) {
       const ic = matIcon(mat);
@@ -584,6 +594,17 @@
       put(arrow, 3); ix += arrow.texture.width + 3;
       const oc = matIcon(row.out);
       put(oc, 1); ix += 11;
+    }
+    // every output with its count, byproducts included (the recipe over a
+    // machine, where the whole of what it makes is worth reading)
+    if (row.outs) {
+      const arrow = new PIXI.Sprite(PIXELS.textTex('→', PIXELS.P.brass2));
+      put(arrow, 3); ix += arrow.texture.width + 3;
+      for (const [mat, n] of Object.entries(row.outs)) {
+        put(matIcon(mat), 1); ix += 11;
+        const cnt = new PIXI.Sprite(PIXELS.textTex(String(n), PIXELS.P.paper));
+        put(cnt, 3); ix += cnt.texture.width + 3;
+      }
     }
     if (row.ok === true) {
       const t = new PIXI.Sprite(PIXELS.textTex('✓', '#6cc46c'));
@@ -665,6 +686,18 @@
     menuState = (dockId && rows && rows.length) ? { dockId, rows, sel } : null;
     drawMenu();
   }
+  // The standing choice wears square brackets: two one-pixel corner marks in
+  // cool steel, hugging the row content. Everything about it is the opposite
+  // of the cursor (a thin outline where the cursor is a solid warm block), so
+  // the eye never reads it as a second selection.
+  function currentBracket(top, cw) {
+    const g = new PIXI.Graphics();
+    const lx = 1, rx = 5 + cw + 3, h = 14;
+    g.rect(lx, top, 1, h).rect(lx, top, 3, 1).rect(lx, top + h - 1, 3, 1)
+     .rect(rx + 2, top, 1, h).rect(rx, top, 3, 1).rect(rx, top + h - 1, 3, 1)
+     .fill({ color: 0xc2c8d4, alpha: 0.9 });
+    return g;
+  }
   function drawMenu() {
     wipeMenu();
     if (!ready || !menuState) return;
@@ -679,7 +712,8 @@
     const shown = rows.slice(top, top + win);
     menuC = new PIXI.Container();
     const built = shown.map((r) => rowContainer(r));
-    const w = Math.max(...built.map((c) => c._w)) + (n > win ? 16 : 10);
+    // a bracketed row needs a little air on either side of its frame
+    const w = Math.max(...built.map((c, i) => c._w + (shown[i].current ? 6 : 0))) + (n > win ? 16 : 10);
     const h = win * 16 + 6;
     const cx = midX(def);
     let px = Math.round(cx - w / 2);
@@ -704,8 +738,9 @@
         menuC.addChild(hl);
       }
       c.position.set(5, 4 + i * 16);
-      c.alpha = row.enabled === false ? 0.5 : 1;
+      c.alpha = row.enabled === false || row.grey ? 0.5 : 1;
       menuC.addChild(c);
+      if (row.current) menuC.addChild(currentBracket(3 + i * 16, c._w));
     });
     // more rows above / below the window: a small brass arrow says so
     if (top > 0) menuC.addChild(new PIXI.Graphics().poly([w - 9, 8, w - 3, 8, w - 6, 4]).fill(0xc9a24a));
@@ -1366,7 +1401,9 @@
     belts.forEach((b, bi) => {
       const from = profile.machines.find((m) => m.id === b.from);
       const to = profile.machines.find((m) => m.id === b.to);
-      const pipe = !!(from && from.kind === 'mine' && from.ore === 'oil');
+      // a run that carries a fluid is a pipe (sim.js: the materials the
+      // link would move are all fluids)
+      const pipe = SIM.isPipe(profile, b);
       const n = b.path.length;
       if (n < 2) return;
       const c = new PIXI.Container();

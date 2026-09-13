@@ -13,6 +13,8 @@
   const KEY_GEOMETRY = [
     { y: 0, split: 6.0, keys: [
       { code: 'Backquote', x: 0 },
+      // the number row is live since lesson plan v4 (2026-09-12): a course
+      // that puts a glyph on a key wakes it; one that does not leaves it inert
       { code: 'Digit1', x: 1, inert: true, label: '1' }, { code: 'Digit2', x: 2, inert: true, label: '2' },
       { code: 'Digit3', x: 3, inert: true, label: '3' }, { code: 'Digit4', x: 4, inert: true, label: '4' },
       { code: 'Digit5', x: 5, inert: true, label: '5' }, { code: 'Digit6', x: 6, inert: true, label: '6' },

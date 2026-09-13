@@ -82,7 +82,7 @@
   const LEGACY_ORDER = ['о', 'е', 'а', 'и', 'н', 'т', 'с', 'л', 'в', 'р', 'к', 'м', 'д', 'п', 'ы', 'у', 'б', 'я', 'ь', 'г', 'з', 'ч', 'й', '.', ',', 'ж', 'х', 'ш', 'ю', 'ё', 'ц', 'э', 'щ', 'ф', 'ъ'];
 
   // Trainable non-letter items (never used inside generated words).
-  const PUNCT = new Set(['.', ',', '?', '!', '-', ':', ';', '"', '(', ')']);
+  const PUNCT = new Set(['.', ',', '?', '!', '-', '—', ':', ';', '"', '«', '»', '(', ')', '№', '%', '*', '+', '=', '/', '\\', '[', ']', '{', '}', '<', '>', '@', '#', '$', '&', '^', '~', '|', '_', '`']);
 
   // Letters that make a collected word a "rare find" in the passport.
   const RARE_LETTERS = new Set(['ф', 'ъ', 'ё', 'щ', 'ц', 'э']);
