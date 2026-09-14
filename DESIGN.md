@@ -136,30 +136,32 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   like any bad ground, the caption saying why. A **tap** of Space turns it
   a quarter clockwise; a **hold**
   builds it on good ground, and on bad ground the same hold cancels;
-  Escape cancels too. **Valid ground is the map's own answer, and there
-  are two of them (2026-08-28, user decision; the two styles are being
-  played against each other).** A world with surveyed sites takes a body
-  only on one of them. A **free-build** world (`freeBuild` in the map file
-  → `CHAIN.FREE_BUILD`, the Open Range, whose fifty-seven sites and their
-  worn aprons came out with it) has no sites at all and asks the ground
-  instead: `FACTORY.buildZone` answers for the box under the ghost, and
-  what it refuses is what a belt is refused (off the map, solid tiles like
-  water, tar or a cliff face, scenery, a closed crossing) plus two things
-  only a body cares about. The whole footprint must sit on **one storey**,
-  so nothing straddles a cliff edge or corks a ramp or a bridge; and
-  nothing may stand **inside the treeline**, which is painted rather than
-  solid and is otherwise only a fence on the operator's feet. An unopened
-  **seam is not building ground** for anything but its mine, on either kind
-  of world: a smelter parked over one would bury the ore for good. Mines
-  are unchanged and map-agnostic: a free vein the body covers, the mine
-  row pricing itself off the vein under the ghost, and an unopened ore's
-  first mine still unlocking its keys. Both rules meet in one `zone` set in
-  app.js, so everything downstream still only asks whether a tile is in it.
-  A free-build world makes bad placements possible on purpose (a body that
-  boxes in its own ports), and the ghost says so at the time, in red, before
-  anything is spent. The four-facing guarantee that `dev/verify.html` holds
-  the Frontier's sites to was only ever a promise the *surveyed* ground
-  made. Machines are seated
+  Escape cancels too. **Valid ground is the ground's own answer, on every
+  map (free build: the Open Range 2026-08-28, the Frontier 2026-09-14, user
+  decisions).** The surveyed 3×3 sites were played against free ground and
+  lost, because they were too tight to be worth what they guaranteed. No
+  map has sites now. `FACTORY.buildZone` answers for the box under the
+  ghost, and what it refuses is what a belt is refused (off the map, solid
+  tiles like water, tar or a cliff face, scenery, a closed crossing) plus two
+  things only a body cares about. The whole footprint must sit on **one
+  storey**, so nothing straddles a cliff edge or corks a ramp or a bridge;
+  and nothing may stand **inside the treeline**, which is painted rather
+  than solid and is otherwise only a fence on the operator's feet. An
+  unopened **seam is not building ground** for anything but its mine: a
+  smelter parked over one would bury the ore for good. **Mines stay put:**
+  a mine stands only on a free vein of its own raw and snaps onto it, the
+  mine row pricing itself off the vein under the ghost, and an unopened
+  ore's first mine still unlocking its keys. **Belts keep to the same
+  ground:** a port whose way out is a rock face does not make the rock face
+  beltable. The machine has to move, and the ghost says so at the time by
+  drawing that port's plate faint, as the spool's route preview goes red
+  where no run can go. Free ground makes bad placements possible on purpose
+  (a body that boxes in its own ports), and the ghost shows it in red before
+  anything is spent. Free ground is not meant to open a layout-optimization
+  game: it adds no machine and no rule, only the choice of where, and the
+  map still decides where a works is worth the walk. The Frontier's old
+  lattice survives as `PLOTS` in its map file, read only to seat a machine
+  saved before the rotation overhaul. Machines are seated
   in the save as tiles (`m.at` + `m.face`), and pads and veins stopped
   being dockable places — their markers survey the ground, the menu came to
   the operator. **The ghost is the only place a machine turns** (user
@@ -1947,7 +1949,9 @@ demands a measured pool of ≥25 real words before a recipe is offered.
   processors (with one outlet's worth of flank they could never seat two
   belts of intake).
 - **A build pad is one size: 3×3 (user rulings 2026-08-20, grown from 3×2
-  with the rotation overhaul).** Machines vary; pads do not. A pad has to
+  with the rotation overhaul). Retired 2026-09-14: no map has pads now (see
+  *Valid ground* above). The ruling stays as the history of why the maps
+  are laid the way they are.** Machines vary; pads do not. A pad has to
   take the largest kind there is **at every facing** — a 3×2 kind sideways
   is 2×3, so the pad is the square of the two — and a smaller machine simply
   leaves slack on it. The alternative was pads that matched their machine,
@@ -1980,7 +1984,9 @@ demands a measured pool of ≥25 real words before a recipe is offered.
   its veins. The 80px lattice is still why the meadow is the size it is, and
   the vein row stands on it. The guarantee is a promise *surveyed* ground
   makes; where the player picks the ground it is theirs to get right, and the
-  ghost's red tiles are the check.
+  ghost's red tiles are the check. **The Frontier followed on 2026-09-14**
+  (user decision): its seventy-three sites stopped being building ground,
+  and the guarantee now holds only the veins, on either map.
 - **The facing is final (user ruling 2026-08-21).** A machine is turned at
   the build ghost — a tap of Space, a quarter clockwise per tap — and never
   after: there is no turn row on a standing machine, because turning one
@@ -2635,7 +2641,12 @@ material proof sheets (every material in the bag and on the band) ·
 `dev/map-thumbs.html` bakes the picker's thumbnails to `assets/maps/` — the
 only thing that writes them, run on every map edit ·
 `dev/sim.html` simulation harness · `dev/play.html` the game headless (rAF
-shim) · `libs/pixi.min.js` vendored Pixi 8 ·
+shim) · `js/bot.js` the bot that plays the game, developer mode only (the
+robot in the header or Ctrl+Alt+B: 30 WPM, machine speed, off); it plans from
+the tree each move and plays through the real keys, menus and ghosts ·
+`dev/bot-sim.js` the bot's plan played out headless in node against the real
+tree and SIM, for checking that it still finds its way after the tree or the
+prices change · `libs/pixi.min.js` vendored Pixi 8 ·
 `docs/tech-tree-v3.html` the agreed tech-tree page (keyboard-by-ore, tier
 board, material ladder, simulation, transport) · `docs/build-plan.md` the
 phased build order for v3.

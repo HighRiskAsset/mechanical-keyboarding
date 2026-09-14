@@ -3,7 +3,7 @@
 // machine; hold Space to open the place's menu (arrows choose, a tap of
 // Space confirms, Escape closes). Tech tree v3: everything is bought from
 // the bag: Mk and ⚙ at the machine, and machines through the build menu a
-// hold raises on open ground: pick a kind, walk its ghost to a build site
+// hold raises on open ground: pick a kind, walk its ghost onto clear ground
 // (mines to a free vein), tap Space to turn it, hold Space to build
 // (rotation overhaul, 2026-08-21). The one screen before the world is the
 // map picker.
@@ -758,7 +758,7 @@
   const veinName = (ore) => (T.t('veinNames') || {})[ore] || T.t('veinOf', { name: matName(ore) });
   function refreshCaption() {
     if (captionFlash) return;
-    if (autoTyping) { setCaption('', T.t('capDebugAuto'), 'ok'); return; }
+    if (autoHeld) { setCaption('', T.t('capDebugAuto'), 'ok'); return; }
     if (!profile) { setCaption('', ''); return; }
     // While a menu is open the caption speaks for the MENU, not for the place
     // behind it (2026-08-28): the brass line names the chosen row — "Build
@@ -935,6 +935,7 @@
   }
   function startPlacing(kind, ore) {
     placing = { kind, ore: ore || null, face: 's', at: null, ok: false, vein: null, price: null, unlock: false };
+    FACTORY.callVeins(kind === 'mine' ? placing.ore : null);
     clearLine();
     refreshLessonLights();
     updatePlacing(true);
@@ -950,27 +951,15 @@
     if (!placing) return;
     placing = null;
     FACTORY.clearBuildGhost();
+    FACTORY.callVeins(null);
     A.thud();
     redock();
   }
-  // The zone, as tiles. A world with surveyed sites lets a machine stand on
-  // one and nowhere else; a free-build world (CHAIN.FREE_BUILD, the Open
-  // Range since 2026-08-28) hands the question to the ground instead, and
-  // FACTORY.buildZone answers it for the box under the ghost: clear of
-  // solids and scenery, all on one storey. That is the terrain answer this
-  // set was always going to be replaced by; both rules still meet here, so
-  // everything downstream only ever asks `zone.has(tile)`.
-  let siteTiles = null, siteTilesMap = null;
-  function siteZone() {
-    if (siteTiles && siteTilesMap === mapId) return siteTiles;
-    siteTiles = new Set();
-    siteTilesMap = mapId;
-    for (const p of CHAIN.SITES) {
-      const b = MAPKIT.siteBox(p);
-      for (let ty = b.r0; ty <= b.r1; ty++) for (let tx = b.c0; tx <= b.c1; tx++) siteTiles.add(tx + ',' + ty);
-    }
-    return siteTiles;
-  }
+  // The zone, as tiles: FACTORY.buildZone answers for the box under the
+  // ghost, clear of solids and scenery and all on one storey. Every map
+  // builds free since 2026-09-14 (the Open Range went first, 2026-08-28), so
+  // the surveyed sites and the zone they made are gone. Everything
+  // downstream still only asks `zone.has(tile)`.
   // the ghost walks a step ahead of the operator, snapped to the grid: the
   // body stands against the tile they are on, in the direction they face,
   // centred across — so aiming is walking, and turning to face another way
@@ -1010,14 +999,14 @@
         if (d < best) { best = d; vein = n; c0 = seat.c0; r0 = seat.r0; }
       }
       // an unopened seam is not building ground for anything else: a smelter
-      // parked over one buries the ore for good. The site maps kept a site
-      // and a vein apart by hand; free build has to say it out loud.
+      // parked over one buries the ore for good, and free ground has to say
+      // so out loud.
       else for (let ty = vb.r0; ty <= vb.r1; ty++) for (let tx = vb.c0; tx <= vb.c1; tx++) veins.add(tx + ',' + ty);
     }
     placing.at = [c0, r0];
     const phantom = { kind: placing.kind, at: [c0, r0], face: placing.face };
     const box = CHAIN.machineBox(phantom);
-    const zone = CHAIN.FREE_BUILD ? FACTORY.buildZone(box) : siteZone();
+    const zone = FACTORY.buildZone(box);
     const bodies = new Set();
     for (const om of profile.machines) {
       const ob = CHAIN.machineBox(om);
@@ -1071,6 +1060,7 @@
     profile.machines.push(m);
     placing = null;
     FACTORY.clearBuildGhost();
+    FACTORY.callVeins(null);
     const landed = afterPurchase({ dockId: 'm:' + m.id }, price);
     // the card waits for the body: a mine that opens a pair is the build
     // most worth watching, and a card over the smoke is a card over nothing
@@ -1597,12 +1587,23 @@
   const AUTO_SAVE_MS = 1500;    // the per-line save steps aside for this one
   let autoTyping = false, autoRaf = null, autoSavedAt = 0, autoChars = 0;
   let autoLastFrame = 0, autoOwed = 0;
+  // Two drivers share this typist. The held key types at AUTO_CPS with the
+  // panels redrawn once a frame. The bot (js/bot.js) sets its own rate, may
+  // ask for every keystroke to be shown the way a hand's is (`autoBatch`
+  // off), and names the moment to stop, which is checked before every
+  // character so a unit of work is never left half paid for. Neither signs
+  // the register: `autoTyping` is that rule, whoever is at the keys.
+  let autoCps = AUTO_CPS, autoBatch = false, autoHeld = false, autoUntil = null;
+  // Some hosts stop handing frames to a page they still call visible (see
+  // factory.js frameWatchdog). A timer carries the typist there, the way the
+  // watchdog carries the clock, and stands aside the moment frames return.
+  let autoTimer = null;
 
-  function autoTypeFrame() {
-    autoRaf = null;
+  function autoTypeFrame(from) {
+    if (from !== 'timer') autoRaf = null;
     if (!autoTyping) return;
     const now = performance.now();
-    autoOwed += Math.min(AUTO_MAX_GAP, now - autoLastFrame) * AUTO_CPS / 1000;
+    autoOwed += Math.min(AUTO_MAX_GAP, now - autoLastFrame) * autoCps / 1000;
     autoLastFrame = now;
     const budget = Math.floor(autoOwed);
     autoOwed -= budget;                                   // the remainder rides to the next frame
@@ -1614,25 +1615,35 @@
       if (menu || buildMenu || placing) { autoOwed = 0; break; }            // and the same doors a real keystroke waits at
       if (!canTypeHere()) { autoOwed = 0; break; }                          // walking, or standing somewhere with no drill
       if (lineText[pos] === undefined) { autoOwed = 0; break; }
+      if (autoUntil && autoUntil(unitAcc, unitPaid, lineText[pos])) { autoOwed = 0; break; }   // the bot has what it came for
       handleTyped(lineText[pos]);
       n++;
     }
     if (n) {
       autoChars += n;
-      // the once-a-frame half of what a keystroke normally does per character
-      renderLine();
-      FACTORY.castLetter(true);
-      flushFloats();
-      refreshInventory();
-      refreshStatus();
-      if (now - autoSavedAt > AUTO_SAVE_MS) { E.saveProfile(profile); autoSavedAt = now; }
+      // the once-a-frame half of what a keystroke normally does per character;
+      // a keystroke shown on its own has had all of it already
+      if (autoBatch) {
+        renderLine();
+        FACTORY.castLetter(true);
+        flushFloats();
+        refreshInventory();
+        refreshStatus();
+        if (now - autoSavedAt > AUTO_SAVE_MS) { E.saveProfile(profile); autoSavedAt = now; }
+      }
     }
-    autoRaf = requestAnimationFrame(autoTypeFrame);
+    if (!autoRaf) autoRaf = requestAnimationFrame(autoTypeFrame);
   }
 
-  function autoTypeStart() {
+  // opts (the bot's): {cps, batch, until}; the held key passes nothing
+  function autoTypeStart(opts) {
     if (autoTyping || !profile) return;
+    const o = opts || {};
     autoTyping = true;
+    autoHeld = !opts;
+    autoCps = o.cps || AUTO_CPS;
+    autoBatch = o.batch !== false;
+    autoUntil = typeof o.until === 'function' ? o.until : null;
     autoChars = 0;
     autoOwed = 0;
     autoLastFrame = performance.now();
@@ -1640,12 +1651,18 @@
     clearHint();
     refreshCaption();            // the caption says so for as long as the key is down
     autoRaf = requestAnimationFrame(autoTypeFrame);
+    autoTimer = setInterval(() => {
+      if (document.visibilityState === 'visible' && performance.now() - autoLastFrame > 150) autoTypeFrame('timer');
+    }, 100);
   }
   function autoTypeStop() {
     if (!autoTyping) return;
-    autoTyping = false;
+    const held = autoHeld;
+    autoTyping = false; autoHeld = false; autoBatch = false; autoUntil = null;
     if (autoRaf) cancelAnimationFrame(autoRaf);
     autoRaf = null;
+    clearInterval(autoTimer);
+    autoTimer = null;
     if (profile) E.saveProfile(profile);
     renderLine();
     flushFloats();
@@ -1653,7 +1670,7 @@
     refreshKeyboard();
     refreshStats();
     refreshStatus();
-    flashCaption(T.t('capDebugAutoDone', { n: autoChars }));
+    if (held) flashCaption(T.t('capDebugAutoDone', { n: autoChars }));
   }
   // The hold is armed from the capture phase, ahead of every other listener on
   // the page and ahead of the browser's own reading of the key, and the event
@@ -1666,9 +1683,54 @@
     e.stopPropagation();
     if (!e.repeat) autoTypeStart();
   }, { capture: true });
-  window.addEventListener('keyup', (e) => { if (AUTO_KEYS.has(e.code)) autoTypeStop(); }, { capture: true });
+  window.addEventListener('keyup', (e) => { if (AUTO_KEYS.has(e.code) && autoHeld) autoTypeStop(); }, { capture: true });
   // a key held while the window goes away never sends its keyup
-  window.addEventListener('blur', autoTypeStop);
+  window.addEventListener('blur', () => { if (autoHeld) autoTypeStop(); });
+
+  // The bot's window on the game (js/bot.js), developer mode only. It reads
+  // the state a player reads off the screen, and its hands are a player's:
+  // it walks, holds and taps by dispatching the same key events, and at the
+  // keys it drives the typist above. Nothing here moves the world by itself.
+  const botRow = (r) => ({
+    type: r.action ? r.action.type : null,
+    enabled: r.enabled !== false && !!r.action,
+    kind: (r.action && r.action.kind) || r.kind || null,
+    ore: (r.action && r.action.ore) || r.ore || null,
+    out: (r.action && r.action.r && r.action.r.out) || r.out || null,
+    current: !!r.current,
+  });
+  window.MK_DEBUG.bot = {
+    view() {
+      if (!profile || !DEVMODE.isEnabled()) return null;
+      return {
+        map: mapId, profile,
+        card: overlay.classList.contains('hidden') ? null : (overlayName || 'other'),
+        dock: dock ? { id: dock.id, kind: dock.kind, machine: dock.m ? dock.m.id : null } : null,
+        recipe: recipe ? recipe.out : null,
+        unit: { acc: unitAcc, paid: unitPaid, dry: dryNow },
+        line: lineText, pos, canType: canTypeHere(),
+        menu: menu ? { sel: menu.sel, rows: menu.rows.map(botRow) } : null,
+        buildMenu: buildMenu ? { sel: buildMenu.sel, rows: buildMenu.rows.map(botRow) } : null,
+        placing: placing ? {
+          kind: placing.kind, ore: placing.ore, face: placing.face, at: placing.at ? placing.at.slice() : null,
+          ok: !!placing.ok, vein: placing.vein ? placing.vein.index : null,
+        } : null,
+        spool: spool ? spool.from : null, socket: !!socketHere(),
+        space: spaceDown,
+        typing: autoTyping ? (autoHeld ? 'held' : 'bot') : null,
+      };
+    },
+    // start typing, or change what the running bot typist stops at
+    type(opts) {
+      if (!profile || !DEVMODE.isEnabled() || autoHeld) return false;   // a hand on the held key comes first
+      const cps = opts.cps || AUTO_CPS, batch = opts.batch !== false;
+      if (autoTyping && (autoCps !== cps || autoBatch !== batch)) autoTypeStop();
+      if (autoTyping) { autoUntil = typeof opts.until === 'function' ? opts.until : null; return true; }
+      autoTypeStart({ cps, batch, until: opts.until });
+      return autoTyping;
+    },
+    stopTyping() { if (autoTyping && !autoHeld) autoTypeStop(); },
+  };
   window.addEventListener('keydown', (e) => {
     noteRealKeyboard(e);
     const overlayOpen = !overlay.classList.contains('hidden');
@@ -1813,19 +1875,23 @@
         session.streak++;
         if (session.streak > session.bestStreak) session.bestStreak = session.streak;
         profile.totalChars++;
-
+      }
+      // what a keystroke looks and sounds like: every one by hand, and every
+      // one of the bot's at a hand's pace; the machine-speed typist leaves it
+      // to the frame
+      if (!autoBatch) {
         A.click();
         A.onKey(latency, session.streak);      // the streak pushes the weather back
       }
 
       if (expected !== ' ') {
-        if (!autoTyping) FACTORY.castLetter(true);   // once a frame instead, while the autotyper runs
+        if (!autoBatch) FACTORY.castLetter(true);   // once a frame instead, while the autotyper runs
         workKeystroke();
       }
 
       pos++;
       attemptsAtPos = 0;
-      if (!autoTyping) advanceCaret();
+      if (!autoBatch) advanceCaret();
 
       if (lineText[pos] === ' ' || pos >= lineText.length) {
         const endedIdx = lineText.slice(0, pos).split(' ').length - 1;
@@ -1836,7 +1902,7 @@
           const justCollected = collectWord(word, clean);
           // the panels: per word by hand, per frame under the autotyper —
           // hundreds of words a second is not something a panel can show
-          if (!autoTyping) {
+          if (!autoBatch) {
             showGloss(word, justCollected);
             flushFloats();
             refreshInventory();
@@ -1848,7 +1914,7 @@
 
       if (pos >= lineText.length) finishLine();
       else scheduleHint();
-      if (!autoTyping) refreshStats();
+      if (!autoBatch) refreshStats();
     } else {
       attemptsAtPos++;
       if (erroredAt !== pos) {
@@ -1880,7 +1946,7 @@
     // any other, and the cap above is what keeps a long look away from
     // counting. Nulling it here threw out every line transition whole.
     FACTORY.stamp();
-    if (!autoTyping) {
+    if (!autoBatch) {
       A.press();
       flushFloats();
       refreshInventory();
@@ -1889,7 +1955,7 @@
     checkIntroUnlocks();
     // the bag may now pay for a different recipe
     if (dock && dock.kind === 'machine' && dock.m.kind !== 'mine') recipe = pickRecipe(dock.m);
-    if (!autoTyping) refreshStatus();
+    if (!autoBatch) refreshStatus();
 
     if (session.activeMs > SOFT_STOP_MIN * 60000 && session.activeMs - lastSoftStopAt > 10 * 60000) {
       lastSoftStopAt = session.activeMs;
@@ -2053,7 +2119,10 @@
 
   // ---------- overlays ----------
   let overlayRerender = null;
-  function showOverlay(html, wide) {
+  // which of the game's own cards is up (the ones play puts in front of you,
+  // named for the bot, which may press their one button); null for the rest
+  let overlayName = null;
+  function showOverlay(html, wide, name) {
     clearHint();
     FACTORY.setMove('left', false);
     FACTORY.setMove('right', false);
@@ -2061,11 +2130,13 @@
     FACTORY.setMove('down', false);
     overlayCard.classList.toggle('wide', !!wide);
     overlayCard.innerHTML = html;
+    overlayName = name || null;
     overlay.classList.remove('hidden');
   }
   function hideOverlay() {
     overlay.classList.add('hidden');
     overlayRerender = null;
+    overlayName = null;
   }
 
   function showUnlockCard(pair, retooled) {
@@ -2090,7 +2161,7 @@
       <p>${T.t('unlockNote')}</p>
       ${retooled ? `<p class="muted">${T.t('unlockRetool')}</p>` : ''}
       <button id="ov-continue" class="btn-primary">${T.t('unlockGo')}</button>
-    `);
+    `, false, 'unlock');
     // paint the new ore band under the glow, so when the glow drops away the
     // key is already wearing the colour of the mine that paid for it
     const caps = [];
@@ -2121,7 +2192,7 @@
       <h2>${T.t('benchAutoTitle', { name: machineName(m) })}</h2>
       <p>${T.t(m.kind === 'mine' ? 'benchAutoNote' : 'autoNoteProcessor')}</p>
       <button id="ov-continue" class="btn-primary">${T.t('automationGo')}</button>
-    `);
+    `, false, 'auto');
     $('ov-continue').onclick = () => { hideOverlay(); };
     $('ov-continue').focus();
   }
@@ -2137,7 +2208,7 @@
       <p>${T.t('finishNote', { k: CHAIN.COMPLETION.pages.length })}</p>
       ${hours ? `<p class="muted">${T.t('finishHours', { hours })}</p>` : ''}
       <button id="ov-continue" class="btn-primary">${T.t('finishGo')}</button>
-    `);
+    `, false, 'finish');
     $('ov-continue').onclick = () => { hideOverlay(); };
     $('ov-continue').focus();
   }
@@ -2147,7 +2218,7 @@
       <div class="card-station">🌅</div>
       <p class="soft-stop">${T.t('softStop', { min: Math.round(session.activeMs / 60000) })}</p>
       <button id="ov-continue" class="btn-primary">${T.t('blockGo')}</button>
-    `);
+    `, false, 'rest');
     $('ov-continue').onclick = () => { hideOverlay(); proceedAfterLine(); };
     $('ov-continue').focus();
   }
@@ -2194,7 +2265,7 @@
       <p>${T.t('welcomeIntro')}</p>
       <ul class="rules">${rules}</ul>
       <button id="ov-continue" class="btn-primary">${T.t('welcomeGo')}</button>
-    `);
+    `, false, 'welcome');
     $('ov-continue').onclick = () => { hideOverlay(); };
     $('ov-continue').focus();
   }
@@ -2339,8 +2410,9 @@
     E.setLastMap(id);
 
     dock = null; recipe = null; menu = null;
-    buildMenu = null; placing = null; siteTiles = null;
+    buildMenu = null; placing = null;
     FACTORY.clearBuildGhost();
+    FACTORY.callVeins(null);
     pendingUnlock = null;
     unitAcc = 0; unitPaid = false; dryNow = false; lastCorrectTime = null;
     producedSinceFloat = {}; madeElsewhere = 0;

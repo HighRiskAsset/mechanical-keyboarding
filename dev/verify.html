@@ -281,14 +281,14 @@
     const over = asks.filter(([, n]) => n > cap * 0.8);
     line(!over.length, `no single-material ask crowds the bag: every hold ≤ ${cap * 0.8} of the ${cap} cap`, over.map(([l, n]) => `${l}: ${n}`).join('<br>'));
   }
-  // 18. every site and node stands on clear ground and is reachable from the spawn (crossings counted open)
+  // 18. every vein stands on clear ground and is reachable from the spawn (crossings counted open)
   const placeBad = [], placePending = [];
   for (const mapId of C.MAP_IDS) {
     C.useMap(mapId);
     const map = C.MAPS[mapId];
     const W = map.W, H = map.H;
     const grid = TILES.bake(C.MAP, W, H);
-    const spots = [...C.SITES.map((p) => ({ id: p.id, kind: 'site', x: p.x, y: p.y })), ...C.MAP.NODES.filter((nd) => C.ORE_BY_NODE[nd.kind]).map((nd, i) => ({ id: nd.kind + '#' + i, kind: 'vein', x: nd.x + 4, y: nd.y + 12, node: nd }))];
+    const spots = [...C.MAP.NODES.filter((nd) => C.ORE_BY_NODE[nd.kind]).map((nd, i) => ({ id: nd.kind + '#' + i, kind: 'vein', x: nd.x + 4, y: nd.y + 12, node: nd }))];
     const cross = C.MAP.CROSSINGS.map((cr) => ({ x: cr.x, y: cr.y, w: cr.w, h: cr.h }));
     const inRect = (r, x, y) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
     const solidAt = (x, y) => { const tl = TILES.tileAt(grid, x, y); return tl === null || !!(grid.flags[tl] & TILES.FL.SOLID); };
@@ -319,8 +319,8 @@
     // take every facing is a site the build ghost will refuse you at, and
     // that is a thing to fix in the map file, not to live with.
     //
-    // A free-build map (the Open Range since 2026-08-28) declares no sites,
-    // so all this has to say about it is its veins. The guarantee was only
+    // Every map builds free since 2026-09-14 (the Open Range went first, on
+    // 2026-08-28) and declares no sites, so all this has to say is its veins. The guarantee was only
     // ever a promise the surveyed ground made; where the player picks the
     // ground, a bad facing is their own placement and the ghost says so at
     // the time, in red, before anything is spent.
@@ -401,9 +401,9 @@
     });
   }
   C.useMap(C.DEFAULT_MAP);
-  line(!placeBad.length, 'every site and vein can take its machine somehow, on reachable ground', placeBad.join('<br>'));
+  line(!placeBad.length, 'every vein can take its mine somehow, on reachable ground', placeBad.join('<br>'));
   line(!placePending.length,
-    `the four-facing guarantee (3×3 sites, every facing legal)${placePending.length ? ' — ' + placePending.length + ' spots short' : ' holds on every site and vein of every map'}`,
+    `the four-facing guarantee (every vein, every facing legal)${placePending.length ? ': ' + placePending.length + ' spots short' : ' holds on every vein of every map'}`,
     placePending.join('<br>'));
 
   document.getElementById('sum').textContent = `${pass} passed · ${fail} failed · ${warn} to look at`;

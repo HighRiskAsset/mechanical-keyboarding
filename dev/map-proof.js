@@ -56,16 +56,10 @@ const bakeWorld = (mapId, outlines) => {
   }
   late.sort((a, b) => a.z - b.z).forEach((o) => o.draw());
 
-  // every build site outlined on the tiles it actually zones (3×3, MAPKIT.siteBox),
-  // and every vein on the two tiles its mine takes (MAPKIT.veinBox), so the
+  // every vein outlined on the two tiles its mine takes (MAPKIT.veinBox), so the
   // sheet shows which seams lie across and which are bedded on end. The sky
   // sheet wants the ground clean, so the outlines are optional.
   if (outlines !== false) {
-    x.strokeStyle = 'rgba(255, 230, 140, 0.85)';
-    for (const p of m.SITES) {
-      const b = MAPKIT.siteBox(p);
-      x.strokeRect(b.c0 * T + 0.5, b.r0 * T + 0.5, b.w * T - 1, b.h * T - 1);
-    }
     x.strokeStyle = 'rgba(140, 220, 255, 0.85)';
     for (const n of m.MAP.NODES) {
       const b = MAPKIT.veinBox(n);

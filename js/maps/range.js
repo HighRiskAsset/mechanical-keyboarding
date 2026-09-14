@@ -4,12 +4,12 @@
 //
 // FREE BUILD since 2026-08-28. The map used to carry fifty-seven surveyed
 // sites in three ranks, and a machine could only stand on one of them; the
-// sites are gone and `freeBuild` says so, so a body may go down on any clear
+// sites are gone, so a body may go down on any clear
 // ground. The obstacles still rule: the treeline, the scenery, the pond and
 // the seams themselves refuse a placement, and belts still have to find a
-// lane between whatever you put in their way. THIS MAP IS THE OPEN ONE:
-// the Frontier keeps its sites, and the two are meant to be played against
-// each other.
+// lane between whatever you put in their way. The Frontier was meant to
+// keep its sites so the two styles could be played against each other; it
+// went free too on 2026-09-14, and every map builds this way now.
 //
 // (The ranks were laid on an 80px pitch in the 2026-08-21 rework to give
 // every site all four facings; that geometry is what set the meadow's size,
@@ -19,7 +19,7 @@
   const K = window.MAPKIT;
   const { sc } = K;
 
-  const W = 1648, H = 464;                        // 103 × 29 tiles
+  const W = 2848, H = 464;                        // 178 × 29 tiles
   // The vein row: nineteen seams on tile lines, alternating across and on
   // end — the flat map is where both seatings get walked into first
   // (MAPKIT.veinBox). Node x = 112 + 80k, so a seam takes cols 7+5k (and
@@ -37,12 +37,19 @@
   // The map grew east to take them, six columns of meadow on the same 80px
   // pitch, and nothing else about it moved: every seam that was here is on
   // the ground it was on, so a save comes back untouched.
-  const COLS = Array.from({ length: 19 }, (_, k) => 112 + 80 * k);
+  //
+  // Thirty-four since 2026-09-13, the same cut as The Frontier (R1 5, R2 4,
+  // R3 3, R4 3, R5 3, two of every later raw). The v4 tree has thirteen raws,
+  // and R7 to R13 had one seam each. The row grew east again on the same
+  // pitch, with the new seams appended so every old one keeps its index.
+  const COLS = Array.from({ length: 34 }, (_, k) => 112 + 80 * k);
   const NODE_KINDS = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6',
     'R7', 'R8', 'R9', 'R10', 'R11', 'R12',
-    'R13', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6'];
-  // every ore gets at least one of each seating, on both of its first two turns
-  const VERT = new Set([0, 3, 4, 7, 8, 11, 13, 14, 16, 17]);
+    'R13', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6',
+    'R7', 'R8', 'R9', 'R10', 'R11', 'R12', 'R13',
+    'R1', 'R2', 'R3', 'R4', 'R5', 'R1', 'R2', 'R1'];
+  // every raw with two seams or more gets one of each seating
+  const VERT = new Set([0, 3, 4, 7, 8, 11, 13, 14, 16, 17, 19, 22, 23, 25, 27, 28, 31]);
   const NODES = COLS.map((x, k) => (VERT.has(k)
     ? { kind: NODE_KINDS[k], x, y: 48, vert: true }
     : { kind: NODE_KINDS[k], x, y: 48 }));
@@ -53,6 +60,10 @@
     sc('tree2', 60, 24), sc('rock2', 63, 26), sc('tree', 68, 24),
     // the six columns the row grew east
     sc('tree2', 75, 25), sc('rock', 82, 24), sc('tree', 89, 25), sc('rock2', 96, 24),
+    // and the fifteen it grew for the v4 raws
+    sc('tree', 103, 25), sc('rock', 110, 24), sc('tree2', 117, 25), sc('tree', 124, 24),
+    sc('rock2', 131, 25), sc('tree2', 138, 24), sc('tree', 145, 25), sc('rock', 152, 24),
+    sc('tree2', 159, 25), sc('rock2', 166, 24), sc('tree', 173, 25),
   ];
 
   const PROPS = [
@@ -60,6 +71,9 @@
     { kind: 'lamppost', x: 372, y: 106, glow: true },
     { kind: 'lamppost', x: 652, y: 106, glow: true },
     { kind: 'lamppost', x: 932, y: 106, glow: true },
+    { kind: 'lamppost', x: 1492, y: 106, glow: true },
+    { kind: 'lamppost', x: 2052, y: 106, glow: true },
+    { kind: 'lamppost', x: 2612, y: 106, glow: true },
     { kind: 'crate', x: 1106, y: 90 },
     { kind: 'crate2', x: 1116, y: 100 },
     { kind: 'drum', x: 30, y: 178 },
@@ -71,7 +85,7 @@
   const MAP = {
     FOREST: { n: 48, e: 32, s: 32, w: 32 },
     REGIONS: [
-      { id: 'range', x: 0, y: 0, w: 1648, h: 464, elev: 0, base: 'grass', cliff: 'tan', treeline: ['tree', 'tree2'] },
+      { id: 'range', x: 0, y: 0, w: 2848, h: 464, elev: 0, base: 'grass', cliff: 'tan', treeline: ['tree', 'tree2'] },
     ],
     GROUND: [
       // the dish under every seam, lying the way the seam does
@@ -79,10 +93,10 @@
         ? { kind: 'dirt', x: n.x - 8, y: n.y - 4, w: 32, h: 48 }
         : { kind: 'dirt', x: n.x - 4, y: n.y - 8, w: 48, h: 32 })),
       { kind: 'pad', x: 32, y: 128, w: 48, h: 32 },
-      { kind: 'dirt', x: 80, y: 96, w: 1504, h: 16 },   // the track under the row, out to the last seam
+      { kind: 'dirt', x: 80, y: 96, w: 2704, h: 16 },   // the track under the row, out to the last seam
       { kind: 'dirt', x: 80, y: 112, w: 16, h: 16 },
       { kind: 'dirt', x: 128, y: 80, w: 16, h: 16 }, { kind: 'dirt', x: 208, y: 80, w: 16, h: 16 }, { kind: 'dirt', x: 288, y: 80, w: 16, h: 16 },
-      { kind: 'dirt', x: 1568, y: 80, w: 16, h: 16 },
+      { kind: 'dirt', x: 2768, y: 80, w: 16, h: 16 },
       // The meadow below the row is bare on purpose. The worn aprons that
       // marked the three ranks went out with the sites: a patch of laid
       // dirt reads as an invitation to stand on it, and this ground has no
@@ -105,7 +119,6 @@
   K.register({
     id: 'range', W, H, spawn: { x: 84, y: 154 },
     LEGACY: {},
-    freeBuild: true, SITES: [],
     MAP, SCENERY, PROPS, WEATHER,
   });
 })();

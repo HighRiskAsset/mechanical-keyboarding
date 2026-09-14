@@ -313,18 +313,6 @@
   }
   const machinesOfKind = (profile, kind) => profile.machines.filter((m) => m.kind === kind);
   const nodeBuilt = (profile, i) => profile.machines.some((m) => m.node === i);
-  function freeSites(profile) {
-    const taken = new Set();
-    for (const m of profile.machines) {
-      const b = machineBox(m);
-      for (let ty = b.r0; ty <= b.r1; ty++) for (let tx = b.c0; tx <= b.c1; tx++) taken.add(tx + ',' + ty);
-    }
-    return cur.SITES.filter((p) => {
-      const b = MAPKIT.siteBox(p);
-      for (let ty = b.r0; ty <= b.r1; ty++) for (let tx = b.c0; tx <= b.c1; tx++) if (taken.has(tx + ',' + ty)) return false;
-      return true;
-    });
-  }
   function unbuiltNodes(profile) {
     const out = [];
     cur.MAP.NODES.forEach((n, i) => {
@@ -343,9 +331,6 @@
     const C = window.CHAIN;
     C.MAP_ID = cur.id;
     C.MAP = cur.MAP;
-    C.SITES = (cur.SITES || []).filter((p) => !cur.MAP.NODES.some((n) => Math.abs(n.x + 4 - p.x) <= 8 && Math.abs(n.y + 12 - p.y) <= 8));
-    cur.SITES = C.SITES;
-    C.FREE_BUILD = !!cur.freeBuild;
     C.SCENERY = cur.SCENERY;
     C.PROPS = cur.PROPS;
     C.WORLD_W = cur.W;
@@ -366,7 +351,10 @@
     }
     return out;
   }
-  function siteById(id) { return cur.SITES.find((p) => p.id === id); }
+  // a plot is only a save-reader now (free build on every map since
+  // 2026-09-14): a machine saved before the rotation overhaul names one
+  // instead of carrying `at`
+  function siteById(id) { return (cur.PLOTS || []).find((p) => p.id === id); }
   function crossingOpen(profile, c) {
     return !!c.free || !!(profile.crossings && profile.crossings[c.id]);
   }
@@ -389,7 +377,7 @@
     priceNode, priceExtraMine, priceMachine, priceAuto, priceCompletion, priceCrossing, scaleCost, autoKey, autoOn, closedCrossings,
     unlockedIntros, introUnlocked, unlockedKeys, capsUnlocked, nextPairs, nextPair, introRung, newestPair, targetBar, currentTier,
     oreOpen, matExists, offerable, offerableRecipes, inputsExist, kindLive, whatUnlocks, affordable, matInReach, visibleKinds, buildableKinds, kindEverLive, rungsInView, mineMat,
-    machineBox, machinePos, machineFoot, machineAnchor, nodeFace, machinesOfKind, machinesOfOre, nodeBuilt, freeSites, unbuiltNodes,
+    machineBox, machinePos, machineFoot, machineAnchor, nodeFace, machinesOfKind, machinesOfOre, nodeBuilt, unbuiltNodes,
     MAPS, MAP_IDS, DEFAULT_MAP, useMap, currentMap, starterNodes, siteById, crossingOpen, regionAt,
   };
   useMap(DEFAULT_MAP);

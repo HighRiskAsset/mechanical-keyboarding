@@ -4,17 +4,17 @@
 // The shape of the world (2026-08-20 rebuild; works and seams re-laid
 // 2026-08-21; THE RIM GREW 2026-08-28):
 //   · A 60×20-tile grass BASIN sits in the centre. It holds the track, the
-//     landing, thirty build sites and the first vein of every ore. Nothing solid
+//     landing, the widest free ground and the first vein of every ore. Nothing solid
 //     stands in it — no cliff, no water, no boulder, not one rock.
 //   · The LANDING CLUSTER: the three mines the player starts with — iron,
 //     copper, stone — stand around the landing, all three inside the camera
 //     the moment the world opens, even at the smallest viewport the zoom
 //     will settle on. The basin's other veins sit at its corners and the
 //     rest are away in the ring: those are found by looking around.
-//   · EVERY BIOME OF THE RING HAS AT LEAST TWO WORKS: twelve of them over
-//     the five biomes, forty-three sites, because a biome you can only look
-//     at is not a place. Seventy-three sites in all with the basin's thirty,
-//     every one a full 3x3 with all four facings legal.
+//   · EVERY BIOME OF THE RING HAS AT LEAST TWO WORKS: twelve stretches of
+//     level, clear ground over the five biomes, each beside a seam, because a
+//     biome you can only look at is not a place. They are ground, not plots:
+//     a body goes down anywhere the ground allows (FREE BUILD, below).
 //   · A SEAM LIES THE WAY THE LAND DOES: half the nineteen veins are bedded
 //     on end, so the mine that takes them stands 1x2 rather than 2x1.
 //   · Six biomes ring it — peaks west, quarry north-west, canyon north-east
@@ -46,6 +46,15 @@
 //   · Every terrain and every obstacle is on show and all of it is out of the
 //     way: water, tar, ice, the three wall palettes and every piece of region
 //     scenery live in the ring, never in the basin — and never on a works.
+//
+// FREE BUILD (user ruling 2026-09-14). The Frontier carried seventy-three
+// surveyed 3x3 sites, and a machine could stand on one of them and nowhere
+// else. They were too tight to be worth what they guaranteed, and they went
+// the way the Open Range's did: a body goes down on any clear ground on one
+// storey (FACTORY.buildZone), and a belt lies only where a belt may, so a
+// port facing a rock face is a machine to move, not a belt to force. Mines
+// are unchanged and stand only on their veins. The lattice below survives as
+// PLOTS, a save-reader and nothing more.
 //
 // THE RIM GREW (user ruling 2026-08-28). The world was 1600×720 and the ring
 // was a strip: the quarry and the two southern biomes were eleven or twelve
@@ -184,6 +193,12 @@
   }
 
   // ======================================================================
+  // PLOTS: NOT BUILDING GROUND SINCE 2026-09-14. A save from before the
+  // rotation overhaul seats a machine by plot id (CHAIN.machineAnchor), so the
+  // ids and the ground they name must never move. Nothing draws them, zones
+  // by them or checks them any more. What follows is how they were laid, and
+  // it is still why the works' ground is where it is.
+  //
   // build sites: thirty in the open basin on an 80px grid, then TWO WORKS in
   // every biome of the ring, so a walk out there ends somewhere you can
   // build a line rather than at one lonely square (user ruling 2026-08-21;
@@ -279,12 +294,13 @@
   // Everything after the cluster is a walk: the basin's other veins sit out
   // at its corners, and the deeper ones are away in the biome they belong to.
   //
-  // HOW MANY OF EACH IS NOT AUTHORED HERE (DESIGN.md, *Veins follow the
-  // tree*). `dev/ore-load.js` spreads the whole bill across every recipe path
-  // and reports the ore the map is short of; the cut below (iron 3, copper
-  // 4, stone 3, quartz 3, coal 3, oil 3) is what that check wanted on
-  // 2026-08-28, and it is short for neither course. It will move again when a
-  // recipe does, and it is recomputed rather than remembered.
+  // HOW MANY OF EACH follows the tree (DESIGN.md, *Veins follow the tree*).
+  // The v4 cut (2026-09-13) is R1 5, R2 4, R3 3, R4 3, R5 3 and two of every
+  // raw after that, 34 seams. The tree's whole bill, expanded to raw units,
+  // falls 36% on R1, 26% on R2, 13% each on R3 and R4 and 10% on R5, while
+  // R6 to R13 together carry under 2%, so those eight sit on the floor of
+  // two. dev/ore-load.js still speaks the v3 API and did not compute this;
+  // recompute it when that tool is ported, rather than trusting the number.
   //
   // WHERE they go is this file's business. THE BASIN HOLDS ONE OF EVERY ORE
   // AND THE SECOND IRON. That second one stays in reach on purpose: it is
@@ -332,6 +348,27 @@
     { kind: 'R4', x: 1792, y: 96 },               // the east crystal bench, over the east works
     { kind: 'R5', x: 96,   y: 768, vert: true },  // the badland butte, the far south-west
     { kind: 'R6',    x: 1600, y: 832, vert: true },  // the reed lagoon's west shore, past the lake
+    // ---- the v4 seams (2026-09-13) ----
+    // Thirteen raws where there were six, and seven of them stood on one seam
+    // each, under the floor of two. Appended, never inserted: a mine's save
+    // names its vein by index. The early raws' extra seams sit close in,
+    // along the basin's south rim, because the tree leans on them from the
+    // first hour; the late raws' second seams go out to the edges.
+    { kind: 'R1',  x: 768,  y: 624 },               // the basin's south rim, below the landing
+    { kind: 'R1',  x: 384,  y: 656, vert: true },  // the flats, under the peaks works
+    { kind: 'R1',  x: 960,  y: 720, vert: true },  // the bog's west bank, beside its works
+    { kind: 'R2',  x: 1200, y: 624 },               // the basin's south-east rim, above the lake spur
+    { kind: 'R2',  x: 320,  y: 112 },               // the north snow, between the summit and the mesa
+    { kind: 'R3',  x: 1120, y: 864 },               // the south shore, west of the marsh works
+    { kind: 'R4',  x: 1504, y: 112 },               // the canyon head, west of the creek
+    { kind: 'R5',  x: 1472, y: 880, vert: true },  // the lake's south shore
+    { kind: 'R7',  x: 1344, y: 80 },                // on top of the west crystal bench
+    { kind: 'R8',  x: 480,  y: 880 },               // the lower flats, by the deep seep
+    { kind: 'R9',  x: 352,  y: 800, vert: true },  // the tar flats, between the seeps
+    { kind: 'R10', x: 1776, y: 544, vert: true },  // the east shale, below the east works
+    { kind: 'R11', x: 464,  y: 160 },               // the north snow, under the mesa's west face
+    { kind: 'R12', x: 96,   y: 432 },               // the far west, beside the broken crevasse
+    { kind: 'R13', x: 1776, y: 672 },               // the far east corner, past the bog
   ];
 
   // ======================================================================
@@ -667,6 +704,6 @@
     // exactly where it was built. `tag` is what a migrated save remembers; a
     // new one is stamped with it and never shifts.
     RELAY: { tag: 'rim-2026-08-28', dc: 10, dr: 8 },
-    MAP, SITES, SCENERY, PROPS, WEATHER,
+    PLOTS: SITES, MAP, SCENERY, PROPS, WEATHER,
   });
 })();

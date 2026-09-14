@@ -1,5 +1,5 @@
 // The overworld, in two dimensions: a frontier the operator walks with all
-// four arrows. Machines stand on build sites and ore nodes; walking IS the menu;
+// four arrows. Machines stand on clear ground and ore nodes; walking IS the menu;
 // hold Space at a place opens its icon menu (rows drawn here). Global: FACTORY
 //
 // One pixel grid, no exceptions: the canvas upscales by a whole number of
@@ -51,7 +51,9 @@
   let simProfile = null;               // the save whose belts/items we draw (set by buildWorld)
   let beltViews = {};                  // belt id → {c, items:[sprite], pipe, b}
   let portSprites = [];                // the inlet/outlet plates around every machine
-  let siteSprites = [];                // the build sites and free veins (markers only)
+  let siteSprites = [];                // the free veins (markers only)
+  let veinMarks = [], veinMarksGen = 0; // the free veins' markers, with the raw each one takes
+  let veinCallOre = null, veinCallG = null, veinCallKey = null;   // the raw a mine ghost is calling
   const beltTileIndex = new Map();      // "tx,ty" → belt ids on that tile (two where runs cross)
   let spoolSp = null, spoolOn = false;
   let ghostG = null;
@@ -346,6 +348,46 @@
     socketG.position.set(midX(st.def) - 5, st.def.y - 32 - bounce);
     // the route preview pulses with it
     if (ghostG) ghostG.alpha = 0.7 + 0.3 * Math.abs(Math.sin(frameClock * 0.12));
+  }
+
+  // Holding a mine's ghost calls its veins: every free seam of that raw
+  // trades its brass tape for the ghost's own green and flashes, so a seam
+  // across the map reads from wherever the operator stands, and the other
+  // raws' seams keep their brass and stay quiet. app.js names the raw when
+  // the ghost is picked up and clears it when the ghost is put down.
+  function callVeins(ore) {
+    veinCallOre = ore || null;
+  }
+  function drawVeinCall() {
+    const key = veinCallOre ? veinCallOre + ':' + veinMarksGen : null;
+    if (key !== veinCallKey) {
+      veinCallKey = key;
+      for (const v of veinMarks) v.sp.visible = !(veinCallOre && v.ore === veinCallOre);
+      if (veinCallG && veinCallG.parent !== cameraC) { veinCallG.destroy(); veinCallG = null; }
+      if (!veinCallG) {
+        veinCallG = new PIXI.Graphics();
+        veinCallG.zIndex = -699;
+        cameraC.addChild(veinCallG);
+      }
+      veinCallG.clear();
+      for (const v of veinMarks) {
+        if (!veinCallOre || v.ore !== veinCallOre) continue;
+        const x = v.b.c0 * T16, y = v.b.r0 * T16, w = v.b.w * T16, h = v.b.h * T16;
+        // an ink ring outside the green, or the tape vanishes into the grass
+        const frame = (d, t, color) => {
+          veinCallG.rect(x - d, y - d, w + 2 * d, t).fill(color);
+          veinCallG.rect(x - d, y + h + d - t, w + 2 * d, t).fill(color);
+          veinCallG.rect(x - d, y - d + t, t, h + 2 * d - 2 * t).fill(color);
+          veinCallG.rect(x + w + d - t, y - d + t, t, h + 2 * d - 2 * t).fill(color);
+        };
+        frame(3, 1, 0x17161a);
+        frame(2, 3, 0x6cc46c);
+        veinCallG.rect(x + 1, y + 1, w - 2, h - 2).fill({ color: 0x6cc46c, alpha: 0.35 });
+      }
+    }
+    if (!veinCallG) return;
+    veinCallG.visible = !!veinCallOre;
+    if (veinCallOre) veinCallG.alpha = 0.3 + 0.7 * Math.abs(Math.sin(frameClock * 0.1));
   }
 
   // the ground's lights and the machines' lights are one list to the sky
@@ -755,7 +797,7 @@
     return band(lookOf(m.kind, m.autoLive), m.autoLive ? 'idle' : 'still', SIM.facingOf(m))[0];
   }
 
-  // Build the world from the save: machines on sites and nodes, free sites,
+  // Build the world from the save: machines on the ground and on nodes,
   // unbuilt nodes, crossings. `autoLive(m)` says whether a machine is running
   // by itself right now (⚙ bought and its letters sticky).
   // A vein takes the seating of the mine standing on it: a mine faced east or
@@ -786,6 +828,7 @@
     portSprites = [];
     for (const s of siteSprites) { cameraC.removeChild(s); s.destroy(); }
     siteSprites = [];
+    veinMarks = []; veinMarksGen++;
     beltTileIndex.clear();
     beltDockId = null;                 // its station goes with the rest, below
     for (const s of Object.values(stateDots)) { cameraC.removeChild(s); s.destroy(); }
@@ -899,24 +942,12 @@
     const relaid = reconcileBelts(profile);
     drawPorts(profile);
     drawBelts(profile);
-    // Free build sites and unbuilt veins: survey markers on the ground, and
-    // nothing more. They stopped being dockable places when the build ghost
-    // arrived (rotation overhaul, 2026-08-21): a long press on open ground
-    // opens the build menu, and the ghost is aimed by walking — so a site is
-    // just the ground that will take a body, drawn where the zone really is
-    // (one size, 3×3, the largest kind every way up).
-    for (const p of CHAIN.freeSites(profile)) {
-      const b = MAPKIT.siteBox(p);
-      const sp = new PIXI.Sprite(PIXELS.siteTex(48, 48));
-      sp.position.set(b.c0 * T16, b.r0 * T16);
-      sp.zIndex = -700;
-      sp.alpha = 0.9;
-      cameraC.addChild(sp);
-      siteSprites.push(sp);
-    }
-    // a vein takes a mine and a mine is two tiles by one, so its mark is
-    // that and not a build site's — laid across or bedded on end, whichever
-    // way the map seated the seam
+    // Unbuilt veins: survey markers on the ground, and nothing more. The
+    // build sites that used to share them are gone (free build on every map,
+    // 2026-09-14): a long press on open ground opens the build menu, and the
+    // ghost's own grid says where a body may go. A vein takes a mine and a
+    // mine is two tiles by one, so its mark is that size, laid across or
+    // bedded on end, whichever way the map seated the seam.
     for (const n of CHAIN.unbuiltNodes(profile)) {
       const b = MAPKIT.veinBox(n);
       const sp = new PIXI.Sprite(PIXELS.siteTex(b.w * T16, b.h * T16));
@@ -925,6 +956,7 @@
       sp.alpha = 0.6;
       cameraC.addChild(sp);
       siteSprites.push(sp);
+      veinMarks.push({ sp, ore: n.ore, b });
     }
 
     player = new PIXI.Sprite(charTex.side[0]);
@@ -952,7 +984,7 @@
   // The box is both the tiles no run may lie on and the frame the ports hang
   // off, so a port is never a tile the body covers and a run always meets
   // the machine flush. The arithmetic is CHAIN's (the seated `at` plus the
-  // facing's footprint): dev/verify.html checks every site on every map
+  // facing's footprint): dev/verify.html checks every vein on every map
   // against the same answer this draws from.
   function bodyBox(m) {
     return CHAIN.machineBox(m);
@@ -1038,8 +1070,8 @@
     if (grid.flags[i] & TILES.FL.RAMP) return null;
     return grid.elev[i];
   }
-  // The tiles of `box` a body may stand on, on a map that has no build sites
-  // (free build, 2026-08-28). Clear ground inside the treeline, and all of
+  // The tiles of `box` a body may stand on (free build: the Open Range
+  // 2026-08-28, every map 2026-09-14). Clear ground inside the treeline, and all of
   // it on ONE storey, the storey under the middle of the machine's foot, so
   // a body never straddles a cliff edge or squats on a ramp. Everything
   // else about a placement (other bodies, the veins, the price) is app.js's
@@ -1895,6 +1927,55 @@
     try { app.ticker.update(performance.now()); } finally { windingByHand = false; }
   }
 
+  // ---------- what stops a walker, and where a walker docks ----------
+  // The frame asks these for every step the operator takes, and the bot
+  // (js/bot.js) asks them to plan a walk, so a route it finds is a route the
+  // feet can take and a spot it stands on docks where it thinks it does.
+  // the base of a standing body blocks, never the tower: the operator
+  // squeezes behind a machine as before, and a wider kind blocks a wider base
+  function bodyBlocks(px, py) {
+    for (const s of Object.values(stations)) {
+      if (!s.built) continue;
+      const d = s.def;
+      if (px > d.x - 3 && px < d.x + (d.bw || 26) + 3 && py > d.y - 14 && py < d.y + 2) return true;
+    }
+    for (const sc of CHAIN.SCENERY) {
+      const b = sc.box;
+      if (px > b.x - 3 && px < b.x + b.w + 3 && py > b.y - 3 && py < b.y + b.h + 3) return true;
+    }
+    return false;
+  }
+  const inRectPx = (r, px, py) => px >= r.x && px < r.x + r.w && py >= r.y && py < r.y + r.h;
+  function groundLets(fx, fy, tx2, ty2) {
+    if (closedRects.some((r) => inRectPx(r, tx2, ty2))) return false;
+    if (openRects.some((r) => inRectPx(r, tx2, ty2))) return true;
+    return TILES.passable(grid, fx, fy, tx2, ty2);
+  }
+  // the place a walker standing at (px, py) docks at: the nearest work spot in
+  // reach. Runs underfoot are not places here; the frame adds them after.
+  function stationAt(px, py) {
+    let best = null, bestD = 1e9;
+    for (const s of Object.values(stations)) {
+      if (s.def.kind === 'belt') continue;          // a run yields to anything else in reach
+      const d = Math.hypot(px - midX(s.def), py - (s.def.y + 6));
+      if (d < DOCK_RANGE && d < bestD) { best = s.def.id; bestD = d; }
+    }
+    return best;
+  }
+  // one whole step from (ax, ay) to (bx, by), as the frame would allow it
+  function canStep(ax, ay, bx, by) {
+    if (!grid || bx < LIM.w || bx > LIM.e || by < LIM.n || by > LIM.s) return false;
+    return !bodyBlocks(bx, by) && groundLets(ax, ay, bx, by);
+  }
+  // where a walker standing at (px, py) would dock: a place, a run, or nothing
+  function dockAt(px, py) {
+    const id = stationAt(px, py);
+    if (id) return id;
+    const [tx, ty] = tileOf(px, py - 2);
+    const ids = beltTileIndex.get(key(tx, ty));
+    return ids && ids.length ? 'belt:' + tx + ',' + ty : null;
+  }
+
   function tick(ticker) {
     if (!windingByHand) lastFrame = performance.now();
     if (!ready || !player) return;
@@ -1905,26 +1986,7 @@
     if (moving.right) vx += SPEED;
     if (moving.up) vy -= SPEED;
     if (moving.down) vy += SPEED;
-    const collides = (px, py) => {
-      for (const s of Object.values(stations)) {
-        if (!s.built) continue;
-        const d = s.def;
-        // the base blocks, never the tower: the operator squeezes behind a
-        // machine as before, and a wider kind blocks a wider base
-        if (px > d.x - 3 && px < d.x + (d.bw || 26) + 3 && py > d.y - 14 && py < d.y + 2) return true;
-      }
-      for (const sc of CHAIN.SCENERY) {
-        const b = sc.box;
-        if (px > b.x - 3 && px < b.x + b.w + 3 && py > b.y - 3 && py < b.y + b.h + 3) return true;
-      }
-      return false;
-    };
-    const inRect = (r, px, py) => px >= r.x && px < r.x + r.w && py >= r.y && py < r.y + r.h;
-    const terrainOK = (fx, fy, tx2, ty2) => {
-      if (closedRects.some((r) => inRect(r, tx2, ty2))) return false;
-      if (openRects.some((r) => inRect(r, tx2, ty2))) return true;
-      return TILES.passable(grid, fx, fy, tx2, ty2);
-    };
+    const collides = bodyBlocks, terrainOK = groundLets;
     if (vx !== 0 || vy !== 0) {
       workTtl = 0; working = false;
       facing = Math.abs(vy) > Math.abs(vx) ? (vy < 0 ? 'up' : 'down') : 'side';
@@ -1978,14 +2040,7 @@
     }
 
     // docking: 2D proximity to the place's work spot (front-center)
-    let best = null, bestD = 1e9;
-    for (const s of Object.values(stations)) {
-      if (s.def.kind === 'belt') continue;          // a run yields to anything else in reach
-      const dx = playerX - midX(s.def);
-      const dy = playerY - (s.def.y + 6);
-      const d = Math.hypot(dx, dy);
-      if (d < DOCK_RANGE && d < bestD) { best = s.def.id; bestD = d; }
-    }
+    let best = stationAt(playerX, playerY);
     // nothing else claims you: the run you are standing on does
     const onRun = best ? null : beltsUnderfoot();
     if (onRun) best = beltDock(onRun.tx, onRun.ty, onRun.ids);
@@ -2101,6 +2156,7 @@
         .rect(bx + 1, by + 1, Math.round(14 * Math.min(1, chargeVal)), 2).fill(chargeColor);
     }
     drawSocketMarker();
+    drawVeinCall();
     // the selector breathes, so it reads as a cursor and not a fence
     if (dockedId && stations[dockedId]) stations[dockedId].glow.alpha = 0.7 + 0.3 * Math.abs(Math.sin(frameClock * 0.06));
 
@@ -2215,7 +2271,9 @@
     scale: () => S,                    // device px per world px, so the DOM can match the canvas
     screenPos, setDockGlow, showInfo, clearInfo, showMenu, clearMenu, setAutoLook,
     routeBelt, beltReaches, machinePorts, portsOpen, showGhost, clearGhost, setSpool, markStations, setSocketTarget,
-    showBuildGhost, clearBuildGhost, buildZone,
+    showBuildGhost, clearBuildGhost, buildZone, callVeins,
+    // the walker's own rules, for a caller planning a walk (js/bot.js)
+    canStep, dockAt, SPEED, DOCK_RANGE,
     setInvValue, invScreenPos, setHudKeys, setInvMarks, setCharge, pulseInv,
     onDock: null,
   };
