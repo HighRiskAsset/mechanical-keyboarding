@@ -55,7 +55,6 @@
   let menu = null;               // {rows:[{...row, action}], sel}
   let buildMenu = null;          // the build menu, raised on the operator in open field
   let placing = null;            // {kind, face, at, ok, vein, price, …} — the build ghost
-  let pendingUnlock = null;      // a pair just unlocked, card queued
   let producedSinceFloat = {};
   // goods made this batch that never flew to the bag: onto a run, into the
   // machine's own bin behind a backed-up run, or onto the ground when
@@ -87,8 +86,11 @@
         const cap = document.createElement('div');
         cap.className = 'keycap';
         cap.dataset.code = key.code;
-        const finger = LAYOUT.FINGER[key.code];
-        if (!isSpace) cap.classList.add(finger ? (finger[0] === 'l' ? 'hand-l' : 'hand-r') : (isRight ? 'hand-r' : 'hand-l'));
+        // the cap wears the tint of the finger that owns it (Space is the
+        // thumbs' and stays plain); a key the board leaves unowned falls to
+        // the pinky of its side, which is where every edge key sits
+        const finger = LAYOUT.FINGER[key.code] || (isRight ? 'r5' : 'l5');
+        if (!isSpace) cap.classList.add('f-' + finger);
         if (LAYOUT.HOME_CODES.has(key.code)) cap.classList.add('home');
         const shifted = LAYOUT.SHIFTED_CODE_TO_CHAR[key.code];
         const plain = LAYOUT.CODE_TO_CHAR[key.code];
@@ -177,38 +179,6 @@
   }
 
   // ---------- what the board is showing you ----------
-  // Locked and unlocked caps are printed alike; the band under the key is the
-  // whole tell, and its colour is the ore that unlocked the letter. So buying
-  // a mine's Mk lights that mine's colour across the board, and the keyboard
-  // reads as the economy rather than as a finger chart.
-  function bandFor(ch) {
-    const origin = ch === undefined ? null : CHAIN.keyOrigin(ch);
-    return origin && origin.ore ? `var(--ore-${origin.ore})` : 'var(--band-free)';
-  }
-  function paintBand(cap, ch, unlocked) {
-    cap.classList.toggle('locked', !unlocked);
-    cap.style.setProperty('--ore', unlocked ? bandFor(ch) : 'transparent');
-  }
-  function refreshKeyboard() {
-    const unlockedSet = new Set(E.unlockedLetters(profile));
-    // Shift belongs to no ore. It lights when the course has handed out
-    // something that needs it — in ЙЦУКЕН that is the comma, at the Fastener.
-    const shiftReady = CHAIN.capsUnlocked(profile) || [...LAYOUT.NEEDS_SHIFT].some((c) => unlockedSet.has(c));
-    for (const [code, cap] of Object.entries(keycapEls)) {
-      if (cap.classList.contains('inert')) continue;
-      const isShift = code === 'ShiftLeft' || code === 'ShiftRight';
-      let ch = LAYOUT.CODE_TO_CHAR[code];
-      // a key whose only trainable glyph is shifted (the number-row marks)
-      if (ch === undefined) {
-        const sh = LAYOUT.SHIFTED_CODE_TO_CHAR[code];
-        if (sh !== undefined && L.PUNCT.has(sh)) ch = sh;
-      }
-      if (!isShift && ch === undefined) continue;
-      if (isShift) paintBand(cap, undefined, shiftReady);
-      else paintBand(cap, ch, ch === ' ' || unlockedSet.has(ch));
-    }
-    scheduleHint();
-  }
   // the lesson's letters light up
   function refreshLessonLights() {
     const set = canTypeHere() ? new Set(alphabet) : null;
@@ -226,11 +196,18 @@
     if (!profile.seen[mat]) { profile.seen[mat] = true; }
     const got = CHAIN.bagAdd(profile.bag, mat, n);
     if (!got) return;
+    touch(mat);
     producedSinceFloat[mat] = (producedSinceFloat[mat] || 0) + got;
   }
   function spend(cost) {
-    CHAIN.spendCost(profile.bag, cost);   // family-aware: deeper ore covers a shallow ask, shallow stock first
+    CHAIN.spendCost(profile.bag, cost);
+    for (const mat of Object.keys(cost || {})) touch(mat);
   }
+  // The panel's residents are the materials the hands worked with last. A
+  // touch is a good landing in the bag by hand (typed out, collected, swept
+  // up) or a price leaving it; the simulation's own traffic stays on belts
+  // and in bins and never touches anything.
+  function touch(mat) { profile.touched[mat] = ++profile.touchN; }
   const canPay = (cost) => CHAIN.affordable(profile.bag, cost);
   // the materials of a price the bag falls short of — their counts print
   // red in the menu rows, so an unaffordable row says which is the problem
@@ -241,6 +218,7 @@
   // by the same keystroke as one that lands in the bag, and it used to be
   // made in silence.
   function flushFloats() {
+    refreshHudRows();
     const parts = Object.entries(producedSinceFloat).filter(([, n]) => n > 0);
     if (parts.length && dock) {
       FACTORY.floatText(parts.map(([, n]) => `+${n}`).join(' '), dock.id);
@@ -252,7 +230,16 @@
   }
 
   // The bag lives inside the game canvas as a pixel HUD (icons + bitmap
-  // numbers). Rows are the materials the player has held, in tree order.
+  // numbers). The panel is not the bag (2026-09-15): the bag holds every
+  // good ever earned, well past a hundred kinds by the end of a tree, and
+  // the panel shows only the rows the hands have been working with last,
+  // as many as fit the canvas, in tree order so nothing shuffles while you
+  // work. A row the thing in front of you names (its price, its inputs,
+  // what it makes) surfaces above the residents for as long as it is in
+  // front of you, taking the place of the longest-untouched resident, and
+  // goes back down when you walk away. A resident the focus names stays
+  // where it is, lit by its mark. Nothing is ever lost from the bag: a
+  // hidden row comes back the moment a price names it or a good lands.
   let iconURLs = {};
   const invPrev = {};
   const invShown = {};
@@ -266,8 +253,17 @@
   const countHint = {};
   let hudKeysShown = [];
   const invValue = (k) => profile.bag[k] || 0;
-  function hudKeys() {
-    return CHAIN.MAT_IDS.filter((id) => profile.seen[id]);
+  function hudKeys(marks) {
+    const cap = FACTORY.hudCapacity();
+    const touched = profile.touched || {};
+    const byTree = (a, b) => CHAIN.MAT_IDS.indexOf(a) - CHAIN.MAT_IDS.indexOf(b);
+    const focus = Object.keys(marks || {}).sort(byTree);
+    const inFocus = (m) => (marks && marks[m] ? 1 : 0);
+    // the newest touches stay; a resident the focus names is never the one evicted
+    const resident = Object.keys(touched).sort((a, b) => (inFocus(b) - inFocus(a)) || (touched[b] - touched[a]));
+    const surfaced = focus.filter((m) => !resident.includes(m)).slice(0, cap);
+    const keep = resident.slice(0, cap - surfaced.length).sort(byTree);
+    return surfaced.concat(keep);
   }
   function showInv(key, n) {
     invShown[key] = n;
@@ -296,16 +292,27 @@
     if (hint && hint.wait) countWaits[key] = setTimeout(run, hint.wait);
     else run();
   }
+  // the rows alone: which materials the panel shows. Called on the frame
+  // with the marks (the focus moves with the cursor, not with the goods)
+  // and before a flight, so a good landing on a row that has just surfaced
+  // has a row to land on.
+  function refreshHudRows(marks) {
+    if (!profile) return;
+    const keys = hudKeys(marks || invMarksNow());
+    if (hudKeysShown && keys.join() === hudKeysShown.join()) return;
+    hudKeysShown = keys;
+    FACTORY.setHudKeys(keys);
+    for (const k of keys) { if (!iconURLs[k]) iconURLs[k] = PIXELS.matURL(k, PIXELS.MAT_SPARK_PEAK); showInv(k, invPrev[k] === undefined ? invValue(k) : invPrev[k]); }
+  }
   function refreshInventory() {
     if (!profile) return;
-    const keys = hudKeys();
-    if (!hudKeysShown || keys.join() !== hudKeysShown.join()) {
-      hudKeysShown = keys;
-      FACTORY.setHudKeys(keys);
-      for (const k of keys) { if (!iconURLs[k]) iconURLs[k] = PIXELS.matURL(k, PIXELS.MAT_SPARK_PEAK); showInv(k, invPrev[k] === undefined ? invValue(k) : invPrev[k]); }
-    }
-    for (const k of keys) {
+    refreshHudRows();
+    const shown = new Set(hudKeysShown);
+    // every material is tracked, shown or not, so a row that surfaces later
+    // comes up at its true count and climbs only for what lands after
+    for (const k of CHAIN.MAT_IDS) {
       const v = invValue(k);
+      if (!shown.has(k)) { if (invPrev[k] !== v) { stopCount(k); delete countHint[k]; invPrev[k] = v; invShown[k] = v; } continue; }
       if (invPrev[k] === undefined) { invPrev[k] = v; showInv(k, v); continue; }
       if (v === invPrev[k]) continue;               // a note is only spent on the change it was left for
       const hint = countHint[k];
@@ -1052,8 +1059,7 @@
     updatePlacing(true);
     if (!placing.ok) { cancelPlacing(); return; }
     const { kind, face, at, price, vein, unlock } = placing;
-    let pair = null;
-    if (unlock) pair = E.unlockIntro(profile, CHAIN.mineLesson(vein.ore));
+    if (unlock) E.unlockIntro(profile, CHAIN.mineLesson(vein.ore));
     if (price) spend(price);
     const m = { id: 'm' + (profile.nextMachineId++), kind, at: at.slice(), face, auto: false };
     if (kind === 'mine') { m.ore = vein.ore; m.node = vein.index; }
@@ -1061,10 +1067,9 @@
     placing = null;
     FACTORY.clearBuildGhost();
     FACTORY.callVeins(null);
-    const landed = afterPurchase({ dockId: 'm:' + m.id }, price);
-    // the card waits for the body: a mine that opens a pair is the build
-    // most worth watching, and a card over the smoke is a card over nothing
-    if (pair) { pendingUnlock = pair; setTimeout(() => showUnlockCard(pair), landed + 140); }
+    // the keys it opens come into the lines drawn after, not onto a card
+    // (no dialogues once play has started)
+    afterPurchase({ dockId: 'm:' + m.id }, price);
   }
 
   function openMenu() {
@@ -1124,8 +1129,10 @@
       if (!act.m.autoOn) act.m.autoOn = {};
       act.m.autoOn[act.key] = true;
       SIM.ensureMachine(act.m);
+      // the fanfare stays; the card it came with went (no dialogues once
+      // play has started)
       const landed = afterPurchase({ dockId: 'm:' + act.m.id }, act.price);
-      setTimeout(() => showBenchAutoCard(act.m), landed + 140);
+      setTimeout(A.fanfare, landed + 140);
     } else if (act.type === 'recipe') {
       // the recipe already running: choosing it changes nothing, and the
       // unit in progress is not thrown away
@@ -1221,7 +1228,7 @@
       if (flying) A.pay();
     }
     refreshInventory();
-    refreshKeyboard();
+    scheduleHint();
     redock();
     // the site smokes for the whole flight and the body settles as the last
     // of the price arrives, so the ground is never bare between the ghost
@@ -1239,7 +1246,7 @@
     rebuildWorld();
     E.saveProfile(profile);
     refreshInventory();
-    refreshKeyboard();
+    scheduleHint();
     redock();
   }
   // returns {moved, lost}: runs the world re-laid or gave up on because a
@@ -1356,9 +1363,8 @@
   function refreshInvMarks() {
     const marks = invMarksNow();
     const sig = Object.keys(marks).sort().map((k) => k + marks[k]).join(',');
-    if (sig === invMarksSig) return;
-    invMarksSig = sig;
-    FACTORY.setInvMarks(marks);
+    if (sig !== invMarksSig) { invMarksSig = sig; FACTORY.setInvMarks(marks); }
+    refreshHudRows(marks);   // marks first, so a row rebuilt for the focus comes back lit
   }
 
   // ---------- line rendering ----------
@@ -1374,7 +1380,7 @@
     wordHadError = false;
     lineErrors = 0;
     renderLine();
-    refreshKeyboard();
+    scheduleHint();
     refreshLessonLights();
   }
   function clearLine() {
@@ -1533,6 +1539,7 @@
       buildMenu: buildMenu ? { sel: buildMenu.sel, rows: buildMenu.rows.map((r) => (r.action ? r.action.kind : 'none') + (r.enabled === false ? '(off)' : '')) } : null,
       placing: placing ? { kind: placing.kind, face: placing.face, at: placing.at, ok: placing.ok } : null,
       spool, spoolRoute: spoolRoute ? spoolRoute.length : null,
+      hud: (hudKeysShown || []).slice(),   // the rows the bag panel is showing, top to bottom
     }),
     // the live save, for the harnesses; developer mode only
     live: () => (DEVMODE.isEnabled() ? profile : null),
@@ -1547,6 +1554,7 @@
     for (const mat of CHAIN.MAT_IDS) {
       if (!CHAIN.bagAdd(profile.bag, mat, DEBUG_MATERIALS)) continue;   // already at the cap
       profile.seen[mat] = true;
+      touch(mat);   // in tree order, so the panel comes up holding the newest of them
       n++;
     }
     E.saveProfile(profile);
@@ -1667,7 +1675,7 @@
     renderLine();
     flushFloats();
     refreshInventory();
-    refreshKeyboard();
+    scheduleHint();
     refreshStats();
     refreshStatus();
     if (held) flashCaption(T.t('capDebugAutoDone', { n: autoChars }));
@@ -1970,26 +1978,24 @@
 
   // ---------- keys opened at a machine ----------
   // A key group's recipe costs its inputs, and that is the whole price of
-  // the keys: the first time every input has been held, the keys open and
-  // the card says so. Mines open their keys when they are built (placeNow).
+  // the keys: the first time every input has been held, the keys open. Mines
+  // open their keys when they are built (placeNow). No card says so (no
+  // dialogues once play has started): the lines drawn after carry the keys.
+  // With no card to queue, every group that has come due opens in the same
+  // pass.
   function checkIntroUnlocks() {
     if (!profile) return;
+    let opened = false;
     for (const l of CHAIN.INTROS) {
       if (l.kind !== 'keys' || profile.unlocked[l.id]) continue;
       const r = CHAIN.recipeOfLesson(l.id);
       if (!r || !CHAIN.inputsExist(r, profile)) continue;
-      const pair = E.unlockIntro(profile, l.id);
-      if (!pair) continue;
-      E.saveProfile(profile);
-      refreshKeyboard();
-      const show = () => {
-        if (!overlay.classList.contains('hidden') || (pendingUnlock && pendingUnlock !== pair)) { setTimeout(show, 400); return; }
-        pendingUnlock = pair;
-        showUnlockCard(pair);
-      };
-      setTimeout(show, 200);
-      return;   // one card at a time; the next call finds the next
+      if (E.unlockIntro(profile, l.id)) opened = true;
     }
+    if (!opened) return;
+    E.saveProfile(profile);
+    scheduleHint();
+    refreshStatus();
   }
 
   // ---------- docking ----------
@@ -2058,6 +2064,7 @@
       profile.seen[g.mat] = true;
       if (kept < g.n) DROPS.spawn(profile, g.mat, g.n - kept, g.x, g.y);
       if (!kept) continue;
+      touch(g.mat);
       flyFrom(g.mat, Math.min(kept, 3), g.x, g.y);
       A.pickup();
     }
@@ -2139,63 +2146,6 @@
     overlayName = null;
   }
 
-  function showUnlockCard(pair, retooled) {
-    overlayRerender = () => showUnlockCard(pair, retooled);
-    const keys = pair.keys;
-    const first = keys.find((k) => k !== 'Shift') || keys[0];
-    const composed = LAYOUT.COMPOSED && LAYOUT.COMPOSED[first];
-    const code = composed ? composed.split('+').pop() : LAYOUT.CHAR_TO_CODE[first];
-    let finger = code && LAYOUT.FINGER[code] ? T.fingerName(LAYOUT.FINGER[code]) : '';
-    if (first === 'Shift') finger = T.t('shiftBoth');
-    else if (composed) finger = ((T.t('strokeNames') || {})[composed.split('+')[0]] || composed.split('+')[0]) + ' + ' + finger;
-    else if (LAYOUT.NEEDS_SHIFT.has(first)) finger = T.t('shiftFinger', { finger });
-    const freq = keys.reduce((a, k) => a + (L.LETTER_FREQ[k] || 0), 0).toFixed(1);
-    const big = keys.map((k) => (k === 'Shift' ? '⇧' : (L.PUNCT.has(k) || /^\d$/.test(k)) ? k : k.toUpperCase() + ' ' + k)).join(' · ');
-    const title = T.t('unlockTitlePair', { keys: `<span class="big-letter">${big}</span>` });
-    // marks and digits carry no share of the letter count: the finger alone
-    const meta = +freq > 0 ? T.t('unlockMeta', { finger, freq }) : finger;
-    showOverlay(`
-      <div class="card-station">${T.t('unlockStation')}</div>
-      <h2>${title}</h2>
-      <p class="muted">${meta}</p>
-      <p>${T.t('unlockNote')}</p>
-      ${retooled ? `<p class="muted">${T.t('unlockRetool')}</p>` : ''}
-      <button id="ov-continue" class="btn-primary">${T.t('unlockGo')}</button>
-    `, false, 'unlock');
-    // paint the new ore band under the glow, so when the glow drops away the
-    // key is already wearing the colour of the mine that paid for it
-    const caps = [];
-    for (const k of keys) {
-      const codes = k === 'Shift' ? ['ShiftLeft', 'ShiftRight'] : [LAYOUT.CHAR_TO_CODE[k]];
-      for (const c of codes) {
-        const cap = keycapEls[c];
-        if (!cap) continue;
-        paintBand(cap, k === 'Shift' ? undefined : k, true);
-        cap.classList.add('unlock-glow');
-        caps.push(cap);
-      }
-    }
-    $('ov-continue').onclick = () => {
-      for (const cap of caps) cap.classList.remove('unlock-glow');
-      hideOverlay();
-      pendingUnlock = null;
-      lastCorrectTime = null;
-      redock();
-    };
-    $('ov-continue').focus();
-  }
-  function showBenchAutoCard(m) {
-    overlayRerender = () => showBenchAutoCard(m);
-    A.fanfare();
-    showOverlay(`
-      <div class="card-station">${T.t('benchAutoStation')}</div>
-      <h2>${T.t('benchAutoTitle', { name: machineName(m) })}</h2>
-      <p>${T.t(m.kind === 'mine' ? 'benchAutoNote' : 'autoNoteProcessor')}</p>
-      <button id="ov-continue" class="btn-primary">${T.t('automationGo')}</button>
-    `, false, 'auto');
-    $('ov-continue').onclick = () => { hideOverlay(); };
-    $('ov-continue').focus();
-  }
   // the finish: the frontier is built. Free play continues — raised bars,
   // hint-free by now, more pages — nothing shuts.
   function showFinishCard() {
@@ -2413,7 +2363,6 @@
     buildMenu = null; placing = null;
     FACTORY.clearBuildGhost();
     FACTORY.callVeins(null);
-    pendingUnlock = null;
     unitAcc = 0; unitPaid = false; dryNow = false; lastCorrectTime = null;
     producedSinceFloat = {}; madeElsewhere = 0;
     for (const k of Object.keys(invPrev)) delete invPrev[k];
@@ -2436,7 +2385,7 @@
     if (relaid && (relaid.moved || relaid.lost)) E.saveProfile(profile);
     clearLine();
     refreshInventory();
-    refreshKeyboard();
+    scheduleHint();
     refreshLessonLights();
     refreshStatus();
     hideOverlay();

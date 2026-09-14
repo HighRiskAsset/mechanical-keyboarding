@@ -65,6 +65,8 @@
     KeyO: 'r4', KeyL: 'r4', Period: 'r4',
     KeyP: 'r5', Semicolon: 'r5', Quote: 'r5', BracketLeft: 'r5', BracketRight: 'r5', Slash: 'r5',
     ShiftLeft: 'l5', ShiftRight: 'r5',
+    // the edge keys are the pinkies' too; inert here, but owned all the same
+    Tab: 'l5', CapsLock: 'l5', Backspace: 'r5', Backslash: 'r5', Enter: 'r5',
   };
 
   // Home-row anchor keys (where fingers rest).

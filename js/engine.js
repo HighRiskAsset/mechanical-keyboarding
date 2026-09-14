@@ -70,6 +70,8 @@
       collected: {},     // word → {n, clean, at} — the passport
       bag: {},           // material id → count
       seen: {},          // material id → true once held (progressive reveal)
+      touched: {},       // material id → the count of its last hand touch (the bag panel's residents)
+      touchN: 0,
       machines: sm.machines, // {id, kind, ore?, node?, at, face, recipe?, autoOn?}
       nextMachineId: sm.nextId,
       drops: [],         // loose materials on the ground: {id, mat, n, x, y}
@@ -115,6 +117,10 @@
     if (!p.collected) p.collected = {};
     if (!p.bag) p.bag = {};
     if (!p.seen) p.seen = {};
+    // a save from before the panel had residents: everything it has held is
+    // touched in tree order, so its newest goods are the ones that stay up
+    if (!p.touched) { p.touched = {}; p.touchN = 0; for (const m of C().MAT_IDS) if (p.seen[m] && !C().isFluid(m)) p.touched[m] = ++p.touchN; }
+    if (typeof p.touchN !== 'number') p.touchN = Object.keys(p.touched).length;
     if (!p.crossings) p.crossings = {};
     if (p.finishedAt === undefined) p.finishedAt = null;
     // a fluid never sits in the bag (it cannot be carried); a save that

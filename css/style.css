@@ -12,18 +12,14 @@
   --ok: #7fb98a;
   --err: #d4685e;
   --hint: #e8c877;
-  /* The band under a keycap names the ore that unlocked the letter, so the
-     six mine colours (ORE_TONE, pixels.js) reappear here — lifted a few
-     steps, because 3px of coal or oil at their true tone is black on a dark
-     cap. --band-free is for the keys no mine sells: space and Shift. */
-  --ore-iron: #8fb0d6; --ore-copper: #d8814e; --ore-stone: #b8ab8e;
-  --ore-quartz: #e59ae0; --ore-coal: #7f8494; --ore-oil: #8b6fc4;
-  /* the v4 tree's raws (js/tree-ru.js), one band colour each */
-  --ore-R1: #8fb0d6; --ore-R2: #d8814e; --ore-R3: #b8ab8e; --ore-R4: #7f8494; --ore-R5: #4ba8d8;
-  --ore-R6: #e8c25a; --ore-R7: #e59ae0; --ore-R8: #d6d25a; --ore-R9: #8b6fc4; --ore-R10: #c98b6a;
-  --ore-R11: #8fd66e; --ore-R12: #a9d8e8; --ore-R13: #d67ab8;
-  --band-free: #4f6f7a;
-  --hand-l-bg: #12242e; --hand-r-bg: #1c2527;
+  /* the four finger tints, mirrored across the hands: a key's colour is the
+     finger that owns it, and the same finger reads the same on both sides.
+     Quiet shades of the night-train palette, so the pattern is there to be
+     read and never shouts over the brass. */
+  --finger-2: #1e2a22;   /* index: moss */
+  --finger-3: #14282f;   /* middle: teal */
+  --finger-4: #1d2333;   /* ring: slate blue */
+  --finger-5: #262029;   /* pinky: plum */
 }
 
 html, body { height: 100%; }
@@ -210,14 +206,13 @@ body.night #factory-mount canvas { filter: brightness(0.45) saturate(0.8); }
   font-size: 16px;
   font-family: Arial, sans-serif;
   color: var(--ink);
-  /* set per key by refreshKeyboard: the ore's colour once unlocked, nothing
-     before. A locked cap is otherwise a normal cap — the band is the tell. */
-  border-bottom: 3px solid var(--ore, transparent);
 }
-.keycap.hand-l { background: var(--hand-l-bg); }
-.keycap.hand-r { background: var(--hand-r-bg); }
-/* Tab, Enter, the digits: scenery, not game content. No band — a band means
-   an ore bought this key, and no ore ever buys these. */
+/* which finger: the hands are already told apart by the gap in the slab */
+.keycap.f-l2, .keycap.f-r2 { background: var(--finger-2); }
+.keycap.f-l3, .keycap.f-r3 { background: var(--finger-3); }
+.keycap.f-l4, .keycap.f-r4 { background: var(--finger-4); }
+.keycap.f-l5, .keycap.f-r5 { background: var(--finger-5); }
+/* Tab, Enter, the digits: scenery, not game content. */
 .keycap.inert {
   background: #0f1a20;
   color: #31454e;
@@ -239,9 +234,6 @@ body.night #factory-mount canvas { filter: brightness(0.45) saturate(0.8); }
   border-radius: 1px;
   background: #3d545e;
 }
-/* .locked carries no styling of its own: an unreached letter is printed on
-   its cap as plainly as any other, it simply has no ore band under it. The
-   class stays because the unlock card and the tests read it. */
 .keycap.hint {
   color: #1a1508;
   background: rgba(232, 200, 119, 1);
@@ -292,13 +284,6 @@ body.night #factory-mount canvas { filter: brightness(0.45) saturate(0.8); }
   background: #7fc9a8;
   box-shadow: 0 0 6px 2px rgba(127, 201, 168, 0.7);
 }
-.keycap.unlock-glow {
-  background: var(--brass);
-  color: #1a1508;
-  box-shadow: 0 0 24px rgba(212, 169, 78, 0.9);
-  animation: pulse 1s infinite alternate;
-}
-@keyframes pulse { from { transform: scale(1); } to { transform: scale(1.12); } }
 
 #hint-note {
   font-size: 13px;
@@ -383,7 +368,6 @@ footer {
   font-size: 13px;
   text-transform: uppercase;
 }
-.big-letter { color: var(--brass); }
 .pix-scene { image-rendering: pixelated; display: block; margin: 10px auto 0; }
 .rules { text-align: left; margin: 14px 0 8px 20px; line-height: 1.7; font-size: 15px; }
 .btn-primary {
@@ -427,7 +411,7 @@ footer {
 
 /* night run: the whole room dims, keyboard goes dark */
 body.night { background: #0a141a; }
-body.night .keycap:not(.hint) { background: #0d161c; color: #2b3d46; border-bottom-color: #16232b; }
+body.night .keycap:not(.hint) { background: #0d161c; color: #2b3d46; }
 body.night .keycap.home::after { background: #23343d; }
 
 /* ---------- loading card: markup AND styling both live in index.html, inlined

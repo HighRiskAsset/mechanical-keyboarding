@@ -95,6 +95,25 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   numbers, top-right of the canvas), requirement rows, charge bar. Only the
   page header and the keyboard visualizer are DOM. (The drill text line stays
   DOM for now — it's the reading surface.)
+- **The panel is not the bag (2026-09-15).** The v4 tree ends past a hundred
+  materials and the bag holds every one of them, but the HUD shows only what
+  fits the canvas (about 15 rows at the usual height, `FACTORY.hudCapacity`):
+  the **residents**, the materials the hands worked with last (a good landing
+  by hand or a price leaving; the simulation's own traffic never counts), in
+  tree order so nothing shuffles while you work. A row the thing in front of
+  you names (a price, a recipe's inputs, what it makes) **surfaces above the
+  residents for as long as it is in front of you**, taking the place of the
+  longest-untouched resident, and goes back down when you walk away; a
+  resident the focus names stays put, lit by its mark. Nothing is ever lost:
+  a hidden row returns the moment a price names it or a good lands, and a
+  greyed menu row still prints the short count in red, so a hidden row can
+  never hide a shortage. Materials are never retired; rows go quiet instead.
+  Considered and not taken: scrolling, tabs, sorting, a search, an inventory
+  screen (all make management a thing). Still open: pages and byproducts on
+  a shelf of their own at the place that spends them; an audit of how far
+  back prices reach; automated goods leaving the bag for bins and belts.
+  Live save: `touched` / `touchN` on the profile; a save from before is
+  seeded in tree order so its newest goods are the ones that stay up.
 - **Recipes and consumption (v3):** a processor wears **one** row — the
   recipe it is running (2026-08-20; it used to show the whole list, which
   crowded the machine). The others are chosen at the machine's hold-Space
@@ -340,11 +359,10 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   the flux (the one ore/ingot input) sets the focus — its letters tilt
   sampling (`CHAIN.recipeFocus`). The Fastener's Mk levels are bought at a
   Fastener like an ore's at a mine (`PAIRS` events with `at:`,
-  `PRICES.at`): "MK1 ," with a price, the unlock card names ⇧ Shift + the
-  finger; the comma is typed as Shift+/ and the hint lights Shift. Maps
-  carry the pyramid — veins per ore in proportion to the work that ore is
-  asked to do, computed from the tree rather than named (see *Veins follow
-  the tree*) — and the outer regions have their own plots.
+  `PRICES.at`): "MK1 ," with a price; the comma is typed as Shift+/ and the
+  hint lights Shift. Maps carry the pyramid — veins per ore in proportion to
+  the work that ore is asked to do, computed from the tree rather than named
+  (see *Veins follow the tree*) — and the outer regions have their own plots.
 - **Discoverability (2026-08-19):** the in-canvas menus are icons only (the
   bitmap font has no letters), so a **caption** (`#place-caption`, DOM text,
   EN/RU) sits at the bottom of the map: while a menu is open it says what
@@ -496,6 +514,23 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   applies. The one gap that closed: open ground now carries a dim "hold
   Space to build" caption, shown only while the build menu has a row the
   bag can cover.
+- **No dialogues once play has started** (user decision, 2026-09-14). The
+  new-keys card and the automation card ("… now runs itself") are gone. Keys
+  that open come into the lines drawn after; an automation lands with its
+  fanfare, and the caption calls the machine automated. The welcome card
+  comes before play and stays. The rest card (🌅) and the finish card (🏁)
+  predate the decision and still pop up.
+- **No mine colours on the keyboard** (user decision, 2026-09-14). Unlocked
+  keys used to wear a band along the bottom in the colour of the mine that
+  opened them. Keying the board to the mines was not needed, so the bands are
+  gone, and a key the course has not reached yet looks like any other.
+- **The keyboard wears its fingers (user decision, 2026-09-15).** Each cap
+  is tinted for the finger that owns it, the same four quiet shades on both
+  hands (index moss, middle teal, ring slate, pinky plum; `--finger-2` to
+  `--finger-5` in the stylesheet), in place of the old left/right pair. The
+  gap in the slab already tells the hands apart; the tints tell the fingers.
+  Presentation only, and the first of the teaching aids: a hands-on-board
+  card before play is the next.
 - **The two switches** (on the map picker, and again in settings): interface
   language and keyboard course, stacked, language above layout. Both are
   flags — drawn in `flags.js` on a 21×14 pixel grid, because Windows ships no

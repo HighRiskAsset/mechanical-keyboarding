@@ -36,7 +36,7 @@
   // the cards play puts up, whose one button the bot may press; any other
   // panel (settings, the passport, the map picker) is the player's, and the
   // bot waits for it to close
-  const DISMISS = new Set(['welcome', 'unlock', 'auto', 'finish', 'rest']);
+  const DISMISS = new Set(['welcome', 'finish', 'rest']);
 
   let mode = 'off';
   let gen = 0;                       // bumped on every switch, so a stale run stops itself

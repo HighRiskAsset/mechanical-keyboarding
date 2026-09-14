@@ -2275,6 +2275,7 @@
     // the walker's own rules, for a caller planning a walk (js/bot.js)
     canStep, dockAt, SPEED, DOCK_RANGE,
     setInvValue, invScreenPos, setHudKeys, setInvMarks, setCharge, pulseInv,
+    hudCapacity: () => Math.max(1, Math.floor((viewH - 7) / HUD_ROW)),   // rows the panel can show without leaving the canvas
     onDock: null,
   };
 })();

@@ -63,15 +63,6 @@
     const r = last ? TREE.recipes.find((x) => x.lesson === last) : null;
     return r ? r.machine : null;
   };
-  // where a key was opened: the raw whose mine opens it, or the machine
-  // whose recipe does — the band under the keycap wears the raw's colour
-  const KEY_ORIGIN = {};
-  for (const l of INTROS) {
-    const mine = MINES.find((m) => m.lesson === l.id);
-    const r = TREE.recipes.find((x) => x.lesson === l.id);
-    for (const k of l.keys) KEY_ORIGIN[k] = mine ? { ore: mine.raw } : { kind: r ? r.machine : null };
-  }
-  const keyOrigin = (ch) => KEY_ORIGIN[ch] || null;
 
   // ---- machines: a kind is a machine with a shape ----
   // size is [tiles across, tiles deep]: the front holds one outlet per
@@ -372,7 +363,7 @@
   window.CHAIN = {
     TILE, TREE, LESSONS, LESSON, INTROS, lessonOf, lessonSpec, mineLesson,
     ORES, ORE_IDS, ORE_BY_NODE, MINES, oreLetters, mineName, mineFree,
-    MATS, MAT_IDS, isFluid, matName, matSatisfies, bagAvail, spendCost, bagAdd, COMPLETION, completionKind, keyOrigin,
+    MATS, MAT_IDS, isFluid, matName, matSatisfies, bagAvail, spendCost, bagAdd, COMPLETION, completionKind,
     KINDS, KIND_IDS, kindName, RECIPES, recipesFor, recipeFor, recipeOfLesson, perUnit, rateOf, BARS, TUNING,
     priceNode, priceExtraMine, priceMachine, priceAuto, priceCompletion, priceCrossing, scaleCost, autoKey, autoOn, closedCrossings,
     unlockedIntros, introUnlocked, unlockedKeys, capsUnlocked, nextPairs, nextPair, introRung, newestPair, targetBar, currentTier,
