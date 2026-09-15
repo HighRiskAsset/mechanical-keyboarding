@@ -48,7 +48,7 @@ Hold Space anywhere else while carrying to drop the spool.
 Everything is paid from what you have mined and made. Progress is saved in
 your browser (localStorage), one slot per world; switch worlds from ⚙.
 
-The map keeps its own weather and its own clock: about twelve minutes takes it
+The map keeps its own weather and its own clock: about six minutes takes it
 from dawn through dark and back, lamps and machine fireboxes light the ground
 once the sun is off, and the sky works its way through clear, cloudy, rain,
 storm, fog and snow on its own. None of it changes what the machines do, and

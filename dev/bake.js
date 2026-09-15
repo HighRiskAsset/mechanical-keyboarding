@@ -176,7 +176,7 @@
     {
       const b = builder('veins');
       const kinds = new Set(['iron', 'copper', 'stone', 'quartz', 'coal', 'oil', 'titan']);
-      for (const m of MAPS) for (const n of (m.MAP.NODES || [])) kinds.add(n.kind);
+      for (const m of MAPS) for (const n of (m.MAP.NODES || [])) if (n.kind) kinds.add(n.kind);
       for (const k of kinds) {
         b.add('vein.' + k + '.h', PIXELS.nodeCanvas(k, false));
         b.add('vein.' + k + '.v', PIXELS.nodeCanvas(k, true));

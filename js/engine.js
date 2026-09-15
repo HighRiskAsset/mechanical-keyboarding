@@ -121,6 +121,19 @@
     // a fluid never sits in the bag (it cannot be carried); a save that
     // somehow holds one drops it
     for (const k of Object.keys(p.bag)) if (C().isFluid(k)) delete p.bag[k];
+    // An extractor saved on a seam, from before its raw was drawn from open
+    // water (2026-09-16), has no seam left to stand on and is four tiles by
+    // four now, so it is taken down the way the player would take one down:
+    // its price back in the bag (ahead of the spill below, so what the cap
+    // cannot hold lands at the spawn), its keys kept, its runs gone with it.
+    if (Array.isArray(p.machines)) {
+      for (const m of p.machines.slice()) {
+        if (m.kind !== 'mine' || !C().drawsWater(m.ore) || m.node === undefined || m.node === null) continue;
+        for (const [mat, n] of Object.entries(C().priceExtraMine(m.ore) || {})) p.bag[mat] = (p.bag[mat] || 0) + n;
+        if (Array.isArray(p.belts)) p.belts = p.belts.filter((b) => b.from !== m.id && b.to !== m.id);
+        p.machines.splice(p.machines.indexOf(m), 1);
+      }
+    }
     // a save from before the cap spills its surplus onto the ground at the
     // spawn, once — clamping would be theft. The piles never expire.
     const bagCap = C().TUNING.BAG_CAP;
@@ -147,8 +160,9 @@
     p.machines = p.machines.filter((m) => (m.kind === 'mine' ? !!C().ORES[m.ore] : !!C().KINDS[m.kind]));
     // a machine on a node this map doesn't have (map data changed) is re-homed
     // to the first unbuilt node of its ore, else dropped
+    // (an extractor in open water stands on no node, and is left where it is)
     for (const m of p.machines.slice()) {
-      if (m.kind !== 'mine') continue;
+      if (m.kind !== 'mine' || C().drawsWater(m.ore)) continue;
       const n = C().MAP.NODES[m.node];
       if (n && C().ORE_BY_NODE[n.kind] === m.ore) continue;
       const alt = C().unbuiltNodes(p).find((nd) => nd.ore === m.ore);

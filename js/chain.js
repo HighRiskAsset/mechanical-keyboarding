@@ -34,6 +34,9 @@
   const MINES = TREE.mines;   // {lesson, raw, name, opens, price, autoPrice, free}
   const MINE_BY_RAW = {};
   for (const m of MINES) MINE_BY_RAW[m.raw] = m;
+  // a raw drawn from open water (the tree's `ground`, 2026-09-16) has no seam:
+  // its extractor stands on the map's water tiles, wherever they will take it
+  const drawsWater = (ore) => !!(MINE_BY_RAW[ore] && MINE_BY_RAW[ore].ground === 'water');
   const ORE_IDS = MINES.map((m) => m.raw);
   const ORES = {};
   ORE_IDS.forEach((id, i) => { ORES[id] = { id, node: id, order: i, lesson: MINE_BY_RAW[id].lesson, name: MINE_BY_RAW[id].name }; });
@@ -286,8 +289,12 @@
     return p ? { x: p.x, y: p.y } : { x: 0, y: 0 };
   }
   const nodeFace = (i) => ((cur.MAP.NODES[i] || {}).vert ? 'e' : 's');
+  // the tiles a machine takes, [across, deep]: its kind's, except that an
+  // extractor standing in open water is four by four (user ruling 2026-09-16)
+  const WATER_SIZE = [4, 4];
+  const sizeOf = (kind, ore) => (kind === 'mine' && drawsWater(ore) ? WATER_SIZE : ((KINDS[kind] || {}).size || [2, 2]));
   function machineBox(m) {
-    const size = (KINDS[m.kind] || {}).size || [2, 2];
+    const size = sizeOf(m.kind, m.ore);
     const face = MAPKIT.FACINGS.includes(m.face) ? m.face : 's';
     if (Array.isArray(m.at)) return MAPKIT.boxAt(m.at, size, face);
     const a = machineAnchor(m);
@@ -307,7 +314,7 @@
   function unbuiltNodes(profile) {
     const out = [];
     cur.MAP.NODES.forEach((n, i) => {
-      if (ORE_BY_NODE[n.kind] && !nodeBuilt(profile, i)) out.push({ ...n, index: i, ore: ORE_BY_NODE[n.kind] });
+      if (ORE_BY_NODE[n.kind] && !drawsWater(n.kind) && !nodeBuilt(profile, i)) out.push({ ...n, index: i, ore: ORE_BY_NODE[n.kind] });
     });
     return out;
   }
@@ -336,7 +343,7 @@
   function starterNodes() {
     const out = [];
     for (const ore of ORE_IDS) {
-      if (!mineFree(ore)) continue;
+      if (!mineFree(ore) || drawsWater(ore)) continue;
       const i = cur.MAP.NODES.findIndex((n) => ORE_BY_NODE[n.kind] === ore);
       if (i >= 0) out.push({ ore, index: i, lesson: mineLesson(ore) });
     }
@@ -368,7 +375,7 @@
     priceNode, priceExtraMine, priceMachine, priceAuto, priceCompletion, priceCrossing, scaleCost, autoKey, autoOn, closedCrossings,
     unlockedIntros, introUnlocked, unlockedKeys, capsUnlocked, nextPairs, nextPair, introRung, newestPair, targetBar, currentTier,
     oreOpen, matExists, offerable, offerableRecipes, inputsExist, kindLive, whatUnlocks, affordable, matInReach, visibleKinds, buildableKinds, kindEverLive, rungsInView, mineMat,
-    machineBox, machinePos, machineFoot, machineAnchor, nodeFace, machinesOfKind, machinesOfOre, nodeBuilt, unbuiltNodes,
+    machineBox, machinePos, machineFoot, machineAnchor, nodeFace, machinesOfKind, machinesOfOre, nodeBuilt, unbuiltNodes, drawsWater, sizeOf,
     MAPS, MAP_IDS, DEFAULT_MAP, useMap, currentMap, starterNodes, siteById, crossingOpen, regionAt,
   };
   useMap(DEFAULT_MAP);

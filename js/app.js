@@ -799,11 +799,12 @@
     }
     if (placing) {
       const name = placing.kind === 'mine' ? mineName(placing.ore) : kindName(placing.kind);
-      if (placing.kind === 'mine' && !placing.vein) { setCaption('', T.t('capPlaceMine', { name, vein: veinName(placing.ore) }), 'no'); return; }
+      const water = placing.kind === 'mine' && CHAIN.drawsWater(placing.ore);
+      if (placing.kind === 'mine' && !water && !placing.vein) { setCaption('', T.t('capPlaceMine', { name, vein: veinName(placing.ore) }), 'no'); return; }
       if (placing.later) { setCaption('', T.t('capVeinLater', { name }), 'no'); return; }
       if (placing.poor) { setCaption('', T.t('capPlacePoor', { name }), 'no'); return; }
-      if (!placing.ground) { setCaption('', T.t('capPlaceBad'), 'no'); return; }
-      setCaption('', placing.kind === 'mine' ? T.t('capPlaceMine', { name, vein: veinName(placing.ore) }) : T.t('capPlace', { name }), 'ok');
+      if (!placing.ground) { setCaption('', water ? T.t('capPlaceWater', { name }) : T.t('capPlaceBad'), 'no'); return; }
+      setCaption('', water ? T.t('capPlaceWater', { name }) : placing.kind === 'mine' ? T.t('capPlaceMine', { name, vein: veinName(placing.ore) }) : T.t('capPlace', { name }), 'ok');
       return;
     }
     if (spool && dock && dock.kind === 'machine' && dock.m.id !== spool.from) {
@@ -906,10 +907,13 @@
         if (nextShown) continue;
         nextShown = true;
       }
-      const veins = free.some((n) => n.ore === ore);
+      // a raw drawn from open water asks for water on the map, not a free vein
+      const water = CHAIN.drawsWater(ore);
+      const veins = water ? FACTORY.hasWater() : free.some((n) => n.ore === ore);
       rows.push({
         kind: 'mine', ore, opens: mn.opens, items: price, enabled: veins && canPay(price), priced: veins, short: shortOf(price),
-        title: T.t('capBuild', { kind: mineName(ore) }), caption: T.t(veins ? 'capBuildMinePick' : 'capBuildMineNone'),
+        title: T.t('capBuild', { kind: mineName(ore) }),
+        caption: T.t(water ? (veins ? 'capBuildWaterPick' : 'capBuildWaterNone') : (veins ? 'capBuildMinePick' : 'capBuildMineNone')),
         action: veins ? { type: 'pick', kind: 'mine', ore } : null,
       });
     }
@@ -987,7 +991,8 @@
     if (!placing) return;
     const pp = FACTORY.playerPos();
     const dir = FACTORY.playerDir();
-    const fp = MAPKIT.footprint(CHAIN.KINDS[placing.kind].size, placing.face);
+    const size = CHAIN.sizeOf(placing.kind, placing.ore);
+    const fp = MAPKIT.footprint(size, placing.face);
     const ptx = Math.floor(pp.x / 16), pty = Math.floor((pp.y - 2) / 16);
     let c0, r0;
     if (dir === 's') { c0 = ptx - ((fp[0] - 1) >> 1); r0 = pty + 1; }
@@ -997,7 +1002,19 @@
     if (!force && placing.aim && placing.aim[0] === c0 && placing.aim[1] === r0) return;
     placing.aim = [c0, r0];
     const mine = placing.kind === 'mine';
-    const aimBox = MAPKIT.boxAt([c0, r0], CHAIN.KINDS[placing.kind].size, placing.face);
+    // Water is drawn from open water, not a seam (2026-09-16): its extractor
+    // snaps to nothing, and stands wherever every tile under it is water
+    const water = mine && CHAIN.drawsWater(placing.ore);
+    // Walked up against the shore, the feet read a row into the water, so the
+    // aimed box stands a tile further out than the operator means: the ghost
+    // takes the box a step back toward them when that one is all water and
+    // the aimed one is not.
+    if (water) {
+      const wet = (a, b) => FACTORY.waterZone(MAPKIT.boxAt([a, b], size, placing.face)).size === fp[0] * fp[1];
+      const back = { n: [0, 1], s: [0, -1], e: [-1, 0], w: [1, 0] }[dir];
+      if (!wet(c0, r0) && wet(c0 + back[0], r0 + back[1])) { c0 += back[0]; r0 += back[1]; }
+    }
+    const aimBox = MAPKIT.boxAt([c0, r0], size, placing.face);
     const overlaps = (a, b) => a.c0 <= b.c1 && a.c1 >= b.c0 && a.r0 <= b.r1 && a.r1 >= b.r0;
     // a mine stands exactly on a vein of its own raw (a Copper Ore Mine over
     // an iron vein is no mine), so it is not made to be lined up by hand:
@@ -1011,7 +1028,7 @@
     for (const n of CHAIN.unbuiltNodes(profile)) {
       const vb = MAPKIT.veinBox(n);
       if (mine) {
-        if (n.ore !== placing.ore) continue;
+        if (water || n.ore !== placing.ore) continue;
         const seat = MAPKIT.veinBox({ ...n, vert: fp[1] > fp[0] });
         if (!overlaps(aimBox, vb) && !overlaps(aimBox, seat)) continue;
         const d = Math.abs(seat.c0 - c0) + Math.abs(seat.r0 - r0);
@@ -1023,9 +1040,9 @@
       else for (let ty = vb.r0; ty <= vb.r1; ty++) for (let tx = vb.c0; tx <= vb.c1; tx++) veins.add(tx + ',' + ty);
     }
     placing.at = [c0, r0];
-    const phantom = { kind: placing.kind, at: [c0, r0], face: placing.face };
+    const phantom = { kind: placing.kind, ore: placing.ore, at: [c0, r0], face: placing.face };
     const box = CHAIN.machineBox(phantom);
-    const zone = FACTORY.buildZone(box);
+    const zone = water ? FACTORY.waterZone(box) : FACTORY.buildZone(box);
     const bodies = new Set();
     for (const om of profile.machines) {
       const ob = CHAIN.machineBox(om);
@@ -1040,9 +1057,10 @@
     // never stands.
     let price = null, unlock = false, later = false;
     if (!mine) price = CHAIN.priceMachine(placing.kind, CHAIN.machinesOfKind(profile, placing.kind).length + 1);
-    else if (vein) {
-      if (CHAIN.oreOpen(profile, vein.ore)) price = CHAIN.priceExtraMine(vein.ore);
-      else if (CHAIN.priceNode(vein.ore)) { price = CHAIN.priceNode(vein.ore); unlock = true; }
+    else if (water || vein) {
+      const ore = placing.ore;
+      if (CHAIN.oreOpen(profile, ore)) price = CHAIN.priceExtraMine(ore);
+      else if (CHAIN.priceNode(ore)) { price = CHAIN.priceNode(ore); unlock = true; }
       else later = true;
     }
     const poor = !!price && !canPay(price);
@@ -1050,7 +1068,7 @@
     let ground = true;
     for (let ty = box.r0; ty <= box.r1; ty++) for (let tx = box.c0; tx <= box.c1; tx++) {
       const k = tx + ',' + ty;
-      const ok = !bodies.has(k) && (mine ? !!vein : zone.has(k) && !veins.has(k)) && !later && !poor;
+      const ok = !bodies.has(k) && (water ? zone.has(k) : mine ? !!vein : zone.has(k) && !veins.has(k)) && !later && !poor;
       if (!ok) ground = false;
       tiles.push([tx, ty, ok]);
     }
@@ -1060,7 +1078,7 @@
     placing.later = later;
     placing.poor = poor;
     placing.ground = ground;
-    placing.ok = ground && (!mine || !!vein);
+    placing.ok = ground && (!mine || water || !!vein);
     // no price row over the ghost: the build menu already named it, and the
     // caption still says so when the bag cannot cover it
     FACTORY.showBuildGhost(phantom, tiles, placing.ok);
@@ -1070,11 +1088,11 @@
     if (!placing) return;
     updatePlacing(true);
     if (!placing.ok) { cancelPlacing(); return; }
-    const { kind, face, at, price, vein, unlock } = placing;
-    if (unlock) E.unlockIntro(profile, CHAIN.mineLesson(vein.ore));
+    const { kind, ore, face, at, price, vein, unlock } = placing;
+    if (unlock) E.unlockIntro(profile, CHAIN.mineLesson(ore));
     if (price) spend(price);
     const m = { id: 'm' + (profile.nextMachineId++), kind, at: at.slice(), face, auto: false };
-    if (kind === 'mine') { m.ore = vein.ore; m.node = vein.index; }
+    if (kind === 'mine') { m.ore = ore; if (vein) m.node = vein.index; }
     profile.machines.push(m);
     placing = null;
     FACTORY.clearBuildGhost();
@@ -2424,9 +2442,9 @@
       <div class="card-station">${T.t('mapSelectStation')}</div>
       <h2>${T.t('mapSelectTitle')}</h2>
       <p class="muted map-note">${T.t('mapSelectNote')}</p>
+      <button id="map-guide" class="guide-link">${T.t('guideLink')}</button>
       <div class="map-cards" id="map-cards">${cards}</div>
       <div class="map-foot">
-        <button id="map-guide" class="guide-link">${T.t('guideLink')}</button>
         ${switchesHTML('map')}
         ${mapId ? `<button id="ov-cancel" class="link-btn">${T.t('mapSelectBack')}</button>` : ''}
       </div>

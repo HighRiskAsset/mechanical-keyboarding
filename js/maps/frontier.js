@@ -302,6 +302,12 @@
   // two. dev/ore-load.js still speaks the v3 API and did not compute this;
   // recompute it when that tool is ported, rather than trusting the number.
   //
+  // R5 HAS NO SEAMS (user ruling 2026-09-16). Water is drawn from open water:
+  // its extractor is four tiles by four and stands on the lakes, wherever
+  // they take it. Its three slots below stay as `kind: null`, a place a save
+  // may still name with nothing in it, so every node after them keeps its
+  // index.
+  //
   // WHERE they go is this file's business. THE BASIN HOLDS ONE OF EVERY ORE
   // AND THE SECOND IRON. That second one stays in reach on purpose: it is
   // the first extra mine the ladder sells, and the purchase that teaches what
@@ -325,7 +331,7 @@
     { kind: 'R2', x: 688,  y: 496, vert: true },
     { kind: 'R3',  x: 768,  y: 416 },
     { kind: 'R4', x: 496,  y: 352, vert: true },  // ── the basin's corners: found by looking around
-    { kind: 'R5',   x: 1360, y: 352 },
+    { kind: null,   x: 1360, y: 352 },              // (no seam: see the note on R5 above)
     { kind: 'R6',    x: 512,  y: 544, vert: true },
     { kind: 'R7',   x: 1360, y: 544 },
     { kind: 'R8', x: 752,  y: 272, vert: true },  // ── the ring: a reason to walk to each landmark
@@ -346,7 +352,7 @@
     { kind: 'R2',  x: 640,  y: 80 },               // the mesa's north edge, up under the treeline
     { kind: 'R3',   x: 128,  y: 96,  vert: true },  // the summit, the highest seam on the map
     { kind: 'R4', x: 1792, y: 96 },               // the east crystal bench, over the east works
-    { kind: 'R5', x: 96,   y: 768, vert: true },  // the badland butte, the far south-west
+    { kind: null, x: 96,   y: 768, vert: true },  // the badland butte, the far south-west (no seam: see R5 above)
     { kind: 'R6',    x: 1600, y: 832, vert: true },  // the reed lagoon's west shore, past the lake
     // ---- the v4 seams (2026-09-13) ----
     // Thirteen raws where there were six, and seven of them stood on one seam
@@ -361,7 +367,7 @@
     { kind: 'R2',  x: 320,  y: 112 },               // the north snow, between the summit and the mesa
     { kind: 'R3',  x: 1120, y: 864 },               // the south shore, west of the marsh works
     { kind: 'R4',  x: 1504, y: 112 },               // the canyon head, west of the creek
-    { kind: 'R5',  x: 1472, y: 880, vert: true },  // the lake's south shore
+    { kind: null,  x: 1472, y: 880, vert: true },  // the lake's south shore (no seam: see R5 above)
     { kind: 'R7',  x: 1344, y: 80 },                // on top of the west crystal bench
     { kind: 'R8',  x: 480,  y: 880 },               // the lower flats, by the deep seep
     { kind: 'R9',  x: 352,  y: 800, vert: true },  // the tar flats, between the seeps
@@ -580,6 +586,7 @@
 
   // - every ore node sits in its own worn dish, lying the way the seam does
   for (const n of NODES) {
+    if (!n.kind) continue;
     lay('dirt', n.vert
       ? blob((n.x + 8) / T, (n.y + 18) / T, 1.6, 2.3, n.x + n.y, 0.45)
       : blob((n.x + 18) / T, (n.y + 8) / T, 2.3, 1.6, n.x + n.y, 0.45));

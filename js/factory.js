@@ -546,6 +546,7 @@
     // terrain pass cannot do it here because it has no profile.
     nodeSprites = [];
     CHAIN.MAP.NODES.forEach((n, i) => {
+      if (!n.kind) return;             // a slot a save may still name, with no seam in it
       const sp = keep(new PIXI.Sprite(PIXELS.nodeTex(n.kind, !!n.vert)));
       sp.position.set(n.x, n.y);
       sp.zIndex = -960;
@@ -928,7 +929,10 @@
       const live = !!(autoLive && autoLive(m));
       const root = new PIXI.Container();
       const sp = new PIXI.Sprite(stationSpriteTex({ ...m, autoLive: live }));
-      sp.position.set((bwPx - sp.texture.width) >> 1, bhPx - foot - sp.texture.height);
+      // an extractor's rig stands in the middle of the water it takes (it
+      // wears the mine's art until it has its own)
+      const wet = m.kind === 'mine' && CHAIN.drawsWater(m.ore);
+      sp.position.set((bwPx - sp.texture.width) >> 1, wet ? (bhPx - sp.texture.height) >> 1 : bhPx - foot - sp.texture.height);
       root.addChild(sp);
       const bw = bwPx - 2;
       // the selector surrounds what the eye takes as the machine: its tile
@@ -953,7 +957,10 @@
       cameraC.addChild(root);
       const id = 'm:' + m.id;
       stations[id] = {
-        def: { id, x: bx + 1, y: by + bhPx - 5, kind: m.kind, m, bw }, root, sp, glow, mark, built: true, auto: live, sqTtl: 0,
+        // An extractor stands in open water, and the row in front of it may
+        // be water too, so it is worked from any shore that touches it: its
+        // whole body is what a walker has to be in reach of (stationAt).
+        def: { id, x: bx + 1, y: by + bhPx - 5, kind: m.kind, m, bw, reach: wet ? { x: bx, y: by, w: bwPx, h: bhPx } : null }, root, sp, glow, mark, built: true, auto: live, sqTtl: 0,
         spBase: sp.y,
         light,
         body: { x: bx, y: by, w: bwPx, h: bhPx },   // the ground it covers, for the smoke it arrives in
@@ -1115,6 +1122,24 @@
     }
     return out;
   }
+  // Open water, for an extractor (Water is drawn from water since 2026-09-16,
+  // not from a seam): a water tile inside the treeline with no crossing over
+  // it, since a bridge is the way across and a body under one corks it.
+  function waterAt(tx, ty) {
+    if (!grid || tx < 0 || ty < 0 || tx >= grid.cols || ty >= grid.rows) return false;
+    if (tx < FENCE.c0 || tx > FENCE.c1 || ty < FENCE.r0 || ty > FENCE.r1) return false;
+    const cx = tx * T16 + 8, cy = ty * T16 + 8;
+    const inRect = (r) => cx >= r.x && cx < r.x + r.w && cy >= r.y && cy < r.y + r.h;
+    if (closedRects.some(inRect) || openRects.some(inRect)) return false;
+    return !!(grid.flags[ty * grid.cols + tx] & TILES.FL.WATER);
+  }
+  // the tiles of `box` an extractor may stand on, as buildZone answers for dry ground
+  function waterZone(box) {
+    const out = new Set();
+    for (let ty = box.r0; ty <= box.r1; ty++) for (let tx = box.c0; tx <= box.c1; tx++) if (waterAt(tx, ty)) out.add(tx + ',' + ty);
+    return out;
+  }
+  const hasWater = () => !!(grid && grid.water && grid.water.length);
   // can a belt lie on this tile: clear ground, not under a machine, and
   // either clear of other runs or square across a single one
   function beltFree(profile, tx, ty, blocked, beltAt, axis) {
@@ -1228,7 +1253,7 @@
   // corner plug), never out of the body. `noPass` is the cut-off rule's
   // ground: the involved machines' other ports, tiles the walk never
   // crosses.
-  function beltFlood(profile, starts, blocked, beltAt, goals, noPass) {
+  function beltFlood(profile, starts, blocked, beltAt, goals, noPass, plates) {
     const dist = new Map(), q = [];
     const startSet = new Set(starts.map((s) => key(s.tx, s.ty)));
     for (const s of starts) {
@@ -1257,6 +1282,11 @@
         // own last tile.
         if (g) continue;
       }
+      // Every machine's plates are the same, not only the two this run joins:
+      // a run ends on a plate or keeps off it. Walking over a third machine's
+      // ports took them away from it for good (2026-09-16: a pipe lying along
+      // a smelter's inlets left no inlet for anything to plug into).
+      if (plates && plates.has(key(x, y))) continue;
       const straightOnly = beltAt.has(key(x, y));
       const here = dist.get(sk(x, y, d));
       for (let s = 0; s < 4; s++) {
@@ -1275,13 +1305,16 @@
   // the map a run reads before it is laid: machines block, scenery and solids
   // block, another run blocks unless this one can cross it square
   function beltGround(profile) {
-    const blocked = new Set();
-    for (const m of profile.machines) for (const [x, y] of footprintTiles(m)) blocked.add(key(x, y));
-    return { blocked, beltAt: beltAxes(profile, null) };
+    const blocked = new Set(), plates = new Set();
+    for (const m of profile.machines) {
+      for (const [x, y] of footprintTiles(m)) blocked.add(key(x, y));
+      for (const k of portTiles(m)) plates.add(k);
+    }
+    return { blocked, plates, beltAt: beltAxes(profile, null) };
   }
   function routeBelt(from, to, profile) {
     if (!grid) return null;
-    const { blocked, beltAt } = beltGround(profile);
+    const { blocked, plates, beltAt } = beltGround(profile);
     // neither machine's ports are ground the run may cross (the cut-off
     // rule) — except the inlets it may actually end on, which the flood
     // already guards as goals
@@ -1291,7 +1324,7 @@
     for (const q of openPorts(to, 'in', profile, blocked, beltAt, noPass)) goals.set(key(q.tx, q.ty), q);
     if (!starts.length || !goals.size) return null;
     for (const k of goals.keys()) noPass.delete(k);
-    const { dist, found, guard } = beltFlood(profile, starts, blocked, beltAt, goals, noPass);
+    const { dist, found, guard } = beltFlood(profile, starts, blocked, beltAt, goals, noPass, plates);
     if (!found) return null;
     const path = [];
     let cur = found;
@@ -1323,11 +1356,11 @@
   function beltReaches(from, profile) {
     const out = new Set();
     if (!grid) return out;
-    const { blocked, beltAt } = beltGround(profile);
+    const { blocked, plates, beltAt } = beltGround(profile);
     const fromPorts = portTiles(from);
     const starts = openPorts(from, 'out', profile, blocked, beltAt, fromPorts);
     if (!starts.length) return out;
-    const { dist } = beltFlood(profile, starts, blocked, beltAt, null, fromPorts);
+    const { dist } = beltFlood(profile, starts, blocked, beltAt, null, fromPorts, plates);
     const startSet = new Set(starts.map((s) => key(s.tx, s.ty)));
     for (const m of profile.machines) {
       if (m.id === from.id) continue;
@@ -1383,12 +1416,19 @@
     // can be standing on a tile a run lies across. Such a run is plugged in
     // at both ends and still has to move, so the bodies are checked as well
     // as the ends.
-    const under = new Set();
-    for (const m of profile.machines) for (const [x, y] of footprintTiles(m)) under.add(key(x, y));
+    const under = new Set(), plates = new Set();
+    for (const m of profile.machines) {
+      for (const [x, y] of footprintTiles(m)) under.add(key(x, y));
+      for (const k of portTiles(m)) plates.add(k);
+    }
+    // A run laid before every plate was kept clear, or one a new machine's
+    // plates have landed on, lies across ports between its two ends. It is
+    // plugged in and still has to move, the same as a run under a body.
+    const overPlate = (b) => b.path.some(([x, y], i) => i > 0 && i < b.path.length - 1 && plates.has(key(x, y)));
     belts.forEach((b, at) => {
       const from = SIM.machineById(profile, b.from), to = SIM.machineById(profile, b.to);
       if (!from || !to) return;
-      if (beltPlugged(b, from, to) && !b.path.some(([x, y]) => under.has(key(x, y)))) return;
+      if (beltPlugged(b, from, to) && !b.path.some(([x, y]) => under.has(key(x, y))) && !overPlate(b)) return;
       SIM.ensureMachine(from);
       lift.push({ b, at, from, to, riding: b.items });
       b.items = [];
@@ -1650,9 +1690,10 @@
     // stands in front of it or behind it the way they will once it is real
     const b = bodyBox(m);
     const foot = m.kind === 'mine' ? 2 : 10;
+    const wet = m.kind === 'mine' && CHAIN.drawsWater(m.ore);
     const tex0 = band(lookOf(m.kind, false), 'still', SIM.facingOf(m))[0];
     const sp = new PIXI.Sprite(tex0);
-    sp.position.set(b.c0 * T16 + ((b.w * T16 - tex0.width) >> 1), b.r0 * T16 + b.h * T16 - foot - tex0.height);
+    sp.position.set(b.c0 * T16 + ((b.w * T16 - tex0.width) >> 1), wet ? b.r0 * T16 + ((b.h * T16 - tex0.height) >> 1) : b.r0 * T16 + b.h * T16 - foot - tex0.height);
     sp.alpha = 0.6;
     if (!ok) sp.tint = 0xff9a8a;
     buildBodyC = new PIXI.Container();
@@ -1986,7 +2027,10 @@
     let best = null, bestD = 1e9;
     for (const s of Object.values(stations)) {
       if (s.def.kind === 'belt') continue;          // a run yields to anything else in reach
-      const d = Math.hypot(px - midX(s.def), py - (s.def.y + 6));
+      const r = s.def.reach;
+      const d = r
+        ? Math.hypot(Math.max(r.x - px, 0, px - (r.x + r.w)), Math.max(r.y - py, 0, py - (r.y + r.h)))
+        : Math.hypot(px - midX(s.def), py - (s.def.y + 6));
       if (d < DOCK_RANGE && d < bestD) { best = s.def.id; bestD = d; }
     }
     return best;
@@ -2300,7 +2344,7 @@
     scale: () => S,                    // device px per world px, so the DOM can match the canvas
     screenPos, setDockGlow, showInfo, clearInfo, showMenu, clearMenu, setAutoLook,
     routeBelt, beltReaches, machinePorts, portsOpen, showGhost, clearGhost, setSpool, markStations, setSocketTarget,
-    showBuildGhost, clearBuildGhost, buildZone, callVeins,
+    showBuildGhost, clearBuildGhost, buildZone, waterAt, waterZone, hasWater, callVeins,
     // the walker's own rules, for a caller planning a walk (js/bot.js)
     canStep, dockAt, SPEED, DOCK_RANGE,
     setInvValue, invScreenPos, setHudKeys, setInvMarks, setCharge, pulseInv,

@@ -428,6 +428,44 @@
     }
     return best;
   }
+  // Open water to stand an extractor in, for a raw drawn from water rather
+  // than a seam (2026-09-16). Every tile of the body on water; the tile its
+  // outlet opens on walkable and clear, so a pipe can leave it; and a shore
+  // tile to aim from, which is also one it is worked from, since an extractor
+  // docks from any side of its body (factory.js stationAt). Of those, one
+  // with no body near it first, then the nearest walk.
+  function findWater(p, ore) {
+    const reach = flood(null).dist;
+    const t = taken(p);
+    const size = CHAIN.sizeOf('mine', ore);
+    const cols = Math.ceil(CHAIN.WORLD_W / TILE), rows = Math.ceil(CHAIN.WORLD_H / TILE);
+    let best = null;
+    for (const face of MAPKIT.FACINGS) {
+      const fp = MAPKIT.footprint(size, face);
+      for (let r0 = 0; r0 + fp[1] <= rows; r0++) for (let c0 = 0; c0 + fp[0] <= cols; c0++) {
+        if (!FACTORY.waterAt(c0, r0) || badSpots.has('mine@' + c0 + ',' + r0 + face)) continue;
+        const box = MAPKIT.boxAt([c0, r0], size, face);
+        if (boxTiles(box).some(([x, y]) => !FACTORY.waterAt(x, y) || t.bodies.has(k2(x, y)))) continue;
+        const out = FACTORY.machinePorts({ id: 'bot-ghost', kind: 'mine', ore, at: [c0, r0], face }).out[0];
+        if (!out || !reach.has(k2(out.tx, out.ty)) || t.bodies.has(k2(out.tx, out.ty)) || t.belts.has(k2(out.tx, out.ty))) continue;
+        const grade = boxTiles(grow(box, 2)).some(([x, y]) => !inBox(box, x, y) && t.bodies.has(k2(x, y))) ? 1 : 0;
+        for (const dir of ['n', 'w', 'e', 's']) {
+          const stand = standFor(box, dir);
+          const d = reach.get(k2(stand[0], stand[1]));
+          if (d === undefined) continue;
+          const score = d + grade * 1e6;
+          if (!best || score < best.score) best = { kind: 'mine', ore, at: [c0, r0], face, stand, dir, score };
+        }
+      }
+    }
+    return best;
+  }
+  // Somewhere left to stand another mine of `ore`: a free vein, or for a raw
+  // drawn from open water, any water on the map. A lake is not used up one
+  // extractor at a time the way a seam is; findWater answers for the spot.
+  const mineRoom = (p, ore) => (CHAIN.drawsWater(ore)
+    ? !(window.FACTORY && FACTORY.hasWater) || FACTORY.hasWater()
+    : CHAIN.unbuiltNodes(p).some((n) => n.ore === ore));
   // a machine's ghost standing somewhere other than aimed is as good as the
   // aim wherever the ground is as good (and a pipe would still reach it)
   function goodGhost(v, s) {
@@ -464,14 +502,14 @@
       if (!(await walk(g, (x, y) => x === s.stand[0] && y === s.stand[1]))) { await tap(g, 'Escape'); return 'walk'; }
       await faceTo(g, s.dir);
     }
-    const aimed = (v) => v.placing && v.placing.ok && v.placing.at && (s.kind === 'mine' ? v.placing.vein === s.vein
+    const aimed = (v) => v.placing && v.placing.ok && v.placing.at && (s.vein !== undefined ? v.placing.vein === s.vein
       : v.placing.at[0] === s.at[0] && v.placing.at[1] === s.at[1]);
     let pl = await waitFor(g, aimed, 12);
     if (!pl && s.kind !== 'mine') pl = await waitFor(g, (v) => v.placing && v.placing.ok && v.placing.at && v.placing.face === s.face && goodGhost(v, s), 1);
     if (!pl) {
       const gh = (view() || {}).placing;
       console.warn('[bot] aim: wanted', s.kind, 'at', s.at.join(','), s.face, 'from', s.stand.join(','), s.dir, '; ghost', gh ? [gh.at && gh.at.join(','), gh.face, gh.ok ? 'ok' : 'refused'].join(' ') : 'gone', '; feet', (() => { const q = FACTORY.playerPos(); return Math.round(q.x) + ',' + Math.round(q.y); })());
-      badSpots.add(s.kind === 'mine' ? 'mine@' + s.vein + s.dir : s.kind + '@' + s.at[0] + ',' + s.at[1] + s.face);
+      badSpots.add(s.vein !== undefined ? 'mine@' + s.vein + s.dir : s.kind + '@' + s.at[0] + ',' + s.at[1] + s.face);
       if (view().placing) await tap(g, 'Escape');
       return 'aim';
     }
@@ -624,7 +662,7 @@
       // ore collected to pay for another mine goes on that mine before
       // anything else can spend it
       for (const [ore, n] of saving) {
-        if (CHAIN.affordable(p.bag, { [ore]: n }) && CHAIN.unbuiltNodes(p).some((x) => x.ore === ore)) { saving.delete(ore); return { type: 'build', kind: 'mine', ore }; }
+        if (CHAIN.affordable(p.bag, { [ore]: n }) && mineRoom(p, ore)) { saving.delete(ore); return { type: 'build', kind: 'mine', ore }; }
       }
       const care = upkeep(p);
       if (care) return care;
@@ -748,7 +786,7 @@
     // saved up in the fullest bin (which is not nibbled at meanwhile) and
     // collected whole.
     const engines = mines.filter((m) => live(p, m)).length;
-    if (BOT.tune.ENGINES && mines.length && engines === mines.length && CHAIN.unbuiltNodes(p).some((n) => n.ore === ore)) {
+    if (BOT.tune.ENGINES && mines.length && engines === mines.length && mineRoom(p, ore)) {
       const binned = mines.reduce((a, m) => a + ((m.buf && m.buf.out[ore]) || 0), 0);
       const short = target - have(p, ore) - binned;
       const own = Object.keys(price).includes(ore);
@@ -771,7 +809,7 @@
   const EXTRA_MINE_AT = 200;         // ore still wanted, per mine standing, before another goes up
   const saving = new Map();          // ore → the price of another mine, collected for it and not to be spent on anything else
   function buildMine(p, ore, depth) {
-    if (!CHAIN.unbuiltNodes(p).some((n) => n.ore === ore)) throw new Error((T.t('botWhy') || {}).vein({ mat: matName(ore) }));
+    if (!mineRoom(p, ore)) throw new Error((T.t('botWhy') || {})[CHAIN.drawsWater(ore) ? 'water' : 'vein']({ mat: matName(ore), kind: mineName(ore) }));
     const price = minePrice(p, ore);
     if (!price && !CHAIN.mineFree(ore)) throw new Error(`${mineName(ore)} cannot be built`);
     return need(p, price, depth) || { type: 'build', kind: 'mine', ore };
@@ -832,7 +870,7 @@
   function lastHands(p, m) {
     const ore = CHAIN.mineMat(p, m);
     return m.kind === 'mine' && carryable(ore) && CHAIN.machinesOfOre(p, ore).every((x) => x === m || live(p, x))
-      && CHAIN.unbuiltNodes(p).some((n) => n.ore === ore);
+      && mineRoom(p, ore);
   }
   function upkeep(p) {
     if (!BOT.tune.ENGINES) return null;
@@ -1018,7 +1056,7 @@
     if (isRaw(f) && SIM.beltsTo(p, m).length < SIM.inletsOf(m)) {
       const hand = CHAIN.machinesOfOre(p, f).find((x) => !live(p, x) && freeOutlet(p, x));
       if (hand) return { type: 'pipe', from: hand, to: m, mat: f };
-      if (CHAIN.unbuiltNodes(p).some((n) => n.ore === f)) return buildMine(p, f, depth);
+      if (mineRoom(p, f)) return buildMine(p, f, depth);
     }
     return make(p, SIM.machineById(p, runs[0].from), f, depth);
   }
@@ -1151,9 +1189,10 @@
     const name = a.kind === 'mine' ? mineName(a.ore) : kindName(a.kind);
     say(T.t('botBuild', { place: name }));
     let s;
-    if (a.kind === 'mine') s = findVein(p, a.ore);
+    const water = a.kind === 'mine' && CHAIN.drawsWater(a.ore);
+    if (a.kind === 'mine') s = water ? findWater(p, a.ore) : findVein(p, a.ore);
     else s = spotFor(p, a);
-    if (!s) return failed(a, a.kind === 'mine' ? 'vein' : 'site', { mat: matName(a.ore), kind: name });
+    if (!s) return failed(a, water ? 'water' : a.kind === 'mine' ? 'vein' : 'site', { mat: matName(a.ore), kind: name });
     const before = new Set(p.machines.map((m) => m.id));
     const res = await place(g, s);
     if (res !== true) return failed(a, res, { place: name, kind: name });

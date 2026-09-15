@@ -42,12 +42,16 @@
   // R3 3, R4 3, R5 3, two of every later raw). The v4 tree has thirteen raws,
   // and R7 to R13 had one seam each. The row grew east again on the same
   // pitch, with the new seams appended so every old one keeps its index.
+  //
+  // R5 has no seams since 2026-09-16: Water is drawn from open water, and its
+  // four-by-four extractor stands in the pond. Its three places in the row are
+  // `null`, empty ground a save may still name, so every index holds.
   const COLS = Array.from({ length: 34 }, (_, k) => 112 + 80 * k);
-  const NODE_KINDS = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6',
+  const NODE_KINDS = ['R1', 'R2', 'R3', 'R4', null, 'R6',
     'R7', 'R8', 'R9', 'R10', 'R11', 'R12',
-    'R13', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6',
+    'R13', 'R1', 'R2', 'R3', 'R4', null, 'R6',
     'R7', 'R8', 'R9', 'R10', 'R11', 'R12', 'R13',
-    'R1', 'R2', 'R3', 'R4', 'R5', 'R1', 'R2', 'R1'];
+    'R1', 'R2', 'R3', 'R4', null, 'R1', 'R2', 'R1'];
   // every raw with two seams or more gets one of each seating
   const VERT = new Set([0, 3, 4, 7, 8, 11, 13, 14, 16, 17, 19, 22, 23, 25, 27, 28, 31]);
   const NODES = COLS.map((x, k) => (VERT.has(k)
@@ -89,7 +93,7 @@
     ],
     GROUND: [
       // the dish under every seam, lying the way the seam does
-      ...NODES.map((n) => (n.vert
+      ...NODES.filter((n) => n.kind).map((n) => (n.vert
         ? { kind: 'dirt', x: n.x - 8, y: n.y - 4, w: 32, h: 48 }
         : { kind: 'dirt', x: n.x - 4, y: n.y - 8, w: 48, h: 32 })),
       { kind: 'pad', x: 32, y: 128, w: 48, h: 32 },
@@ -102,9 +106,12 @@
       // dirt reads as an invitation to stand on it, and this ground has no
       // favourites any more.
       //
-      // the pond sits in the south strip, well clear of the vein row
-      { kind: 'sand', x: 1008, y: 368, w: 112, h: 64 },
-      { kind: 'water', x: 1024, y: 384, w: 80, h: 32 },
+      // the pond sits out in the meadow, well clear of the vein row, and is
+      // ten tiles by six so it takes two Water Extractors side by side (each
+      // four by four, standing in open water, 2026-09-16) with shore to work
+      // them from
+      { kind: 'sand', x: 976, y: 208, w: 192, h: 128 },
+      { kind: 'water', x: 992, y: 224, w: 160, h: 96 },
     ],
     PLATEAUS: [],
     WALLS: [],

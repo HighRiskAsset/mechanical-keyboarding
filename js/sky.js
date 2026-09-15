@@ -71,10 +71,10 @@
 (function () {
   'use strict';
 
-  const DAY_LEN = 720;          // seconds of play in one full day, midnight to midnight
+  const DAY_LEN = 360;          // seconds of play in one full day, midnight to midnight
   const START_T = 0.36;         // the game opens mid-morning
-  const FADE = 16;              // seconds a sky takes to become the next one
-  const SPELL_MIN = 70, SPELL_VAR = 120;
+  const FADE = 8;               // seconds a sky takes to become the next one
+  const SPELL_MIN = 35, SPELL_VAR = 60;
   const PREF_KEY = 'mk.sky';    // 'full' | 'calm' | 'off'
 
   // ---------- the hours ----------
@@ -744,14 +744,14 @@
     windY = 0;
 
     // Wet ground: it takes a while to soak and longer to dry, so the map stays
-    // dark and cool for a minute after the shower has gone.
+    // dark and cool for most of a minute after the shower has gone.
     const pouring = clamp01(rainN / 120);
-    wet = clamp01(wet + (pouring > 0 ? (sec / 30) * pouring : -sec / 90));
-    // Snow lies while it falls and is gone about a minute after it stops, well
-    // inside the spell that dropped it. Anything slower and the map would sit
-    // white for no reason a player could point at.
+    wet = clamp01(wet + (pouring > 0 ? (sec / 15) * pouring : -sec / 45));
+    // Snow lies while it falls and is gone about twenty seconds after it stops,
+    // well inside the spell that dropped it. Anything slower and the map would
+    // sit white for no reason a player could point at.
     const falling = clamp01(snowN / 90);
-    pack = clamp01(pack + (falling > 0 ? (sec / 55) * falling : -sec / 45));
+    pack = clamp01(pack + (falling > 0 ? (sec / 27.5) * falling : -sec / 22.5));
     if (!fx.wet) wet = 0;
     if (!fx.pack) pack = 0;
 

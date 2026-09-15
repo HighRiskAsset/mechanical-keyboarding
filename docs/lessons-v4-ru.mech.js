@@ -43,6 +43,9 @@ module.exports = {
   // three raws travel by pipe (which three is a naming choice); a syllable
   // recipe fed by a fluid makes a fluid
   fluids: ['R5', 'R9', 'R12'],
+  // the raws drawn from open water rather than a seam: their extractor
+  // stands on the map's water tiles, and no vein is laid for them
+  water: ['R5'],
   // byproducts come out beside a lesson's material: one from three of the
   // gathers (2:2) and from five key-group recipes (1:2), two from the other
   // three gathers (2:3). Pages are printed on them and machines are built

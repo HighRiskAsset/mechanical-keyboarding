@@ -2212,6 +2212,17 @@ The derivation, and why it is available at all:
   not copper. So an ore's share is not one number off the cheapest path: it is
   what the best *blend* consumes, which is a linear program.
 
+**Water has no veins (user ruling 2026-09-16).** Its extractor stands in open
+water instead of on a seam: every tile of its body on a water tile, and four
+tiles by four for variety where a mine is two by one. Water may lie in front
+of it as well as under it, so it is worked from any shore that touches its
+body, not only from its front row. Its supply is placement on the lakes, so
+the derivation above does not count it, and the maps lay no seam for it: their
+three R5 slots stay as empty `kind: null` entries so every later node index
+holds. The rule lives in the tree (`water` in `docs/lessons-v4-*.mech.js`,
+emitted as a mine's `ground`), and `CHAIN.drawsWater` reads it. The Open
+Range pond grew to ten tiles by six to take two extractors.
+
 The test is **local optimality, not a target**, and it runs both ways: a map
 is **short** when a seam that is not there would buy more than 15%, and
 **padded** when a seam that is there could come out for almost nothing. One
@@ -2332,7 +2343,7 @@ what makes a lamp read as a lamp burning rather than a patch somebody forgot
 to darken) · precipitation · fog banks · lightning · vignette.
 
 **The clock is invisible.** No dial, no number, nothing to manage. One full
-day is twelve minutes of play and the game opens mid-morning, so the first
+day is six minutes of play and the game opens mid-morning, so the first
 thing a new player sees is daylight. Twelve keyframed hours interpolate into
 each other, so nothing steps. Midnight runs the world at about a third of its
 noon brightness and blue; the site tape, the ground and the operator all stay
@@ -2429,10 +2440,10 @@ fog put both out.
 **Weather is a chain, never a dice roll.** There are seven skies (clear, cloudy,
 drizzle, rain, storm, fog, snow), and each one holds the weights for the skies
 it can honestly turn into. So an hour walks clear → cloudy → drizzle → rain
-rather than teleporting from sunshine to blizzard. A spell lasts 70 to 190
-seconds and takes 16 to fade into the next. A front arrives from one side or
+rather than teleporting from sunshine to blizzard. A spell lasts 35 to 95
+seconds and takes 8 to fade into the next. A front arrives from one side or
 the other and the whole spell leans that way, so the rain does not slant the
-same direction all session. Rain leaves the ground wet for a minute and a half
+same direction all session. Rain leaves the ground wet for about 45 seconds
 after it stops. Maps may declare `WEATHER` weights (the frontier has a
 snowfield and a bog, so it sees more snow and fog than the open range does).
 
@@ -2498,7 +2509,7 @@ live at 1.6 and 5.2 kHz. Every weather sound added later inherits both rules.
   MOVES rather than because it knows what is underneath. Snow is a screen wash,
   because whitening is what settled snow does and a multiply can only take
   light away. **The snowpack melts inside the spell that dropped it** (up over
-  about a minute of snowfall, gone within another), because with no seasons in
+  about half a minute of snowfall, gone within another), because with no seasons in
   the game, snow lying past its own snowfall is a reskin with nothing behind
   it. Both are on trial behind developer switches; if they survive, the open
   question is whether to buy a per-tile mask so the lake stops going pale, and
