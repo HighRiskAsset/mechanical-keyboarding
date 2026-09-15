@@ -350,39 +350,82 @@ page `docs/lessons-v4-ru.html`.
 | C23 | 1 2 3 4 5 | counts and times |
 | C24 | 6 7 8 9 0 № | dates and prices; gather 7, the keyboard complete |
 
-### A17. The EN seating (built 2026-09-15)
+Considered against the research below on 2026-09-15 and left as it is: the
+RU seed already satisfies it. C1 о а are the home-row bumps; the first five
+columns use only the index and middle fingers, so the hands never travel;
+the pairs cross hands; words open at C3. Two candidates were weighed and set
+aside. A second home-row column before the first reach (о а, then в р)
+would push е н and и т to C4 and C5, dropping coverage at C3 from 46% to
+about 35% and thinning the first word lesson, against West's rule of real
+words at once; the C2 and C3 reaches (T Y, B N) are index-finger stretches
+that keep the hand in place, which is what the motion-capture study actually
+measures. The two same-hand pairs, к п at C6 (R G) and ж х at C18 (; [),
+could be re-paired for hand alternation, but ЙЦУКЕН's frequent left-hand
+cluster (к п м у) has no right-hand partners of similar frequency free by
+C6, and alternation is a property of skilled typing, not a shown factor in
+learning; reshuffling C6 to C22 is not worth it. Revisit only if the EN
+skeleton changes.
+
+### A17. The EN seating (built 2026-09-15, reseated the same day)
 
 The RU skeleton column for column and lesson for lesson (user ruling
 2026-09-15: the two courses should be obviously parallel), with the keys
-reseated for QWERTY. The A6 scorer (coverage, words unlocked, comfort, a
-vowel at least every other group) puts e t first and pulls u, the last
-vowel, up to C5; from C9 on the candidate pairs score within a point of each
-other, so those columns were tuned by hand to the RU column roles (verbs at
-C9, things and places at C11, people at C13, adjectives at C14). Same 24
-columns, same 97 lessons, same ids, so the mech layer and the names are
-shared and the material ids mean the same thing in both courses. The plan is
+seated for QWERTY from the research the user asked for, then the A6 scorer
+for the rest, tuned to the RU column roles. Same 24 columns, same 97
+lessons, same ids, so the mech layer and the names are shared and the
+material ids mean the same thing in both courses. The plan is
 `docs/lessons-v4-en.plan.js`, its review page `docs/lessons-v4-en.html`.
+
+**What the research says, and where it lands in the seating:**
+
+- The habit that predicts skill is hands that stay put and one finger per
+  key, not the ten-finger system itself (Feit, Weir and Oulasvirta, How We
+  Type, CHI 2016: unambiguous finger-to-key mapping, preparation of the
+  next stroke, minimal whole-hand motion; self-taught typists matched trained
+  ones when they had those). So the first two columns sit on the home row,
+  the first reach is straight up under the strongest fingers, the diagonal
+  reaches come after, and the pinky's only early key is a, on home.
+- Choose the first letters so real words and sentences can be typed at
+  once; never drill isolated letters or a limited vocabulary for long;
+  practice extensive, not intensive (West 1957, 1962, 1983). So the home-row
+  phase is two short introductions, words open at C3, phrases at C5,
+  sentences at C7, as in RU.
+- Hand and finger alternation predicts speed (Dhakal et al., 136 million
+  keystrokes, CHI 2018). So the pairs are mirror or cross-hand, and every
+  syllable after C2 is a home key plus a reach: leave and return.
+- Teaching technique from the first lesson pays for children, and the
+  window is about ages 8 to 12 (Donica et al. 2018 to 2021). Covered keys
+  learn faster (Nichols 2004): introductions are hinted, then blind.
+- Short, spaced practice beats long sessions (Baddeley and Longman 1978):
+  A12 already shapes sessions that way.
+- No experiment compares home-row-first with frequency-first directly; the
+  school products open on f j, the adaptive tutors on frequent letters.
+
+**A6 amended for this course:** the first two groups together hold a vowel
+(C1 s l has none; E-01 sits at C2 and needs none), and the vowel banks are
+I-02 a h and I-03 e i rather than I-01, chosen per pair by counting as A3
+says. Both are annotated tunes, not rule breaks.
 
 | col | keys | why here | differs from RU |
 |---|---|---|---|
-| C1 | e t | the two most frequent letters, 22% of text | |
-| C2 | a o | syllables open | |
-| C3 | i n | words open: in, it, on, an, no, not, one, into | |
-| C4 | h s | little words: the, this, she, he, is, his, has | |
-| C5 | r u | the last vowel; phrases open | u this early: a vowel every other group |
-| C6 | l d | gather 1 over twelve letters (78%) | |
-| C7 | c m . | the period on its own key; sentences open; home and family | the Period key, not Slash |
+| C1 | s l | home row, ring fingers, mirror keys: the hands start where they rest | no vowel; RU's bumps carry two |
+| C2 | a h | home row, pinky and index inner; syllables open: as, ha, la, has, ash | |
+| C3 | e i | the first reach, middle fingers straight up; words open: she, his, seal, else, hail | |
+| C4 | t n | index fingers, the first diagonal reaches; the, that, this, it, in, at, an | |
+| C5 | d o | d back on home, o straight up; and, to, on, not, one; phrases open | |
+| C6 | r u | index fingers straight up; the last vowel; gather 1 over twelve letters (81%) | u this late: the home row came first |
+| C7 | c m . | the bottom row; the period on its own key; sentences open; home and family | the Period key, not Slash |
 | C8 | Shift | capitals, and the pronoun I | |
 | C9 | g y | -ing and -ly; you, they, my; verbs; gather 2 over sixteen letters | |
 | C10 | , | clauses | on its own key, unshifted: not a hurdle here |
-| C11 | f w | of, for, from, if; we, was, with, what, when, where, who, how, now; things and places | |
+| C11 | f w | of, for, from, if; we, was, with, what, when, where, who, how, now; things and places | f, the left bump, arrives here |
 | C12 | ' - | the apostrophe (the EN hurdle) with the hyphen: the two marks that live inside a word; contractions | takes the dash column; no em dash in EN scope |
 | C13 | b p | people; gather 3, the past tense (was, were, -ed) | |
-| C14 | v | very, have, over, every, seven; adjectives | one letter |
+| C14 | k | home row again: know, think, like, look, make, take, work; adjectives | one letter |
 | C15 | ? ! | questions | |
-| C16 | k | know, think, like, look, make, take, work; gather 4 questions | one letter |
+| C16 | v | very, have, over, every; gather 4 questions | one letter |
 | C17 | " | dialogue | straight double quotes only; no guillemets |
-| C18 | j | just, job, join, jump | one letter |
+| C18 | j | the right bump; just, job, join, jump | one letter |
 | C19 | x | next, six, box, fix, exit; gather 5 | one letter |
 | C20 | : ; ( ) | lists and asides | the semicolon is unshifted |
 | C21 | q | quarry, quality, quiet, question; syllables borrow r u for the u | one letter |
@@ -390,22 +433,26 @@ shared and the material ids mean the same thing in both courses. The plan is
 | C23 | 1 2 3 4 5 | counts and times | |
 | C24 | 6 7 8 9 0 | dates and prices; gather 7 | no numero sign; English writes No. |
 
+Coverage by column: 11, 24, 44, 60, 72, 81, 86 percent through C7, then
+90, 94, 98 at C9, C11, C13, all letters at C22. The scorer's two open
+calls: g y before f w at C9 (39 to 27 on the A6 score) and k before v at
+C14 (a wash on score; k unlocks more words and is a home-row key).
+
 The one structural difference: English has 26 letters to Russian's 33, and
 the skeleton has sixteen letter columns, so ten columns carry pairs and the
-rare tail (v k j x q z, 2.3% of text together, about what RU's last five
+rare tail (k v j x q z, 2.3% of text together, about what RU's last five
 letter columns carry) stands one letter to a column from C14. The
 alternative, a 21-column EN tree of thirteen pairs, would break the shared
 ids, names and mech layer; it is the user's call if the singles play badly.
 
 Families that moved with the language: E-21 is "things and places leaning
-on f w" (the English plural is -s and has been there since C4, so RU's
+on f w" (the English plural is -s and has been there since C1, so RU's
 plurals column has no counterpart); E-23 is the new `contractions` family
 (an apostrophe, or a hyphen inside a word), tested in the builder and in
 `js/engine.js`; the `past` test covers both languages (был and -л, or was,
-were, had, did, been and a consonant + ed). The syllable partners for the
-singles are the vowel banks as in RU (I-01 e t with I-03 i n or I-02 a o);
-q takes I-05 r u because it needs its u. Coverage: 50% by C3, 78% by C6,
-84% by C7, 93% by C11, all letters at C22.
+were, had, did, been and a consonant + ed). The syllable partners: a group
+that pairs with s l takes e i or a h beside it for the vowel; c m takes e i
+alone; q takes r u for its u.
 
 ## Part B. What the finished plan must look like
 

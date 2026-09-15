@@ -345,13 +345,18 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   English course now has its own v4 lesson plan (`docs/lessons-v4-en.plan.js`,
   review page `docs/lessons-v4-en.html`, tree `js/tree-en.js`) built on the
   RU skeleton lesson for lesson, so the two courses share ids, the mech
-  layer and the material names. The keys were reseated for QWERTY by the
-  A6 scorer and tuned to the RU column roles: e t · a o · i n · h s · r u ·
-  l d · c m + the period · Shift · g y · the comma · f w · the apostrophe
-  and the hyphen (the EN hurdle: contractions) · b p · v · ? ! · k · " · j ·
-  x · : ; ( ) · q · z · the digits. English has 26 letters to Russian's 33,
-  so the rare tail stands one letter to a column. The full table and every
-  difference are in `docs/lessons-v4-rules.md`, A17. The layout file gained
+  layer and the material names. The keys were seated for QWERTY from the
+  typing research the user asked for (hands stay home and one finger per
+  key, Feit 2016; real words at once, West; alternation, Dhakal 2018;
+  technique from lesson one for children, Donica), then by the A6 scorer
+  tuned to the RU column roles: s l · a h (two columns on the home row) ·
+  e i (the first reach) · t n · d o · r u · c m + the period · Shift · g y ·
+  the comma · f w · the apostrophe and the hyphen (the EN hurdle:
+  contractions) · b p · k · ? ! · v · " · j · x · : ; ( ) · q · z · the
+  digits. English has 26 letters to Russian's 33, so the rare tail stands
+  one letter to a column. The full table, the research and every
+  difference are in `docs/lessons-v4-rules.md`, A17; the RU seating was
+  checked against the same research and left alone (A16). The layout file gained
   the number row and the shifted marks; the course file gained the words,
   phrases and names the plan's columns lean on; `dev/bot-sim.js` takes
   `COURSE=en`. QWERTY is now the default course for a visitor with no world.

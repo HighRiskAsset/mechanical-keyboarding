@@ -653,6 +653,21 @@
     ['hazel', '', 'nature'], ['lizard', '', 'nature'], ['wizard', '', 'people'], ['ozone', '', 'nature'], ['citizen', '', 'people'], ['organize', '', 'verbs'],
     ['realize', '', 'verbs'], ['recognize', '', 'verbs'], ['magazine', '', 'things'], ['horizon', '', 'nature'], ['bazaar', '', 'place'], ['plaza', '', 'place'],
     ['waltz', '', 'life'], ['topaz', '', 'things'], ['blizzard', '', 'nature'], ['drizzle', '', 'nature'], ['puzzle', '', 'life'], ['jazz', '', 'life'],
+    // the home-row seed (2026-09-15): what the first columns write over
+    // s l, then a h, then e i, then t n, then d o
+    ['shall', '', 'func'], ['alas', '', 'func'], ['salsa', '', 'things'], ['all', '', 'func'], ['ha', '', 'func'], ['lass', '', 'people'],
+    ['she', '', 'func'], ['he', '', 'func'], ['his', '', 'func'], ['is', '', 'func'], ['else', '', 'func'], ['has', '', 'func'],
+    ['less', '', 'func'], ['sea', '', 'nature'], ['seal', '', 'nature'], ['sail', '', 'rail'], ['sale', '', 'work'], ['isle', '', 'place'],
+    ['lash', '', 'things'], ['hail', '', 'nature'], ['heal', '', 'verbs'], ['ease', '', 'life'], ['easel', '', 'things'], ['lease', '', 'work'],
+    ['sell', '', 'verbs'], ['shell', '', 'nature'], ['hall', '', 'home'], ['hill', '', 'nature'], ['hiss', '', 'verbs'], ['ale', '', 'things'],
+    ['ail', '', 'verbs'], ['sash', '', 'things'], ['hash', '', 'things'], ['hassle', '', 'life'], ['heel', '', 'people'], ['aisle', '', 'place'],
+    ['shale', '', 'nature'], ['alias', '', 'life'], ['lie', '', 'verbs'], ['lies', '', 'verbs'], ['seas', '', 'nature'], ['hale', '', 'adj'],
+    ['ashes', '', 'nature'], ['leash', '', 'things'], ['heels', '', 'people'], ['lilies', '', 'nature'], ['sis', '', 'people'], ['lisle', '', 'things'],
+    ['silt', '', 'nature'], ['stilt', '', 'things'], ['inlet', '', 'place'], ['lentil', '', 'things'], ['title', '', 'things'], ['eel', '', 'nature'],
+    ['lint', '', 'things'], ['sleet', '', 'nature'], ['tiles', '', 'things'], ['list', '', 'things'], ['tinsel', '', 'things'], ['listen', '', 'verbs'],
+    ['soil', '', 'nature'], ['toad', '', 'nature'], ['seed', '', 'nature'], ['tide', '', 'nature'], ['dish', '', 'things'], ['dale', '', 'place'],
+    ['dell', '', 'place'], ['dose', '', 'things'], ['hood', '', 'things'], ['tool', '', 'things'], ['tools', '', 'things'], ['oil', '', 'things'],
+    ['oats', '', 'nature'], ['ladle', '', 'things'], ['idol', '', 'things'], ['sod', '', 'nature'], ['toads', '', 'nature'], ['stools', '', 'things'],
   ];
 
   // phrases: the Assembler's grammar (no sentence marks; contractions are
@@ -724,6 +739,10 @@
     ['down the hill', ''], ['the old road', ''], ['lead and tin', ''], ['sand in the shoe', ''], ['the ladder is tall', ''],
     ['a deal is a deal', ''], ['head to toe', ''], ['hold the line', ''], ['all in a line', ''], ['idle hands', ''],
     ['a lantern in the hall', ''], ['dust on the road', ''], ['a house on the hill', ''], ['the hall is dark', ''],
+    // the home-row seed (2026-09-15): phrases over s l a h e i t n d o, before r u arrive
+    ['the old hat', ''], ['sold as is', ''], ['sand and stone', ''], ['on and on', ''], ['so it is', ''],
+    ['not at all', ''], ['in the shade', ''], ['toast and tea', ''], ['hold it', ''], ['a dish and a stool', ''],
+    ['old and done', ''], ['stand and listen', ''], ['a hat on the head', ''], ['the last one', ''], ['stone on stone', ''],
   ];
 
   // sentences: the Fastener's grammar (with their marks; capitals wait for

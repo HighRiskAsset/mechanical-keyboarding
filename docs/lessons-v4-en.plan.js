@@ -5,12 +5,20 @@
 //
 // The skeleton is the RU plan's, column for column and lesson for lesson
 // (user ruling 2026-09-15: the two courses should be obviously parallel),
-// with the keys reseated for QWERTY by the A6 scorer and hand-tuned to the
-// same column roles. The differences, all forced by the language or the
-// board, are listed in docs/lessons-v4-rules.md, A17:
+// with the keys reseated for QWERTY. The seating follows the research the
+// user asked for (docs/lessons-v4-rules.md, A17): hands stay on the home
+// row and every key has one finger (Feit, Weir and Oulasvirta 2016), real
+// words at once and no long isolated-letter drills (West 1957, 1962),
+// technique from the first lesson for children (Donica 2018 to 2021), and
+// hand alternation (Dhakal 2018). So the first two columns sit on the home
+// row (s l, a h), the first reach is the middle fingers straight up (e i),
+// words open at C3, and every syllable from then on is a home key plus a
+// reach: leave and return. The A6 scorer set the rest, tuned to the RU
+// column roles. The differences from RU, all forced by the language or the
+// board:
 //
 // - English has 26 letters to Russian's 33, so over the same sixteen letter
-//   columns the rare tail stands one letter to a column: v k j x q z.
+//   columns the rare tail stands one letter to a column: k v j x q z.
 // - The apostrophe takes the dash's column (C12) with the hyphen beside it:
 //   the two marks that live inside a word. English has no em dash in scope,
 //   and the apostrophe is the EN hurdle (contractions wait on it).
@@ -20,10 +28,11 @@
 //   sign (English writes "No.").
 //
 // The shape every letter group follows: intro (streams over its own keys),
-// syllables with the first ores (I-01 e t, I-02 a o, I-03 i n are the vowel
-// banks that partner every later group; q borrows I-05 for its u), focused
-// words over everything unlocked, then a sentence lesson or a gather. Marks
-// get an intro and one expansion that needs them.
+// syllables with the first ores, focused words over everything unlocked,
+// then a sentence lesson or a gather. The vowel banks are I-02 a h and I-03
+// e i (I-01 s l is the consonant bank), chosen per pair by counting as A3
+// says: a group that pairs with s l takes e i or a h beside it, and q takes
+// r u for its u. Marks get an intro and one expansion that needs them.
 'use strict';
 
 const L = [];
@@ -31,32 +40,32 @@ const I = (id, keys, strokes, note, extra) => L.push(Object.assign({ id, kind: '
 const E = (id, inputs, rung, family, note, extra) => L.push(Object.assign({ id, kind: 'exp', inputs, rung, family, note }, extra || {}));
 const P = (id, cat, grade, inputs, note, samples) => L.push({ id, kind: 'page', cat, grade, inputs, note, samples });
 
-// ---- C1..C4: the seed ----
-I('I-01', ['e', 't'], 'E T', 'the two most frequent letters, 22% of text; middle top and index top');
-I('I-02', ['a', 'o'], 'A O', 'pinky home and ring top: two more vowels');
-E('E-01', ['I-01', 'I-02'], 'syllables', null, 'te at to ta; the first syllables');
-I('I-03', ['i', 'n'], 'I N', 'middle top and index bottom; words open here');
-E('E-02', ['I-01', 'I-03'], 'syllables', null, 'ti in en ne; a second alphabet, same rung');
-E('E-03', ['E-01', 'I-03'], 'words', ['func'], 'the first real words: in, it, at, an, to, no, not, one, into');
-I('I-04', ['h', 's'], 'H S', 'index home and ring home: the, this, she, he, is, his, has');
-E('E-04', ['E-02', 'I-04'], 'words', ['things', 'nature', 'home'], 'nouns over six letters: nest, tent, hen, hint, sheet');
-E('E-05', ['E-03', 'I-04', 'I-02'], 'words', ['func'], 'little words over eight letters: the, this, that, then, she, has, as, so; a o come back as the flux');
+// ---- C1..C4: the seed; two columns on the home row, then the first reach ----
+I('I-01', ['s', 'l'], 'S L', 'ring fingers on the home row, mirror keys: the hands start where they rest');
+I('I-02', ['a', 'h'], 'A H', 'pinky and index inner, still on the home row; syllables open');
+E('E-01', ['I-01', 'I-02'], 'syllables', null, 'as ha la sal; the first syllables, all on the home row');
+I('I-03', ['e', 'i'], 'E I', 'the first reach: middle fingers straight up; words open here');
+E('E-02', ['I-01', 'I-03'], 'syllables', null, 'se le is el; a second alphabet, same rung: a home key and a reach in every pair');
+E('E-03', ['E-01', 'I-03'], 'words', ['func'], 'the first real words: she, he, his, has, is, as, else');
+I('I-04', ['t', 'n'], 'T N', 'index fingers, the first diagonal reaches: the, that, this, it, in, at, an');
+E('E-04', ['E-02', 'I-04'], 'words', ['things', 'nature', 'home'], 'nouns over six letters: nest, tent, tin, net, list, line, tile');
+E('E-05', ['E-03', 'I-04', 'I-02'], 'words', ['func'], 'little words over eight letters: the, this, that, then, it, in, at, an; a h come back as the flux');
 
-// ---- C5: r u ----
-I('I-05', ['r', 'u'], 'R U', 'index top on both hands: the sixth-most frequent letter and the last vowel');
-E('E-06', ['I-05', 'I-01'], 'syllables', null, 're er ru ur ut tr', { focus: true });
-E('E-07', ['E-06', 'E-04', 'I-02'], 'words', ['nature', 'things'], 'nature words leaning on r u: rain, river, rust, sun, stone, iron; a o ride along as the flux', { focus: true });
-E('E-08', ['E-05', 'I-05'], 'phrases', null, 'first phrases: here and there, sun and rain, one at a time');
+// ---- C5: d o ----
+I('I-05', ['d', 'o'], 'D O', 'back to the home row with d, and o straight up: and, to, on, not, one');
+E('E-06', ['I-05', 'I-01'], 'syllables', null, 'do so old sold; d o with the home-row bank', { focus: true });
+E('E-07', ['E-06', 'E-04', 'I-02'], 'words', ['nature', 'things'], 'nature words leaning on d o: stone, soil, sand, land, toad, seed, tide; a h ride along as the flux', { focus: true });
+E('E-08', ['E-05', 'I-05'], 'phrases', null, 'first phrases: salt and sand, hand in hand, head to toe');
 
-// ---- C6: l d ----
-I('I-06', ['l', 'd'], 'L D', 'ring home and middle home');
-E('E-09', ['I-06', 'I-05', 'I-01'], 'syllables', null, 'le el de ed ld with r u', { focus: true });
-E('E-10', ['E-09', 'E-07'], 'words', ['home', 'things', 'rail'], 'home and road words leaning on l d: door, hall, road, rail, load, ladder', { focus: true });
+// ---- C6: r u ----
+I('I-06', ['r', 'u'], 'R U', 'index fingers straight up: the last vowel');
+E('E-09', ['I-06', 'I-05', 'I-01'], 'syllables', null, 'ru ur ro or with d o', { focus: true });
+E('E-10', ['E-09', 'E-07'], 'words', ['home', 'things', 'rail'], 'home and road words leaning on r u: door, road, route, rust, hour, house, ruin', { focus: true });
 E('E-11', ['E-08', 'E-10'], 'phrases', null, 'GATHER 1: phrases over the first twelve letters', { gather: true });
 
 // ---- C7: c m and the period ----
-I('I-07', ['c', 'm', '.'], 'C M .', 'middle bottom, index bottom, and the period on its own key: sentences are within reach');
-E('E-12', ['I-07', 'I-01'], 'syllables', null, 'ce ec me em ct', { focus: true });
+I('I-07', ['c', 'm', '.'], 'C M .', 'the bottom row, middle and index, and the period on its own key: sentences are within reach');
+E('E-12', ['I-07', 'I-03'], 'syllables', null, 'ce ec me em ic; ice, mice; e i is the bank because s l holds no vowel', { focus: true });
 E('E-13', ['E-12', 'E-10'], 'words', ['home', 'people', 'time'], 'home and family words leaning on c m: home, room, mother, cousin, uncle, morning', { focus: true });
 E('E-14', ['E-11', 'E-13'], 'sentences', 'period', 'the first sentences, period only');
 
@@ -65,8 +74,8 @@ I('I-08', ['Shift'], 'Shift', 'capitals of every unlocked letter; a sentence get
 E('E-15', ['E-14', 'I-08', 'E-08'], 'sentences', 'names', 'capitalised sentences and proper names: Sam, Ruth, London; the first phrases come back as the flux');
 
 // ---- C9: g y ----
-I('I-09', ['g', 'y'], 'G Y', 'index home and index top, both inner: -ing and -ly; you, they, my');
-E('E-16', ['I-09', 'I-01', 'I-02'], 'syllables', null, 'ge ag og; ye ay ty', { focus: true });
+I('I-09', ['g', 'y'], 'G Y', 'index inner home and index top inner: -ing and -ly; you, they, my');
+E('E-16', ['I-09', 'I-01', 'I-02'], 'syllables', null, 'ga ag gas; ay ly hy', { focus: true });
 E('E-17', ['E-16', 'E-13'], 'words', ['verbs'], 'verbs and their -ing leaning on g y: go, get, dig, try, say, stay, carry, going, saying', { focus: true });
 E('E-18', ['E-15', 'E-17'], 'sentences', 'period', 'GATHER 2: sentences over sixteen letters', { gather: true });
 
@@ -75,8 +84,8 @@ I('I-10', [','], ',', 'the comma on its own key, unshifted: not the hurdle it is
 E('E-19', ['E-18', 'I-10', 'E-11'], 'sentences', 'clauses', 'clauses: he sat, and she read; two phrases joined by a comma, so the phrase gather is the flux');
 
 // ---- C11: f w ----
-I('I-11', ['f', 'w'], 'F W', 'index home and ring top: of, for, from, if; we, was, with, what, when, where, who, how, now');
-E('E-20', ['I-11', 'I-01', 'I-03'], 'syllables', null, 'fe fi ft; we wi', { focus: true });
+I('I-11', ['f', 'w'], 'F W', 'the left bump and ring top: of, for, from, if; we, was, with, what, when, where, who, how, now');
+E('E-20', ['I-11', 'I-01', 'I-03'], 'syllables', null, 'fe fi self; we wi wise', { focus: true });
 E('E-21', ['E-20', 'E-17'], 'words', ['things', 'place', 'nature'], 'things and places leaning on f w: farm, field, fire, forest, water, wood, wind, wall, window, world', { focus: true });
 E('E-22', ['E-19', 'E-21'], 'sentences', 'clauses', 'sentences with clauses and the wh- words');
 
@@ -86,39 +95,39 @@ E('E-23', ['E-22', 'I-12', 'E-13'], 'sentences', 'contractions', "contractions a
 
 // ---- C13: b p ----
 I('I-13', ['b', 'p'], 'B P', 'index bottom, inner, and pinky top');
-E('E-24', ['I-13', 'I-05', 'I-01'], 'syllables', null, 'be bu br ub; pe pr pt up', { focus: true });
+E('E-24', ['I-13', 'I-05', 'I-01'], 'syllables', null, 'bo ob po op; sob, pod, plod', { focus: true });
 E('E-25', ['E-24', 'E-21'], 'words', ['people', 'life', 'verbs'], 'people leaning on b p: people, boy, brother, baby, papa, pupil, partner; put, pull, build, bring', { focus: true });
 E('E-26', ['E-23', 'E-25'], 'sentences', 'past', 'GATHER 3: the past tense: yesterday we were busy. the boy was born by the bay.', { gather: true });
 
-// ---- C14: v ----
-I('I-14', ['v'], 'V', 'index bottom, alone: 26 letters over sixteen columns leave the rare six standing alone from here');
-E('E-27', ['I-14', 'I-01', 'I-03'], 'syllables', null, 've ev vi iv; vent, vine', { focus: true });
-E('E-28', ['E-27', 'E-25'], 'words', ['adj', 'things', 'place'], 'adjectives leaning on v: very, heavy, vast, brave, clever, seven, silver, village, valley, river', { focus: true });
+// ---- C14: k ----
+I('I-14', ['k'], 'K', 'middle home, alone: 26 letters over sixteen columns leave the rare six standing alone from here; know, think, like, look, make, take, work');
+E('E-27', ['I-14', 'I-01', 'I-03'], 'syllables', null, 'ke ki sk; silk, skill', { focus: true });
+E('E-28', ['E-27', 'E-25'], 'words', ['adj', 'things', 'place'], 'adjectives leaning on k: dark, black, thick, weak, sick, kind, keen, lucky; key, book, lock, market, lake', { focus: true });
 E('E-29', ['E-26', 'E-28'], 'sentences', 'period', 'sentences with adjectives');
 
 // ---- C15: ? ! ----
 I('I-15', ['?', '!'], 'Shift+/, Shift+1', 'the slash key and the number row, shifted: questions and exclamations');
 E('E-30', ['E-29', 'I-15', 'E-05'], 'sentences', 'questions', 'who is there? are you ready? well done! The question words are little words, so E-05 is the flux');
 
-// ---- C16: k ----
-I('I-16', ['k'], 'K', 'middle home, alone: know, think, like, look, make, take, work, keep');
-E('E-31', ['I-16', 'I-01', 'I-03'], 'syllables', null, 'ke ki nk; ink, kit', { focus: true });
-E('E-32', ['E-31', 'E-28'], 'words', ['time', 'life', 'verbs'], 'time and doing words leaning on k: week, dusk, like, look, make, take, work, walk, talk, think', { focus: true });
-E('E-33', ['E-30', 'E-32'], 'sentences', 'questions', 'GATHER 4: questions with know, think, like: do you know the way? what do you think?', { gather: true });
+// ---- C16: v ----
+I('I-16', ['v'], 'V', 'index bottom, alone: very, have, over, every, seven, river');
+E('E-31', ['I-16', 'I-01', 'I-03'], 'syllables', null, 've ev vi iv; evil, live', { focus: true });
+E('E-32', ['E-31', 'E-28'], 'words', ['time', 'life', 'verbs'], 'time and doing words leaning on v: evening, event, ever, never, give, live, move, save, visit', { focus: true });
+E('E-33', ['E-30', 'E-32'], 'sentences', 'questions', 'GATHER 4: questions with have, ever, very: have you seen it? do you ever rest?', { gather: true });
 
 // ---- C17: quotes ----
 I('I-17', ['"'], "Shift+'", 'the straight double quote on the apostrophe key, shifted; English has no guillemets');
 E('E-34', ['E-33', 'I-17', 'E-25'], 'sentences', 'dialogue', 'dialogue: "Go home!" said Bob. The people and past-tense words are the flux');
 
 // ---- C18: j ----
-I('I-18', ['j'], 'J', 'index home, alone: the bump under the right hand, and the rarest letter this side of x');
-E('E-35', ['I-18', 'I-01', 'I-02'], 'syllables', null, 'ja jo je; jet, jot', { focus: true });
+I('I-18', ['j'], 'J', 'the right bump, alone: the rarest letter this side of x');
+E('E-35', ['I-18', 'I-01', 'I-02'], 'syllables', null, 'ja aj; jab', { focus: true });
 E('E-36', ['E-35', 'E-32'], 'words', ['things', 'verbs', 'rail'], 'words leaning on j: jar, jug, jacket, join, jump, enjoy, jet, junction, journey', { focus: true });
 E('E-37', ['E-34', 'E-36'], 'sentences', 'clauses', 'sentences with j: just a minute, then we go.');
 
 // ---- C19: x ----
 I('I-19', ['x'], 'X', 'ring bottom, alone');
-E('E-38', ['I-19', 'I-01', 'I-03'], 'syllables', null, 'ex xi xt; next, text', { focus: true });
+E('E-38', ['I-19', 'I-01', 'I-03'], 'syllables', null, 'ex xi ix; six, exile', { focus: true });
 E('E-39', ['E-38', 'E-36'], 'words', ['things', 'people', 'place'], 'things leaning on x: box, axle, text, index, expert, exit, taxi, six, sixty', { focus: true });
 E('E-40', ['E-37', 'E-39'], 'sentences', 'mixed', 'GATHER 5: every mark so far in one pool: comma, question, capitals, apostrophe, quotes', { gather: true });
 
@@ -128,13 +137,13 @@ E('E-41', ['E-40', 'I-20', 'E-21'], 'sentences', 'lists', 'here is the list: iro
 
 // ---- C21: q ----
 I('I-21', ['q'], 'Q', 'pinky top, alone: q only ever comes with u');
-E('E-42', ['I-21', 'I-05', 'I-01'], 'syllables', null, 'qu que quet; r u is the partner because q needs its u', { focus: true });
+E('E-42', ['I-21', 'I-06', 'I-03'], 'syllables', null, 'qu que quire; r u is the partner because q needs its u', { focus: true });
 E('E-43', ['E-42', 'E-39'], 'words', ['work', 'things', 'life'], 'work words leaning on q: quarry, quality, quantity, equip, quartz, liquid, question', { focus: true });
 E('E-44', ['E-41', 'E-43'], 'sentences', 'mixed', 'sentences with q: the quarry is quiet today.');
 
 // ---- C22: z ----
 I('I-22', ['z'], 'Z', 'pinky bottom, alone: the last letter, the corner of the board');
-E('E-45', ['I-22', 'I-05', 'I-01'], 'syllables', null, 'ze ez zu; zer, tze', { focus: true });
+E('E-45', ['I-22', 'I-05', 'I-01'], 'syllables', null, 'zo oz; zoo, doze', { focus: true });
 E('E-46', ['E-45', 'E-43'], 'words', ['life', 'things', 'nature'], 'the last letter in words: puzzle, jazz, size, dozen, zinc, bronze, breeze, blizzard', { focus: true });
 E('E-47', ['E-44', 'E-46'], 'sentences', 'mixed', 'GATHER 6: every letter of the alphabet', { gather: true });
 
@@ -207,29 +216,31 @@ P('PX-code', 'tech', 4, ['PX-math', 'X-02', 'X-03'].concat(PAPER), 'extended: a 
 // pool and is the to-do list for js/language-en.js. Lower case before C8
 // (no capitals, so no "I"), and each list uses only the keys its column has.
 const AUTHORED = {
-  'E-12': ['met', 'tem', 'cet', 'mec'],
+  'E-01': ['ah', 'sal', 'lash', 'hall'],
+  'E-12': ['ice', 'mice', 'mic', 'cem'],
   'E-14': ['the sun is hot.', 'the moon is out.', 'she is at home.', 'the train is late.', 'it is cold in here.', 'the coal is in the cart.', 'the door is shut.', 'the tea is hot.', 'hand me the salt.', 'the mine is old.', 'the cat sat on the mat.', 'the line is clean.', 'the road ends here.', 'she is at the door.', 'the tent is on the hill.', 'the oats are in the shed.', 'a mouse is in the house.', 'the steel is cold.', 'mother is at home.', 'the rain is here.', 'the cart is on the rails.', 'she can see the sea.', 'the hut is small.', 'the air is still.', 'the tools are in the shed.', 'the moon lit the road.', 'the men are at the mine.', 'time is short.', 'the ore is in the cart.', 'it is time to eat.', 'the sea is calm.', 'the stone is in the road.', 'the hill is on the east side.'],
   'E-15': ['Sam is at home.', 'Ann and Tom are in London.', 'Ruth is late.', 'Dan sold the cart.', 'Rose can see the sea.', 'Lee is at the mine.', 'Sue and Dan sat on the hill.', 'Tim is in Rome.', 'The road to Athens is old.', 'Nora has the salt.', 'Simon and Clara are here.', 'Dan is a miner.', 'Anna reads at noon.', 'The Nile runs north.', 'Carl lit the lantern.', 'Emma is at the door.', 'Helen and Leo are at sea.', 'Otto is old.', 'Ellen came home.', 'Alan sees the moon.', 'Sarah made the tea.', 'Ian sold the ore to Sam.', 'Tom is a doctor.', 'The Thames is calm.', 'Alice and Lena are at the station.', 'Nathan has a cat.', 'Rita is in the tent.', 'Linda and Laura are sisters.', 'The Hudson is cold.'],
-  'E-16': ['ag', 'og', 'ye', 'yo', 'gat', 'toy', 'ego', 'yet'],
+  'E-16': ['ag', 'ga', 'gas', 'sag', 'lag', 'hag', 'gal', 'say', 'lay', 'hay', 'shy', 'gash', 'slay'],
   'E-18': ['You can go home.', 'The day is long.', 'They sang all night.', 'The engine is running.', 'You are early today.', 'My hands are cold.', 'The young man is a miner.', 'Sunday is a rest day.', 'Glass and gold are in the cart.', 'The gate is shut and the dog is out.', 'They are digging a tunnel.', 'Get the gear and go.', 'The morning is grey.', 'The city is a long ride.', 'Nothing is easy at the start.', 'Gold is dense.', 'The rain stayed all day.', 'The steel is ready.', 'Say it again.', 'The seam is rich in ore.', 'My uncle sings at night.', 'The sea is grey today.', 'You need a good rest.', 'The tunnel is dry.', 'They ate early and rested.', 'Ruth is a young engineer.', 'Each man has a duty.', 'The signal is green.', 'Sing along.', 'Get the tools ready.'],
   'E-19': ['He sat, and she read.', 'The day is done, and the night is here.', 'Go home, Sam.', 'The rain came, then the sun.', 'Coal is dear, gold is dearer.', 'It is late, so rest.', 'Stone, sand, iron and coal.', 'Say it, then do it.', 'Ruth is here, Tom is not.', 'The tea is hot, the toast is cold.', 'One more load, then home.', 'Rest, then run the line again.', 'The mine is old, the road is long.', 'Dig, then sort the ore.', 'Sit, eat, then go.', 'The sun is high, the sea is calm.', 'Yes, it is mine.', 'Oh, it is you.', 'The engine is hot, so stand clear.', 'The gate is shut, and the dog is out.', 'You sing, I listen.', 'It is morning, and the moon is still out.', 'Dan is a miner, Anna is a doctor.', 'Easy, steady, sure.', 'The cart is here, the mule is not.', 'Iron, then steel, then rails.', 'The road is long, the day is short.', 'Tea, then toast, then the mine.'],
   'E-22': ['We wait, and the train is late.', 'The wind is cold, so shut the window.', 'Wood for the fire, water for the tea.', 'If it rains, we stay in.', 'The fields are wet, the roads are worse.', 'We found it, and we left it there.', 'First the ore, then the iron, then the steel.', 'Few of us are ready, and none of us are late.', 'The fire is out, the forge is cold.', 'The water is low, so the wheel is slow.', 'We dig in the mine, and we rest at home.', 'The world is wide, the road is narrow.', 'Frost on the rails, fog in the fields.', 'Wait here, then follow me.', 'The wolf is near, so watch the herd.', 'When the whistle sounds, the shift ends.', 'My father was a miner, and his father too.', 'The wheel turns, the water flows.', 'We had a fine day, then it rained.', 'Half of the coal is wet, and the rest is dust.', 'Wash, then eat, then rest.', 'The flag is out, so the train is due.', 'It was warm, then it was cold.', 'Two men went in, and two men came out.', 'The west field is dry, the east one is wet.', 'Fetch the tools, and we can start.', 'We saw the light, and we followed it.'],
   'E-23': ["It's cold, so don't go out.", "We can't wait, and we won't.", "Mother's at home, father's at the mine.", "It isn't late.", 'The self-made man is my uncle.', "Don't touch the hot iron.", "We're home, and we're tired.", "That's the last of the coal.", "He didn't come, and she didn't wait.", 'The well-worn road leads home.', "You're early, and I'm glad.", "It's a one-way street.", "Let's go home.", 'The twenty-one men are all here.', "There's tea in the hall.", "We'll rest here, then we'll go.", "The old man's hat is on the chair.", "I'm not sure it's here.", "They're at the station, and we're not.", "Here's the gate, and there's the house.", "It wasn't me, and it wasn't you.", "The dog's at the door.", "My sister's a nurse.", "Ann's cousin is here.", "Don't run in the hall.", "We had our tea, and that's that.", "The sun's out, so let's go.", "You'll need a coat, it's cold.", "What's done is done.", 'The mid-day sun is hot.'],
-  'E-24': ['up', 'ep', 'bet', 'put', 'pet', 'rub', 'tub', 'pub'],
+  'E-24': ['bo', 'ob', 'sob', 'lob', 'bod', 'pod', 'plod', 'blob', 'bold', 'slob'],
   'E-26': ['Yesterday we were busy.', 'The boy was born by the bay.', 'Papa had put the pipe by the bed.', 'We played, then we stopped.', 'The baby was asleep all night.', 'I was a pupil here.', 'The bridge was built in a year.', 'They planted beans by the path.', 'The pump failed, so we pumped by hand.', 'The brothers were at the mill.', 'She boiled beans, and he made tea.', 'The pub was full.', 'The band played until dawn.', 'We piled the ore by the belt.', 'It rained, so we stayed in.', 'Bob painted the barn blue.', 'The bell rang, and the men stopped.', 'The paper was damp.', 'The bear was in the cabin.', 'This bridge was built by my father.', 'Ben opened the gate and bolted it.', 'The pipes were cold.', 'The bus was late, so we waited.', 'Peter had a plan, and it was good.', 'The boat sailed at noon.', 'We dropped the load, then we rested.', 'The bread was ready by noon.', 'It was a bad day, but a good year.', 'The pond was deep, and the boys were bold.'],
-  'E-29': ['The river is deep and very cold.', 'Seven men live in the village.', 'Every valley has a river.', 'We have five ovens and one stove.', 'Give me the silver spoon.', 'The valve is open.', 'Never leave the engine running.', 'The harvest is over.', 'Vera drives the van.', 'Move the cart over there.', 'The evening is warm.', 'Save the best for last.', 'The oven is hot.', 'We arrived at eleven.', 'The view from the hill is vast.', 'David is a clever man.', 'Love is a heavy word.', 'The velvet coat is violet.', 'Every door has a lever.', 'The vine grows over the wall.', 'Steve has seven sisters.', 'The valley is green in spring.', 'We visit the mine every day.', 'The anvil rings.', 'The earth is vast.'],
-  'E-30': ['Who is there?', 'Is it true?', 'Where are you?', 'What is this?', 'Why not now?', 'How far is it?', 'Is he in?', 'Stop!', 'Well done!', 'What a day!', 'Are you ready?', 'Can we go?', 'Is the train late?', 'Did you see it?', 'Who has the salt?', 'Where is my hat?', 'Hold on!', 'Mind the gap!', 'Go home!', 'Is this yours?', 'When is dinner?', 'Have you seen Tom?', 'Do you hear that?', 'Run!', 'Is it far?', 'What now?', 'Do you want tea?', 'Oh no!', 'Are we there yet?', 'Who said that?'],
-  'E-31': ['kn', 'ink', 'kit', 'ken', 'tik', 'nik'],
-  'E-33': ['Do you know the way?', 'What do you think?', 'How does it look?', 'Can you make it?', 'Will it work?', 'Take it back!', 'Do you like it here?', 'Who took the key?', 'Where is the book?', 'Is the kettle on?', 'Did you lock the door?', 'What kind of ore is this?', 'Look out!', 'Can you speak up?', 'Keep going!', 'Why is it so dark?', 'Do you take milk?', 'Is it broken?', 'Which track is ours?', 'Knock first!', 'Are the kids asleep?', 'How much does it weigh?', 'Thank you!', 'Did the clock stop?', 'Who wants a break?', 'Can we walk there?', "What's for lunch?"],
+  'E-27': ['ki', 'ik', 'elk', 'ilk', 'silk', 'skill', 'like', 'kiss', 'leek', 'seek'],
+  'E-29': ['The kettle is on.', 'Keep the key in the lock.', 'The dark road leads to the lake.', 'Take the book back.', 'The market opens at dusk.', 'The bank is by the park.', 'A kind word is a key.', 'The brick wall is thick.', 'The sky is dark and the wind is keen.', 'Look at the black cat.', 'The clock ticks all night.', 'We like the old track.', 'Milk and bread are on the table.', 'The lock is broken.', 'My back is sore from the work.', 'The kids are asleep.', 'The weak link is the belt.', 'The lake is deep and cold.', 'The kitchen is warm.', 'Knock before you walk in.', 'The smoke is thick and black.', 'Make the tea and keep it hot.', 'The truck is stuck in the muck.', 'Work is done for the week.', 'The key is under the mat.'],
+  'E-30': ['Who is there?', 'Is it true?', 'Where are you?', 'What is this?', 'Why not now?', 'How far is it?', 'Is he in?', 'Stop!', 'Well done!', 'What a day!', 'Are you ready?', 'Can we go?', 'Is the train late?', 'Did you see it?', 'Who has the salt?', 'Where is my hat?', 'Hold on!', 'Mind the gap!', 'Go home!', 'Is this yours?', 'When is dinner?', 'Has anyone seen Tom?', 'Do you hear that?', 'Run!', 'Is it far?', 'What now?', 'Do you want tea?', 'Oh no!', 'Are we there yet?', 'Who said that?'],
+  'E-31': ['vie', 'vile', 'evil', 'live', 'veil', 'vise', 'elves', 'sieve'],
+  'E-33': ['Have you seen it?', 'Do you ever rest?', 'Is it very far?', 'Will you give it back?', 'Where do you live?', 'Who drove the van?', 'Have we met?', 'Do you know the way?', 'What do you think?', 'How does it look?', 'Can you make it?', 'Will it work?', 'Take it back!', 'Do you like it here?', 'Who took the key?', 'Where is the book?', 'Is the kettle on?', 'Did you lock the door?', 'What kind of ore is this?', 'Look out!', 'Can you speak up?', 'Keep going!', 'Why is it so dark?', 'Do you take milk?', 'Is it broken?', 'Which track is ours?', 'Knock first!', 'Are the kids asleep?', 'How much does it weigh?', 'Thank you!', 'Did the clock stop?', 'Who wants a break?', 'Can we walk there?', "What's for lunch?"],
   'E-34': ['"Go home!" said Bob.', '"Who is there?" she asked.', '"I am ready," said the boy.', '"Not yet," said Papa.', '"Yes," she said.', '"Ready," she said.', '"Wait for me!" the girl called.', '"Keep it," said Peter.', '"The bridge is out," said the driver.', '"Is it far?" asked Ben.', '"No," said the old man.', '"Look!" said the boy.', 'The word "home" is a small word.', '"Stop the train!" he shouted.', '"We are late," said Anna.', '"Take the key," said Mother.', '"Where were you?" asked Papa.', '"I was at the mine," said Bob.', '"Sit down," said the teacher.', '"Well done, boys!" said the foreman.', 'She said "yes" and he said "no".', '"It works!" cried Tom.', '"Come in," said the baker.', '"Not now," said the nurse.', '"Mind the gap," said the guard.'],
-  'E-35': ['ja', 'jo', 'je', 'jet', 'jot', 'aj', 'oj'],
+  'E-35': ['ja', 'aj', 'jah'],
   'E-37': ['Just a minute, please.', 'Jack joined the crew, and Jane joined too.', 'The job is done, so enjoy the evening.', 'In June the days are long, in January they are short.', 'Jim jumped the fence, and the dog followed.', 'The judge was fair, but the jury was slow.', 'We had jam, bread and tea.', 'Join us, or stay at home.', 'The major road is closed, so take the lane.', 'It is just a joke, so laugh.', 'The jar is full, the jug is empty.', 'Jenny has a new jacket, and it is blue.', 'The journey is long, but the road is good.', 'The engine jerked, then it ran smooth.', 'Just one more, then we stop.', 'The jet is fast, the barge is slow.', 'The joint is loose, so tighten it.', 'Enjoy your tea, and rest.', 'The project is late, and the subject is hard.', 'Jump in, the water is warm.', 'Jill has the juice, Jack has the bread.'],
-  'E-38': ['xi', 'ix', 'ext', 'nex', 'tex', 'xit'],
+  'E-38': ['xi', 'ix', 'six', 'ilex', 'exile', 'exes'],
   'E-40': ['Next stop, Exeter!', 'Six boxes, all full.', 'The axle is fixed, so we can go.', '"Exactly," said the expert.', 'Is the exit this way?', 'Fix the pipe, then mix the mortar.', 'The text is long, but the story is good.', 'What an excellent day!', 'Sixty men, six wagons, one road.', "Don't expect too much.", 'The fox is in the box!', 'Explain it again, please.', 'Extra coal, extra steam.', "The taxi is here, so let's go.", 'Six times six is thirty-six.', 'The exam is next week.', 'Max fixed the axle.', "Relax, it's only a mouse.", 'Expect rain, then expect sun.', 'The index is at the back.', 'We export ore and we import tea.', 'Is the toolbox in the boxcar?', 'Wax the sled, then ride it.'],
   'E-41': ['Here is the list: iron, coal, stone.', 'The day is done; the night is near.', 'The book (an old one) is on the shelf.', 'Note: oil the gears.', 'Three things: bread, salt, water.', 'One rule: think first.', 'The room is warm; the door is shut.', 'The plan is simple (almost).', 'Input: ore; output: pages.', 'Bring: a lamp, a rope, a coat.', 'The master said: go.', 'Down tools; the day is done.', 'Eight bells; all is fine.', 'The ledger reads: iron, coal, sand.', 'The pump (the old one) is broken; the new one works.', 'Answer: no.', 'Asked: who? Answer: nobody.', 'Tea is at four; dinner is at six.', 'The mine (as always) is cold; the forge is hot.', 'The price (with delivery) is ten pounds.', 'Two jobs: dig, then sort.', 'He waited; she did not.', 'Hush; the baby is asleep.', 'First: wash. Then: eat.', 'We need three: a saw, a hammer, a file.', 'Stone (the grey kind) is best for walls.'],
-  'E-42': ['qu', 'que', 'quer', 'quet', 'requ', 'equ'],
+  'E-42': ['qu', 'que', 'quer', 'requ', 'equ', 'quir'],
   'E-44': ['The quarry is quiet today.', 'Be quick, be quiet, be careful.', 'Quarry stone is hard; sand is soft.', 'The queen is not amused.', 'Is it quite ready?', 'Quality first, quantity second.', 'Equip the men, then go.', 'A square peg in a round hole.', 'The liquid is cold; the pipe is warm.', 'Quite so!', 'The request was refused.', 'We require six more.', '"Quick!" she said.', 'The squirrel took the nut.', 'The quilt is on the bed.', 'A quarter past nine.', 'The question is: who pays?', "Squash in, there's room.", 'The quest is over; the treasure is ours.', 'Quit while you can.', 'The engine is quiet now.', 'The quay is empty.', "Unique, isn't it?", 'We quarried stone for the bridge.'],
-  'E-45': ['ze', 'ez', 'zu', 'uz', 'zer', 'tze', 'rz', 'utz'],
+  'E-45': ['zo', 'oz', 'doz', 'zoo'],
   'E-46': ['zero', 'size', 'dozen', 'zinc', 'bronze', 'puzzle', 'jazz', 'breeze', 'blizzard', 'drizzle', 'haze', 'blaze', 'zone', 'lazy', 'crazy', 'dizzy', 'frozen', 'zigzag', 'prize', 'freeze', 'quartz', 'zeal', 'zebra', 'wizard', 'lizard'],
   'E-47': ['The zinc is in the bronze.', 'Zero wind today.', 'The puzzle has a dozen pieces.', 'Size matters; so does speed.', 'The blizzard froze the points.', 'A lazy breeze, a hazy sky.', 'Freeze!', 'The prize is a zinc medal.', 'Jazz at the pub tonight.', 'The zone is closed (frozen rails).', 'Is the nozzle blocked?', "Don't be crazy; wear a coat.", 'The bronze bell is quiet.', 'We seized the moment.', 'Dizzy? Sit down.', 'The zoo is open on Sunday.', 'Zigzag up the hill.', "The quartz sparkles; the zinc doesn't.", 'A dozen eggs, please.', 'The fizz is gone.', 'The haze lifted at noon.', 'Amazing!', 'Seize the day.', 'The glaze is dry; the pot is done.'],
   'E-48': ['There are 25 men in the crew.', 'The train is at 5.', 'We need 3 tons of coal and 2 of quartz.', 'The station is 12 miles away.', 'The shift is 4 hours; lunch is 1.', 'Answer: 2, 4, 1, 3, 5.', 'Buy 2 loaves and 1 pint of milk.', 'House 14, floor 3.', 'The lesson is 45 minutes.', 'We were 5; now we are 3.', 'Lunch at 2.', 'Page 231, line 12.', 'A cat has 4 legs and 1 tail.', 'He lives on floor 5.', 'We bought 3 tickets at 125 each.', 'Wait 15 minutes.', 'There are 4 seasons and 12 months.', 'Walk 2 miles, then 1 more.', 'Three plus two is 5.', 'Track 3, 11 sharp.', 'It is 13 miles to Exeter.', 'The shop opens at 5, not 4.'],
