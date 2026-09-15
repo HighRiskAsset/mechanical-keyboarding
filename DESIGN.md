@@ -98,13 +98,17 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
 - **The panel is not the bag (2026-09-15).** The v4 tree ends past a hundred
   materials and the bag holds every one of them, but the HUD shows only what
   fits the canvas (about 15 rows at the usual height, `FACTORY.hudCapacity`):
-  the **residents**, the materials the hands worked with last (a good landing
-  by hand or a price leaving; the simulation's own traffic never counts), in
-  tree order so nothing shuffles while you work. A row the thing in front of
-  you names (a price, a recipe's inputs, what it makes) **surfaces above the
-  residents for as long as it is in front of you**, taking the place of the
-  longest-untouched resident, and goes back down when you walk away; a
-  resident the focus names stays put, lit by its mark. Nothing is ever lost:
+  the **residents**, the newest materials the player has discovered, in
+  tree order with the newest at the top: what the game is working towards
+  now, never the ore it started on. (Built first as "the materials the hands
+  worked with last"; the user asked for the tree instead the same day, so an
+  old material shows only while something in front of you names it.) A row
+  the thing in front of you names (a price, a recipe's inputs, what it
+  makes) that is not already up **is added at the bottom for as long as it
+  is in front of you**, the oldest of the newest making room, and goes away
+  when you walk on; that is how an old ore a price still asks for gets its
+  count read. A row already up that the focus names stays put, lit by its
+  mark. Nothing is ever lost:
   a hidden row returns the moment a price names it or a good lands, and a
   greyed menu row still prints the short count in red, so a hidden row can
   never hide a shortage. Materials are never retired; rows go quiet instead.
@@ -112,8 +116,22 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   screen (all make management a thing). Still open: pages and byproducts on
   a shelf of their own at the place that spends them; an audit of how far
   back prices reach; automated goods leaving the bag for bins and belts.
-  Live save: `touched` / `touchN` on the profile; a save from before is
-  seeded in tree order so its newest goods are the ones that stay up.
+  Nothing is kept in the save for this: the rows follow `seen` and the tree.
+- **Every row carries its name (2026-09-15).** The panel is the one place the
+  player can always read what a material is called, and the icons alone were
+  never going to carry a hundred kinds. A row is the icon with the name over
+  the count beside it, two lines of the 5px font stacked in the same 14px,
+  so the row count does not change; the panel widened from 46 to 68 world px
+  (16% of the canvas) and the blank column between icon and count is gone.
+  Names are capitals, dimmer than the count (the count is what changes, the
+  name is what it is), localized through the same table the menus use. The
+  font gained Latin and Cyrillic capitals (`dev/gen/pixels.js`, appended after
+  the marks so no cell on the sheet moved; `dev/font.html` bakes the font
+  sheet alone and refuses to write the live sheet if any existing cell would
+  change). **Names are short by design, never truncated:** the naming pass
+  caps a name at 12 glyphs in both scripts, measured on the font. Until real
+  names land the stand-ins are cut to what fits, keeping a short last token
+  (Book II, Gazette III) so the tail still tells them apart.
 - **Recipes and consumption (v3):** a processor wears **one** row — the
   recipe it is running (2026-08-20; it used to show the whole list, which
   crowded the machine). The others are chosen at the machine's hold-Space
@@ -323,6 +341,20 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   contractions enter with the apostrophe (Oil Mk1); the pronoun 'I' waits
   for the Crane. Engine: TRAINABLE_PUNCT is now course-declared
   (`MINE_MARKS` — invariant 5; RU keeps the ['.','-'] fallback).
+- **The EN v4 course (2026-09-15):** the v3 ladder above is history; the
+  English course now has its own v4 lesson plan (`docs/lessons-v4-en.plan.js`,
+  review page `docs/lessons-v4-en.html`, tree `js/tree-en.js`) built on the
+  RU skeleton lesson for lesson, so the two courses share ids, the mech
+  layer and the material names. The keys were reseated for QWERTY by the
+  A6 scorer and tuned to the RU column roles: e t · a o · i n · h s · r u ·
+  l d · c m + the period · Shift · g y · the comma · f w · the apostrophe
+  and the hyphen (the EN hurdle: contractions) · b p · v · ? ! · k · " · j ·
+  x · : ; ( ) · q · z · the digits. English has 26 letters to Russian's 33,
+  so the rare tail stands one letter to a column. The full table and every
+  difference are in `docs/lessons-v4-rules.md`, A17. The layout file gained
+  the number row and the shifted marks; the course file gained the words,
+  phrases and names the plan's columns lean on; `dev/bot-sim.js` takes
+  `COURSE=en`. QWERTY is now the default course for a visitor with no world.
 - **Tiers 4–6 (phase 5, 2026-08-20):** the Crane drills *capitals*
   (sentence-initial, with `NAMES`; a capital's stats fold onto its
   lowercase letter) and the Manufacturer drills *pages* (`PAGES`, real

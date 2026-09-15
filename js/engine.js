@@ -70,8 +70,6 @@
       collected: {},     // word → {n, clean, at} — the passport
       bag: {},           // material id → count
       seen: {},          // material id → true once held (progressive reveal)
-      touched: {},       // material id → the count of its last hand touch (the bag panel's residents)
-      touchN: 0,
       machines: sm.machines, // {id, kind, ore?, node?, at, face, recipe?, autoOn?}
       nextMachineId: sm.nextId,
       drops: [],         // loose materials on the ground: {id, mat, n, x, y}
@@ -117,10 +115,7 @@
     if (!p.collected) p.collected = {};
     if (!p.bag) p.bag = {};
     if (!p.seen) p.seen = {};
-    // a save from before the panel had residents: everything it has held is
-    // touched in tree order, so its newest goods are the ones that stay up
-    if (!p.touched) { p.touched = {}; p.touchN = 0; for (const m of C().MAT_IDS) if (p.seen[m] && !C().isFluid(m)) p.touched[m] = ++p.touchN; }
-    if (typeof p.touchN !== 'number') p.touchN = Object.keys(p.touched).length;
+    delete p.touched; delete p.touchN;   // one day of saves (2026-09-15) kept the bag panel's residents by touch; it keeps them by tree now
     if (!p.crossings) p.crossings = {};
     if (p.finishedAt === undefined) p.finishedAt = null;
     // a fluid never sits in the bag (it cannot be carried); a save that
@@ -442,7 +437,11 @@
     names: (s) => /^[^,?!:;"«»()—\d]*\.$/.test(s),
     clauses: (s) => s.includes(','),
     dash: (s) => /—|\S-\S/.test(s),
-    past: (s) => /(^|\s)(был|была|были|было)(\s|[.,!?])|л[аи]?[.,]/.test(s),
+    // the past: Russian by был/-л, English by was/were/had/did/been or a
+    // consonant + ed (so bed, red, need stay out); a sentence is one or the other
+    past: (s) => /(^|\s)(был|была|были|было)(\s|[.,!?])|л[аи]?[.,]/.test(s) || /\b(was|were|had|did|been)\b|\b\w+[bdfgklmnprstvwyz]ed\b/.test(s),
+    // the EN hurdle: an apostrophe, or a hyphen inside a word
+    contractions: (s) => /'|\S-\S/.test(s),
     questions: (s) => /[?!]/.test(s),
     dialogue: (s) => /["«»]/.test(s),
     lists: (s) => /[:;()]/.test(s),

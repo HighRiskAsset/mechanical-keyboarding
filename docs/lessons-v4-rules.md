@@ -20,7 +20,10 @@ kinds:
 
 Materials and machines are not part of the plan. Lessons carry ids (I-03,
 E-14, P-02) until the naming pass. Naming is aesthetic and mechanical and
-happens after the structure freezes.
+happens after the structure freezes. **A material name is at most 12 glyphs
+in each script, measured on the game's 5px font (`dev/font.html` shows it):**
+the bag panel prints every name whole beside its count (2026-09-15), and a
+name that has to be cut there is a name that failed.
 
 ## Part A. Rules of determination
 
@@ -347,6 +350,63 @@ page `docs/lessons-v4-ru.html`.
 | C23 | 1 2 3 4 5 | counts and times |
 | C24 | 6 7 8 9 0 № | dates and prices; gather 7, the keyboard complete |
 
+### A17. The EN seating (built 2026-09-15)
+
+The RU skeleton column for column and lesson for lesson (user ruling
+2026-09-15: the two courses should be obviously parallel), with the keys
+reseated for QWERTY. The A6 scorer (coverage, words unlocked, comfort, a
+vowel at least every other group) puts e t first and pulls u, the last
+vowel, up to C5; from C9 on the candidate pairs score within a point of each
+other, so those columns were tuned by hand to the RU column roles (verbs at
+C9, things and places at C11, people at C13, adjectives at C14). Same 24
+columns, same 97 lessons, same ids, so the mech layer and the names are
+shared and the material ids mean the same thing in both courses. The plan is
+`docs/lessons-v4-en.plan.js`, its review page `docs/lessons-v4-en.html`.
+
+| col | keys | why here | differs from RU |
+|---|---|---|---|
+| C1 | e t | the two most frequent letters, 22% of text | |
+| C2 | a o | syllables open | |
+| C3 | i n | words open: in, it, on, an, no, not, one, into | |
+| C4 | h s | little words: the, this, she, he, is, his, has | |
+| C5 | r u | the last vowel; phrases open | u this early: a vowel every other group |
+| C6 | l d | gather 1 over twelve letters (78%) | |
+| C7 | c m . | the period on its own key; sentences open; home and family | the Period key, not Slash |
+| C8 | Shift | capitals, and the pronoun I | |
+| C9 | g y | -ing and -ly; you, they, my; verbs; gather 2 over sixteen letters | |
+| C10 | , | clauses | on its own key, unshifted: not a hurdle here |
+| C11 | f w | of, for, from, if; we, was, with, what, when, where, who, how, now; things and places | |
+| C12 | ' - | the apostrophe (the EN hurdle) with the hyphen: the two marks that live inside a word; contractions | takes the dash column; no em dash in EN scope |
+| C13 | b p | people; gather 3, the past tense (was, were, -ed) | |
+| C14 | v | very, have, over, every, seven; adjectives | one letter |
+| C15 | ? ! | questions | |
+| C16 | k | know, think, like, look, make, take, work; gather 4 questions | one letter |
+| C17 | " | dialogue | straight double quotes only; no guillemets |
+| C18 | j | just, job, join, jump | one letter |
+| C19 | x | next, six, box, fix, exit; gather 5 | one letter |
+| C20 | : ; ( ) | lists and asides | the semicolon is unshifted |
+| C21 | q | quarry, quality, quiet, question; syllables borrow r u for the u | one letter |
+| C22 | z | the last letter; gather 6, all letters | one letter |
+| C23 | 1 2 3 4 5 | counts and times | |
+| C24 | 6 7 8 9 0 | dates and prices; gather 7 | no numero sign; English writes No. |
+
+The one structural difference: English has 26 letters to Russian's 33, and
+the skeleton has sixteen letter columns, so ten columns carry pairs and the
+rare tail (v k j x q z, 2.3% of text together, about what RU's last five
+letter columns carry) stands one letter to a column from C14. The
+alternative, a 21-column EN tree of thirteen pairs, would break the shared
+ids, names and mech layer; it is the user's call if the singles play badly.
+
+Families that moved with the language: E-21 is "things and places leaning
+on f w" (the English plural is -s and has been there since C4, so RU's
+plurals column has no counterpart); E-23 is the new `contractions` family
+(an apostrophe, or a hyphen inside a word), tested in the builder and in
+`js/engine.js`; the `past` test covers both languages (был and -л, or was,
+were, had, did, been and a consonant + ed). The syllable partners for the
+singles are the vowel banks as in RU (I-01 e t with I-03 i n or I-02 a o);
+q takes I-05 r u because it needs its u. Coverage: 50% by C3, 78% by C6,
+84% by C7, 93% by C11, all letters at C22.
+
 ## Part B. What the finished plan must look like
 
 One table per course, one row per lesson:
@@ -399,7 +459,12 @@ built by `dev/tech-tree-v4-build.js` into three files: the tech tree
 `docs/tech-tree-v4-ru.html`, the overlay `docs/lesson-tech-tree-v4-ru.html`
 (the lesson tree with its recipe on every node), and `docs/tree-v4-ru.json`,
 the same data for the game to read. Ids only; naming comes after the
-structure is agreed.
+structure is agreed. The EN layer (`docs/lessons-v4-en.mech.js`, 2026-09-15)
+started as a copy of the RU cut, since the EN plan has the same skeleton,
+and builds the same three files with `en` in the name; its names file
+re-exports the RU names, one naming for both courses. Both courses are
+built with `node dev/tech-tree-v4-build.js ru` and `... en`, which also
+write `js/tree-ru.js` and `js/tree-en.js`, the modules the game loads.
 
 ### C1. The shape: Satisfactory's
 

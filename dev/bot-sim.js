@@ -8,9 +8,11 @@
 //   BOT_CPS=2.5     characters a second at the keys (2.5 = 30 WPM; 200 = machine speed)
 //   BOT_HOURS=40    stop when the bot's clock passes this many hours
 //   BOT_ENGINES=0   the old way: carry everything, automate nothing
+//   COURSE=en       play the English tree (default ru); only that course's files are loaded
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const ROOT = path.join(__dirname, '..');
 const mapId = process.argv[2] || 'range';
+const course = process.env.COURSE || 'ru';
 const store = new Map([['mk.devmode', 'on']]);
 const el = () => ({ classList: { add() {}, remove() {}, toggle() {} }, style: {}, appendChild() {} });
 const ctx = {
@@ -26,7 +28,7 @@ const ctx = {
 };
 ctx.window = ctx; ctx.globalThis = ctx; ctx.self = ctx;
 vm.createContext(ctx);
-for (const f of ['js/i18n.js', 'js/dev.js', 'js/board-ansi.js', 'js/language-ru.js', 'js/layout-ru.js', 'js/tree-ru.js',
+for (const f of ['js/i18n.js', 'js/dev.js', 'js/board-ansi.js', `js/language-${course}.js`, `js/layout-${course}.js`, `js/tree-${course}.js`,
   'js/courses.js', 'js/maps/kit.js', 'js/maps/frontier.js', 'js/maps/range.js', 'js/chain.js', 'js/engine.js', 'js/sim.js', 'js/bot.js']) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f });
 }

@@ -113,6 +113,11 @@
     ['yr', 1], ['rn', 2], ['rb', 1], ['lt', 1], ['aw', 1],
     // the 2026-08-25 ladder pass: the new T0 (f j r u b n) and the e/i rung
     ['ru', 2], ['ei', 1], ['ib', 1], ['ls', 1], ['ny', 1],
+    // the v4 pass (2026-09-15): the single-letter columns (v k j x q z) need
+    // bigrams that carry their letter, or their syllable lesson never shows it
+    ['qu', 3], ['ja', 1], ['jo', 1], ['je', 1], ['ju', 1], ['ze', 1], ['za', 1], ['zi', 1], ['zo', 1], ['zz', 1],
+    ['xt', 1], ['ax', 1], ['ox', 1], ['ix', 1], ['xi', 1], ['xp', 1], ['kn', 1], ['sk', 1], ['ok', 1], ['ak', 1],
+    ['va', 1], ['vo', 1], ['av', 1], ['ov', 1],
   ];
 
   const CLUSTERS = [
@@ -559,6 +564,95 @@
     ['index', '', 'things'], ['example', '', 'life'], ['exam', '', 'life'], ['explain', '', 'verbs'],
     ['explore', '', 'verbs'], ['oxide', '', 'things'], ['boxcar', '', 'rail'], ['sixteen', '', 'things'],
     ['mixture', '', 'things'], ['expand', '', 'verbs'], ['flax', '', 'nature'], ['flex', '', 'verbs'],
+    // --- the v4 pass (2026-09-15): what the lesson plan's columns lean on.
+    // A word already listed above keeps its first entry (WORD_LIST dedupes),
+    // so these only add. Grouped by the column that first needs them. ---
+    // C3, the first words over e t a o i n
+    ['to', '', 'func'], ['at', '', 'func'], ['in', '', 'func'], ['on', '', 'func'], ['an', '', 'func'], ['it', '', 'func'],
+    ['no', '', 'func'], ['not', '', 'func'], ['one', '', 'func'], ['into', '', 'func'], ['onto', '', 'func'], ['none', '', 'func'],
+    ['ten', '', 'things'], ['nine', '', 'things'], ['tin', '', 'things'], ['tie', '', 'things'], ['toe', '', 'people'], ['tea', '', 'things'],
+    ['eat', '', 'verbs'], ['ate', '', 'verbs'], ['oat', '', 'nature'], ['ton', '', 'things'], ['tone', '', 'life'], ['note', '', 'things'],
+    ['neat', '', 'adj'], ['tent', '', 'things'], ['tan', '', 'adj'], ['net', '', 'things'], ['noon', '', 'time'], ['onion', '', 'nature'],
+    ['inn', '', 'place'], ['tint', '', 'things'], ['item', '', 'things'], ['nation', '', 'place'], ['notion', '', 'life'], ['tenant', '', 'people'],
+    // C4, nouns over e t i n h s and the little words over eight letters
+    ['nest', '', 'nature'], ['sheet', '', 'things'], ['teeth', '', 'people'], ['shin', '', 'people'], ['thistle', '', 'nature'], ['shine', '', 'nature'],
+    ['ninth', '', 'things'], ['tenth', '', 'things'], ['thesis', '', 'life'], ['tennis', '', 'life'], ['siesta', '', 'life'], ['stint', '', 'work'],
+    ['hiss', '', 'verbs'], ['insist', '', 'verbs'], ['tense', '', 'adj'], ['teen', '', 'people'], ['sit', '', 'verbs'], ['set', '', 'verbs'],
+    ['hit', '', 'verbs'], ['sent', '', 'verbs'], ['seen', '', 'verbs'], ['thin', '', 'adj'], ['thine', '', 'func'], ['its', '', 'func'],
+    ['that', '', 'func'], ['those', '', 'func'], ['than', '', 'func'], ['has', '', 'func'], ['as', '', 'func'], ['so', '', 'func'],
+    ['too', '', 'func'], ['thus', '', 'func'], ['hence', '', 'func'], ['oh', '', 'func'], ['ah', '', 'func'], ['hers', '', 'func'],
+    ['nose', '', 'people'], ['hose', '', 'things'], ['stain', '', 'things'], ['heat', '', 'nature'], ['ash', '', 'nature'], ['oath', '', 'life'],
+    // C5, nature and things leaning on r u
+    ['rain', '', 'nature'], ['river', '', 'nature'], ['rust', '', 'nature'], ['sun', '', 'nature'], ['stone', '', 'nature'], ['iron', '', 'things'],
+    ['ore', '', 'things'], ['root', '', 'nature'], ['star', '', 'nature'], ['rat', '', 'nature'], ['hare', '', 'nature'], ['horse', '', 'nature'],
+    ['heron', '', 'nature'], ['otter', '', 'nature'], ['turtle', '', 'nature'], ['thrush', '', 'nature'], ['trout', '', 'nature'], ['earth', '', 'nature'],
+    ['air', '', 'nature'], ['shore', '', 'nature'], ['hour', '', 'time'], ['house', '', 'home'], ['route', '', 'rail'], ['tour', '', 'rail'],
+    ['north', '', 'place'], ['south', '', 'place'], ['east', '', 'place'], ['ruin', '', 'place'], ['nut', '', 'things'], ['tuna', '', 'nature'],
+    ['hut', '', 'home'], ['turn', '', 'verbs'], ['run', '', 'verbs'], ['hurt', '', 'verbs'], ['hunt', '', 'verbs'], ['trust', '', 'verbs'],
+    ['sour', '', 'adj'], ['rare', '', 'adj'], ['true', '', 'adj'], ['sure', '', 'adj'], ['short', '', 'adj'], ['rough', '', 'adj'],
+    // C6, home and road leaning on l d
+    ['door', '', 'home'], ['hall', '', 'home'], ['road', '', 'rail'], ['load', '', 'rail'], ['ladder', '', 'things'], ['lantern', '', 'things'],
+    ['lid', '', 'things'], ['lead', '', 'things'], ['lodge', '', 'home'], ['land', '', 'nature'], ['dust', '', 'nature'], ['dial', '', 'things'],
+    ['dinner', '', 'home'], ['lathe', '', 'things'], ['dollar', '', 'things'], ['lane', '', 'rail'], ['line', '', 'rail'], ['loader', '', 'things'],
+    ['handle', '', 'things'], ['saddle', '', 'things'], ['needle', '', 'things'], ['drill', '', 'things'], ['hillside', '', 'place'], ['island', '', 'place'],
+    ['old', '', 'adj'], ['dull', '', 'adj'], ['idle', '', 'adj'], ['loud', '', 'adj'], ['solid', '', 'adj'], ['hold', '', 'verbs'],
+    // C7, home and family leaning on c m
+    ['home', '', 'home'], ['room', '', 'home'], ['mother', '', 'people'], ['cousin', '', 'people'], ['uncle', '', 'people'], ['aunt', '', 'people'],
+    ['mum', '', 'people'], ['mate', '', 'people'], ['madam', '', 'people'], ['master', '', 'people'], ['mister', '', 'people'], ['miss', '', 'people'],
+    ['comrade', '', 'people'], ['doctor', '', 'people'], ['miner', '', 'people'], ['sailor', '', 'people'], ['teacher', '', 'people'], ['actor', '', 'people'],
+    ['mason', '', 'people'], ['mechanic', '', 'people'], ['merchant', '', 'people'], ['chairman', '', 'people'], ['child', '', 'people'], ['children', '', 'people'],
+    ['chamber', '', 'home'], ['cellar', '', 'home'], ['cabin', '', 'home'], ['camp', '', 'home'], ['couch', '', 'home'], ['cot', '', 'home'],
+    ['coat', '', 'things'], ['cloth', '', 'things'], ['candle', '', 'home'], ['cup', '', 'home'], ['chair', '', 'home'], ['church', '', 'place'],
+    ['cinema', '', 'place'], ['mansion', '', 'home'], ['mat', '', 'home'], ['mirror', '', 'home'], ['meal', '', 'home'], ['cream', '', 'things'],
+    ['cheese', '', 'things'], ['corn', '', 'nature'], ['cocoa', '', 'things'], ['ham', '', 'things'], ['mattress', '', 'home'], ['curtain', '', 'home'],
+    ['morning', '', 'time'], ['minute', '', 'time'], ['moment', '', 'time'], ['month', '', 'time'], ['decade', '', 'time'], ['autumn', '', 'time'],
+    ['summer', '', 'time'], ['march', '', 'time'], ['century', '', 'time'], ['second', '', 'time'], ['midnight', '', 'time'], ['season', '', 'time'],
+    // C9, verbs leaning on g y
+    ['go', '', 'verbs'], ['get', '', 'verbs'], ['guess', '', 'verbs'], ['gather', '', 'verbs'], ['gain', '', 'verbs'], ['drag', '', 'verbs'],
+    ['hang', '', 'verbs'], ['sign', '', 'verbs'], ['argue', '', 'verbs'], ['agree', '', 'verbs'], ['try', '', 'verbs'], ['say', '', 'verbs'],
+    ['stay', '', 'verbs'], ['cry', '', 'verbs'], ['carry', '', 'verbs'], ['hurry', '', 'verbs'], ['marry', '', 'verbs'], ['study', '', 'verbs'],
+    ['yell', '', 'verbs'], ['yearn', '', 'verbs'], ['glue', '', 'verbs'], ['guard', '', 'verbs'], ['gallop', '', 'verbs'], ['going', '', 'verbs'],
+    ['saying', '', 'verbs'], ['getting', '', 'verbs'], ['digging', '', 'verbs'], ['singing', '', 'verbs'], ['reading', '', 'verbs'], ['eating', '', 'verbs'],
+    // C11, things, places and nature leaning on f w
+    ['farm', '', 'place'], ['field', '', 'nature'], ['forest', '', 'nature'], ['flower', '', 'nature'], ['fog', '', 'nature'], ['frost', '', 'nature'],
+    ['fish', '', 'nature'], ['wind', '', 'nature'], ['wall', '', 'things'], ['wheel', '', 'things'], ['well', '', 'place'], ['weather', '', 'nature'],
+    ['west', '', 'place'], ['wolf', '', 'nature'], ['wheat', '', 'nature'], ['straw', '', 'nature'], ['willow', '', 'nature'], ['waterfall', '', 'nature'],
+    ['flag', '', 'things'], ['fence', '', 'things'], ['fork', '', 'things'], ['wire', '', 'things'], ['wharf', '', 'place'], ['workshop', '', 'place'],
+    ['fountain', '', 'place'], ['ferry', '', 'rail'], ['flat', '', 'home'], ['floor', '', 'home'], ['fireplace', '', 'home'], ['wardrobe', '', 'home'],
+    // C13, people leaning on b p
+    ['people', '', 'people'], ['person', '', 'people'], ['baby', '', 'people'], ['boy', '', 'people'], ['brother', '', 'people'], ['papa', '', 'people'],
+    ['pupil', '', 'people'], ['parent', '', 'people'], ['partner', '', 'people'], ['boss', '', 'people'], ['baker', '', 'people'], ['builder', '', 'people'],
+    ['plumber', '', 'people'], ['husband', '', 'people'], ['neighbour', '', 'people'], ['nobody', '', 'people'], ['somebody', '', 'people'], ['public', '', 'people'],
+    ['bishop', '', 'people'], ['barber', '', 'people'], ['butcher', '', 'people'], ['porter', '', 'people'], ['pilot', '', 'people'], ['poet', '', 'people'],
+    ['painter', '', 'people'], ['printer', '', 'people'], ['peasant', '', 'people'], ['prince', '', 'people'], ['band', '', 'people'], ['pal', '', 'people'],
+    // C14, v
+    ['village', '', 'place'], ['oven', '', 'home'], ['stove', '', 'home'], ['harvest', '', 'nature'], ['visit', '', 'verbs'], ['view', '', 'nature'],
+    ['voice', '', 'people'], ['vote', '', 'life'], ['eleven', '', 'things'], ['twelve', '', 'things'], ['vessel', '', 'rail'], ['lever', '', 'things'],
+    ['vapour', '', 'nature'], ['avenue', '', 'place'], ['cover', '', 'verbs'], ['deliver', '', 'verbs'], ['travel', '', 'rail'], ['novel', '', 'things'],
+    ['navy', '', 'rail'], ['survey', '', 'work'], ['review', '', 'work'], ['silver', '', 'things'], ['clever', '', 'adj'], ['violet', '', 'adj'],
+    ['vain', '', 'adj'], ['vague', '', 'adj'], ['vital', '', 'adj'], ['savage', '', 'adj'], ['active', '', 'adj'], ['native', '', 'adj'],
+    ['private', '', 'adj'], ['average', '', 'adj'], ['even', '', 'adj'], ['evil', '', 'adj'], ['valid', '', 'adj'], ['vault', '', 'place'],
+    ['vale', '', 'place'], ['harbour', '', 'place'], ['cavern', '', 'place'], ['veranda', '', 'home'], ['velvet', '', 'things'], ['seven', '', 'things'],
+    // C18, j
+    ['job', '', 'work'], ['joy', '', 'life'], ['joke', '', 'life'], ['jacket', '', 'things'], ['jam', '', 'things'], ['major', '', 'adj'],
+    ['enjoy', '', 'verbs'], ['journey', '', 'rail'], ['junction', '', 'rail'], ['jolly', '', 'adj'], ['project', '', 'work'], ['subject', '', 'life'],
+    ['object', '', 'things'], ['injure', '', 'verbs'], ['adjust', '', 'verbs'], ['jury', '', 'people'], ['junior', '', 'people'], ['jeans', '', 'things'],
+    ['jewel', '', 'things'], ['jog', '', 'verbs'], ['jerk', '', 'verbs'], ['jingle', '', 'verbs'], ['jaw', '', 'people'], ['justice', '', 'life'],
+    // C19, x
+    ['exist', '', 'verbs'], ['examine', '', 'verbs'], ['exhaust', '', 'things'], ['excuse', '', 'life'], ['exercise', '', 'life'], ['excellent', '', 'adj'],
+    ['expensive', '', 'adj'], ['exchange', '', 'work'], ['extreme', '', 'adj'], ['vex', '', 'verbs'], ['relax', '', 'verbs'], ['oxygen', '', 'nature'],
+    ['textile', '', 'things'], ['anxious', '', 'adj'], ['luxury', '', 'life'], ['complex', '', 'adj'], ['mixer', '', 'things'], ['axis', '', 'things'],
+    ['exile', '', 'life'], ['excess', '', 'things'], ['exterior', '', 'place'], ['annex', '', 'place'], ['exit', '', 'place'], ['expert', '', 'people'],
+    // C21, q
+    ['quarter', '', 'time'], ['quay', '', 'place'], ['quote', '', 'verbs'], ['quiz', '', 'life'], ['squad', '', 'people'], ['squire', '', 'people'],
+    ['queue', '', 'things'], ['quarrel', '', 'life'], ['squash', '', 'verbs'], ['banquet', '', 'things'], ['conquer', '', 'verbs'], ['inquire', '', 'verbs'],
+    ['acquire', '', 'verbs'], ['sequel', '', 'life'], ['frequent', '', 'adj'], ['liquor', '', 'things'], ['mosquito', '', 'nature'], ['quiver', '', 'verbs'],
+    ['squirrel', '', 'nature'], ['equipment', '', 'work'], ['quota', '', 'work'], ['inquiry', '', 'work'], ['quarryman', '', 'work'], ['lacquer', '', 'things'],
+    // C22, z
+    ['zeal', '', 'life'], ['zest', '', 'life'], ['zebra', '', 'nature'], ['zip', '', 'verbs'], ['zoom', '', 'verbs'], ['gazette', '', 'things'],
+    ['hazel', '', 'nature'], ['lizard', '', 'nature'], ['wizard', '', 'people'], ['ozone', '', 'nature'], ['citizen', '', 'people'], ['organize', '', 'verbs'],
+    ['realize', '', 'verbs'], ['recognize', '', 'verbs'], ['magazine', '', 'things'], ['horizon', '', 'nature'], ['bazaar', '', 'place'], ['plaza', '', 'place'],
+    ['waltz', '', 'life'], ['topaz', '', 'things'], ['blizzard', '', 'nature'], ['drizzle', '', 'nature'], ['puzzle', '', 'life'], ['jazz', '', 'life'],
   ];
 
   // phrases: the Assembler's grammar (no sentence marks; contractions are
@@ -614,6 +708,22 @@
     // --- typeable from pair 17 ---
     ['fix the pipe', ''], ['the next exit', ''], ['a dozen boxes', ''],
     ['fix the axle', ''],
+    // --- the v4 pass (2026-09-15): phrases over the plan's first ten
+    // letters (C5: e t a o i n h s r u; no d, so no "and" yet) and its first
+    // twelve (C6, with l d), for E-08 and the first gather ---
+    ['here it is', ''], ['sit here', ''], ['one at a time', ''], ['at the station', ''], ['on the train', ''],
+    ['into the mine', ''], ['out at sea', ''], ['the north shore', ''], ['a hut on the shore', ''], ['in the sun', ''],
+    ['the iron horse', ''], ['rain on the ruins', ''], ['the sun is out', ''], ['the hour is near', ''], ['one more ton', ''],
+    ['the tea is hot', ''], ['the east shore', ''], ['our turn', ''], ['ten to one', ''], ['tin or iron', ''],
+    ['the sea at noon', ''], ['the ore is in', ''], ['hear it out', ''], ['one in ten', ''], ['the train is here', ''],
+    ['not so soon', ''], ['this or that', ''], ['the north is ours', ''], ['sit in the sun', ''], ['sun in the east', ''],
+    ['an iron hat', ''], ['run to the station', ''], ['trust no one', ''], ['no one is here', ''], ['it is not so', ''],
+    ['here and there', ''], ['sun and rain', ''], ['iron and stone', ''], ['in and out', ''], ['the iron road', ''],
+    ['rain on the hills', ''], ['salt in the air', ''], ['north and south', ''], ['the old station', ''], ['under the moon', ''],
+    ['at the door', ''], ['an old load', ''], ['load the sled', ''], ['a dull tool', ''], ['the last load', ''],
+    ['down the hill', ''], ['the old road', ''], ['lead and tin', ''], ['sand in the shoe', ''], ['the ladder is tall', ''],
+    ['a deal is a deal', ''], ['head to toe', ''], ['hold the line', ''], ['all in a line', ''], ['idle hands', ''],
+    ['a lantern in the hall', ''], ['dust on the road', ''], ['a house on the hill', ''], ['the hall is dark', ''],
   ];
 
   // sentences: the Fastener's grammar (with their marks; capitals wait for
@@ -686,6 +796,23 @@
     ['Fern', ''], ['Grace', ''], ['Kate', ''], ['Claire', ''], ['Wade', ''], ['Zack', ''],
     ['Pearl', ''], ['Gus', ''], ['Hank', ''], ['Bess', ''], ['Nell', ''], ['Joe', ''],
     ['Bill', ''], ['Walt', ''], ['Quinn', ''], ['Rex', ''],
+    // the v4 pass (2026-09-15): names the C8 capitals lesson can write with
+    // its fourteen letters (e t a o i n h s r u l d c m), and the ones the
+    // authored sentences use later
+    ['Anna', ''], ['Clara', ''], ['Carl', ''], ['Laura', ''], ['Linda', ''], ['Alice', ''], ['Simon', ''], ['Nora', ''],
+    ['Diana', ''], ['Leo', ''], ['Emma', ''], ['Alan', ''], ['Ian', ''], ['Neil', ''], ['Sean', ''], ['Helen', ''],
+    ['Rosa', ''], ['Lena', ''], ['Nathan', ''], ['Nelson', ''], ['Milton', ''], ['Thomas', ''], ['Charles', ''], ['Louis', ''],
+    ['Louise', ''], ['Daniel', ''], ['Michael', ''], ['Susan', ''], ['Sarah', ''], ['Ellen', ''], ['Ida', ''], ['Otto', ''],
+    ['Hans', ''], ['Heidi', ''], ['Rita', ''], ['Ross', ''], ['Ted', ''], ['Ned', ''], ['Ella', ''], ['Ada', ''],
+    ['Lucas', ''], ['Mia', ''], ['Noah', ''], ['Liam', ''], ['Ethan', ''], ['Chloe', ''], ['Isla', ''], ['Amelia', ''],
+    ['Charlotte', ''], ['Harriet', ''], ['Tess', ''], ['Edith', ''], ['Iris', ''], ['Stella', ''], ['Colin', ''], ['Dean', ''],
+    ['Harold', ''], ['Hector', ''], ['Isaac', ''], ['Lionel', ''], ['Marcus', ''], ['Martin', ''], ['Miles', ''], ['Norman', ''],
+    ['Oscar', ''], ['Roland', ''], ['Samuel', ''], ['Silas', ''], ['Stuart', ''], ['Anton', ''], ['Elena', ''], ['Lucia', ''],
+    ['Rome', ''], ['Ohio', ''], ['Utah', ''], ['Maine', ''], ['India', ''], ['China', ''], ['Chile', ''], ['Iceland', ''],
+    ['Ireland', ''], ['Scotland', ''], ['Holland', ''], ['Nile', ''], ['Thames', ''], ['Rhine', ''], ['Ural', ''], ['Andes', ''],
+    ['Sahara', ''], ['Milan', ''], ['Athens', ''], ['Oslo', ''], ['Dallas', ''], ['Houston', ''], ['Austin', ''], ['Toronto', ''],
+    ['Cairo', ''], ['Lincoln', ''], ['Leeds', ''], ['Bob', ''], ['Peter', ''], ['Vera', ''], ['David', ''], ['Steve', ''],
+    ['Jim', ''], ['Jenny', ''], ['Exeter', ''], ['Edinburgh', ''], ['Dickens', ''], ['Austen', ''], ['Blake', ''], ['Carroll', ''],
   ];
 
   // pages: the Manufacturer's paragraphs — THE CONTENT SLOT (the writing

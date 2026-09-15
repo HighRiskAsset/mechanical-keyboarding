@@ -18,6 +18,11 @@
 // a recipe that takes or makes one gets a machine of its own, stood where a
 // pipe from its source can reach it.
 //
+// A machine stands where a player would stand it: one a run comes into, where
+// the run can reach it; one that eats an ore, at that ore's mine; the rest at
+// home, the landing, until home has no ground left with a lane round it, and
+// then wherever the operator is standing, which is the last input's source.
+//
 // Pressing a real key while it plays hands the game back: the bot stops.
 // Global: BOT
 (function () {
@@ -227,6 +232,21 @@
     } finally { release(code); }
     await frame();
   }
+  // Walk the last tile onto `tile` facing `dir`, a frame at a time, until the
+  // feet are on it and at or just short of its middle. The feet move in lumps
+  // of up to eight pixels on a host short of frames, and the middle is eight
+  // from the tile's edge, so they cannot overshoot out of it.
+  async function nudge(g, dir, tile) {
+    const code = { s: 'ArrowDown', n: 'ArrowUp', e: 'ArrowRight', w: 'ArrowLeft' }[dir];
+    const c = spot(tile[0], tile[1]);
+    const short = () => { const q = FACTORY.playerPos(); return { n: q.y - c.y, s: c.y - q.y, e: c.x - q.x, w: q.x - c.x }[dir]; };
+    const there = () => { const [tx, ty] = playerTile(); return tx === tile[0] && ty === tile[1] && short() <= 4; };
+    try {
+      for (let i = 0; i < 40 && !there(); i++) { press(code); await frame(); alive(g); }
+    } finally { release(code); }
+    await frame();
+    return there();
+  }
   // a tile the operator docks at `id` from, anywhere inside the window a walk
   // stops in (see walk), since the feet stop near the middle of a tile and
   // not on it
@@ -340,8 +360,10 @@
   // Somewhere to stand a machine of `kind`: the nearest ground to `anchor` (a
   // tile) with a lane round it, and only where there is none anywhere, the
   // nearest with its ring alone. With `feed`, a machine a pipe has to reach
-  // it from, a spot only counts if that pipe would find a route.
-  function findSpot(p, kind, anchor, feed) {
+  // it from, a spot only counts if that pipe would find a route. With
+  // `within`, only ground that far from the anchor and only with a lane: a
+  // home that has run out of lanes is left, not packed tighter.
+  function findSpot(p, kind, anchor, feed, within) {
     const size = CHAIN.KINDS[kind].size;
     const t = taken(p);
     const reach = flood(null).dist;
@@ -357,9 +379,10 @@
     cands.sort((a, b) => a.d - b.d);
     let fallback = null, routed = 0;
     for (const c of cands) {
+      if (within && c.d > within) break;
       if (badSpots.has(kind + '@' + c.c0 + ',' + c.r0 + c.face)) continue;
       const box = MAPKIT.boxAt([c.c0, c.r0], size, c.face);
-      const crowd = groundFor(t, reach, box, !!fallback);
+      const crowd = groundFor(t, reach, box, !!fallback || !!within);
       if (crowd === null) continue;
       const dir = ['n', 'w', 's', 'e'].find((dd) => { const st = standFor(box, dd); return reach.has(k2(st[0], st[1])); });
       if (!dir) continue;
@@ -370,7 +393,7 @@
       }
       const s = { kind, at: [c.c0, c.r0], face: c.face, box, stand: standFor(box, dir), dir, feed: feed || null, lane: !crowd };
       if (s.lane) return s;
-      fallback = s;
+      if (!within) fallback = s;
     }
     return fallback;
   }
@@ -424,17 +447,30 @@
     await tap(g, 'Space');
     if (!(await waitFor(g, (v) => v.placing))) return 'menu';
     for (let i = 0; i < 4 && (view().placing || {}).face !== s.face; i++) await tap(g, 'Space');
-    if (!(await walk(g, (x, y) => x === s.stand[0] && y === s.stand[1]))) { await tap(g, 'Escape'); return 'walk'; }
-    await faceTo(g, s.dir);
     // The ghost aims from the tile underfoot, and on a host short of frames
-    // the turn carries the feet a whole step, and the ghost with them. A
-    // mine's ghost snaps back onto its vein; a machine's is taken where it
-    // then stands if that ground is as good.
+    // a turn on the spot carries the feet a whole step, and the ghost with
+    // them. So the turn is made one tile back from the stand, where a slip
+    // only brings the feet nearer, and the last tile is walked facing the
+    // way the ghost goes. Where that tile cannot be walked to, the turn is
+    // made on the stand and taken as it comes: a mine's ghost snaps back
+    // onto its vein, a machine's is taken where it then stands if that
+    // ground is as good.
+    const back = { n: [0, 1], s: [0, -1], e: [-1, 0], w: [1, 0] }[s.dir];
+    const approach = [s.stand[0] + back[0], s.stand[1] + back[1]];
+    if (await walk(g, (x, y) => x === approach[0] && y === approach[1])) {
+      await faceTo(g, s.dir);
+      await nudge(g, s.dir, s.stand);
+    } else {
+      if (!(await walk(g, (x, y) => x === s.stand[0] && y === s.stand[1]))) { await tap(g, 'Escape'); return 'walk'; }
+      await faceTo(g, s.dir);
+    }
     const aimed = (v) => v.placing && v.placing.ok && v.placing.at && (s.kind === 'mine' ? v.placing.vein === s.vein
       : v.placing.at[0] === s.at[0] && v.placing.at[1] === s.at[1]);
     let pl = await waitFor(g, aimed, 12);
     if (!pl && s.kind !== 'mine') pl = await waitFor(g, (v) => v.placing && v.placing.ok && v.placing.at && v.placing.face === s.face && goodGhost(v, s), 1);
     if (!pl) {
+      const gh = (view() || {}).placing;
+      console.warn('[bot] aim: wanted', s.kind, 'at', s.at.join(','), s.face, 'from', s.stand.join(','), s.dir, '; ghost', gh ? [gh.at && gh.at.join(','), gh.face, gh.ok ? 'ok' : 'refused'].join(' ') : 'gone', '; feet', (() => { const q = FACTORY.playerPos(); return Math.round(q.x) + ',' + Math.round(q.y); })());
       badSpots.add(s.kind === 'mine' ? 'mine@' + s.vein + s.dir : s.kind + '@' + s.at[0] + ',' + s.at[1] + s.face);
       if (view().placing) await tap(g, 'Escape');
       return 'aim';
@@ -969,6 +1005,49 @@
   }
   const done = (a) => fails.delete(sigOf(a));
   const boxMid = (m) => { const b = CHAIN.machineBox(m); return [b.c0 + (b.w >> 1), b.r1 + 1]; };
+  // The ore a machine of `kind` will be fed for `r`: the recipe's own raw
+  // input, else the raw the same kind makes its inputs from, down the chain.
+  // A smelter is asked for by the sheet it makes, not the ingot in between,
+  // and it is the ingot's ore it stands by.
+  function oreFor(kind, r, seen = new Set()) {
+    if (!r || seen.has(r.lesson)) return null;
+    seen.add(r.lesson);
+    const ins = Object.entries(r.in).sort((x, y) => y[1] - x[1]).map(([i]) => i);
+    for (const i of ins) if (isRaw(i) && carryable(i)) return i;
+    for (const i of ins) { const rr = mainMaker(i); if (rr && rr.kind === kind) { const o = oreFor(kind, rr, seen); if (o) return o; } }
+    return null;
+  }
+  // where an ore is: its mines, and the seats of its free veins, since a
+  // mine will stand there
+  function orePlaces(p, ore) {
+    const fp = MAPKIT.footprint(CHAIN.KINDS.mine.size, 's');
+    const seat = (n) => workTile(MAPKIT.veinBox({ ...n, vert: fp[1] > fp[0] }));
+    return CHAIN.machinesOfOre(p, ore).map(boxMid).concat(CHAIN.unbuiltNodes(p).filter((n) => n.ore === ore).map(seat));
+  }
+  // Where a player would stand a machine, for a build move. One a run comes
+  // into goes up where the run can reach it, beside its source. One that
+  // eats an ore goes up at that ore, the nearest of its mines first (the
+  // smelter by the ore patch; the operator is standing there anyway, with
+  // the bag that paid for it). The rest go home, to the landing, while home
+  // has ground with a lane round it within HOME tiles. Past that home is
+  // full, and the next camp is started round the mine nearest home that has
+  // such ground of its own, then the next mine out; only past every mine
+  // does a machine go up wherever the operator stands.
+  function spotFor(p, a) {
+    const kind = a.kind, H = BOT.tune.HOME;
+    const f = a.r ? Object.keys(a.r.in).find((i) => !carryable(i)) : null;
+    const from = f ? producerOf(p, f) : null;
+    if (from) return findSpot(p, kind, boxMid(from), from);
+    const [px, py] = playerTile();
+    const near = (ts) => ts.slice().sort((x, y) => (Math.abs(x[0] - px) + Math.abs(x[1] - py)) - (Math.abs(y[0] - px) + Math.abs(y[1] - py)));
+    const ore = a.r ? oreFor(kind, a.r) : null;
+    if (ore) for (const t of near(orePlaces(p, ore))) { const s = findSpot(p, kind, t, null, H); if (s) return s; }
+    const sp = CHAIN.SPAWN || { x: 0, y: 0 }, home = [Math.floor(sp.x / TILE), Math.floor(sp.y / TILE)];
+    const far = (t) => Math.abs(t[0] - home[0]) + Math.abs(t[1] - home[1]);
+    const camps = p.machines.filter((m) => m.kind === 'mine').map(boxMid).filter((t) => far(t) > H).sort((x, y) => far(x) - far(y));
+    for (const t of [home].concat(camps)) { const s = findSpot(p, kind, t, null, H); if (s) return s; }
+    return findSpot(p, kind, playerTile(), null);
+  }
   // stop typing at the end of a unit, never inside one: a unit's inputs are
   // paid at its first keystroke and lost if the operator walks off mid-unit
   function stopWhen(p, a) {
@@ -1019,14 +1098,7 @@
     say(T.t('botBuild', { place: name }));
     let s;
     if (a.kind === 'mine') s = findVein(p, a.ore);
-    else {
-      // a machine a run will come into goes up where the run can reach it,
-      // beside its source; the rest go up near where the operator landed
-      const f = a.r ? Object.keys(a.r.in).find((i) => !carryable(i)) : null;
-      const from = f ? producerOf(p, f) : null;
-      const sp = CHAIN.SPAWN || { x: 0, y: 0 };
-      s = findSpot(p, a.kind, from ? boxMid(from) : [Math.floor(sp.x / TILE), Math.floor(sp.y / TILE)], from || null);
-    }
+    else s = spotFor(p, a);
     if (!s) return failed(a, a.kind === 'mine' ? 'vein' : 'site', { mat: matName(a.ore), kind: name });
     const before = new Set(p.machines.map((m) => m.id));
     const res = await place(g, s);
@@ -1208,9 +1280,14 @@
     // plays the plan out without a screen (see dev/bot-sim.js)
     planFor: (p) => { adoptRoles(p); return plan(p); },
     noteBuilt, describe,
+    // where a machine would go up from a save, as doBuild would stand it:
+    // for asking the map what the model makes of it without playing there
+    spotFor: (p, a) => { const s = spotFor(p, a); return s && { kind: s.kind, at: s.at, face: s.face, stand: s.stand, lane: s.lane }; },
     outstanding,                   // what the rest of the game still asks for, for the harness's post-mortem
     // ENGINES off plays the old way, carrying everything and buying no
     // automation: the A/B for dev/bot-sim.js
-    tune: { BATCH_KS, ENGINES: true },
+    // HOME is how far from the landing, in tiles, a machine with no place of
+    // its own still counts as at home
+    tune: { BATCH_KS, ENGINES: true, HOME: 8 },
   };
 })();

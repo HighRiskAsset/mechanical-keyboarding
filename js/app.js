@@ -196,18 +196,11 @@
     if (!profile.seen[mat]) { profile.seen[mat] = true; }
     const got = CHAIN.bagAdd(profile.bag, mat, n);
     if (!got) return;
-    touch(mat);
     producedSinceFloat[mat] = (producedSinceFloat[mat] || 0) + got;
   }
   function spend(cost) {
     CHAIN.spendCost(profile.bag, cost);
-    for (const mat of Object.keys(cost || {})) touch(mat);
   }
-  // The panel's residents are the materials the hands worked with last. A
-  // touch is a good landing in the bag by hand (typed out, collected, swept
-  // up) or a price leaving it; the simulation's own traffic stays on belts
-  // and in bins and never touches anything.
-  function touch(mat) { profile.touched[mat] = ++profile.touchN; }
   const canPay = (cost) => CHAIN.affordable(profile.bag, cost);
   // the materials of a price the bag falls short of — their counts print
   // red in the menu rows, so an unaffordable row says which is the problem
@@ -232,14 +225,15 @@
   // The bag lives inside the game canvas as a pixel HUD (icons + bitmap
   // numbers). The panel is not the bag (2026-09-15): the bag holds every
   // good ever earned, well past a hundred kinds by the end of a tree, and
-  // the panel shows only the rows the hands have been working with last,
-  // as many as fit the canvas, in tree order so nothing shuffles while you
-  // work. A row the thing in front of you names (its price, its inputs,
-  // what it makes) surfaces above the residents for as long as it is in
-  // front of you, taking the place of the longest-untouched resident, and
-  // goes back down when you walk away. A resident the focus names stays
-  // where it is, lit by its mark. Nothing is ever lost from the bag: a
-  // hidden row comes back the moment a price names it or a good lands.
+  // the panel shows only the newest materials the player has discovered,
+  // as many as fit the canvas, newest at the top: what the game is working
+  // towards now, not the ore it started on. A row the thing in front of you
+  // names (its price, its inputs, what it makes) that is not already up is
+  // added at the bottom for as long as it is in front of you, and the oldest
+  // of the newest make room; that is how an old ore a price still asks for
+  // gets its count read. A row already up that the focus names stays where
+  // it is, lit by its mark. Nothing is ever lost from the bag: a hidden row
+  // comes back the moment a price names it.
   let iconURLs = {};
   const invPrev = {};
   const invShown = {};
@@ -255,15 +249,21 @@
   const invValue = (k) => profile.bag[k] || 0;
   function hudKeys(marks) {
     const cap = FACTORY.hudCapacity();
-    const touched = profile.touched || {};
-    const byTree = (a, b) => CHAIN.MAT_IDS.indexOf(a) - CHAIN.MAT_IDS.indexOf(b);
-    const focus = Object.keys(marks || {}).sort(byTree);
-    const inFocus = (m) => (marks && marks[m] ? 1 : 0);
-    // the newest touches stay; a resident the focus names is never the one evicted
-    const resident = Object.keys(touched).sort((a, b) => (inFocus(b) - inFocus(a)) || (touched[b] - touched[a]));
-    const surfaced = focus.filter((m) => !resident.includes(m)).slice(0, cap);
-    const keep = resident.slice(0, cap - surfaced.length).sort(byTree);
-    return surfaced.concat(keep);
+    const newestFirst = (a, b) => CHAIN.MAT_IDS.indexOf(b) - CHAIN.MAT_IDS.indexOf(a);
+    const seen = CHAIN.MAT_IDS.filter((m) => profile.seen[m] && !CHAIN.isFluid(m)).sort(newestFirst);
+    const focus = Object.keys(marks || {}).sort(newestFirst);
+    // what the focus names that the newest would not show on their own goes
+    // below them; each one added costs the newest a row, which may push
+    // another named row past the cut, so it settles in a pass or two
+    const below = [];
+    for (;;) {
+      const cut = cap - below.length;
+      const more = focus.filter((m) => !below.includes(m) && seen.indexOf(m) >= cut || seen.indexOf(m) < 0 && !below.includes(m));
+      if (!more.length) break;
+      below.push(...more);
+    }
+    below.sort(newestFirst);
+    return seen.slice(0, Math.max(0, cap - below.length)).concat(below.slice(0, cap));
   }
   function showInv(key, n) {
     invShown[key] = n;
@@ -301,7 +301,9 @@
     const keys = hudKeys(marks || invMarksNow());
     if (hudKeysShown && keys.join() === hudKeysShown.join()) return;
     hudKeysShown = keys;
-    FACTORY.setHudKeys(keys);
+    const names = {};
+    for (const k of keys) names[k] = matName(k);
+    FACTORY.setHudKeys(keys, names);
     for (const k of keys) { if (!iconURLs[k]) iconURLs[k] = PIXELS.matURL(k, PIXELS.MAT_SPARK_PEAK); showInv(k, invPrev[k] === undefined ? invValue(k) : invPrev[k]); }
   }
   function refreshInventory() {
@@ -1554,7 +1556,6 @@
     for (const mat of CHAIN.MAT_IDS) {
       if (!CHAIN.bagAdd(profile.bag, mat, DEBUG_MATERIALS)) continue;   // already at the cap
       profile.seen[mat] = true;
-      touch(mat);   // in tree order, so the panel comes up holding the newest of them
       n++;
     }
     E.saveProfile(profile);
@@ -2064,7 +2065,6 @@
       profile.seen[g.mat] = true;
       if (kept < g.n) DROPS.spawn(profile, g.mat, g.n - kept, g.x, g.y);
       if (!kept) continue;
-      touch(g.mat);
       flyFrom(g.mat, Math.min(kept, 3), g.x, g.y);
       A.pickup();
     }

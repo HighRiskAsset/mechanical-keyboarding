@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>font: the glyph sheet from the generator</title>
+<style>
+  body { background: #17141c; color: #f4ecd8; font: 14px/1.4 ui-monospace, Consolas, monospace; margin: 16px; }
+  code { color: #f2c14e; }
+  pre { white-space: pre-wrap; }
+  canvas { image-rendering: pixelated; border: 1px solid #443c50; background: #221d29; margin: 4px 8px 4px 0; }
+  .ok { color: #7fc9a8; } .bad { color: #f06d4f; }
+</style>
+</head>
+<body>
+<p><b>dev/font.html</b>: the font sheet alone, from <code>dev/gen/pixels.js</code> → <code>/upload</code>.
+The full bake (dev/bake.html) is a v3 page and stops before it reaches the font; this one bakes
+just <code>font.png</code> + <code>font.json</code>, the same cells in the same order and the same
+shelf-packing, so every glyph already on the sheet keeps its place.</p>
+<p>Default target is <code>assets/inbox</code>. Open with <code>?to=sprites</code> to write the live sheet,
+which is refused if any cell the sheet already has would move or change (add <code>&amp;force</code> to
+overwrite a repainted glyph on purpose).</p>
+<pre id="log"></pre>
+<div id="sheets"></div>
+<script src="gen/pixels.js"></script>
+<script>
+(async function () {
+  'use strict';
+  const q = new URLSearchParams(location.search);
+  const TARGET = q.get('to') === 'sprites' ? 'sprites' : 'inbox';
+  const FORCE = q.has('force');
+  const SHEET_W = 512;                                   // dev/bake.js's shelf width
+  const log = (s, cls) => { const el = document.getElementById('log'); el.textContent += s + '\n'; if (cls) el.className = cls; };
+
+  // ---- pack: dev/bake.js's builder, for one sheet ----
+  const anims = [];
+  for (const ch of Object.keys(PIXELS.GLYPHS)) {
+    const c = PIXELS.textCanvas(ch, '#ffffff');
+    anims.push({ key: 'g.' + ch, c, w: c.width, h: c.height, opts: { adv: PIXELS.GLYPHS[ch][0].length } });
+  }
+  let x = 0, y = 0, shelfH = 0, maxW = 0;
+  const sprites = {};
+  for (const a of anims) {
+    if (x > 0 && x + a.w > SHEET_W) { y += shelfH; x = 0; shelfH = 0; }
+    a.x = x; a.y = y;
+    x += a.w; shelfH = Math.max(shelfH, a.h); maxW = Math.max(maxW, a.x + a.w);
+  }
+  y += shelfH;
+  const sheet = document.createElement('canvas');
+  sheet.width = Math.max(1, maxW); sheet.height = Math.max(1, y);
+  const ctx = sheet.getContext('2d');
+  for (const a of anims) {
+    ctx.drawImage(a.c, a.x, a.y);
+    sprites[a.key] = Object.assign({ x: a.x, y: a.y, w: a.w, h: a.h }, a.opts);
+  }
+  const manifest = { image: 'font.png', sprites };
+
+  // ---- the check: every cell the live sheet has must come out unchanged ----
+  let changed = [];
+  try {
+    const old = await (await fetch('../assets/sprites/font.json')).json();
+    const img = new Image();
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = '../assets/sprites/font.png'; });
+    const oc = document.createElement('canvas'); oc.width = img.naturalWidth; oc.height = img.naturalHeight;
+    const ox = oc.getContext('2d'); ox.drawImage(img, 0, 0);
+    for (const [key, e] of Object.entries(old.sprites)) {
+      const n = sprites[key];
+      if (!n) { changed.push(key + ': gone'); continue; }
+      if (n.x !== e.x || n.y !== e.y || n.w !== e.w || n.h !== e.h || n.adv !== e.adv) { changed.push(key + ': moved'); continue; }
+      const a = ox.getImageData(e.x, e.y, e.w, e.h).data, b = ctx.getImageData(n.x, n.y, n.w, n.h).data;
+      for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) { changed.push(key + ': repainted'); break; }
+    }
+    log(`live sheet: ${Object.keys(old.sprites).length} cells; new sheet: ${anims.length} cells (${sheet.width}x${sheet.height})`);
+    log(changed.length ? 'cells that would change:\n  ' + changed.join('\n  ') : 'every cell the live sheet has comes out unchanged', changed.length ? 'bad' : 'ok');
+  } catch (e) { log('no live sheet to compare against (' + e + ')'); }
+
+  const label = document.createElement('div');
+  label.textContent = 'font.png (' + sheet.width + 'x' + sheet.height + ')';
+  document.getElementById('sheets').append(label, sheet);
+  // a proof line in every script the sheet carries, composed the way the game composes it
+  for (const s of ['IRON ORE 300', 'ЖЕЛЕЗНАЯ РУДА 300', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ.', 'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ']) {
+    const c = PIXELS.textCanvas(s, '#f4ecd8');
+    const big = document.createElement('canvas'); big.width = c.width * 4; big.height = c.height * 4;
+    const bx = big.getContext('2d'); bx.imageSmoothingEnabled = false; bx.drawImage(c, 0, 0, big.width, big.height);
+    document.getElementById('sheets').append(big, document.createElement('br'));
+  }
+
+  if (TARGET === 'sprites' && changed.length && !FORCE) { log('refusing to write assets/sprites: add &force to overwrite on purpose', 'bad'); return; }
+  const put = async (fname, blob) => {
+    const r = await fetch('/upload?name=' + encodeURIComponent(fname) + '&dir=' + TARGET, { method: 'POST', body: blob });
+    log('  ' + fname + ': ' + r.status + ' ' + await r.text());
+  };
+  log('baking to assets/' + TARGET + ' …');
+  await put('font.png', await new Promise((res) => sheet.toBlob(res, 'image/png')));
+  await put('font.json', new Blob([JSON.stringify(manifest, null, 1)], { type: 'application/json' }));
+  log('done', changed.length ? 'bad' : 'ok');
+})();
+</script>
+</body>
+</html>

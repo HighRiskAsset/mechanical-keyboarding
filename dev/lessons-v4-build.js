@@ -15,18 +15,24 @@ const src = fs.readFileSync(path.join(ROOT, 'js', `language-${course}.js`), 'utf
 const lay = fs.readFileSync(path.join(ROOT, 'js', `layout-${course}.js`), 'utf8');
 
 // ---- course data, lifted out of the IIFE by pattern ----
-const block = (name) => {
+const block = (name, optional) => {
   const m = src.match(new RegExp(`const ${name} = \\[([\\s\\S]*?)\\n  \\];`));
-  if (!m) throw new Error('no block ' + name);
+  if (!m) { if (optional) return ''; throw new Error('no block ' + name); }
   return m[1];
 };
-const pairs = (text) => [...text.matchAll(/\['((?:[^'\\]|\\.)+)',\s*(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")/g)].map((x) => x[1].replace(/\\'/g, "'"));
+// a text is the first element of its row, single- or double-quoted (the EN
+// file double-quotes anything with an apostrophe in it)
+const pairs = (text) => [...text.matchAll(/\[(?:'((?:[^'\\]|\\.)+)'|"((?:[^"\\]|\\.)+)"),\s*(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")/g)].map((x) => (x[1] || x[2]).replace(/\\'/g, "'"));
 const FREQ = eval('(' + src.match(/const LETTER_FREQ = (\{[\s\S]*?\});/)[1] + ')');
-const WORDS = [...block('WORDS').matchAll(/\['([^']+)',\s*(?:'(?:[^'\\]|\\.)*'|"[^"]*"),\s*'(\w+)'\]/g)].map((x) => ({ w: x[1], set: x[2] }));
+// the course file dedupes its word list (first entry wins); count the same way
+const WORDS = (() => { const seen = new Set(); return [...block('WORDS').matchAll(/\[(?:'([^']+)'|"([^"]+)"),\s*(?:'(?:[^'\\]|\\.)*'|"[^"]*"),\s*'(\w+)'\]/g)].map((x) => ({ w: x[1] || x[2], set: x[3] })).filter((x) => (seen.has(x.w) ? false : (seen.add(x.w), true))); })();
 const SYL = [...block('SYLLABLES').matchAll(/\['([^']+)', \d+\]/g)].map((x) => x[1])
-  .concat([...block('MORE_SYLLABLES').matchAll(/\['([^']+)', \d+\]/g)].map((x) => x[1]));
+  .concat([...block('MORE_SYLLABLES', true).matchAll(/\['([^']+)', \d+\]/g)].map((x) => x[1]));
 const PHRASES = pairs(block('PHRASES'));
-const SENTENCES = pairs(block('SENTENCES')).map((s) => s.replace(/ - /g, ' — '));
+// a course that has the em dash in scope writes it as a spaced hyphen in the course file
+const SENTENCES = pairs(block('SENTENCES')).map((s) => (plan.scope.marks.includes('—') ? s.replace(/ - /g, ' — ') : s));
+const COURSE_NAME = { ru: 'Russian (ЙЦУКЕН)', en: 'English (QWERTY)' }[course] || course.toUpperCase();
+const LANG_NAME = { ru: 'Russian', en: 'English' }[course] || course;
 const NAMES = pairs(block('NAMES'));
 const CODE_TO_CHAR = eval('(' + lay.match(/const CODE_TO_CHAR = (\{[\s\S]*?\});/)[1] + ')');
 const CHAR_CODE = {}; for (const [c, ch] of Object.entries(CODE_TO_CHAR)) CHAR_CODE[ch] = c;
@@ -119,7 +125,11 @@ const FAMILY_TEST = {
   names: (s) => /^[^,?!:;"«»()—\d]*\.$/.test(s),
   clauses: (s) => s.includes(','),
   dash: (s) => /—|\S-\S/.test(s),
-  past: (s) => /(^|\s)(был|была|были|было)(\s|[.,!?])|л[аи]?[.,]/.test(s),
+  // the past: Russian by был/-л, English by was/were/had/did/been or a
+  // consonant + ed (so bed, red, need stay out); js/engine.js tests the same
+  past: (s) => /(^|\s)(был|была|были|было)(\s|[.,!?])|л[аи]?[.,]/.test(s) || /\b(was|were|had|did|been)\b|\b\w+[bdfgklmnprstvwyz]ed\b/.test(s),
+  // the EN hurdle: an apostrophe, or a hyphen inside a word
+  contractions: (s) => /'|\S-\S/.test(s),
   questions: (s) => /[?!]/.test(s),
   dialogue: (s) => /["«»]/.test(s),
   lists: (s) => /[:;()]/.test(s),
@@ -256,7 +266,7 @@ for (const l of plan.lessons) counts[l.ext ? 'ext' : l.kind]++;
 const problems = plan.lessons.flatMap((l) => l.checks.filter((c) => c.startsWith('✗')).map((c) => `${l.id}: ${c}`)).concat(columnProblems);
 const reviewEdges = {};
 for (const l of plan.lessons) if (l.kind === 'exp' && l.col <= KEYBOARD_COLS) reviewEdges[l.col] = (reviewEdges[l.col] || 0) + l.reviews.length;
-const letterCols = coverage.filter((c) => /[а-яё]/.test(c.intro));
+const letterCols = coverage.filter((c) => [...c.intro].some((ch) => LETTERS.has(ch)));
 const rises = plan.lessons.flatMap((l) => l.checks.filter((c) => c.startsWith('↑')).map((c) => `${l.id}: ${c}`));
 
 // ---- console report ----
@@ -376,7 +386,7 @@ const summary = `
 </ul>`;
 
 const html = `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>Lesson plan v4 · RU</title>
+<html lang="en"><head><meta charset="utf-8"><title>Lesson plan v4 · ${course.toUpperCase()}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   body { margin: 0; padding: 20px 28px; font: 14px/1.45 system-ui, sans-serif; color: #222; background: #fbfaf7; }
@@ -400,15 +410,15 @@ const html = `<!doctype html>
   svg.tree .node { cursor: pointer; }
   ul.problems li { color: #b02a2a; }
 </style></head><body>
-<h1>Lesson plan v4 · Russian (ЙЦУКЕН)</h1>
-<div class="dim">Draft 2026-09-10. Structure in <code>docs/lessons-v4-ru.plan.js</code>; everything computed by <code>dev/lessons-v4-build.js</code> from <code>js/language-ru.js</code>. Rules in <code>docs/lessons-v4-rules.md</code>. Ids only; naming comes after the structure freezes.</div>
+<h1>Lesson plan v4 · ${COURSE_NAME}</h1>
+<div class="dim">Structure in <code>docs/lessons-v4-${course}.plan.js</code>; everything computed by <code>dev/lessons-v4-build.js</code> from <code>js/language-${course}.js</code>. Rules in <code>docs/lessons-v4-rules.md</code>. Ids only; naming comes after the structure freezes.</div>
 
 <h2>The tree</h2>
 <div class="legend">
   <span style="background:${FILL.intro}">introduction</span><span style="background:${FILL.syllables}">syllables</span><span style="background:${FILL.words}">words</span><span style="background:${FILL.phrases}">phrases</span><span style="background:${FILL.sentences}">sentences</span><span style="background:${FILL.full}">full sentences</span><span style="background:${FILL.page}">pages</span><span style="background:${FILL.ext}">extended</span>
   <span style="border-width:2.5px;border-color:#333">gather</span> <span style="border-color:#b08a3c;color:#b08a3c">↶ review edge (two or more columns back)</span>
 </div>
-<div class="dim">Each column opens with an introduction; the expansions below it are the lessons that need those keys. Hover a node for its samples and checks; click to jump to its row. Grey edges are the expansion input, gold edges reach back for review. Coverage is the share of running Russian text the unlocked keys can write.</div>
+<div class="dim">Each column opens with an introduction; the expansions below it are the lessons that need those keys. Hover a node for its samples and checks; click to jump to its row. Grey edges are the expansion input, gold edges reach back for review. Coverage is the share of running ${LANG_NAME} text the unlocked keys can write.</div>
 <div class="scroll">${svg}</div>
 
 <h2>Coverage</h2>
@@ -420,7 +430,7 @@ ${problems.length ? `<ul class="problems">${problems.map((p) => `<li>${esc(p)}</
 ${rises.length ? `<div class="dim">Could sit a rung higher by A4 (kept low on purpose where the note says so): <br>${rises.map(esc).join('<br>')}</div>` : ''}
 
 <h2>Every lesson</h2>
-<div class="dim">Keys: bold = the column's new keys. Inputs: grey = expands (this or the previous column), gold ↶ = reviews (older). Pool = what the course data can write with this alphabet; "authored" items are real Russian written for this plan and are the to-do list for the course file.</div>
+<div class="dim">Keys: bold = the column's new keys. Inputs: grey = expands (this or the previous column), gold ↶ = reviews (older). Pool = what the course data can write with this alphabet; "authored" items are real ${LANG_NAME} written for this plan and are the to-do list for the course file.</div>
 <div class="scroll"><table>
 <thead><tr><th>id</th><th>col</th><th>keys</th><th>what you type</th><th>samples</th><th>inputs</th><th>feeds</th><th>pool</th><th>checks</th></tr></thead>
 <tbody>${rows}</tbody></table></div>

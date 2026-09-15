@@ -64,7 +64,30 @@
   let hudRows = {}, hudKeys = [];
   const invValues = {};
   let invMarks = {};
-  const HUD_W = 46, HUD_ROW = 14;
+  // A row is the icon, the material's name over its count, in 14px: two
+  // lines of the 7px font (5px glyphs and their outline) stacked beside a
+  // 10px icon. The width is the name's budget: the naming pass caps names
+  // at 12 glyphs so nothing here is ever cut, and a stand-in name too long
+  // for the row is cut to what fits (see fitName).
+  const HUD_W = 68, HUD_ROW = 14, HUD_TEXT_X = 15;
+  let hudNames = {};                   // material id → the name its row shows (the caller localizes)
+  // the widest run of the name that fits the row, measured on the font
+  // itself. A name that ends in a short token (Book II, Gazette III) keeps
+  // that token and loses letters off the word before it instead: the tail
+  // is what tells those names apart, and three of them cut to the same
+  // head would be worse than no name at all.
+  const textW = (s) => PIXELS.textTex(s, PIXELS.P.paper2).width;
+  function fitName(name) {
+    const max = HUD_W - HUD_TEXT_X - 2;
+    let s = String(name || '').toUpperCase();
+    if (textW(s) <= max) return s;
+    const at = s.lastIndexOf(' ');
+    const tail = at > 0 ? s.slice(at) : '';
+    let head = at > 0 && tail.length <= 4 ? s.slice(0, at) : s;
+    const keep = head === s ? '' : tail;
+    while (head.length && textW(head + keep) > max) head = head.slice(0, -1).trimEnd();
+    return head + keep;
+  }
   const MARK_IN = 0xf06d4f, MARK_OUT = 0x4ba8d8;   // P.orange leaves, P.water1 comes back
   let chargeVal = null, chargeG = null;
 
@@ -200,8 +223,9 @@
     layoutHud();
   }
   // the rows the HUD shows: materials the player has held, in tree order
-  function setHudKeys(keys) {
+  function setHudKeys(keys, names) {
     hudKeys = keys.slice();
+    if (names) hudNames = names;
     if (!uiC) return;
     for (const ch of uiC.children.slice()) { uiC.removeChild(ch); ch.destroy({ children: true }); }
     hudRows = {};
@@ -228,12 +252,17 @@
       flash.visible = false;
       uiC.addChild(flash);
       const ic = matIcon(k, (i * 5) % PIXELS.MAT_SPARK_FRAMES);
-      ic.position.set(3, 3 + i * HUD_ROW);
+      ic.position.set(3, 2 + i * HUD_ROW);
       uiC.addChild(ic);
+      // the name on the upper line, a shade dimmer than the count: the
+      // count is what changes, the name is what it is
+      const nm = new PIXI.Sprite(PIXELS.textTex(fitName(hudNames[k] || k), PIXELS.P.paper2));
+      nm.position.set(HUD_TEXT_X - 1, i * HUD_ROW);
+      uiC.addChild(nm);
       const t = new PIXI.Sprite(PIXELS.textTex(String(invValues[k] || 0), PIXELS.P.paper));
-      t.position.set(HUD_W - 3 - t.texture.width, 6 + i * HUD_ROW);
+      t.position.set(HUD_W - 3 - t.texture.width, 7 + i * HUD_ROW);
       uiC.addChild(t);
-      hudRows[k] = { t, ic, flash, iy: ic.y, pulse: null, mark, mk: invMarks[k] || null, mkA: 0, mkC: invMarks[k] === 'out' ? MARK_OUT : MARK_IN };
+      hudRows[k] = { t, ic, nm, flash, iy: ic.y, pulse: null, mark, mk: invMarks[k] || null, mkA: 0, mkC: invMarks[k] === 'out' ? MARK_OUT : MARK_IN };
     });
   }
   // The bag's forecast: `map` is material → 'in' where the row is about to

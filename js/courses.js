@@ -22,8 +22,8 @@
   // first. ЙЦУКЕН sits beside it, not beneath it.
   // A course is playable once it has all three: the glyphs on the caps, the
   // course data, and its tree (js/tree-<code>.js, generated from the lesson
-  // plan by dev/tech-tree-v4-build.js). EN has no tree yet, so it stays
-  // greyed until its plan is built.
+  // plan by dev/tech-tree-v4-build.js). Both courses have all three since
+  // 2026-09-15, when the EN plan was built on the RU skeleton.
   const ROWS = [
     { id: 'en-qwerty', layout: 'LAYOUT_EN', course: 'LANG_EN', tree: 'TREE_EN' },
     { id: 'ru-jcuken', layout: 'LAYOUT_RU', course: 'LANG_RU', tree: 'TREE_RU' },

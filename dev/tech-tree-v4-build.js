@@ -16,6 +16,7 @@ const L = require('./lessons-v4-build.js');
 const mech = require(path.join(ROOT, 'docs', `lessons-v4-${course}.mech.js`));
 const { plan, byId, KEYBOARD_COLS, COMPLETION_COL, FREQ, LETTERS, rungIx } = L;
 const PAGE_BASE = plan.pageBase || KEYBOARD_COLS;
+const COURSE_NAME = { ru: 'Russian (ЙЦУКЕН)', en: 'English (QWERTY)' }[course] || course.toUpperCase();
 const colLabel = (c) => (c <= KEYBOARD_COLS ? 'C' + c : 'pages ' + (c - PAGE_BASE));
 const order = {}; plan.lessons.forEach((l, i) => { order[l.id] = i; });
 const byCol = (a, b) => a.col - b.col || order[a.id] - order[b.id];
@@ -427,7 +428,7 @@ const lessonRows = lessons.map((l) => {
 const expRows = exposure.map((e) => `<tr${(e.ratio < 0.5 && e.target >= 0.3) || (e.ratio > (LETTERS.has(e.key) ? 2 : 2.5) && e.target >= 1) || strokesOf(e.key) < floorOf(e.key) ? ' class="flag"' : ''}><td>${esc(e.key)}</td><td>${e.target.toFixed(2)}</td><td>${e.actual.toFixed(2)}</td><td>${e.ratio.toFixed(2)}</td><td>${e.strokes}</td></tr>`).join('');
 
 const html = `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>Tech tree v4 · RU</title>
+<html lang="en"><head><meta charset="utf-8"><title>Tech tree v4 · ${course.toUpperCase()}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   body { margin: 0; padding: 20px 28px; font: 14px/1.45 system-ui, sans-serif; color: #222; background: #fbfaf7; }
@@ -445,8 +446,8 @@ const html = `<!doctype html>
   svg.map .flow.hi { opacity: 0.9; stroke: #c0392b; }
   ul.problems li { color: #b02a2a; }
 </style></head><body>
-<h1>Tech tree v4 · Russian (ЙЦУКЕН)</h1>
-<div class="dim">Draft 2026-09-11, fourth cut. Materials and machines. Some materials are raw. A recipe at a machine turns input materials into one output material, and every recipe has its own. A lesson is one recipe or one raw. Prices are made of materials. Built by <code>dev/tech-tree-v4-build.js</code> from the lesson plan and <code>docs/lessons-v4-ru.mech.js</code>. Ids only.</div>
+<h1>Tech tree v4 · ${COURSE_NAME}</h1>
+<div class="dim">Materials and machines. Some materials are raw. A recipe at a machine turns input materials into one output material, and every recipe has its own. A lesson is one recipe or one raw. Prices are made of materials. Built by <code>dev/tech-tree-v4-build.js</code> from the lesson plan and <code>docs/lessons-v4-${course}.mech.js</code>. Ids only.</div>
 
 <h2>Counts</h2>
 <ul>
@@ -570,7 +571,7 @@ console.log('wrote docs/tech-tree-v4-' + course + '.html');
   const mineRows = mech.mines.map((id) => `<tr><td class="id">${outputOf[id]}</td><td>${mineOf[id].id}</td><td>${colLabel(byId[id].col)}</td><td>${esc(byId[id].keys.join(' '))}</td><td>${isFluid(outputOf[id]) ? 'pipe' : 'belt'}</td><td class="dim">${[...consumersOf[outputOf[id]]].join(', ')}</td></tr>`).join('');
   const rowsAll = lessons.map((l) => `<tr class="${l.kind === 'intro' ? 'intro' : l.kind === 'page' ? 'page' : l.rung}"><td class="id">${l.id}</td><td>${colLabel(l.col)}</td><td>${l.kind === 'intro' ? `<b>${esc(l.keys.join(' '))}</b>` : esc(rungIx(l.rung || 'pages') >= rungIx('sentences') || l.kind === 'page' ? (l.focusKeys || []).join(' ') + ' + all' : [...l.alpha].join(' '))}</td><td>${esc(l.what || '')}<div class="dim">${esc((l.samples || []).join(' · '))}</div></td><td>${esc(isMine(l) ? mineOf[l.id].id : machineOf[l.id].id)}<div class="dim">${esc(isMine(l) ? '' : machineOf[l.id].shapeText)}</div></td><td>${esc(recipeLine(l))}</td><td class="dim">${esc(unlockOf[l.id] || (isMine(l) ? 'there at the start' : 'its inputs'))}</td><td>${l.automatedAt ? colLabel(l.automatedAt) : ''}</td></tr>`).join(NL);
   const overlay = `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>Lesson and tech tree v4 · RU</title>
+<html lang="en"><head><meta charset="utf-8"><title>Lesson and tech tree v4 · ${course.toUpperCase()}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   body { margin: 0; padding: 20px 28px; font: 14px/1.45 system-ui, sans-serif; color: #222; background: #fbfaf7; }
@@ -586,8 +587,8 @@ console.log('wrote docs/tech-tree-v4-' + course + '.html');
   svg.overlay .edge.hi { opacity: 1; stroke: #c0392b; stroke-width: 2.6; }
   svg.overlay .node { cursor: pointer; }
 </style></head><body>
-<h1>Lesson tree and tech tree v4 · Russian (ЙЦУКЕН)</h1>
-<div class="dim">The lesson plan (<code>docs/lessons-v4-ru.html</code>) with its recipe on every node, from the same build as <code>docs/tech-tree-v4-ru.html</code>. Ids only.</div>
+<h1>Lesson tree and tech tree v4 · ${COURSE_NAME}</h1>
+<div class="dim">The lesson plan (<code>docs/lessons-v4-${course}.html</code>) with its recipe on every node, from the same build as <code>docs/tech-tree-v4-${course}.html</code>. Ids only.</div>
 
 <div class="legend" style="margin-top:12px">
   <span style="background:${FILL.intro}">introduction (a raw or a key-group recipe)</span><span style="background:${FILL.syllables}">syllables</span><span style="background:${FILL.words}">words</span><span style="background:${FILL.phrases}">phrases</span><span style="background:${FILL.sentences}">sentences</span><span style="background:${FILL.full}">full sentences</span><span style="background:${FILL.page}">pages</span>

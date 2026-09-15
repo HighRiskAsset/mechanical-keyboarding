@@ -1,5 +1,5 @@
 {
- "course": "ru",
+ "course": "en",
  "generated": "2026-09-15",
  "lessons": [
   {
@@ -7,21 +7,21 @@
    "kind": "raw",
    "col": 1,
    "keys": [
-    "о",
-    "а"
+    "e",
+    "t"
    ],
    "rung": "streams",
-   "what": "streams over о а",
+   "what": "streams over e t",
    "alpha": [
-    "о",
-    "а"
+    "e",
+    "t"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [],
    "samples": [
-    "о а"
+    "e t"
    ],
    "lineage": []
   },
@@ -30,21 +30,21 @@
    "kind": "raw",
    "col": 2,
    "keys": [
-    "е",
-    "н"
+    "a",
+    "o"
    ],
    "rung": "streams",
-   "what": "streams over е н",
+   "what": "streams over a o",
    "alpha": [
-    "е",
-    "н"
+    "a",
+    "o"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [],
    "samples": [
-    "е н"
+    "a o"
    ],
    "lineage": []
   },
@@ -56,22 +56,22 @@
    "family": null,
    "what": "syllables",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н"
+    "e",
+    "t",
+    "a",
+    "o"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "е",
-    "н"
+    "a",
+    "o"
    ],
    "samples": [
-    "на",
-    "но",
-    "не"
+    "at",
+    "to",
+    "ea"
    ],
    "lineage": [
     "I-01",
@@ -83,21 +83,21 @@
    "kind": "raw",
    "col": 3,
    "keys": [
-    "и",
-    "т"
+    "i",
+    "n"
    ],
    "rung": "streams",
-   "what": "streams over и т",
+   "what": "streams over i n",
    "alpha": [
-    "и",
-    "т"
+    "i",
+    "n"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [],
    "samples": [
-    "и т"
+    "i n"
    ],
    "lineage": []
   },
@@ -109,22 +109,22 @@
    "family": null,
    "what": "syllables",
    "alpha": [
-    "о",
-    "а",
-    "и",
-    "т"
+    "e",
+    "t",
+    "i",
+    "n"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "и",
-    "т"
+    "i",
+    "n"
    ],
    "samples": [
-    "то",
-    "та",
-    "ти"
+    "in",
+    "en",
+    "ti"
    ],
    "lineage": [
     "I-01",
@@ -141,24 +141,24 @@
    ],
    "what": "words: func",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "и",
-    "т"
+    "i",
+    "n"
    ],
    "samples": [
-    "и",
-    "тот",
-    "они"
+    "in",
+    "it",
+    "an"
    ],
    "lineage": [
     "E-01",
@@ -170,21 +170,21 @@
    "kind": "keys",
    "col": 4,
    "keys": [
-    "с",
-    "л"
+    "h",
+    "s"
    ],
    "rung": "streams",
-   "what": "streams over с л",
+   "what": "streams over h s",
    "alpha": [
-    "с",
-    "л"
+    "h",
+    "s"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [],
    "samples": [
-    "с л"
+    "h s"
    ],
    "lineage": []
   },
@@ -200,24 +200,24 @@
    ],
    "what": "words: things, nature, home",
    "alpha": [
-    "о",
-    "а",
-    "и",
-    "т",
-    "с",
-    "л"
+    "e",
+    "t",
+    "i",
+    "n",
+    "h",
+    "s"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "с",
-    "л"
+    "h",
+    "s"
    ],
    "samples": [
-    "оса",
-    "лиса",
-    "лист"
+    "hen",
+    "nest",
+    "sheet"
    ],
    "lineage": [
     "E-02",
@@ -234,26 +234,26 @@
    ],
    "what": "words: func",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "с",
-    "л"
+    "h",
+    "s"
    ],
    "samples": [
-    "с",
-    "или",
-    "если"
+    "he",
+    "she",
+    "is"
    ],
    "lineage": [
     "E-03",
@@ -266,21 +266,21 @@
    "kind": "raw",
    "col": 5,
    "keys": [
-    "в",
-    "р"
+    "r",
+    "u"
    ],
    "rung": "streams",
-   "what": "streams over в р",
+   "what": "streams over r u",
    "alpha": [
-    "в",
-    "р"
+    "r",
+    "u"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [],
    "samples": [
-    "в р"
+    "r u"
    ],
    "lineage": []
   },
@@ -292,22 +292,22 @@
    "family": null,
    "what": "syllables",
    "alpha": [
-    "в",
-    "р",
-    "о",
-    "а"
+    "r",
+    "u",
+    "e",
+    "t"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "в",
-    "р"
+    "r",
+    "u"
    ],
    "samples": [
-    "ро",
-    "ра",
-    "во"
+    "er",
+    "re",
+    "ur"
    ],
    "lineage": [
     "I-05",
@@ -325,28 +325,28 @@
    ],
    "what": "words: nature, things",
    "alpha": [
-    "в",
-    "р",
-    "о",
-    "а",
-    "и",
-    "т",
-    "с",
-    "л",
-    "е",
-    "н"
+    "r",
+    "u",
+    "e",
+    "t",
+    "i",
+    "n",
+    "h",
+    "s",
+    "a",
+    "o"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "в",
-    "р"
+    "r",
+    "u"
    ],
    "samples": [
-    "сова",
-    "вол",
-    "ворона"
+    "urn",
+    "rune",
+    "hue"
    ],
    "lineage": [
     "E-06",
@@ -362,28 +362,28 @@
    "family": null,
    "what": "phrases",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "в",
-    "р"
+    "r",
+    "u"
    ],
    "samples": [
-    "вот и все",
-    "сила воли",
-    "все на свете"
+    "hush hush",
+    "it is here",
+    "test then rest"
    ],
    "lineage": [
     "E-05",
@@ -395,21 +395,21 @@
    "kind": "keys",
    "col": 6,
    "keys": [
-    "к",
-    "п"
+    "l",
+    "d"
    ],
    "rung": "streams",
-   "what": "streams over к п",
+   "what": "streams over l d",
    "alpha": [
-    "к",
-    "п"
+    "l",
+    "d"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [],
    "samples": [
-    "к п"
+    "l d"
    ],
    "lineage": []
   },
@@ -421,24 +421,24 @@
    "family": null,
    "what": "syllables",
    "alpha": [
-    "к",
-    "п",
-    "в",
-    "р",
-    "о",
-    "а"
+    "l",
+    "d",
+    "r",
+    "u",
+    "e",
+    "t"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "к",
-    "п"
+    "l",
+    "d"
    ],
    "samples": [
-    "ко",
-    "ка",
-    "по"
+    "ed",
+    "le",
+    "de"
    ],
    "lineage": [
     "I-06",
@@ -458,30 +458,30 @@
    ],
    "what": "words: home, things, rail",
    "alpha": [
-    "к",
-    "п",
-    "в",
-    "р",
-    "о",
-    "а",
-    "и",
-    "т",
-    "с",
-    "л",
-    "е",
-    "н"
+    "l",
+    "d",
+    "r",
+    "u",
+    "e",
+    "t",
+    "i",
+    "n",
+    "h",
+    "s",
+    "a",
+    "o"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "к",
-    "п"
+    "l",
+    "d"
    ],
    "samples": [
-    "окно",
-    "сок",
-    "пиво"
+    "dud",
+    "hundred",
+    "din"
    ],
    "lineage": [
     "E-09",
@@ -496,30 +496,30 @@
    "family": null,
    "what": "phrases",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "к",
-    "п"
+    "l",
+    "d"
    ],
    "samples": [
-    "так и так",
-    "они пели",
-    "он не пил"
+    "in the end",
+    "test the line",
+    "run the line"
    ],
    "lineage": [
     "E-08",
@@ -531,22 +531,22 @@
    "kind": "raw",
    "col": 7,
    "keys": [
-    "м",
-    "д",
+    "c",
+    "m",
     "."
    ],
    "rung": "streams",
-   "what": "streams over м д .",
+   "what": "streams over c m .",
    "alpha": [
-    "м",
-    "д"
+    "c",
+    "m"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [],
    "samples": [
-    "м д ."
+    "c m ."
    ],
    "lineage": []
   },
@@ -558,23 +558,23 @@
    "family": null,
    "what": "syllables",
    "alpha": [
-    "м",
-    "д",
-    "о",
-    "а"
+    "c",
+    "m",
+    "e",
+    "t"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "м",
-    "д",
+    "c",
+    "m",
     "."
    ],
    "samples": [
-    "до",
-    "да",
-    "мо"
+    "me",
+    "ce",
+    "ec"
    ],
    "lineage": [
     "I-07",
@@ -593,33 +593,33 @@
    ],
    "what": "words: home, people, time",
    "alpha": [
-    "м",
-    "д",
-    "о",
-    "а",
-    "к",
-    "п",
-    "в",
-    "р",
-    "и",
-    "т",
-    "с",
-    "л",
-    "е",
-    "н"
+    "c",
+    "m",
+    "e",
+    "t",
+    "l",
+    "d",
+    "r",
+    "u",
+    "i",
+    "n",
+    "h",
+    "s",
+    "a",
+    "o"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "м",
-    "д",
+    "c",
+    "m",
     "."
    ],
    "samples": [
-    "мама",
-    "солдат",
-    "доктор"
+    "mum",
+    "time",
+    "men"
    ],
    "lineage": [
     "E-12",
@@ -634,20 +634,20 @@
    "family": "period",
    "what": "sentences: period",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m"
    ],
    "marks": [
     "."
@@ -655,14 +655,14 @@
    "digits": [],
    "caps": false,
    "focus": [
-    "м",
-    "д",
+    "c",
+    "m",
     "."
    ],
    "samples": [
-    "они дома.",
-    "все не так.",
-    "он сидел и ел."
+    "the sun is hot.",
+    "the moon is out.",
+    "she is at home."
    ],
    "lineage": [
     "E-11",
@@ -684,9 +684,9 @@
    "caps": true,
    "focus": [],
    "samples": [
-    "Анна",
-    "Иван",
-    "Нина"
+    "Sam",
+    "Ruth",
+    "Tom"
    ],
    "lineage": []
   },
@@ -698,20 +698,20 @@
    "family": "names",
    "what": "sentences: names",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m"
    ],
    "marks": [
     "."
@@ -720,9 +720,9 @@
    "caps": true,
    "focus": [],
    "samples": [
-    "Иван дома.",
-    "Анна и Вера в Омске.",
-    "Анна"
+    "Sam is at home.",
+    "Ann and Tom are in London.",
+    "Sam"
    ],
    "lineage": [
     "E-14",
@@ -735,21 +735,21 @@
    "kind": "raw",
    "col": 9,
    "keys": [
-    "у",
-    "ь"
+    "g",
+    "y"
    ],
    "rung": "streams",
-   "what": "streams over у ь",
+   "what": "streams over g y",
    "alpha": [
-    "у",
-    "ь"
+    "g",
+    "y"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [],
    "samples": [
-    "у ь"
+    "g y"
    ],
    "lineage": []
   },
@@ -761,24 +761,24 @@
    "family": null,
    "what": "syllables",
    "alpha": [
-    "у",
-    "ь",
-    "о",
-    "а",
-    "е",
-    "н"
+    "g",
+    "y",
+    "e",
+    "t",
+    "a",
+    "o"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "у",
-    "ь"
+    "g",
+    "y"
    ],
    "samples": [
-    "ну",
-    "ун",
-    "нь"
+    "ge",
+    "ty",
+    "ay"
    ],
    "lineage": [
     "I-09",
@@ -796,34 +796,34 @@
    ],
    "what": "words: verbs",
    "alpha": [
-    "у",
-    "ь",
-    "о",
-    "а",
-    "е",
-    "н",
-    "м",
-    "д",
-    "к",
-    "п",
-    "в",
-    "р",
-    "и",
-    "т",
-    "с",
-    "л"
+    "g",
+    "y",
+    "e",
+    "t",
+    "a",
+    "o",
+    "c",
+    "m",
+    "l",
+    "d",
+    "r",
+    "u",
+    "i",
+    "n",
+    "h",
+    "s"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "у",
-    "ь"
+    "g",
+    "y"
    ],
    "samples": [
-    "стать",
-    "видеть",
-    "есть"
+    "hung",
+    "reign",
+    "urge"
    ],
    "lineage": [
     "E-16",
@@ -838,22 +838,22 @@
    "family": "period",
    "what": "sentences: period",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y"
    ],
    "marks": [
     "."
@@ -861,13 +861,13 @@
    "digits": [],
    "caps": true,
    "focus": [
-    "у",
-    "ь"
+    "g",
+    "y"
    ],
    "samples": [
-    "Мне пора спать.",
-    "День идет.",
-    "Они пили воду."
+    "You can go home.",
+    "The day is long.",
+    "They sang all night."
    ],
    "lineage": [
     "E-15",
@@ -901,22 +901,22 @@
    "family": "clauses",
    "what": "sentences: clauses",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y"
    ],
    "marks": [
     ".",
@@ -928,9 +928,9 @@
     ","
    ],
    "samples": [
-    "он ел, а она пела.",
-    "мама дома, и нам тепло.",
-    "кот спит, пес не спит."
+    "He sat, and she read.",
+    "The day is done, and the night is here.",
+    "Go home, Sam."
    ],
    "lineage": [
     "E-18",
@@ -943,21 +943,21 @@
    "kind": "raw",
    "col": 11,
    "keys": [
-    "ы",
-    "г"
+    "f",
+    "w"
    ],
    "rung": "streams",
-   "what": "streams over ы г",
+   "what": "streams over f w",
    "alpha": [
-    "ы",
-    "г"
+    "f",
+    "w"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [],
    "samples": [
-    "ы г"
+    "f w"
    ],
    "lineage": []
   },
@@ -969,24 +969,24 @@
    "family": null,
    "what": "syllables",
    "alpha": [
-    "ы",
-    "г",
-    "о",
-    "а",
-    "и",
-    "т"
+    "f",
+    "w",
+    "e",
+    "t",
+    "i",
+    "n"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "ы",
-    "г"
+    "f",
+    "w"
    ],
    "samples": [
-    "ты",
-    "го",
-    "га"
+    "wi",
+    "we",
+    "fi"
    ],
    "lineage": [
     "I-11",
@@ -1006,36 +1006,36 @@
    ],
    "what": "words: things, place, nature",
    "alpha": [
-    "ы",
-    "г",
-    "о",
-    "а",
-    "и",
-    "т",
-    "у",
-    "ь",
-    "е",
-    "н",
-    "м",
-    "д",
-    "к",
-    "п",
-    "в",
-    "р",
-    "с",
-    "л"
+    "f",
+    "w",
+    "e",
+    "t",
+    "i",
+    "n",
+    "g",
+    "y",
+    "a",
+    "o",
+    "c",
+    "m",
+    "l",
+    "d",
+    "r",
+    "u",
+    "h",
+    "s"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "ы",
-    "г"
+    "f",
+    "w"
    ],
    "samples": [
-    "гора",
-    "крыса",
-    "снег"
+    "fur",
+    "ruff",
+    "fin"
    ],
    "lineage": [
     "E-20",
@@ -1050,24 +1050,24 @@
    "family": "clauses",
    "what": "sentences: clauses",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w"
    ],
    "marks": [
     ".",
@@ -1076,13 +1076,13 @@
    "digits": [],
    "caps": true,
    "focus": [
-    "ы",
-    "г"
+    "f",
+    "w"
    ],
    "samples": [
-    "горы далеко, а мы дома.",
-    "книги на столе, тетради в сумке.",
-    "мы уснули, они остались."
+    "We wait, and the train is late.",
+    "The wind is cold, so shut the window.",
+    "Wood for the fire, water for the tea."
    ],
    "lineage": [
     "E-19",
@@ -1094,18 +1094,18 @@
    "kind": "keys",
    "col": 12,
    "keys": [
-    "-",
-    "—"
+    "'",
+    "-"
    ],
    "rung": "streams",
-   "what": "streams over - —",
+   "what": "streams over ' -",
    "alpha": [],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [],
    "samples": [
-    "- —"
+    "' -"
    ],
    "lineage": []
   },
@@ -1114,44 +1114,44 @@
    "kind": "sentences",
    "col": 12,
    "rung": "sentences",
-   "family": "dash",
-   "what": "sentences: dash",
+   "family": "contractions",
+   "what": "sentences: contractions",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w"
    ],
    "marks": [
     ".",
     ",",
-    "-",
-    "—"
+    "'",
+    "-"
    ],
    "digits": [],
    "caps": true,
    "focus": [
-    "-",
-    "—"
+    "'",
+    "-"
    ],
    "samples": [
-    "Дон — река.",
-    "Труд — основа всего.",
-    "Мы — дома, они — в пути."
+    "It's cold, so don't go out.",
+    "We can't wait, and we won't.",
+    "Mother's at home, father's at the mine."
    ],
    "lineage": [
     "E-22",
@@ -1164,21 +1164,21 @@
    "kind": "raw",
    "col": 13,
    "keys": [
-    "б",
-    "я"
+    "b",
+    "p"
    ],
    "rung": "streams",
-   "what": "streams over б я",
+   "what": "streams over b p",
    "alpha": [
-    "б",
-    "я"
+    "b",
+    "p"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [],
    "samples": [
-    "б я"
+    "b p"
    ],
    "lineage": []
   },
@@ -1190,24 +1190,24 @@
    "family": null,
    "what": "syllables",
    "alpha": [
-    "б",
-    "я",
-    "в",
-    "р",
-    "о",
-    "а"
+    "b",
+    "p",
+    "r",
+    "u",
+    "e",
+    "t"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "б",
-    "я"
+    "b",
+    "p"
    ],
    "samples": [
-    "ря",
-    "вя",
-    "бо"
+    "be",
+    "pe",
+    "pr"
    ],
    "lineage": [
     "I-13",
@@ -1227,38 +1227,38 @@
    ],
    "what": "words: people, life, verbs",
    "alpha": [
-    "б",
-    "я",
-    "в",
-    "р",
-    "о",
-    "а",
-    "ы",
-    "г",
-    "и",
-    "т",
-    "у",
-    "ь",
-    "е",
-    "н",
-    "м",
-    "д",
-    "к",
-    "п",
-    "с",
-    "л"
+    "b",
+    "p",
+    "r",
+    "u",
+    "e",
+    "t",
+    "f",
+    "w",
+    "i",
+    "n",
+    "g",
+    "y",
+    "a",
+    "o",
+    "c",
+    "m",
+    "l",
+    "d",
+    "h",
+    "s"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "б",
-    "я"
+    "b",
+    "p"
    ],
    "samples": [
-    "быть",
-    "стоять",
-    "работать"
+    "rub",
+    "burn",
+    "buff"
    ],
    "lineage": [
     "E-24",
@@ -1273,43 +1273,43 @@
    "family": "past",
    "what": "sentences: past",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p"
    ],
    "marks": [
     ".",
     ",",
-    "-",
-    "—"
+    "'",
+    "-"
    ],
    "digits": [],
    "caps": true,
    "focus": [
-    "б",
-    "я"
+    "b",
+    "p"
    ],
    "samples": [
-    "Я был дома.",
-    "Она была одна.",
-    "Мы были в лесу."
+    "Yesterday we were busy.",
+    "The boy was born by the bay.",
+    "Papa had put the pipe by the bed."
    ],
    "lineage": [
     "E-23",
@@ -1321,21 +1321,19 @@
    "kind": "keys",
    "col": 14,
    "keys": [
-    "з",
-    "й"
+    "v"
    ],
    "rung": "streams",
-   "what": "streams over з й",
+   "what": "streams over v",
    "alpha": [
-    "з",
-    "й"
+    "v"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [],
    "samples": [
-    "з й"
+    "v"
    ],
    "lineage": []
   },
@@ -1347,24 +1345,22 @@
    "family": null,
    "what": "syllables",
    "alpha": [
-    "з",
-    "й",
-    "о",
-    "а",
-    "и",
-    "т"
+    "v",
+    "e",
+    "t",
+    "i",
+    "n"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "з",
-    "й"
+    "v"
    ],
    "samples": [
-    "зо",
-    "за",
-    "зи"
+    "ve",
+    "iv",
+    "vi"
    ],
    "lineage": [
     "I-14",
@@ -1384,40 +1380,38 @@
    ],
    "what": "words: adj, things, place",
    "alpha": [
-    "з",
-    "й",
-    "о",
-    "а",
-    "и",
-    "т",
-    "б",
-    "я",
-    "в",
-    "р",
-    "ы",
-    "г",
-    "у",
-    "ь",
-    "е",
-    "н",
-    "м",
-    "д",
-    "к",
-    "п",
-    "с",
-    "л"
+    "v",
+    "e",
+    "t",
+    "i",
+    "n",
+    "b",
+    "p",
+    "r",
+    "u",
+    "f",
+    "w",
+    "g",
+    "y",
+    "a",
+    "o",
+    "c",
+    "m",
+    "l",
+    "d",
+    "h",
+    "s"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "з",
-    "й"
+    "v"
    ],
    "samples": [
-    "завод",
-    "зал",
-    "красивый"
+    "five",
+    "vest",
+    "rivet"
    ],
    "lineage": [
     "E-27",
@@ -1432,45 +1426,43 @@
    "family": "period",
    "what": "sentences: period",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v"
    ],
    "marks": [
     ".",
     ",",
-    "-",
-    "—"
+    "'",
+    "-"
    ],
    "digits": [],
    "caps": true,
    "focus": [
-    "з",
-    "й"
+    "v"
    ],
    "samples": [
-    "Твой брат знает.",
-    "Зима была долгой.",
-    "Злой пес не спит."
+    "The river is deep and very cold.",
+    "Seven men live in the village.",
+    "Every valley has a river."
    ],
    "lineage": [
     "E-26",
@@ -1505,34 +1497,33 @@
    "family": "questions",
    "what": "sentences: questions",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!"
    ],
@@ -1543,9 +1534,9 @@
     "!"
    ],
    "samples": [
-    "Кто там?",
-    "Ты готов?",
-    "Где мы?"
+    "Who is there?",
+    "Is it true?",
+    "Where are you?"
    ],
    "lineage": [
     "E-29",
@@ -1558,21 +1549,19 @@
    "kind": "keys",
    "col": 16,
    "keys": [
-    "ч",
-    "ш"
+    "k"
    ],
    "rung": "streams",
-   "what": "streams over ч ш",
+   "what": "streams over k",
    "alpha": [
-    "ч",
-    "ш"
+    "k"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [],
    "samples": [
-    "ч ш"
+    "k"
    ],
    "lineage": []
   },
@@ -1584,24 +1573,22 @@
    "family": null,
    "what": "syllables",
    "alpha": [
-    "ч",
-    "ш",
-    "о",
-    "а",
-    "и",
-    "т"
+    "k",
+    "e",
+    "t",
+    "i",
+    "n"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "ч",
-    "ш"
+    "k"
    ],
    "samples": [
-    "ча",
-    "чи",
-    "ша"
+    "ke",
+    "kn",
+    "kn"
    ],
    "lineage": [
     "I-16",
@@ -1621,42 +1608,39 @@
    ],
    "what": "words: time, life, verbs",
    "alpha": [
-    "ч",
-    "ш",
-    "о",
-    "а",
-    "и",
-    "т",
-    "з",
-    "й",
-    "б",
-    "я",
-    "в",
-    "р",
-    "ы",
-    "г",
-    "у",
-    "ь",
-    "е",
-    "н",
-    "м",
-    "д",
-    "к",
-    "п",
-    "с",
-    "л"
+    "k",
+    "e",
+    "t",
+    "i",
+    "n",
+    "v",
+    "b",
+    "p",
+    "r",
+    "u",
+    "f",
+    "w",
+    "g",
+    "y",
+    "a",
+    "o",
+    "c",
+    "m",
+    "l",
+    "d",
+    "h",
+    "s"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "ч",
-    "ш"
+    "k"
    ],
    "samples": [
-    "мочь",
-    "слушать",
-    "читать"
+    "dunk",
+    "hike",
+    "drink"
    ],
    "lineage": [
     "E-31",
@@ -1671,49 +1655,46 @@
    "family": "questions",
    "what": "sentences: questions",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!"
    ],
    "digits": [],
    "caps": true,
    "focus": [
-    "ч",
-    "ш"
+    "k"
    ],
    "samples": [
-    "Что ты делаешь?",
-    "Почему ты молчишь?",
-    "Что ты читаешь?"
+    "Do you know the way?",
+    "What do you think?",
+    "How does it look?"
    ],
    "lineage": [
     "E-30",
@@ -1725,19 +1706,17 @@
    "kind": "raw",
    "col": 17,
    "keys": [
-    "\"",
-    "«",
-    "»"
+    "\""
    ],
    "rung": "streams",
-   "what": "streams over \" « »",
+   "what": "streams over \"",
    "alpha": [],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [],
    "samples": [
-    "\" « »"
+    "\""
    ],
    "lineage": []
   },
@@ -1749,53 +1728,47 @@
    "family": "dialogue",
    "what": "sentences: dialogue",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
-    "\"",
-    "«",
-    "»"
+    "\""
    ],
    "digits": [],
    "caps": true,
    "focus": [
-    "\"",
-    "«",
-    "»"
+    "\""
    ],
    "samples": [
-    "«Иди домой!» — сказал он.",
-    "«Кто там?» — спросила она.",
-    "«Я готов», — ответил брат."
+    "\"Go home!\" said Bob.",
+    "\"Who is there?\" she asked.",
+    "\"I am ready,\" said the boy."
    ],
    "lineage": [
     "E-33",
@@ -1808,21 +1781,19 @@
    "kind": "keys",
    "col": 18,
    "keys": [
-    "ж",
-    "х"
+    "j"
    ],
    "rung": "streams",
-   "what": "streams over ж х",
+   "what": "streams over j",
    "alpha": [
-    "ж",
-    "х"
+    "j"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [],
    "samples": [
-    "ж х"
+    "j"
    ],
    "lineage": []
   },
@@ -1834,24 +1805,22 @@
    "family": null,
    "what": "syllables",
    "alpha": [
-    "ж",
-    "х",
-    "о",
-    "а",
-    "е",
-    "н"
+    "j",
+    "e",
+    "t",
+    "a",
+    "o"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "ж",
-    "х"
+    "j"
    ],
    "samples": [
-    "жа",
-    "же",
-    "ха"
+    "ja",
+    "jo",
+    "je"
    ],
    "lineage": [
     "I-18",
@@ -1865,50 +1834,46 @@
    "col": 18,
    "rung": "words",
    "family": [
-    "life",
-    "home",
-    "adj"
+    "things",
+    "verbs",
+    "rail"
    ],
-   "what": "words: life, home, adj",
+   "what": "words: things, verbs, rail",
    "alpha": [
-    "ж",
-    "х",
-    "о",
-    "а",
-    "е",
-    "н",
-    "ч",
-    "ш",
-    "и",
-    "т",
-    "з",
-    "й",
-    "б",
-    "я",
-    "в",
-    "р",
-    "ы",
-    "г",
-    "у",
-    "ь",
-    "м",
-    "д",
-    "к",
-    "п",
-    "с",
-    "л"
+    "j",
+    "e",
+    "t",
+    "a",
+    "o",
+    "k",
+    "i",
+    "n",
+    "v",
+    "b",
+    "p",
+    "r",
+    "u",
+    "f",
+    "w",
+    "g",
+    "y",
+    "c",
+    "m",
+    "l",
+    "d",
+    "h",
+    "s"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "ж",
-    "х"
+    "j"
    ],
    "samples": [
-    "хлеб",
-    "ложка",
-    "нож"
+    "jib",
+    "jug",
+    "junk"
    ],
    "lineage": [
     "E-35",
@@ -1923,54 +1888,48 @@
    "family": "clauses",
    "what": "sentences: clauses",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
-    "\"",
-    "«",
-    "»"
+    "\""
    ],
    "digits": [],
    "caps": true,
    "focus": [
-    "ж",
-    "х"
+    "j"
    ],
    "samples": [
-    "Уже поздно, иди спать.",
-    "Мужчина вошел, а дети вышли.",
-    "Нужно много угля, а дров мало."
+    "Jack joined the crew, and Jane joined too.",
+    "The job is done, so enjoy the evening.",
+    "Jim jumped the fence, and the dog followed."
    ],
    "lineage": [
     "E-34",
@@ -1982,21 +1941,19 @@
    "kind": "raw",
    "col": 19,
    "keys": [
-    "ц",
-    "э"
+    "x"
    ],
    "rung": "streams",
-   "what": "streams over ц э",
+   "what": "streams over x",
    "alpha": [
-    "ц",
-    "э"
+    "x"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [],
    "samples": [
-    "ц э"
+    "x"
    ],
    "lineage": []
   },
@@ -2008,24 +1965,22 @@
    "family": null,
    "what": "syllables",
    "alpha": [
-    "ц",
-    "э",
-    "о",
-    "а",
-    "и",
-    "т"
+    "x",
+    "e",
+    "t",
+    "i",
+    "n"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "ц",
-    "э"
+    "x"
    ],
    "samples": [
-    "ца",
-    "ци",
-    "то"
+    "ex",
+    "xt",
+    "ix"
    ],
    "lineage": [
     "I-19",
@@ -2045,46 +2000,41 @@
    ],
    "what": "words: things, people, place",
    "alpha": [
-    "ц",
-    "э",
-    "о",
-    "а",
-    "и",
-    "т",
-    "ж",
-    "х",
-    "е",
-    "н",
-    "ч",
-    "ш",
-    "з",
-    "й",
-    "б",
-    "я",
-    "в",
-    "р",
-    "ы",
-    "г",
-    "у",
-    "ь",
-    "м",
-    "д",
-    "к",
-    "п",
-    "с",
-    "л"
+    "x",
+    "e",
+    "t",
+    "i",
+    "n",
+    "j",
+    "a",
+    "o",
+    "k",
+    "v",
+    "b",
+    "p",
+    "r",
+    "u",
+    "f",
+    "w",
+    "g",
+    "y",
+    "c",
+    "m",
+    "l",
+    "d",
+    "h",
+    "s"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "ц",
-    "э"
+    "x"
    ],
    "samples": [
-    "отец",
-    "лицо",
-    "поэт"
+    "six",
+    "text",
+    "exit"
    ],
    "lineage": [
     "E-38",
@@ -2099,56 +2049,49 @@
    "family": "mixed",
    "what": "sentences: mixed",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
-    "\"",
-    "«",
-    "»"
+    "\""
    ],
    "digits": [],
    "caps": true,
    "focus": [
-    "ц",
-    "э"
+    "x"
    ],
    "samples": [
-    "Это мой дом, а это — твой.",
-    "В центре города — музей.",
-    "Отец читает, мать шьет."
+    "Next stop, Exeter!",
+    "Six boxes, all full.",
+    "The axle is fixed, so we can go."
    ],
    "lineage": [
     "E-37",
@@ -2185,45 +2128,39 @@
    "family": "lists",
    "what": "sentences: lists",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
@@ -2238,9 +2175,9 @@
     ")"
    ],
    "samples": [
-    "Вот что нужно: хлеб, соль, вода.",
-    "День прошел; настала ночь.",
-    "Система проста (почти)."
+    "Here is the list: iron, coal, stone.",
+    "The day is done; the night is near.",
+    "The book (an old one) is on the shelf."
    ],
    "lineage": [
     "E-40",
@@ -2253,21 +2190,19 @@
    "kind": "raw",
    "col": 21,
    "keys": [
-    "ю",
-    "ф"
+    "q"
    ],
    "rung": "streams",
-   "what": "streams over ю ф",
+   "what": "streams over q",
    "alpha": [
-    "ю",
-    "ф"
+    "q"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [],
    "samples": [
-    "ю ф"
+    "q"
    ],
    "lineage": []
   },
@@ -2279,24 +2214,22 @@
    "family": null,
    "what": "syllables",
    "alpha": [
-    "ю",
-    "ф",
-    "в",
-    "р",
-    "о",
-    "а"
+    "q",
+    "r",
+    "u",
+    "e",
+    "t"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "ю",
-    "ф"
+    "q"
    ],
    "samples": [
-    "рю",
-    "фа",
-    "фо"
+    "qu",
+    "qu",
+    "que"
    ],
    "lineage": [
     "I-21",
@@ -2316,48 +2249,42 @@
    ],
    "what": "words: work, things, life",
    "alpha": [
-    "ю",
-    "ф",
-    "в",
-    "р",
-    "о",
-    "а",
-    "ц",
-    "э",
-    "и",
-    "т",
-    "ж",
-    "х",
-    "е",
-    "н",
-    "ч",
-    "ш",
-    "з",
-    "й",
-    "б",
-    "я",
-    "ы",
-    "г",
-    "у",
-    "ь",
-    "м",
-    "д",
-    "к",
-    "п",
-    "с",
-    "л"
+    "q",
+    "r",
+    "u",
+    "e",
+    "t",
+    "x",
+    "i",
+    "n",
+    "j",
+    "a",
+    "o",
+    "k",
+    "v",
+    "b",
+    "p",
+    "f",
+    "w",
+    "g",
+    "y",
+    "c",
+    "m",
+    "l",
+    "d",
+    "h",
+    "s"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "ю",
-    "ф"
+    "q"
    ],
    "samples": [
-    "ключ",
-    "юла",
-    "плюс"
+    "liquid",
+    "equip",
+    "quest"
    ],
    "lineage": [
     "E-42",
@@ -2372,47 +2299,40 @@
    "family": "mixed",
    "what": "sentences: mixed",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э",
-    "ю",
-    "ф"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x",
+    "q"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
@@ -2421,13 +2341,12 @@
    "digits": [],
    "caps": true,
    "focus": [
-    "ю",
-    "ф"
+    "q"
    ],
    "samples": [
-    "Я люблю кофе.",
-    "В июле жара.",
-    "Люди ждут поезда."
+    "The quarry is quiet today.",
+    "Be quick, be quiet, be careful.",
+    "The queen is not amused."
    ],
    "lineage": [
     "E-41",
@@ -2439,23 +2358,19 @@
    "kind": "keys",
    "col": 22,
    "keys": [
-    "щ",
-    "ё",
-    "ъ"
+    "z"
    ],
    "rung": "streams",
-   "what": "streams over щ ё ъ",
+   "what": "streams over z",
    "alpha": [
-    "щ",
-    "ё",
-    "ъ"
+    "z"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [],
    "samples": [
-    "щ ё ъ"
+    "z"
    ],
    "lineage": []
   },
@@ -2467,26 +2382,22 @@
    "family": null,
    "what": "syllables",
    "alpha": [
-    "щ",
-    "ё",
-    "ъ",
-    "в",
-    "р",
-    "о",
-    "а"
+    "z",
+    "r",
+    "u",
+    "e",
+    "t"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "щ",
-    "ё",
-    "ъ"
+    "z"
    ],
    "samples": [
-    "ща",
-    "ща",
-    "ро"
+    "ze",
+    "zz",
+    "ze"
    ],
    "lineage": [
     "I-22",
@@ -2506,52 +2417,43 @@
    ],
    "what": "words: life, things, nature",
    "alpha": [
-    "щ",
-    "ё",
-    "ъ",
-    "в",
-    "р",
-    "о",
-    "а",
-    "ю",
-    "ф",
-    "ц",
-    "э",
-    "и",
-    "т",
-    "ж",
-    "х",
-    "е",
-    "н",
-    "ч",
-    "ш",
-    "з",
-    "й",
-    "б",
-    "я",
-    "ы",
-    "г",
-    "у",
-    "ь",
-    "м",
-    "д",
-    "к",
-    "п",
-    "с",
-    "л"
+    "z",
+    "r",
+    "u",
+    "e",
+    "t",
+    "q",
+    "x",
+    "i",
+    "n",
+    "j",
+    "a",
+    "o",
+    "k",
+    "v",
+    "b",
+    "p",
+    "f",
+    "w",
+    "g",
+    "y",
+    "c",
+    "m",
+    "l",
+    "d",
+    "h",
+    "s"
    ],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [
-    "щ",
-    "ё",
-    "ъ"
+    "z"
    ],
    "samples": [
-    "ёлка",
-    "роща",
-    "чаща"
+    "buzz",
+    "fuzz",
+    "quartz"
    ],
    "lineage": [
     "E-45",
@@ -2566,50 +2468,41 @@
    "family": "mixed",
    "what": "sentences: mixed",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э",
-    "ю",
-    "ф",
-    "щ",
-    "ё",
-    "ъ"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x",
+    "q",
+    "z"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
@@ -2618,14 +2511,12 @@
    "digits": [],
    "caps": true,
    "focus": [
-    "щ",
-    "ё",
-    "ъ"
+    "z"
    ],
    "samples": [
-    "Всё своё ношу с собой.",
-    "Ещё чуть-чуть, и мы дома.",
-    "Щи да каша — пища наша."
+    "The zinc is in the bronze.",
+    "The puzzle has a dozen pieces.",
+    "Size matters; so does speed."
    ],
    "lineage": [
     "E-44",
@@ -2639,50 +2530,41 @@
    "rung": "pages",
    "what": "lore: the machines talking, grade 1",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э",
-    "ю",
-    "ф",
-    "щ",
-    "ё",
-    "ъ"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x",
+    "q",
+    "z"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
@@ -2692,7 +2574,7 @@
    "caps": true,
    "focus": [],
    "samples": [
-    "Плавильня не спит. Она ест руду и отдаёт бронзу, и так весь день."
+    "The smelter never sleeps. It eats ore and gives back bronze, and so it goes all day."
    ],
    "lineage": [
     "E-23",
@@ -2707,50 +2589,41 @@
    "rung": "pages",
    "what": "letters and correspondence, grade 1",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э",
-    "ю",
-    "ф",
-    "щ",
-    "ё",
-    "ъ"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x",
+    "q",
+    "z"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
@@ -2760,7 +2633,7 @@
    "caps": true,
    "focus": [],
    "samples": [
-    "Дорогая Анна! Пишу тебе из Омска. Здесь холодно, но работа идёт. Целую, Иван."
+    "Dear Ann, I am writing from Leeds. It is cold here, but the work goes on. Love, Sam."
    ],
    "lineage": [
     "E-30",
@@ -2799,50 +2672,41 @@
    "family": "numbers",
    "what": "sentences: numbers",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э",
-    "ю",
-    "ф",
-    "щ",
-    "ё",
-    "ъ"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x",
+    "q",
+    "z"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
@@ -2864,9 +2728,9 @@
     "5"
    ],
    "samples": [
-    "В классе 25 человек.",
-    "Поезд в 5 часов 15 минут.",
-    "Нам нужно 3 тонны угля и 2 тонны кварца."
+    "There are 25 men in the crew.",
+    "The train is at 5.",
+    "We need 3 tons of coal and 2 of quartz."
    ],
    "lineage": [
     "E-47",
@@ -2881,50 +2745,41 @@
    "rung": "pages",
    "what": "famous literature, grade 1",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э",
-    "ю",
-    "ф",
-    "щ",
-    "ё",
-    "ъ"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x",
+    "q",
+    "z"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
@@ -2940,7 +2795,7 @@
    "caps": true,
    "focus": [],
    "samples": [
-    "Все счастливые семьи похожи друг на друга, каждая несчастливая семья несчастлива по-своему. (Толстой)"
+    "It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife. (Austen)"
    ],
    "lineage": [
     "E-40",
@@ -2956,50 +2811,41 @@
    "rung": "pages",
    "what": "fun trivia, grade 1",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э",
-    "ю",
-    "ф",
-    "щ",
-    "ё",
-    "ъ"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x",
+    "q",
+    "z"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
@@ -3015,7 +2861,7 @@
    "caps": true,
    "focus": [],
    "samples": [
-    "У осьминога три сердца, а кровь у него голубая."
+    "An octopus has three hearts, and its blood is blue."
    ],
    "lineage": [
     "E-44",
@@ -3031,50 +2877,41 @@
    "rung": "pages",
    "what": "lore: the machines talking, grade 2",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э",
-    "ю",
-    "ф",
-    "щ",
-    "ё",
-    "ъ"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x",
+    "q",
+    "z"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
@@ -3090,7 +2927,7 @@
    "caps": true,
    "focus": [],
    "samples": [
-    "Говорят, что кран однажды поднял сам себя. Это, конечно, шутка; но с тех пор его табличка гласит: «Не проверять!»"
+    "They say the crane once lifted itself. That is a joke, of course; but ever since, its plaque has read: \"Do not test!\""
    ],
    "lineage": [
     "P-lore-1",
@@ -3108,18 +2945,17 @@
     "7",
     "8",
     "9",
-    "0",
-    "№"
+    "0"
    ],
    "rung": "streams",
-   "what": "streams over 6 7 8 9 0 №",
+   "what": "streams over 6 7 8 9 0",
    "alpha": [],
    "marks": [],
    "digits": [],
    "caps": false,
    "focus": [],
    "samples": [
-    "6 7 8 9 0 №"
+    "6 7 8 9 0"
    ],
    "lineage": []
   },
@@ -3131,55 +2967,45 @@
    "family": "dates",
    "what": "full sentences: dates",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э",
-    "ю",
-    "ф",
-    "щ",
-    "ё",
-    "ъ"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x",
+    "q",
+    "z"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
-    ")",
-    "№"
+    ")"
    ],
    "digits": [
     "1",
@@ -3199,13 +3025,12 @@
     "7",
     "8",
     "9",
-    "0",
-    "№"
+    "0"
    ],
    "samples": [
-    "В 1867 году здесь построили завод.",
-    "Цена — 90 рублей.",
-    "Дом № 7, квартира 108."
+    "The mill was built in 1867.",
+    "The price is 90 pounds.",
+    "House 7, flat 108."
    ],
    "lineage": [
     "E-48",
@@ -3220,55 +3045,45 @@
    "family": "everything",
    "what": "full sentences: everything",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э",
-    "ю",
-    "ф",
-    "щ",
-    "ё",
-    "ъ"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x",
+    "q",
+    "z"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
-    ")",
-    "№"
+    ")"
    ],
    "digits": [
     "1",
@@ -3288,13 +3103,12 @@
     "7",
     "8",
     "9",
-    "0",
-    "№"
+    "0"
    ],
    "samples": [
-    "В 1799 году родился Пушкин — и русский язык изменился.",
-    "Дом № 7 (у реки) продан за 1 250 000 рублей; хозяин доволен.",
-    "Инженер пишет: «Система проста (почти)». Вход: руда; выход: страницы."
+    "In 1812 Dickens was born, and the English novel changed.",
+    "House 7 (by the river) sold for 1 250 000 pounds; the owner's pleased.",
+    "The engineer writes: \"The system is simple (almost)\". Input: ore; output: pages."
    ],
    "lineage": [
     "E-49",
@@ -3309,55 +3123,45 @@
    "rung": "pages",
    "what": "famous literature, grade 2",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э",
-    "ю",
-    "ф",
-    "щ",
-    "ё",
-    "ъ"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x",
+    "q",
+    "z"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
-    ")",
-    "№"
+    ")"
    ],
    "digits": [
     "1",
@@ -3374,7 +3178,7 @@
    "caps": true,
    "focus": [],
    "samples": [
-    "Я помню чудное мгновенье: передо мной явилась ты, как мимолётное виденье, как гений чистой красоты. (Пушкин)"
+    "Two roads diverged in a yellow wood, And sorry I could not travel both, And be one traveler, long I stood. (Frost)"
    ],
    "lineage": [
     "P-lit-1",
@@ -3390,55 +3194,45 @@
    "rung": "pages",
    "what": "letters and correspondence, grade 2",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э",
-    "ю",
-    "ф",
-    "щ",
-    "ё",
-    "ъ"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x",
+    "q",
+    "z"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
-    ")",
-    "№"
+    ")"
    ],
    "digits": [
     "1",
@@ -3455,7 +3249,7 @@
    "caps": true,
    "focus": [],
    "samples": [
-    "Уважаемый Пётр Ильич! Благодарю за письмо от 12 мая. Отвечаю по пунктам: 1) да; 2) нет; 3) обсудим при встрече."
+    "Dear Mr Hudson, Thank you for your letter of 12 May. My answers, point by point: 1) yes; 2) no; 3) we can talk it over when we meet."
    ],
    "lineage": [
     "P-let-1",
@@ -3472,55 +3266,45 @@
    "rung": "pages",
    "what": "dialogue and theatre, grade 1",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э",
-    "ю",
-    "ф",
-    "щ",
-    "ё",
-    "ъ"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x",
+    "q",
+    "z"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
-    ")",
-    "№"
+    ")"
    ],
    "digits": [
     "1",
@@ -3537,7 +3321,7 @@
    "caps": true,
    "focus": [],
    "samples": [
-    "— Кто там? — Это я, почтальон Печкин. — Что принесли? — Журнал «Мурзилка»."
+    "\"Who is there?\" \"It is me, the postman.\" \"What have you brought?\" \"A letter from home.\""
    ],
    "lineage": [
     "E-34",
@@ -3553,55 +3337,45 @@
    "rung": "pages",
    "what": "fun trivia, grade 2",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э",
-    "ю",
-    "ф",
-    "щ",
-    "ё",
-    "ъ"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x",
+    "q",
+    "z"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
-    ")",
-    "№"
+    ")"
    ],
    "digits": [
     "1",
@@ -3618,7 +3392,7 @@
    "caps": true,
    "focus": [],
    "samples": [
-    "Байкал — самое глубокое озеро на Земле: 1642 метра. В нём пятая часть пресной воды планеты."
+    "Loch Ness holds more water than every lake in England and Wales put together: about 7 452 million cubic metres."
    ],
    "lineage": [
     "P-triv-1",
@@ -3635,55 +3409,45 @@
    "rung": "pages",
    "what": "dialogue and theatre, grade 2",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э",
-    "ю",
-    "ф",
-    "щ",
-    "ё",
-    "ъ"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x",
+    "q",
+    "z"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
-    ")",
-    "№"
+    ")"
    ],
    "digits": [
     "1",
@@ -3700,7 +3464,7 @@
    "caps": true,
    "focus": [],
    "samples": [
-    "Городничий. Я пригласил вас, господа, с тем, чтобы сообщить вам пренеприятное известие: к нам едет ревизор. (Гоголь)"
+    "Hamlet. To be, or not to be, that is the question: whether it is nobler in the mind to suffer the slings and arrows of outrageous fortune. (Shakespeare)"
    ],
    "lineage": [
     "P-dia-1",
@@ -3716,55 +3480,45 @@
    "rung": "pages",
    "what": "lore: the machines talking, grade 3",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э",
-    "ю",
-    "ф",
-    "щ",
-    "ё",
-    "ъ"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x",
+    "q",
+    "z"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
-    ")",
-    "№"
+    ")"
    ],
    "digits": [
     "1",
@@ -3781,7 +3535,7 @@
    "caps": true,
    "focus": [],
    "samples": [
-    "Экзамен на фронтире один: собери машину, запусти её (в 6:00) и уйди спать. Если утром она работает — ты мастер."
+    "The frontier has one exam: build the machine, start it (at 6:00) and go to bed. If it is running in the morning, you are a master."
    ],
    "lineage": [
     "P-lore-2",
@@ -3798,55 +3552,45 @@
    "rung": "pages",
    "what": "mathematical and technical writing, grade 1",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э",
-    "ю",
-    "ф",
-    "щ",
-    "ё",
-    "ъ"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x",
+    "q",
+    "z"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
-    ")",
-    "№"
+    ")"
    ],
    "digits": [
     "1",
@@ -3863,7 +3607,7 @@
    "caps": true,
    "focus": [],
    "samples": [
-    "Скорость — это путь, делённый на время. Если путь 120 км, а время 2 часа, скорость равна 60 км в час."
+    "Speed is distance divided by time. If the distance is 120 miles and the time is 2 hours, the speed is 60 miles an hour."
    ],
    "lineage": [
     "E-50",
@@ -3880,55 +3624,45 @@
    "rung": "pages",
    "what": "famous literature, grade 3",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э",
-    "ю",
-    "ф",
-    "щ",
-    "ё",
-    "ъ"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x",
+    "q",
+    "z"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
-    ")",
-    "№"
+    ")"
    ],
    "digits": [
     "1",
@@ -3945,7 +3679,7 @@
    "caps": true,
    "focus": [],
    "samples": [
-    "Мороз и солнце; день чудесный! Ещё ты дремлешь, друг прелестный — пора, красавица, проснись. (Пушкин)"
+    "Tyger Tyger, burning bright, In the forests of the night; What immortal hand or eye, Could frame thy fearful symmetry? (Blake)"
    ],
    "lineage": [
     "P-lit-2",
@@ -3961,55 +3695,45 @@
    "rung": "pages",
    "what": "letters and correspondence, grade 3",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э",
-    "ю",
-    "ф",
-    "щ",
-    "ё",
-    "ъ"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x",
+    "q",
+    "z"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
-    ")",
-    "№"
+    ")"
    ],
    "digits": [
     "1",
@@ -4026,7 +3750,7 @@
    "caps": true,
    "focus": [],
    "samples": [
-    "Здравствуйте! Заказ № 4085 (3 позиции; 12 700 руб.) отправлен 8 июня; трек-номер — в приложении. С уважением, склад."
+    "Hello! Order 4085 (3 items; 12 700 pounds) was sent on 8 June; the tracking number is attached. Regards, the warehouse."
    ],
    "lineage": [
     "P-let-2",
@@ -4043,55 +3767,45 @@
    "rung": "pages",
    "what": "dialogue and theatre, grade 3",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э",
-    "ю",
-    "ф",
-    "щ",
-    "ё",
-    "ъ"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x",
+    "q",
+    "z"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
-    ")",
-    "№"
+    ")"
    ],
    "digits": [
     "1",
@@ -4108,7 +3822,7 @@
    "caps": true,
    "focus": [],
    "samples": [
-    "— Отчего люди не летают? — сказала Катерина. — Я говорю: отчего люди не летают так, как птицы? (Островский)"
+    "\"Curiouser and curiouser!\" cried Alice; \"now I am opening out like the largest telescope that ever was!\" (Carroll)"
    ],
    "lineage": [
     "P-dia-2",
@@ -4124,55 +3838,45 @@
    "rung": "pages",
    "what": "mathematical and technical writing, grade 2",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э",
-    "ю",
-    "ф",
-    "щ",
-    "ё",
-    "ъ"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x",
+    "q",
+    "z"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
-    ")",
-    "№"
+    ")"
    ],
    "digits": [
     "1",
@@ -4189,7 +3893,7 @@
    "caps": true,
    "focus": [],
    "samples": [
-    "Площадь круга: пи умножить на квадрат радиуса. При радиусе 3 (см) площадь около 28,3 (кв. см)."
+    "The area of a circle is pi times the radius squared. With a radius of 3 (cm) the area is about 28.3 (sq cm)."
    ],
    "lineage": [
     "P-tech-1",
@@ -4206,55 +3910,45 @@
    "rung": "pages",
    "what": "fun trivia, grade 3",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э",
-    "ю",
-    "ф",
-    "щ",
-    "ё",
-    "ъ"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x",
+    "q",
+    "z"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
-    ")",
-    "№"
+    ")"
    ],
    "digits": [
     "1",
@@ -4271,7 +3965,7 @@
    "caps": true,
    "focus": [],
    "samples": [
-    "Транссибирская магистраль — 9289 км, 87 городов, 8 часовых поясов; поезд № 1 идёт 6 дней."
+    "In 1928 the Flying Scotsman ran the 392 miles from London to Edinburgh without a stop: 8 hours, 3 minutes, 1 engine."
    ],
    "lineage": [
     "P-triv-2",
@@ -4287,55 +3981,45 @@
    "rung": "pages",
    "what": "mathematical and technical writing, grade 3",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э",
-    "ю",
-    "ф",
-    "щ",
-    "ё",
-    "ъ"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x",
+    "q",
+    "z"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
-    ")",
-    "№"
+    ")"
    ],
    "digits": [
     "1",
@@ -4352,7 +4036,7 @@
    "caps": true,
    "focus": [],
    "samples": [
-    "Алгоритм: 1) прочитать число; 2) если оно чётное — разделить на 2, иначе умножить на 3 и прибавить 1; 3) повторять, пока не получится 1."
+    "Algorithm: 1) read a number; 2) if it is even, halve it, else triple it and add 1; 3) repeat until you reach 1."
    ],
    "lineage": [
     "P-tech-2",
@@ -4416,55 +4100,45 @@
    "rung": "pages",
    "what": "mathematical and technical writing, grade 4",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э",
-    "ю",
-    "ф",
-    "щ",
-    "ё",
-    "ъ"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x",
+    "q",
+    "z"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
-    ")",
-    "№"
+    ")"
    ],
    "digits": [
     "1",
@@ -4481,7 +4155,7 @@
    "caps": true,
    "focus": [],
    "samples": [
-    "Формула: (х + у) * (х - у) = х^2 - у^2; при х = 7, у = 3 получаем 40 (100% верно)."
+    "Formula: (x + y) * (x - y) = x^2 - y^2; with x = 7, y = 3 we get 40 (100% correct)."
    ],
    "lineage": [
     "P-tech-3",
@@ -4524,55 +4198,45 @@
    "rung": "pages",
    "what": "mathematical and technical writing, grade 4",
    "alpha": [
-    "о",
-    "а",
-    "е",
-    "н",
-    "и",
-    "т",
-    "с",
-    "л",
-    "в",
-    "р",
-    "к",
-    "п",
-    "м",
-    "д",
-    "у",
-    "ь",
-    "ы",
-    "г",
-    "б",
-    "я",
-    "з",
-    "й",
-    "ч",
-    "ш",
-    "ж",
-    "х",
-    "ц",
-    "э",
-    "ю",
-    "ф",
-    "щ",
-    "ё",
-    "ъ"
+    "e",
+    "t",
+    "a",
+    "o",
+    "i",
+    "n",
+    "h",
+    "s",
+    "r",
+    "u",
+    "l",
+    "d",
+    "c",
+    "m",
+    "g",
+    "y",
+    "f",
+    "w",
+    "b",
+    "p",
+    "v",
+    "k",
+    "j",
+    "x",
+    "q",
+    "z"
    ],
    "marks": [
     ".",
     ",",
+    "'",
     "-",
-    "—",
     "?",
     "!",
     "\"",
-    "«",
-    "»",
     ":",
     ";",
     "(",
-    ")",
-    "№"
+    ")"
    ],
    "digits": [
     "1",
@@ -4589,7 +4253,7 @@
    "caps": true,
    "focus": [],
    "samples": [
-    "если (число % 2 === 0) { печать(`${число} чётное`); } иначе { печать(`нечётное`); } // числа: 0..10"
+    "if (n % 2 === 0) { print(`${n} is even`); } else { print(`odd`); } // n: 0..10"
    ],
    "lineage": [
     "PX-math",
@@ -7405,7 +7069,7 @@
      "qty": 135
     }
    ],
-   "label": "R2 mine (е н) makes R2"
+   "label": "R2 mine (a o) makes R2"
   },
   {
    "col": 2,
@@ -7433,7 +7097,7 @@
      "qty": 135
     }
    ],
-   "label": "R3 mine (и т) makes R3"
+   "label": "R3 mine (i n) makes R3"
   },
   {
    "col": 3,
@@ -7537,7 +7201,7 @@
      "qty": 135
     }
    ],
-   "label": "R4 mine (в р) makes R4"
+   "label": "R4 mine (r u) makes R4"
   },
   {
    "col": 5,
@@ -7701,7 +7365,7 @@
      "qty": 135
     }
    ],
-   "label": "R5 mine (м д .) makes R5"
+   "label": "R5 mine (c m .) makes R5"
   },
   {
    "col": 7,
@@ -7865,7 +7529,7 @@
      "qty": 135
     }
    ],
-   "label": "R6 mine (у ь) makes R6"
+   "label": "R6 mine (g y) makes R6"
   },
   {
    "col": 9,
@@ -8001,7 +7665,7 @@
      "qty": 135
     }
    ],
-   "label": "R7 mine (ы г) makes R7"
+   "label": "R7 mine (f w) makes R7"
   },
   {
    "col": 11,
@@ -8117,7 +7781,7 @@
      "qty": 135
     }
    ],
-   "label": "R8 mine (б я) makes R8"
+   "label": "R8 mine (b p) makes R8"
   },
   {
    "col": 13,
@@ -8421,7 +8085,7 @@
      "qty": 135
     }
    ],
-   "label": "R10 mine (\" « ») makes R10"
+   "label": "R10 mine (\") makes R10"
   },
   {
    "col": 17,
@@ -8557,7 +8221,7 @@
      "qty": 135
     }
    ],
-   "label": "R11 mine (ц э) makes R11"
+   "label": "R11 mine (x) makes R11"
   },
   {
    "col": 19,
@@ -8673,7 +8337,7 @@
      "qty": 135
     }
    ],
-   "label": "R12 mine (ю ф) makes R12"
+   "label": "R12 mine (q) makes R12"
   },
   {
    "col": 21,
