@@ -472,6 +472,47 @@ body.night .keycap.home::after { background: #23343d; }
   margin-top: 18px;
 }
 
+/* ---------- how to play: the cards behind the link on the world picker ---------- */
+.guide-link {
+  background: none;
+  border: 1px solid #2c4a58;
+  border-radius: 6px;
+  color: var(--brass);
+  font-family: inherit;
+  font-size: 14px;
+  letter-spacing: 1px;
+  padding: 7px 16px;
+  cursor: pointer;
+}
+.guide-link:hover { border-color: var(--brass); background: var(--bg-raised); }
+.guide-visual { margin: 6px 0 4px; min-height: 120px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.guide-body { text-align: left; font-size: 15px; }
+/* the slab drawn small: the board is laid at full size and scaled in a box
+   cut to its scaled size, so the caps keep every style the live board has */
+.guide-kbd { position: relative; overflow: hidden; margin: 0 auto; max-width: 100%; }
+.guide-kbd-in { position: absolute; left: 0; top: 0; transform-origin: top left; }
+.guide-board { position: relative; }
+.guide-board .keycap.lit { color: #1a1508; background: var(--hint); box-shadow: 0 0 14px rgba(232, 200, 119, 0.55); }
+.guide-board .keycap.lit::after { background: #6b5a2a; }
+/* the ridge under the index fingers, drawn where a finger would feel it */
+.guide-board .keycap.bump::after { width: 18px; height: 4px; bottom: 8px; border-radius: 2px; background: #1a1508; }
+/* the finger tints are quiet by design; the finger card turns them up */
+.guide-board.fingers .keycap:not(.inert):not(.space), .guide-legend .chip { filter: saturate(2.4) brightness(1.45); }
+.guide-legend { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.guide-legend .chip { padding: 4px 12px; border-radius: 5px; font-size: 13px; letter-spacing: 1px; color: var(--ink); }
+.guide-line { font-size: 30px; }
+.guide-scene { display: flex; align-items: flex-end; gap: 18px; justify-content: center; min-height: 96px; }
+.guide-scene .pix, .guide-visual .pix { image-rendering: pixelated; }
+.guide-plus { font-size: 26px; color: var(--ink-dim); align-self: center; }
+.keys-inline { display: flex; gap: 6px; justify-content: center; }
+.keys-inline .keycap { position: static; min-width: 40px; padding: 0 10px; font-size: 15px; }
+.guide-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; gap: 10px; }
+.guide-nav .btn-primary { margin-top: 0; }
+.guide-nav .link-btn:disabled { visibility: hidden; }
+.guide-dots { display: flex; gap: 6px; }
+.guide-dot { width: 7px; height: 7px; border-radius: 50%; background: #2c4a58; }
+.guide-dot.on { background: var(--brass); }
+
 /* ---------- language + layout switches ---------- */
 /* one grid for both rows, so the labels share a column and the switches share
    a left edge however many entries each of them grows to */

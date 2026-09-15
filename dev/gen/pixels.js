@@ -84,6 +84,33 @@
     gun: '#8a5e46', gunD: '#4c3122', gunL: '#c08a68',
     gls: '#cfa8e4', glsD: '#6e4f8e', glsL: '#f6e8ff',
     titan: '#c8d0e0', titan2: '#8890a8', titan3: '#f0f4ff',
+    // the v4 materials past the first six (art pass 2026-09-15). Each is
+    // pulled off its neighbours by hue: caterium is gold and sulfur lemon,
+    // bauxite brick against copper's orange, uranium glows where coal glints,
+    // SAM wears the violet no other ore does, steel is blued so aluminium
+    // can be the white metal.
+    cat: '#e2b53a', catD: '#8e6a12', catL: '#fff0a0',
+    hostR: '#7a6e60', hostRD: '#4a4038', hostRL: '#a89a86',      // the warm rock caterium sits in
+    sul: '#d9d23c', sulD: '#8a861c', sulL: '#f6f0a0',
+    bau: '#a04a38', bauD: '#5e2a24', bauL: '#cf7a5c', bauS: '#e8c898',
+    ur: '#62cc5a', urD: '#2f7a34', urL: '#d2ffb4',
+    slate: '#454c56', slateD: '#262b32', slateL: '#6e7782',       // the dark rock uranium sits in
+    sam: '#5a3a86', samD: '#2c1c44', samL: '#8f6ac8', samG: '#e774f4', samW: '#ffd8ff',
+    h2o: '#3b8ec4', h2oD: '#205a8e', h2oL: '#7cc4ea',
+    nit: '#a8c8cc', nitD: '#5c7c86', nitL: '#e4f6f4',
+    acid: '#b8dc3c', acidD: '#6c8a1e', acidL: '#eaffa0',
+    slur: '#8a7a6c', slurD: '#51463e', slurL: '#b8a898',
+    stB: '#7a98c4', stBD: '#43557a', stBL: '#cfe0f8',
+    alu: '#c4cad2', aluD: '#7f8792', aluL: '#f4f6f8',
+    silica: '#d6cfe2', silicaD: '#9a90ac',
+    plast: '#8cc8e0', plastD: '#4a86a8', plastL: '#d8f4ff',
+    amber: '#e0962e', amberD: '#8e5418', amberL: '#ffd27a',
+    pcb: '#3f7a44', pcbD: '#234a2c', pcbL: '#6aae5c',
+    slag: '#5e5250', slagD: '#2e2628', slagL: '#8a7a74',
+    tar: '#2a2226', tarD: '#120d10', tarL: '#6a5a5e',
+    rustL: '#c9703e',
+    blue: '#3a6ab0', blueD: '#244a86', blueL: '#cfe4ff',          // blueprint
+    gbar: '#b8dca8',                                             // a program listing's green bars
     // paper goods
     paper: '#f4ecd8', paper2: '#d8cba8',
     // the operator — a fantasy mechanic, the man who works on airships
@@ -2118,7 +2145,11 @@
   // cream stops being an edge and becomes a halo, which at ten pixels is a
   // quarter of the sprite spent on nothing.
   const RIM_LIT = '#9c9184', RIM_INK = P.ink;
+  // Tones are a list indexed by digit (the v3 ladder's masks) or an object
+  // keyed by letter (the v4 drawings, which need more tones than nine and
+  // read better with names).
   function matMask(rows, tones) {
+    if (rows.length !== 8 || rows.some((r) => r.length !== 8)) throw new Error('matMask: a mask is 8 rows of 8, got ' + JSON.stringify(rows));
     const [c, x] = canvas(MAT_PX, MAT_PX);
     const on = (cx, cy) => cy >= 0 && cy < 8 && cx >= 0 && cx < 8 && rows[cy][cx] !== '.';
     for (let cy = -1; cy <= 8; cy++) for (let cx = -1; cx <= 8; cx++) {
@@ -2131,7 +2162,10 @@
     }
     for (let cy = 0; cy < 8; cy++) for (let cx = 0; cx < 8; cx++) {
       const ch = rows[cy][cx];
-      if (ch !== '.') R(x, tones[+ch - 1], cx + 1, cy + 1, 1, 1);
+      if (ch === '.') continue;
+      const col = Array.isArray(tones) ? tones[+ch - 1] : tones[ch];
+      if (!col) throw new Error('matMask: no tone for ' + ch);
+      R(x, col, cx + 1, cy + 1, 1, 1);
     }
     return c;
   }
@@ -2342,6 +2376,828 @@
                  '..2222..'], t: [P.brass2, P.brass1, P.brass3, P.brass1] },
   };
 
+  // ---------- the v4 materials: one drawing each (art pass 2026-09-15) ----------
+  // The v4 tree has 111 materials and until this pass they rode the v3
+  // ladder's cells by pool and number. Each now has its own mask, keyed by
+  // tree id, so js/sprites.js finds `mat.<id>` in the sheet and the stand-ins
+  // stop being asked for. The names in docs/lessons-v4-ru.names.js are what
+  // the drawings show; if a name changes, the drawing for that id should.
+  //
+  // How they are told apart, at ten pixels and on a moving band:
+  //   the kind is the silhouette: a raw is a lump or a crystal on its rock,
+  //     a smelt is a flat-topped bar, a liquid is a drop or a vessel, a part
+  //     is its own object (rod, pipe, sheet, coil, beam, frame), a machine
+  //     is a machine;
+  //   the substance is the hue, the same one wherever it turns up: copper
+  //     stays copper from the ore to the wire, uranium glows green in the
+  //     rock, the cell and the rod;
+  //   a page's grade is one accent, the same on every kind of page: I is red,
+  //     II verdigris, III brass.
+  // Letters in a mask: l m d are a ramp's light, mid and dark (light comes
+  // from the top left, as the rim says); w is a glint; the rest are named in
+  // each drawing's tones.
+  const RAMP = {
+    ironOre: { l: P.ironore3, m: P.ironore, d: P.ironore2, r: P.rust },
+    copper: { l: P.copper3, m: P.copper, d: P.copper2, o: P.copper4 },
+    lime: { l: P.stoneore3, m: P.stoneore, d: P.stoneore2 },
+    coal: { l: P.coal3, m: P.coal, d: P.coal2, w: P.white },
+    quartz: { l: P.quartz3, m: P.quartz, d: P.quartz2, w: P.white },
+    oil: { l: P.oil3, m: P.oil, d: P.oil2, w: P.white },
+    iron: { l: P.ironL, m: P.iron, d: P.iron2, k: P.iron3, w: P.steel },
+    steel: { l: P.stBL, m: P.stB, d: P.stBD, w: P.white },
+    alu: { l: P.aluL, m: P.alu, d: P.aluD, w: P.white },
+    cat: { l: P.catL, m: P.cat, d: P.catD, w: P.white },
+    castIron: { l: P.cIronL, m: P.cIron, d: P.cIronD, k: P.iron3 },
+    brass: { a: P.brass1, b: P.brass2, e: P.brassD },
+    wood: { W: P.bB, w: P.bA, v: P.bC },
+    paper: { p: P.paper, q: P.paper2, t: P.iron2 },
+  };
+  const INGOT = ['........',
+                 '........',
+                 '.llllll.',
+                 'llwlllll',
+                 'mmmmmmmd',
+                 'mmmmmmdd',
+                 'mmmmmmdd',
+                 '.dddddd.'];
+  // pages: the kind is the object, the grade is the accent (x, and X its shade)
+  const PAGE_GRADE = [null, { x: P.red, X: P.enamD }, { x: P.teal3, X: P.teal2 }, { x: P.brass2, X: P.brass1 }];
+  const PAGE_ART = {
+    gazette: { m: ['pppppppq',
+                   'pxxxxxxq',
+                   'pppppppq',
+                   'pttpttpq',
+                   'pppppppq',
+                   'pttpttpq',
+                   'pttpttpq',
+                   'qqqqqqqq'], t: RAMP.paper },
+    letter: { m: ['........',
+                  'pppppppp',
+                  'qpppppqq',
+                  'pqpppqpq',
+                  'ppqxXqpq',
+                  'pppxxppq',
+                  'pppppppq',
+                  'qqqqqqqq'], t: RAMP.paper },
+    book: { m: ['.xxxxxx.',
+                'Xxbbbxxp',
+                'Xxxxxxxp',
+                'Xxxxxxxp',
+                'Xxxxxxxp',
+                'Xxxxxxxp',
+                'XxxxxxXp',
+                '.XXXXXpp'], t: { p: P.paper, b: P.paper } },
+    almanac: { m: ['........',
+                   '.xxxxxxx',
+                   'xxxbbxxX',
+                   'xxbbbbxX',
+                   'pppppppX',
+                   'qqqqqqqX',
+                   'pppppppX',
+                   'XXXXXXXX'], t: { p: P.paper, q: P.paper2, b: P.glow } },
+    script: { m: ['wwwwwwwv',
+                  '.pppppq.',
+                  '.ptttpq.',
+                  '.pppppq.',
+                  'xxxxxxxX',
+                  '.ptttpq.',
+                  '.pppppq.',
+                  'wwwwwwwv'], t: Object.assign({}, RAMP.paper, RAMP.wood) },
+    blueprint: { m: ['bbbbbbxx',
+                     'bbwwwbbx',
+                     'bwbbbwbB',
+                     'bwbwbwbB',
+                     'bwbbbwbB',
+                     'bbwwwbbB',
+                     'bbbbbbbB',
+                     'BBBBBBBB'], t: { b: P.blue, B: P.blueD, w: P.blueL } },
+  };
+  const page = (kind, grade) => ({ m: PAGE_ART[kind].m, t: Object.assign({}, PAGE_ART[kind].t, PAGE_GRADE[grade]) });
+  const MAT_ART = {
+    // ---- raws ----
+    R1: { m: ['........',      // Iron Ore: the angular chunk, rust in its faces
+              '..ll....',
+              '.lllm...',
+              '.llmmmmd',
+              'lmmmrmdd',
+              'mmmrmddd',
+              '.mmdd...',
+              '........'], t: RAMP.ironOre },
+    R2: { m: ['........',      // Copper Ore: the round nugget, a fleck of verdigris
+              '..llmm..',
+              '.llmmmmd',
+              '.lmmmtmd',
+              '.lmmmmdd',
+              '.mmommdd',
+              '..mdddd.',
+              '........'], t: Object.assign({ t: P.teal3 }, RAMP.copper) },
+    R3: { m: ['........',      // Limestone: the flat slab
+              '........',
+              '..llll..',
+              '.llllmmd',
+              '.mmmmmmd',
+              'mmdmmmdd',
+              '.dddddd.',
+              '........'], t: RAMP.lime },
+    R4: { m: ['........',      // Coal: the jagged lump with its one hard glint
+              '..l..m..',
+              '.llmmmmd',
+              'llmmmwmd',
+              '.mmmmmdd',
+              '.mmmddd.',
+              '..md.d..',
+              '........'], t: RAMP.coal },
+    R5: { m: ['...mm...',      // Water: a drop
+              '...mm...',
+              '..lmmm..',
+              '.llmmmd.',
+              '.lwmmmd.',
+              '.mmmmdd.',
+              '..mddd..',
+              '........'], t: { l: P.h2oL, m: P.h2o, d: P.h2oD, w: P.white } },
+    R6: { m: ['........',      // Caterium Ore: warm rock seamed with gold
+              '..llm...',
+              '.lGgmmd.',
+              '.lggmmdd',
+              'lmmmmGdd',
+              'mmmmmggd',
+              '.mmdddd.',
+              '..ddd...'], t: { l: P.hostRL, m: P.hostR, d: P.hostRD, g: P.cat, G: P.catL } },
+    R7: { m: ['.....l..',      // Raw Quartz: twin crystals still in their rock
+              '..l..lm.',
+              '.llm.lmd',
+              '.lmd.lmd',
+              '.lmdslmd',
+              'SSsssssk',
+              '.sssskk.',
+              '........'], t: Object.assign({ S: P.kA, s: P.kB, k: P.kC }, RAMP.quartz) },
+    R8: { m: ['........',      // Sulfur: a crumbling lemon lump, pitted
+              '..ll.l..',
+              '.lllmml.',
+              'llmmmmmd',
+              'lmmdmmmd',
+              '.mmmmmdd',
+              '.mdmmdd.',
+              '..d..d..'], t: { l: P.sulL, m: P.sul, d: P.sulD } },
+    R9: { m: ['...dd...',      // Crude Oil: a fat black drop with an oily sheen
+              '..lddd..',
+              '.lmdddd.',
+              '.wmddddd',
+              'lmdddddd',
+              'lmdddddd',
+              '.mddddd.',
+              '..dddd..'], t: RAMP.oil },
+    R10: { m: ['........',     // Bauxite: a brick-red chunk with pale grains in it
+               '...ll...',
+               '..llmm..',
+               '.lmcmmd.',
+               'llmmmmdd',
+               'mmmmcmdd',
+               '.mmdddd.',
+               '...dd...'], t: { l: P.bauL, m: P.bau, d: P.bauD, c: P.bauS } },
+    R11: { m: ['..G.....',     // Uranium: green crystals glowing out of dark rock
+               '..Gg.G..',
+               '.lGg.Gg.',
+               '.lgglggd',
+               'lmmmmmdd',
+               'mmgmmmdd',
+               '.mmmmdd.',
+               '..dddd..'], t: { l: P.slateL, m: P.slate, d: P.slateD, g: P.ur, G: P.urL } },
+    R12: { m: ['...be...',     // Nitrogen Gas: a bottle with a brass valve
+               '..baae..',
+               '.lmmmmd.',
+               '.lwmmmd.',
+               '.nnnnnn.',
+               '.lmmmmd.',
+               '.lmmmmd.',
+               '..dddd..'], t: Object.assign({ l: P.nitL, m: P.nit, d: P.nitD, w: P.white, n: P.iron2 }, RAMP.brass) },
+    R13: { m: ['.l...l..',     // SAM Ore: violet shards with a light inside
+               '.lm..lm.',
+               '.lmg.lgd',
+               'llgGmlgd',
+               'lmgmmmgd',
+               'mmmgmmdd',
+               '.mmddgd.',
+               '..ddd...'], t: { l: P.samL, m: P.sam, d: P.samD, g: P.samG, G: P.samW } },
+
+    // ---- smelts: a bar is a bar, its metal is its colour ----
+    S1: { m: INGOT, t: Object.assign({}, RAMP.copper, { w: P.white }) },   // Copper Ingot
+    S2: { m: INGOT, t: RAMP.iron },                                        // Iron Ingot
+    S3: { m: INGOT, t: RAMP.steel },                                       // Steel Ingot
+    S4: { m: ['.llllll.',      // Solid Steel Ingot: two bars cast as one
+              'llwlllll',
+              'mmmmmmmd',
+              'kkkkkkkk',
+              'llllllll',
+              'mmmmmmmd',
+              'mmmmmmdd',
+              '.dddddd.'], t: Object.assign({ k: P.ink }, RAMP.steel) },
+    S5: { m: ['..hhhh..',      // Iron Slurry: a pail brimming grey-brown
+              '.h....h.',
+              'hlllmmdh',
+              'abbaaaac',
+              '.abaaac.',
+              '.abaaac.',
+              '.aaaacc.',
+              '..cccc..'], t: { h: P.iron2, l: P.slurL, m: P.slur, d: P.slurD, a: P.iron, b: P.ironL, c: P.iron2 } },
+    S6: { m: INGOT, t: RAMP.cat },                                         // Caterium Ingot
+    S7: { m: ['...lm...',      // Quartz Crystal: one cut stone, out of the rock
+              '..lwmm..',
+              '.lllmmd.',
+              '.llmmmd.',
+              '.llmmmd.',
+              '.lmmmdd.',
+              '..mmdd..',
+              '...dd...'], t: RAMP.quartz },
+    S8: { m: ['...tt...',      // Black Powder: a tied sack, spilling
+              '..tSst..',
+              '..Sssc..',
+              '.SSsssc.',
+              '.Ssssscc',
+              '.ssssscc',
+              '..sccckg',
+              '.....kkk'], t: { t: P.trunk, S: P.cream, s: P.cream2, c: P.dirt3, k: P.coal2, g: P.coal3 } },
+    S9: { m: INGOT, t: { l: P.iron2, m: P.iron3, d: P.ironO, w: P.iron } },  // Pig Iron: the dark bar
+    S10: { m: ['........',     // Polymer Composite: laid up in layers
+               '.llllll.',
+               'llllllll',
+               'kkkkkkkK',
+               'aaaaaaad',
+               'kkkkkkkK',
+               'aaaaaadd',
+               '.KKKKKK.'], t: { l: P.amberL, a: P.amber, d: P.amberD, k: P.iron2, K: P.iron3 } },
+    S11: { m: INGOT, t: RAMP.alu },                                      // Aluminum Ingot: the white metal
+    S12: { m: ['..llll..',     // Encased Uranium Cell: a canister with a green window
+               '.lwllld.',
+               '.mGggmd.',
+               '.mGggmd.',
+               '.mgggdd.',
+               '.mggedd.',
+               '.mmmmdd.',
+               '..dddd..'], t: Object.assign({ g: P.ur, G: P.urL, e: P.urD }, RAMP.iron) },
+    S13: { m: ['...ff...',     // Nitric Acid: a fuming flask
+               '...cc...',
+               '...cc...',
+               '..cAac..',
+               '.cAaaae.',
+               '.caaaaee',
+               'caaaaeee',
+               '.eeeeee.'], t: { f: P.acidL, c: P.iB, A: P.acidL, a: P.acid, e: P.acidD } },
+    S14: { m: ['........',     // Magnetic Core: copper wound on an iron axle
+               '.CcCcCo.',
+               '.CcCcCo.',
+               'lCcCcCod',
+               'lCcCcCod',
+               '.CcCcCo.',
+               '.oooooo.',
+               '........'], t: { C: P.copper3, c: P.copper, o: P.copper2, l: P.ironL, d: P.iron2 } },
+
+    // ---- basic parts ----
+    K1: { m: ['......lw',      // Iron Rod
+              '.....lmd',
+              '....lmd.',
+              '...lmd..',
+              '..lmd...',
+              '.lmd....',
+              'lmd.....',
+              'md......'], t: RAMP.iron },
+    K2: { m: ['.....ml.',      // Steel Pipe: thick, and open at the end
+              '....mkkl',
+              '...lmkkm',
+              '..lmmmd.',
+              '.lmmmd..',
+              'lmmmd...',
+              'mmmd....',
+              '.dd.....'], t: Object.assign({ k: P.ink }, RAMP.steel) },
+    K3: { m: ['.ll.....',      // Iron Casting: a cast bracket with its bolt holes
+              'lmmd....',
+              'lmkd....',
+              'lmmd....',
+              'lmmlllll',
+              'lmmmmkmd',
+              'mmmmmmmd',
+              '.dddddd.'], t: RAMP.castIron },
+    K4: { m: ['WWWWWWWv',      // Caterium Filament: gold thread on a spool
+              '.vwwwwv.',
+              '..GgGe..',
+              '..gGge..',
+              '..GgGe..',
+              '..gGge..',
+              '.vwwwwv.',
+              'wwwwwwvv'], t: Object.assign({ G: P.catL, g: P.cat, e: P.catD }, RAMP.wood) },
+    K5: { m: ['...ll...',      // Silica: a white cone of grains
+              '..lllm..',
+              '..llmm..',
+              '.llmmmd.',
+              '.lmmmmd.',
+              'llmmmmdd',
+              'lmmmmddd',
+              '.dddddd.'], t: { l: P.white, m: P.silica, d: P.silicaD } },
+    K6: { m: ['.llm....',      // Compacted Coal: pressed briquettes
+              'lmmmd...',
+              'lmmmdllm',
+              'mmmdlmmd',
+              '.dddlmmd',
+              '...lmmmd',
+              '...mmmd.',
+              '....dd..'], t: RAMP.coal },
+    K7: { m: ['........',      // Plastic: a glossy pale-blue slab
+              '.lllllm.',
+              'lwwllllm',
+              'lwllllmd',
+              'lllllmmd',
+              'llllmmmd',
+              'mmmmmmdd',
+              '.dddddd.'], t: { l: P.plastL, m: P.plast, d: P.plastD, w: P.white } },
+    K8: { m: ['........',      // Aluminum Scrap: crumpled white metal
+              '...lm...',
+              '.llmlmd.',
+              'lwllmmdd',
+              '.lmlmmd.',
+              'lmmmdmdd',
+              '.mdmmdd.',
+              '...dd...'], t: RAMP.alu },
+    K9: { m: ['..lllm..',      // Uranium Fuel Rod: steel, banded with glow
+              '..lmmd..',
+              '..GggE..',
+              '..GggE..',
+              '..lmmd..',
+              '..GggE..',
+              '..GggE..',
+              '..mddd..'], t: Object.assign({ G: P.urL, g: P.ur, E: P.urD }, RAMP.iron) },
+    K10: { m: ['...ba...',     // Battery: an upright copper cell, its terminal brass
+               '.kkkkkk.',
+               '.Cwccco.',
+               '.Ccccco.',
+               '.Ccccco.',
+               '.Ccccoo.',
+               '.kkkkkk.',
+               '..oooo..'], t: Object.assign({ C: P.copper3, c: P.copper, o: P.copper2, w: P.white, k: P.iron3 }, RAMP.brass) },
+    K11: { m: ['...lm...',     // Reanimated SAM: the violet light, cut clean
+               '..lggm..',
+               '.lgGggd.',
+               'lgGGgggd',
+               'mggggggd',
+               '.mggggd.',
+               '..mggd..',
+               '...dd...'], t: { l: P.samL, m: P.sam, d: P.samD, g: P.samG, G: P.samW } },
+    K12: { m: ['.....w..',     // Power Shard: a splinter of yellow light
+               '....lwd.',
+               '...lwmd.',
+               '..lwmmd.',
+               '..lmmdd.',
+               '.lmmdd..',
+               '.lmdd...',
+               '..dd....'], t: { l: P.brass3, w: P.white, m: P.glow, d: P.brass1 } },
+    K13: { m: ['...bb...',     // Superposition Oscillator: rings about a spark
+               '..bkka..',
+               '.bbooaa.',
+               'bkoOOoke',
+               'bkooooke',
+               '.aaooee.',
+               '..akke..',
+               '...ee...'], t: Object.assign({ k: P.soot, o: P.iA, O: P.white }, RAMP.brass) },
+    K14: { m: ['..oooo..',     // Excited Photonic Matter: light held in a globe
+               '.oCCOoo.',
+               'oCCCOOoi',
+               'oCCOOooi',
+               'oOOOooii',
+               '.ooooii.',
+               '..abbe..',
+               '.aabbee.'], t: Object.assign({ C: P.white, O: P.wF, o: P.iA, i: P.iC }, RAMP.brass) },
+
+    // ---- parts ----
+    W1: { m: ['........',      // Copper Sheet
+              '........',
+              '...lllll',
+              '..lllllm',
+              '.lllllmd',
+              'mmmmmmd.',
+              'dddddd..',
+              '........'], t: RAMP.copper },
+    W2: { m: ['.llllll.',      // Iron Plate: square, holed at the corners
+              'lkllllkm',
+              'llllllmd',
+              'lllllmmd',
+              'llllmmmd',
+              'lkmmmmkd',
+              'mmmmmmdd',
+              '.dddddd.'], t: RAMP.iron },
+    W3: { m: ['..lomm..',      // Wire: a coil of copper
+              '.llmomd.',
+              'lom..mdd',
+              'lm....od',
+              'om....dd',
+              'mmd..odd',
+              '.momddd.',
+              '..dddd..'], t: RAMP.copper },
+    W4: { m: ['lllllllm',      // Steel Beam: the I-beam, end on
+              'mmmmmmdd',
+              '...lm...',
+              '...lm...',
+              '...lm...',
+              '...lm...',
+              'lllllllm',
+              'mmmmmmdd'], t: RAMP.steel },
+    W5: { m: ['.cccccc.',      // Encased Industrial Beam: the I set in concrete
+              'clllllmK',
+              'cccmdkkK',
+              'cccmdkkK',
+              'cccmdkkK',
+              'clllllmK',
+              'kkkkkkKK',
+              '.KKKKKK.'], t: Object.assign({ c: P.kA, k: P.kB, K: P.kC }, RAMP.steel) },
+    W6: { m: ['.....l.l',      // Iron Rebar: ribbed and rust-red
+              '....lmlm',
+              '...lmlmd',
+              '..lmlmd.',
+              '.lmlmd..',
+              'lmlmd...',
+              'mlmd....',
+              '.md.....'], t: { l: P.rustL, m: P.rust, d: P.rustD } },
+    W7: { m: ['.llllm..',      // Quickwire: a gold spring
+              'l....md.',
+              '.llllmd.',
+              'l....md.',
+              '.llllmd.',
+              'l....md.',
+              '.llllmd.',
+              '.....d..'], t: RAMP.cat },
+    W8: { m: ['........',      // Crystal Oscillator: quartz in a brass mount
+              '.bbbbba.',
+              '.bQqqaE.',
+              '.bQqeaE.',
+              '.bqeeaE.',
+              '.aaaaEE.',
+              '..a..E..',
+              '..a..E..'], t: { b: P.brass2, a: P.brass1, E: P.brassD, Q: P.quartz3, q: P.quartz, e: P.quartz2 } },
+    W9: { m: ['.....os.',      // Nobelisk: a black bomb, fuse lit
+              '....fo..',
+              '...f....',
+              '..llkk..',
+              '.lwkkkK.',
+              '.lkkkkK.',
+              '.kkkkKK.',
+              '..KKKK..'], t: { o: P.orange, s: P.glow, f: P.cream2, l: P.coal3, w: P.white, k: P.coal, K: P.coal2 } },
+    W10: { m: ['.llllll.',     // Iron Casing: a hollow banded drum
+               'lkkkkkkd',
+               'llkkkkdd',
+               'lmmmmmmd',
+               'laaaaaad',
+               'lmmmmmmd',
+               'lmmmmmdd',
+               '.dddddd.'], t: Object.assign({ a: P.brass1 }, RAMP.iron) },
+    W11: { m: ['.GGGGGG.',     // Circuit Board: green, traced in brass
+               'Ggaaaggd',
+               'Ggaskkgd',
+               'Gggkkkad',
+               'Gagkkkad',
+               'Gagggaad',
+               'Gaaaggdd',
+               '.dddddd.'], t: { G: P.pcbL, g: P.pcb, d: P.pcbD, a: P.brass2, k: P.iron3, s: P.steel } },
+    W12: { m: ['........',     // Alclad Aluminum Sheet: white metal clad on copper
+               '...lllll',
+               '..lllllm',
+               '.mmmmmmd',
+               'cccccco.',
+               'oooooo..',
+               '........',
+               '........'], t: Object.assign({ c: P.copper, o: P.copper2 }, RAMP.alu) },
+    W13: { m: ['......lb',     // Electromagnetic Control Rod: a rod with a winding
+               '.....lmb',
+               '....CCo.',
+               '...CcCo.',
+               '..CcCo..',
+               '.lmoo...',
+               'lmd.....',
+               'bd......'], t: Object.assign({ C: P.copper3, c: P.copper, o: P.copper2, b: P.brass2 }, RAMP.iron) },
+    W14: { m: ['lllylllm',     // Fused Modular Frame: the frame, welded hot
+               'llmmmmmd',
+               'lmkkkomd',
+               'ymkkokmy',
+               'lmkokkmd',
+               'lmokkkmd',
+               'lmmmmmdd',
+               'mdddyddd'], t: { l: P.iron, m: P.iron2, d: P.iron3, k: P.ironO, o: P.orange, y: P.glow } },
+    W15: { m: ['..llll..',     // Magnetic Field Generator: the horseshoe
+               '.lmmmmd.',
+               'lmd..mmd',
+               'lm....md',
+               'lm....md',
+               'lm....md',
+               'ss....ss',
+               'SS....SS'], t: { l: P.orange, m: P.red, d: P.enam, s: P.steel, S: P.ironL } },
+
+    // ---- frames ----
+    P1: { m: ['lllllllm',      // Reinforced Iron Plate: a plate braced and screwed
+              'lwllllwd',
+              'llkllkmd',
+              'lllkkmmd',
+              'lllkkmmd',
+              'llkmmkmd',
+              'lwmmmmwd',
+              'mddddddd'], t: RAMP.iron },
+    P2: { m: ['lllllllm',      // Modular Frame: an open square, braced
+              'llmmmmmd',
+              'lmkkklmd',
+              'lmkklkmd',
+              'lmklkkmd',
+              'lmlkkkmd',
+              'lmmmmmdd',
+              'mddddddd'], t: RAMP.iron },
+
+    // ---- machines and assemblies ----
+    T1: { m: ['........',      // Rotor: a laminated armature on its shaft
+              '..lmlm..',
+              '..lmlmc.',
+              'ssmmmmCs',
+              'ssmmmmcs',
+              '..dmdmc.',
+              '..dmdm..',
+              '........'], t: Object.assign({ s: P.steel, C: P.copper3, c: P.copper }, RAMP.iron) },
+    T2: { m: ['..llll..',      // Stator: a ring wound with copper
+              '.llCCmd.',
+              'lmkkkkmd',
+              'lCkkkkod',
+              'lCkkkkod',
+              'lmkkkkdd',
+              '.mmoodd.',
+              '..dddd..'], t: Object.assign({ C: P.copper3, o: P.copper2 }, RAMP.iron) },
+    T3: { m: ['........',      // Motor: an enamelled body and its shaft
+              '.RRRRe..',
+              'RrRrRe..',
+              'RrRrResS',
+              'RrRrRe..',
+              'rrrrre..',
+              '.eeeee..',
+              '.dd.dd..'], t: { R: P.enamL, r: P.enam, e: P.enamD, s: P.steel, S: P.ironL, d: P.iron2 } },
+    T4: { m: ['bllllllb',      // Heavy Modular Frame: four windows, brass bolts
+              'lkkmmkkd',
+              'lkkmmkkd',
+              'lmmmmmmd',
+              'lmmmmmmd',
+              'lkkmmkkd',
+              'lkkmmkkd',
+              'bddddddb'], t: { b: P.brass2, l: P.ironL, m: P.iron, d: P.iron2, k: P.ironO } },
+    T5: { m: ['......g.',      // Radio Control Unit: a wireless set and its aerial
+              '......s.',
+              '......s.',
+              'WWWWWWWv',
+              'Wbbwkkwv',
+              'Wbawkwkv',
+              'Wwwwwwvv',
+              '.vvvvvv.'], t: Object.assign({ g: P.glow, s: P.steel, k: P.iron3 }, RAMP.brass, RAMP.wood) },
+    T6: { m: ['.b......',      // Control Panel: lamps, a gauge and a lever
+              '.a..llll',
+              '.alllmmd',
+              'llmrmgmd',
+              'lmkkkkmd',
+              'lmgmrmmd',
+              'lmmmmmdd',
+              '.dddddd.'], t: Object.assign({ r: P.red, g: P.green }, RAMP.brass, RAMP.iron) },
+    T7: { m: ['.ssssss.',      // Nobelisk Detonator: the plunger box
+              '...Sk...',
+              '...Sk...',
+              'WWWWWWWv',
+              'WwwcwwWv',
+              'WwwwwwWv',
+              'Wwwwwwvv',
+              '.vvvvvv.'], t: { s: P.steel, S: P.ironL, k: P.iron2, W: P.enamL, w: P.enam, v: P.enamD, c: P.cream } },
+    T8: { m: ['..bbaa..',      // Turbine Housing: a brass cowl, spoked
+              '.bKmlKe.',
+              'bKKmlKKe',
+              'bmmllmme',
+              'allmmlle',
+              'aKKmlKKe',
+              '.aKmlKe.',
+              '..eeee..'], t: Object.assign({ K: P.ironO }, RAMP.brass, RAMP.iron) },
+    T9: { m: ['.ss.....',      // Fuel Generator: a boiler with its fire lit
+              '.lm.....',
+              '.lmllll.',
+              'llllllmd',
+              'lmkkkkmd',
+              'lmkyokmd',
+              'lmmmmmdd',
+              '.dd..dd.'], t: Object.assign({ s: P.steam, k: P.soot, y: P.glow, o: P.orange }, RAMP.iron) },
+    T10: { m: ['.llllll.',     // Computer: a lit screen over a keyboard
+               'lkkkkkmd',
+               'lkgkgkmd',
+               'lkkgkkmd',
+               'lkkkkkmd',
+               'mmmmmmdd',
+               'lslslsld',
+               'dddddddd'], t: Object.assign({ k: P.soot, g: P.green, s: P.steel }, RAMP.iron) },
+    T11: { m: ['lllllllm',     // Supercomputer: a cabinet of tape reels and lamps
+               'lsssKrkd',
+               'lsKsKkgd',
+               'lsssKykd',
+               'lsssKkrd',
+               'lsKsKgkd',
+               'lsssKkyd',
+               'dddddddd'], t: { l: P.iron, m: P.iron2, d: P.iron3, s: P.steel, K: P.ink, k: P.soot, r: P.red, g: P.green, y: P.glow } },
+    T12: { m: ['lklklklm',     // Heat Sink: fins on a block
+               'lklklkld',
+               'lklklkmd',
+               'lklklkmd',
+               'llllllmd',
+               'mmmmmmmd',
+               'mmmmmmdd',
+               '.dddddd.'], t: Object.assign({ k: P.iron3 }, RAMP.alu) },
+    T13: { m: ['...sSs..',     // Cooling System: a cooling tower, breathing vapour
+               '..sSsss.',
+               '.lllmmd.',
+               '.llmmmd.',
+               '.bbbbbb.',
+               '.llmmmd.',
+               'llmmmmdd',
+               'lmmmmmdd'], t: { s: P.steam, S: P.white, l: P.kA, m: P.kB, d: P.kC, b: P.iA } },
+    T14: { m: ['..llll..',     // Reactor Assembly: a dome with a green heart
+               '.lllmmd.',
+               'llkggkmd',
+               'lkgGGgkd',
+               'lkgGggkd',
+               'lmkggkmd',
+               'ssssssss',
+               'mddddddd'], t: Object.assign({ g: P.ur, G: P.urL, s: P.steel }, RAMP.iron) },
+    T15: { m: ['.bba....',     // Turbo Motor: the motor with a turbine on its nose
+               'bKmKaRRe',
+               'bmlmaRre',
+               'bKmKaRre',
+               '.aaaRrre',
+               '....rrre',
+               '...eeeee',
+               '...d..d.'], t: { b: P.brass2, a: P.brass1, K: P.ironO, m: P.iron, l: P.ironL, R: P.enamL, r: P.enam, e: P.enamD, d: P.iron2 } },
+    T16: { m: ['..bbba..',     // Assembly Director System: an orrery on its stand
+               '.bOwooe.',
+               'bOooooae',
+               'bbbbbaae',
+               'aoooooee',
+               '.aoooee.',
+               '...ae...',
+               '.aaaeee.'], t: Object.assign({ O: P.wF, w: P.white, o: P.stB }, RAMP.brass) },
+    T17: { m: ['.b....e.',     // SAM Fluctuator: a violet crystal held in a fork
+               '.b.gG.e.',
+               '.b.Gg.e.',
+               '.b.gd.e.',
+               '.bb..ee.',
+               '..baae..',
+               '...ae...',
+               '..aaee..'], t: Object.assign({ g: P.samG, G: P.samW, d: P.sam }, RAMP.brass) },
+    T18: { m: ['...ll...',     // Alien Power Matrix: a violet cube, its seam alight
+               '.llllll.',
+               'mlllllld',
+               'mmmllddd',
+               'mmmgGddd',
+               'mmmgGddd',
+               '.mmgGdd.',
+               '...gG...'], t: { l: P.samL, m: P.sam, d: P.samD, g: P.samG, G: P.samW } },
+    T19: { m: ['.....gG.',     // Ballistic Warp Drive: a cannon firing into a rift
+               'lllbmgvg',
+               'lmmbmgvG',
+               'lmmbmgvg',
+               'dddbdgGg',
+               '.aea.gg.',
+               'aeeea...',
+               '.eee....'], t: Object.assign({ g: P.samG, G: P.samW, v: P.sam }, RAMP.brass, RAMP.iron) },
+
+    // ---- byproducts ----
+    B1: { m: ['lls.....',      // Screw
+              'lssd....',
+              'sddkm...',
+              '...smd..',
+              '...dsmd.',
+              '....dsm.',
+              '.....dm.',
+              '......d.'], t: { l: P.white, s: P.steel, m: P.ironL, d: P.iron, k: P.iron2 } },
+    B2: { m: ['........',      // Steel Offcuts: sawn-off stubs
+              '.lll....',
+              '.mmd.ll.',
+              '.ddd.md.',
+              '..llll..',
+              '..mmmd..',
+              'll.ddd..',
+              'md......'], t: RAMP.steel },
+    B3: { m: ['........',      // Slag: a pitted clinker, a seam of ember in it
+              '..ll.m..',
+              '.llmmmd.',
+              'lmkmmodd',
+              'lmmmoddd',
+              'mmmodmdd',
+              '.mkddkd.',
+              '..dddd..'], t: { l: P.slagL, m: P.slag, d: P.slagD, k: P.tarD, o: P.orange } },
+    B4: { m: ['.......l',      // Spare Wire: a cut hank, twisted on itself
+              '......l.',
+              '.lm..lm.',
+              'l..ml..d',
+              'm..dm..d',
+              '.dd..dd.',
+              'd.......',
+              '........'], t: RAMP.copper },
+    B5: { m: ['....l...',      // Iron Scrap: rusted odds and ends
+              '.l..lm..',
+              'lmr.lrd.',
+              '.rdlmdd.',
+              '..lrrmd.',
+              '.lmdrd..',
+              'lmd.dd.l',
+              '.d....md'], t: { l: P.iron, m: P.iron2, d: P.iron3, r: P.rust } },
+    B6: { m: ['........',      // Quartz Dust: a sparkling pink spill
+              '........',
+              '....w...',
+              '...wlw..',
+              '..llll.w',
+              '.llmmmd.',
+              'lmmmwmdd',
+              '.dddddd.'], t: RAMP.quartz },
+    B7: { m: ['........',      // Sulfuric Residue: a yellow sludge, bubbling
+              '........',
+              '.....Yy.',
+              '....Yye.',
+              '.YYyyee.',
+              'YyyyyyeE',
+              'yyeyyeEE',
+              '.EEEEEE.'], t: { Y: P.sulL, y: P.sul, e: P.sulD, E: P.mC } },
+    B8: { m: ['........',      // Heavy Oil Residue: a dripping glob of tar
+              '..lbkk..',
+              '.lbkkkK.',
+              'lbkkkkKK',
+              'bkkkkKKK',
+              '.kkkKKK.',
+              '..K..K..',
+              '..K.....'], t: { l: P.tarL, b: P.gun, k: P.tar, K: P.tarD } },
+    B9: { m: ['........',      // Polymer Resin: amber beads
+              '.Aa.....',
+              'Awad.Aa.',
+              '.dd.Awad',
+              '..Aa.dd.',
+              '.Awad...',
+              '..dd....',
+              '........'], t: { A: P.amberL, a: P.amber, d: P.amberD, w: P.white } },
+    B10: { m: ['........',     // Petroleum Coke: a heap of spongy black
+               '........',
+               '...gl...',
+               '..glkg..',
+               '.glkgkK.',
+               'glkgkkKK',
+               'lkkgkKKK',
+               '.KKKKKK.'], t: { g: P.ash, l: P.coal3, k: P.coal, K: P.coal2 } },
+    B11: { m: ['........',     // Concrete: a cinder block
+               '.cccccc.',
+               'ckckckcm',
+               'cccccccm',
+               'mmmmmmmd',
+               'mkmmmkmd',
+               'mmmkmmdd',
+               '.dddddd.'], t: { c: P.kA, k: P.kC, m: P.kB, d: P.kD } },
+    B12: { m: ['..gGg...',     // Uranium Waste: a hazard drum, leaking green
+               '.lgGgmd.',
+               'lmmgmmmd',
+               'YYYYYYYe',
+               'lmmmmmmd',
+               'lmmmmmmd',
+               'YYYYYYee',
+               '.dddddd.'], t: Object.assign({ g: P.ur, G: P.urL, Y: P.brass2, e: P.brass1 }, RAMP.iron) },
+    B13: { m: ['........',     // Copper Powder: a smooth copper mound
+               '........',
+               '........',
+               '...ll...',
+               '..llmm..',
+               '.llmmmd.',
+               'lmmmmodd',
+               '.dddddd.'], t: RAMP.copper },
+    B14: { m: ['........',     // Iron Filings: a bristling grey pile
+               '........',
+               '..l.l...',
+               '.l.lml.m',
+               '.lmlmmd.',
+               'lmlmmmdd',
+               'lmmdmmdd',
+               '.dddddd.'], t: RAMP.iron },
+
+    // ---- pages ----
+    G1: page('gazette', 1), G2: page('letter', 1), G3: page('book', 1), G4: page('almanac', 1),
+    G5: page('gazette', 2), G6: page('book', 2), G7: page('letter', 2), G8: page('script', 1),
+    G9: page('almanac', 2), G10: page('script', 2), G11: page('gazette', 3), G12: page('blueprint', 1),
+    G13: page('book', 3), G14: page('letter', 3), G15: page('script', 3), G16: page('blueprint', 2),
+    G17: page('almanac', 3), G18: page('blueprint', 3),
+    G19: { m: ['...ss...',     // Formula Sheet: a worked sheet on a clipboard
+               'wwSssSwv',
+               'wttttppv',
+               'wppppppv',
+               'wtttttpv',
+               'wppppppv',
+               'wtttpppv',
+               'vvvvvvvv'], t: Object.assign({ s: P.steel, S: P.ironL }, RAMP.wood, RAMP.paper) },
+    G20: { m: ['pppppppq',     // Program Listing: green-barred fanfold, holed
+               'kggggggk',
+               'pppppppq',
+               'pggggggq',
+               'kpppppqk',
+               'pggggggq',
+               'pppppppq',
+               'qpqpqpqp'], t: { p: P.paper, q: P.paper2, g: P.gbar, k: P.iron2 } },
+  };
+
   // ---------- grade: the twinkle that says how deep a good was dug ----------
   // A deep or pure ore wears its family's art, so a bag of iron ore and a bag
   // of deep iron were the same picture twice — told apart by a pip one pixel
@@ -2411,6 +3267,7 @@
     return c;
   }
   function matBody(kind) {
+    if (MAT_ART[kind]) return matMask(MAT_ART[kind].m, MAT_ART[kind].t);
     const spec = (window.CHAIN && window.CHAIN.MATS && window.CHAIN.MATS[kind]) || null;
     const form = spec ? spec.form : (kind === 'money' ? 'money' : 'crates');
     if (form === 'ore') {

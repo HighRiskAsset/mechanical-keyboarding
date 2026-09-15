@@ -566,8 +566,19 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   hands (index moss, middle teal, ring slate, pinky plum; `--finger-2` to
   `--finger-5` in the stylesheet), in place of the old left/right pair. The
   gap in the slab already tells the hands apart; the tints tell the fingers.
-  Presentation only, and the first of the teaching aids: a hands-on-board
-  card before play is the next.
+  Presentation only, and the first of the teaching aids.
+- **How to play (user decision, 2026-09-15).** A link on the world picker
+  opens seven cards, read before a world is chosen and never during play:
+  every machine is a typing lesson; hands on the home keys; eyes on the
+  line, hints from the screen keyboard, never a look at the physical one;
+  finding home again by the ridges under the index fingers; which finger
+  owns which key, by the tints; working a machine (arrows, Space, the line);
+  and moving on (ore, materials, the bag, building, prices). The visuals
+  are the game's own: the slab under the drill drawn small with caps lit,
+  ridged or tinted up, and the sprites the map is built from. Arrows page,
+  Escape leaves, and the last card sends the player back to the worlds.
+  The teaching stops there: nothing about mechanics beyond what operating
+  a machine needs.
 - **The two switches** (on the map picker, and again in settings): interface
   language and keyboard course, stacked, language above layout. Both are
   flags — drawn in `flags.js` on a 21×14 pixel grid, because Windows ships no

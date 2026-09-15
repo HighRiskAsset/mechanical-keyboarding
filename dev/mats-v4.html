@@ -1,0 +1,150 @@
+<!doctype html>
+<!-- The v4 material sheet (dev only): proof and merge, from the generator.
+     PROOF (default): every material of the tree, grouped by pool. Each cell
+     shows the stand-in the game draws today (the v3 cell js/sprites.js picks
+     by pool and number), the new drawing large, and the new drawing at the
+     game's own 3x on the belt band and on the HUD plate; then every material
+     at 3x in a row, to see whether a band of them can be told apart.
+     Uploads assets/inbox/mats-v4.png. ?pool=R,S narrows it; ?s=6 is the zoom.
+     MERGE (?merge=1): lays a `mat.<id>` cell for every v4 material into the
+     live materials sheet, keeping every cell already there where it is (the
+     v3 cells, the grade marks, the menu icons) and replacing a v4 cell that
+     is already in the sheet. Writes materials.png + .json to assets/inbox, or
+     to assets/sprites with &to=sprites.
+     Open: http://localhost:8123/dev/mats-v4.html -->
+<meta charset="utf-8">
+<title>v4 materials</title>
+<style>
+  body { margin: 0; background: #1a1a20; color: #ddd; font: 12px/1.4 monospace; }
+  #out { image-rendering: pixelated; display: block; margin: 8px; }
+  #log { padding: 8px; white-space: pre-wrap; }
+</style>
+<div id="log"></div>
+<canvas id="out"></canvas>
+<script src="gen/pixels.js"></script>
+<script src="../js/tree-ru.js"></script>
+<script src="../js/tree-en.js"></script>
+<script>
+(async function () {
+  const Q = new URLSearchParams(location.search);
+  const logEl = document.getElementById('log');
+  const log = (s) => { logEl.textContent += s + '\n'; };
+  const MATS = TREE_RU.materials;
+  const en = TREE_EN.materials.map((m) => m.id + m.name).join();
+  if (en !== MATS.map((m) => m.id + m.name).join()) log('NOTE: the EN tree names its materials differently from RU; drawn from RU');
+
+  const PX = 10;
+  const loadImg = (src) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+  const sheetJson = await (await fetch('../assets/sprites/materials.json', { cache: 'no-store' })).json();
+  const sheetImg = await loadImg('../assets/sprites/materials.png?' + Date.now());
+  const cellOf = (key) => {
+    const e = sheetJson.sprites[key];
+    if (!e) return null;
+    const [c, x] = [document.createElement('canvas'), null];
+    c.width = e.w; c.height = e.h;
+    c.getContext('2d').drawImage(sheetImg, e.x, e.y, e.w, e.h, 0, 0, e.w, e.h);
+    return c;
+  };
+  async function put(name, blob, dir) {
+    const r = await fetch('/upload?name=' + encodeURIComponent(name) + '&dir=' + dir, { method: 'POST', body: blob });
+    log('  ' + name + ' -> ' + r.status + ' ' + await r.text());
+  }
+  const toBlob = (c) => new Promise((res) => c.toBlob(res, 'image/png'));
+
+  if (Q.get('merge')) {
+    const dir = Q.get('to') === 'sprites' ? 'sprites' : 'inbox';
+    const sprites = sheetJson.sprites;
+    const W = sheetImg.width;
+    const perRow = Math.floor(W / PX);
+    const fresh = MATS.filter((m) => !sprites['mat.' + m.id]);
+    const rows = Math.ceil(fresh.length / perRow);
+    const c = document.createElement('canvas');
+    c.width = W; c.height = sheetImg.height + rows * PX;
+    const x = c.getContext('2d');
+    x.drawImage(sheetImg, 0, 0);
+    let i = 0;
+    for (const m of MATS) {
+      const key = 'mat.' + m.id;
+      if (!sprites[key]) {
+        sprites[key] = { x: (i % perRow) * PX, y: sheetImg.height + Math.floor(i / perRow) * PX, w: PX, h: PX };
+        i++;
+      }
+      const e = sprites[key];
+      x.clearRect(e.x, e.y, e.w, e.h);
+      x.drawImage(PIXELS.matBodyCanvas(m.id), e.x, e.y);
+    }
+    log('merge: ' + MATS.length + ' v4 materials, ' + fresh.length + ' new cells in ' + rows + ' rows; sheet ' + c.width + 'x' + c.height + ' -> assets/' + dir);
+    document.getElementById('out').replaceWith(c);
+    c.style.cssText = 'image-rendering:pixelated;width:' + c.width * 3 + 'px;margin:8px';
+    await put('materials.png', await toBlob(c), dir);
+    await put('materials.json', new Blob([JSON.stringify(sheetJson, null, 1)], { type: 'application/json' }), dir);
+    return;
+  }
+
+  // the stand-in js/sprites.js draws today for a v4 id that has no cell of
+  // its own (copied from its RAW_ART / POOL_ART, for the comparison only)
+  const RAW_ART = { R1: 'iron', R2: 'copper', R3: 'stone', R4: 'coal', R5: 'oil3', R6: 'quartz2', R7: 'quartz', R8: 'coal3', R9: 'oil', R10: 'stone2', R11: 'quartz3', R12: 'oil2', R13: 'iron2' };
+  const POOL_ART = {
+    S: ['bronze', 'castiron', 'qziron', 'steel', 'brass', 'blackiron', 'gunmetal', 'glass', 'naphtha', 'cokebrass', 'petrolglass', 'flashcopper', 'qzbronze', 'caststeel'],
+    K: ['copper2', 'iron2', 'stone2', 'coal2', 'quartz2', 'oil2', 'quartz3', 'coal3'],
+    W: ['parts', 'mold', 'rivetiron', 'bellquartz'], P: ['modules', 'fast'],
+    T: ['sealed', 'bound', 'blackbrass', 'qzsteel', 'cokeiron'],
+    B: ['coal2', 'stone2', 'coal3', 'copper2', 'iron2', 'quartz2', 'oil2'], G: ['crate', 'heavy'],
+  };
+  const standIn = (id) => {
+    const m = /^([A-Z])(\d+)$/.exec(id);
+    const art = m[1] === 'R' ? RAW_ART[id] : POOL_ART[m[1]][(+m[2] - 1) % POOL_ART[m[1]].length];
+    return cellOf('mat.' + art) || cellOf('mat.crate');
+  };
+
+  const S = +(Q.get('s') || 6);
+  const pools = (Q.get('pool') || 'R,S,K,W,P,T,B,G').split(',');
+  const POOL_NAME = { R: 'raws', S: 'smelts', K: 'basic parts', W: 'parts', P: 'frames', T: 'machines and assemblies', B: 'byproducts', G: 'pages' };
+  const BAND = '#1b1928', PLATE = '#2c2740';
+  const COLS = 8, CW = 60 + PX * S + 30 + 16, CH = PX * S + 34, TITLE = 26;
+  const groups = pools.map((p) => MATS.filter((m) => m.id[0] === p).sort((a, b) => +a.id.slice(1) - +b.id.slice(1)));
+  const shown = groups.flat();
+  const RUN = 40, RUNROWS = Math.ceil(shown.length / RUN);
+  let H = 8;
+  for (const g of groups) H += TITLE + Math.ceil(g.length / COLS) * CH;
+  H += TITLE + RUNROWS * 48 + 8;
+  const W = Math.max(COLS * CW + 16, RUN * 48 + 16);
+  const out = document.getElementById('out');
+  out.width = W; out.height = H;
+  const x = out.getContext('2d');
+  x.imageSmoothingEnabled = false;
+  x.fillStyle = '#26262e'; x.fillRect(0, 0, W, H);
+  const text = (s, px, py, col, size) => { x.fillStyle = col; x.font = (size || 11) + 'px monospace'; x.fillText(s, px, py); };
+  const blit = (c, px, py, k) => x.drawImage(c, 0, 0, c.width, c.height, px, py, c.width * k, c.height * k);
+
+  let y = 8;
+  groups.forEach((g, gi) => {
+    text(pools[gi] + ': ' + POOL_NAME[pools[gi]] + ' (' + g.length + ')', 8, y + 17, '#e0b860', 14);
+    y += TITLE;
+    g.forEach((m, i) => {
+      const cx = 8 + (i % COLS) * CW, cy = y + Math.floor(i / COLS) * CH;
+      x.fillStyle = BAND; x.fillRect(cx, cy, 44, 44);
+      blit(standIn(m.id), cx + 2, cy + 2, 4);
+      x.fillStyle = BAND; x.fillRect(cx + 50, cy, PX * S, PX * S);
+      const art = PIXELS.matBodyCanvas(m.id);
+      blit(art, cx + 50, cy, S);
+      x.fillStyle = BAND; x.fillRect(cx + 54 + PX * S, cy, 34, 34);
+      blit(art, cx + 56 + PX * S, cy + 2, 3);
+      x.fillStyle = PLATE; x.fillRect(cx + 54 + PX * S, cy + 34, 34, 26);
+      blit(art, cx + 56 + PX * S, cy + 32, 3);
+      text(m.id + ' ' + m.name, cx, cy + PX * S + 14, '#fff4dc', 11);
+    });
+    y += Math.ceil(g.length / COLS) * CH;
+  });
+  text('at the game\'s 3x, a tile apart on the band', 8, y + 17, '#e0b860', 14);
+  y += TITLE;
+  shown.forEach((m, i) => {
+    const cx = 8 + (i % RUN) * 48, cy = y + Math.floor(i / RUN) * 48;
+    x.fillStyle = BAND; x.fillRect(cx, cy, 48, 48);
+    blit(PIXELS.matBodyCanvas(m.id), cx + 9, cy + 9, 3);
+  });
+
+  const name = Q.get('name') || 'mats-v4.png';
+  await put(name, await toBlob(out), 'inbox');
+})().catch((e) => { document.getElementById('log').textContent += 'ERROR ' + (e.stack || e); });
+</script>

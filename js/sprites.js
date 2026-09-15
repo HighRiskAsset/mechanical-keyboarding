@@ -217,11 +217,13 @@
   // ---------- materials ----------
   // A material is one cell; its grade is a second sprite laid over it, never
   // baked in (two grades, twelve frames, shared by the whole game).
-  // The v4 tree's materials, machines and veins have no cells of their own
-  // yet (placeholder art, 2026-09-12): each rides an old cell chosen by its
-  // pool and number, so the bag, the belts and the menus stay legible until
-  // the art is drawn. A cell named for the id itself wins the moment it is
-  // in the sheet, so the art lands one material at a time.
+  // The v4 tree's machines and veins have no cells of their own yet
+  // (placeholder art, 2026-09-12): each rides an old cell chosen by its kind.
+  // Every v4 material has had its own `mat.<id>` cell since the art pass of
+  // 2026-09-15 (drawn as MAT_ART in dev/gen/pixels.js, laid into the sheet by
+  // dev/mats-v4.html?merge=1). The pool-and-number stand-ins below are only
+  // the fallback for an id the sheet does not have yet; a cell named for the
+  // id itself always wins.
   const RAW_ART = { R1: 'iron', R2: 'copper', R3: 'stone', R4: 'coal', R5: 'oil3', R6: 'quartz2', R7: 'quartz', R8: 'coal3', R9: 'oil', R10: 'stone2', R11: 'quartz3', R12: 'oil2', R13: 'iron2' };
   const POOL_ART = {
     S: ['bronze', 'castiron', 'qziron', 'steel', 'brass', 'blackiron', 'gunmetal', 'glass', 'naphtha', 'cokebrass', 'petrolglass', 'flashcopper', 'qzbronze', 'caststeel'],
@@ -364,6 +366,7 @@
     nodeCanvas: (kind, vert) => cell('veins', veinName(kind, vert)),
     sceneryCanvas: (kind) => cell('scenery', kind),
     propCanvas: (kind) => cell('props', kind),
+    characterCanvas: (pose, frame) => cell('character', pose || 'idle.side', frame || 0),   // the how-to-play cards
     machineCanvas: (tier, frame, mode, facing) => cell('mine', tier + '.' + (facing || 's') + '.' + (mode || 'work'), frame),
     stationCanvas: (kind, frame, mode, facing) => cell('station-' + kind, (facing || 's') + '.' + (mode || 'work'), frame),
   };

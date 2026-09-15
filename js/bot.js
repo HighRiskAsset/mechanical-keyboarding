@@ -719,20 +719,46 @@
     throw loop;
   }
   const minePrice = (p, ore) => (CHAIN.oreOpen(p, ore) ? CHAIN.priceExtraMine(ore) : CHAIN.priceNode(ore));
+  // the keystrokes a second a hand types at this pace (the harness sets its
+  // own when the switch is off)
+  const cps = () => CPS[mode] || BOT.tune.CPS;
+  // Wait, or build and type? Every source of what is short runs itself, and
+  // an engine is not worked by hand, so the plan so far would stand and wait
+  // for the engines to bring it. A player would not stand there: they would
+  // put up another of the machine and type it out. So the wait is timed at
+  // the engines' own rate against the build (its walk, its price made from
+  // scratch) and the typing, and whichever has it in the bag sooner is what
+  // the operator does. The engines work on through the build, so the
+  // comparison only ever errs toward waiting.
+  function handsSooner(short, engines, secsPerUnit, price, ksPerUnit) {
+    if (short <= 0 || !engines) return false;
+    const waitS = (short * secsPerUnit) / engines;
+    const priceKs = Object.entries(price || {}).reduce((a, [mat, q]) => a + q * unitCost(mat), 0);
+    return BOT.tune.BUILD_S + (priceKs + short * ksPerUnit) / cps() < waitS;
+  }
   function mineFor(p, ore, target, depth) {
     const mines = CHAIN.machinesOfOre(p, ore);
     const price = minePrice(p, ore) || {};
     const full = mines.slice().sort((a, b) => ((b.buf && b.buf.out[ore]) || 0) - ((a.buf && a.buf.out[ore]) || 0))[0];
     const inBin = (full && full.buf && full.buf.out[ore]) || 0;
-    // every mine of it runs itself, and another costs the very ore that is
-    // short. While the game still asks for a bag's worth per mine standing,
-    // another is worth its price: paid from the bag, else saved up in the
-    // fullest bin (which is not nibbled at meanwhile) and collected whole.
-    if (BOT.tune.ENGINES && mines.length && mines.every((m) => live(p, m)) && Object.keys(price).includes(ore)
-      && (left[ore] || 0) >= EXTRA_MINE_AT * mines.length && CHAIN.unbuiltNodes(p).some((n) => n.ore === ore)) {
-      if (CHAIN.affordable(p.bag, price)) { saving.delete(ore); return { type: 'build', kind: 'mine', ore }; }
-      if (inBin >= Math.max(1, (price[ore] || 0) - have(p, ore))) { saving.set(ore, price[ore]); return { type: 'collect', m: full, mat: ore }; }
-      throw new Blocked({ type: 'wait', m: full, mat: ore });
+    // Every mine of it runs itself. Another is worth its price while the
+    // game still asks for a bag's worth per mine standing, or whenever it
+    // would have the ore in the bag sooner than the engines (handsSooner).
+    // Paid from the bag; where the price is the very ore that is short, else
+    // saved up in the fullest bin (which is not nibbled at meanwhile) and
+    // collected whole.
+    const engines = mines.filter((m) => live(p, m)).length;
+    if (BOT.tune.ENGINES && mines.length && engines === mines.length && CHAIN.unbuiltNodes(p).some((n) => n.ore === ore)) {
+      const binned = mines.reduce((a, m) => a + ((m.buf && m.buf.out[ore]) || 0), 0);
+      const short = target - have(p, ore) - binned;
+      const own = Object.keys(price).includes(ore);
+      if ((own && (left[ore] || 0) >= EXTRA_MINE_AT * mines.length)
+        || handsSooner(short, engines, CHAIN.rateOf({ kind: 'mine' }, null), price, 1)) {
+        if (CHAIN.affordable(p.bag, price)) { saving.delete(ore); return { type: 'build', kind: 'mine', ore }; }
+        if (!own) return buildMine(p, ore, depth);
+        if (inBin >= Math.max(1, (price[ore] || 0) - have(p, ore))) { saving.set(ore, price[ore]); return { type: 'collect', m: full, mat: ore }; }
+        throw new Blocked({ type: 'wait', m: full, mat: ore });
+      }
     }
     saving.delete(ore);
     // what an engine has already made is the cheapest there is
@@ -801,6 +827,13 @@
     return out.filter((o) => o.ks < o.saves && Object.keys(o.price).every((mat) => reachable(p, mat)))
       .sort((a, b) => (b.saves - b.ks) - (a.saves - a.ks));
   }
+  // the one mine of an ore the bag carries that the hands can still work, with
+  // a vein of that ore still free
+  function lastHands(p, m) {
+    const ore = CHAIN.mineMat(p, m);
+    return m.kind === 'mine' && carryable(ore) && CHAIN.machinesOfOre(p, ore).every((x) => x === m || live(p, x))
+      && CHAIN.unbuiltNodes(p).some((n) => n.ore === ore);
+  }
   function upkeep(p) {
     if (!BOT.tune.ENGINES) return null;
     // runs first: an engine that wants what another engine makes gets the
@@ -817,6 +850,12 @@
     }
     for (const o of engineOptions(p)) {
       try {
+        // An engine on the last mine of an ore the hands can work leaves
+        // nothing to type that ore at, and the next mine is priced in it: the
+        // operator would stand at the engine waiting for its bin to pay. A
+        // player puts the next mine down first and types there, so while a
+        // vein of it is free, that is what goes up before the engine does.
+        if (!o.r && lastHands(p, o.m)) return buildMine(p, CHAIN.mineMat(p, o.m), 0);
         const short = need(p, o.price, 0);
         if (short) return short;
         if (o.r && o.m.recipe !== o.r.out) return { type: 'recipe', m: o.m, r: o.r };
@@ -850,7 +889,22 @@
     // help at a free machine of the kind, if one stands
     const engine = p.machines.find((x) => x.kind === r.kind && live(p, x) && (SIM.recipeOf(p, x) || {}).out === r.out);
     if (engine) {
-      try { return tend(p, engine, r, mat, target, depth); } catch (e) { if (!(e instanceof Blocked) || !machineFor(p, r)) throw e; }
+      try { return tend(p, engine, r, mat, target, depth); } catch (e) {
+        if (!(e instanceof Blocked)) throw e;
+        if (!machineFor(p, r)) {
+          // no free machine to help at: only the wait on this engine's own
+          // work is weighed against another machine (a wait further down is
+          // that material's to weigh), and a machine a run feeds is the
+          // runs' question, not this one
+          if (e.a.m !== engine || e.a.mat !== mat || piped(r)) throw e;
+          const outQ = outsOf(r)[mat] || 1;
+          const engines = p.machines.filter((x) => x.kind === r.kind && live(p, x) && (SIM.recipeOf(p, x) || {}).out === r.out);
+          const binned = engines.reduce((a, x) => a + ((x.buf && x.buf.out[mat]) || 0), 0);
+          const price = CHAIN.priceMachine(r.kind, CHAIN.machinesOfKind(p, r.kind).length + 1);
+          if (!handsSooner(target - have(p, mat) - binned, engines.length, CHAIN.rateOf(engine, r) / outQ, price, CHAIN.perUnit(r) / outQ)) throw e;
+          try { return buildMachine(p, r.kind, r, depth); } catch (e2) { if (e2 instanceof Blocked) throw e; throw e2; }
+        }
+      }
     }
     const m = machineFor(p, r);
     if (!m) {
@@ -1288,6 +1342,9 @@
     // automation: the A/B for dev/bot-sim.js
     // HOME is how far from the landing, in tiles, a machine with no place of
     // its own still counts as at home
-    tune: { BATCH_KS, ENGINES: true, HOME: 8 },
+    // BUILD_S is the bot's guess at a build's seconds besides its price (the
+    // walk, the menu, the aim), and CPS its pace with the switch off (the
+    // harness), both for weighing a build against a wait (handsSooner)
+    tune: { BATCH_KS, ENGINES: true, HOME: 8, BUILD_S: 25, CPS: CPS.wpm30 },
   };
 })();

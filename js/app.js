@@ -74,8 +74,16 @@
   const keycapEls = {};
   const KEY_U = 44, KEY_H = 42, ROW_PITCH = 47, HAND_GAP = 16;
 
+  // The slab is drawn twice over: once as the live board under the drill, and
+  // again, smaller, on the how-to-play cards. Both come from layKeys, so the
+  // picture the guide teaches from is the picture the player then types at.
   function buildKeyboard() {
-    keyboardEl.innerHTML = '';
+    const laid = layKeys(keyboardEl);
+    for (const [code, cap] of Object.entries(laid.caps)) keycapEls[code] = cap;
+  }
+  function layKeys(el) {
+    el.innerHTML = '';
+    const caps = {};
     let maxRight = 0;
     for (const row of LAYOUT.KEY_GEOMETRY) {
       for (const key of row.keys) {
@@ -103,13 +111,15 @@
         cap.style.left = left + 'px';
         cap.style.top = (row.y * ROW_PITCH) + 'px';
         cap.style.width = (w * KEY_U - 5) + 'px';
-        keyboardEl.appendChild(cap);
-        keycapEls[key.code] = cap;
+        el.appendChild(cap);
+        caps[key.code] = cap;
         maxRight = Math.max(maxRight, left + w * KEY_U - 5);
       }
     }
-    keyboardEl.style.width = maxRight + 'px';
-    keyboardEl.style.height = (LAYOUT.KEY_GEOMETRY.length * ROW_PITCH - (ROW_PITCH - KEY_H)) + 'px';
+    const height = LAYOUT.KEY_GEOMETRY.length * ROW_PITCH - (ROW_PITCH - KEY_H);
+    el.style.width = maxRight + 'px';
+    el.style.height = height + 'px';
+    return { caps, width: maxRight, height };
   }
 
   // ---------- hints: recall first, rescue on hesitation ----------
@@ -2136,6 +2146,7 @@
     FACTORY.setMove('up', false);
     FACTORY.setMove('down', false);
     overlayCard.classList.toggle('wide', !!wide);
+    overlayCard.onkeydown = null;   // a card's own keys (the guide's arrows) go with the card
     overlayCard.innerHTML = html;
     overlayName = name || null;
     overlay.classList.remove('hidden');
@@ -2218,6 +2229,93 @@
     `, false, 'welcome');
     $('ov-continue').onclick = () => { hideOverlay(); };
     $('ov-continue').focus();
+  }
+
+  // ---------- how to play: the cards on the world picker ----------
+  // Seven cards, read before a world is chosen: what a machine is, where the
+  // hands rest, where the eyes stay, how the hands find home again without
+  // looking, which finger owns which key, how a machine is worked, and how
+  // the game moves on. The visuals are the game's own: the slab under the
+  // drill drawn small, and the sprites the map is built from, so what the
+  // cards teach from is what the player then plays at. The last card sends
+  // the player back to the worlds.
+  const GUIDE_SCALE = 0.78;
+  let guideStep = 0;
+  // the slab, small, with a few caps singled out: `lit` caps glow the way a
+  // hint does, `bump` caps show the ridge, `fingers` turns the tints up
+  function guideKeyboardHTML(opts) {
+    const el = document.createElement('div');
+    el.className = 'guide-board' + (opts.fingers ? ' fingers' : '');
+    const laid = layKeys(el);
+    for (const code of opts.lit || []) laid.caps[code]?.classList.add('lit');
+    for (const code of opts.bump || []) laid.caps[code]?.classList.add('bump');
+    const w = Math.round(laid.width * GUIDE_SCALE), h = Math.round(laid.height * GUIDE_SCALE);
+    return `<div class="guide-kbd" style="width:${w}px;height:${h}px"><div class="guide-kbd-in" style="transform:scale(${GUIDE_SCALE})">${el.outerHTML}</div></div>`;
+  }
+  // a line as the drill shows it, a few words into the second word, so the
+  // caret sits on a letter the board can light
+  function guideLineHTML() {
+    const ws = L.WORDS.map(([w]) => w).filter((w) => w.length >= 2 && w.length <= 5 && /^\p{L}+$/u.test(w)).slice(0, 3);
+    const text = ws.join(' ');
+    const at = ws[0].length + 1;
+    const spans = [...text].map((ch, i) => `<span class="ch${i < at ? ' done' : i === at ? ' caret' : ''}">${ch}</span>`).join('');
+    return { html: `<div class="guide-line current-line">${spans}</div>`, code: LAYOUT.CHAR_TO_CODE[text[at]] };
+  }
+  const guideGlyph = (code) => (LAYOUT.CODE_TO_CHAR[code] || '').toUpperCase();
+  const pixImg = (canvas, scale) => `<img class="pix" src="${canvas.toDataURL()}" width="${canvas.width * scale}" height="${canvas.height * scale}" alt="">`;
+  function guideCards() {
+    const G = T.t('guide');
+    const f = guideGlyph('KeyF'), j = guideGlyph('KeyJ');
+    const line = guideLineHTML();
+    const scene = (parts) => `<div class="guide-scene">${parts.join('')}</div>`;
+    const who = pixImg(PIXELS.characterCanvas('idle.side'), 3);
+    const station = pixImg(PIXELS.stationCanvas('foundry', 0, 'work', 's'), 3);
+    const mine = pixImg(PIXELS.machineCanvas(1, 0, 'work', 's'), 3);
+    const mat = (id) => `<img class="pix" src="${PIXELS.matURL(id, PIXELS.MAT_SPARK_PEAK)}" width="30" height="30" alt="">`;
+    const keys = (labels) => `<div class="keys-inline">${labels.map((k) => `<span class="keycap">${k}</span>`).join('')}</div>`;
+    const legend = `<div class="guide-legend">${[2, 3, 4, 5].map((n) => `<span class="chip" style="background:var(--finger-${n})">${G.fingers[n]}</span>`).join('')}</div>`;
+    const raw = CHAIN.MINES[0].raw, made = CHAIN.TREE.recipes[0].out;
+    return [
+      { title: G.t1, visual: scene([who, station]), body: G.b1 },
+      { title: G.t2, visual: guideKeyboardHTML({ lit: [...LAYOUT.HOME_CODES] }), body: G.b2 },
+      { title: G.t3, visual: line.html + guideKeyboardHTML({ lit: [line.code] }), body: G.b3 },
+      { title: G.t4, visual: guideKeyboardHTML({ lit: ['KeyF', 'KeyJ'], bump: ['KeyF', 'KeyJ'] }), body: G.b4({ f, j }) },
+      { title: G.t5, visual: guideKeyboardHTML({ fingers: true }) + legend, body: G.b5 },
+      { title: G.t6, visual: scene([who, mine]) + keys(['←', '↑', '↓', '→']) + keys([G.space]), body: G.b6 },
+      { title: G.t7, visual: scene([mine, mat(raw), '<span class="guide-plus">+</span>', station, mat(made)]), body: G.b7 },
+    ];
+  }
+  function showGuide(step) {
+    const cards = guideCards();
+    guideStep = Math.max(0, Math.min(cards.length - 1, step));
+    overlayRerender = () => showGuide(guideStep);
+    const c = cards[guideStep];
+    const last = guideStep === cards.length - 1;
+    const dots = cards.map((_, i) => `<span class="guide-dot${i === guideStep ? ' on' : ''}"></span>`).join('');
+    showOverlay(`
+      <div class="card-station">${T.t('guideStation')} · ${guideStep + 1}/${cards.length}</div>
+      <h2>${c.title}</h2>
+      <div class="guide-visual">${c.visual}</div>
+      <p class="guide-body">${c.body}</p>
+      <div class="guide-nav">
+        <button id="guide-back" class="link-btn"${guideStep === 0 ? ' disabled' : ''}>${T.t('guideBack')}</button>
+        <span class="guide-dots">${dots}</span>
+        <button id="guide-next" class="btn-primary">${last ? T.t('guideDone') : T.t('guideNext')}</button>
+      </div>
+    `, true, 'guide');
+    $('guide-back').onclick = () => showGuide(guideStep - 1);
+    $('guide-next').onclick = () => (last ? showMapSelect() : showGuide(guideStep + 1));
+    // the arrows page, Escape leaves; both stop here so the walker never hears them
+    overlayCard.onkeydown = (e) => {
+      const k = e.code || e.key;   // the same name either way for these three
+      if (k === 'ArrowRight') { if (!last) showGuide(guideStep + 1); }
+      else if (k === 'ArrowLeft') { if (guideStep > 0) showGuide(guideStep - 1); }
+      else if (k === 'Escape') showMapSelect();
+      else return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    $('guide-next').focus();
   }
 
   // ---------- the map picker: which world to play ----------
@@ -2328,11 +2426,13 @@
       <p class="muted map-note">${T.t('mapSelectNote')}</p>
       <div class="map-cards" id="map-cards">${cards}</div>
       <div class="map-foot">
+        <button id="map-guide" class="guide-link">${T.t('guideLink')}</button>
         ${switchesHTML('map')}
         ${mapId ? `<button id="ov-cancel" class="link-btn">${T.t('mapSelectBack')}</button>` : ''}
       </div>
     `, true);
     wireSwitches('map', showMapSelect);
+    $('map-guide').onclick = () => showGuide(0);
     const btns = [...document.querySelectorAll('#map-cards .map-card')];
     btns.forEach((b) => { b.onclick = () => startMap(b.dataset.map); });
     $('map-cards').onkeydown = (e) => {

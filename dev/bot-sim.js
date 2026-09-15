@@ -35,6 +35,7 @@ for (const f of ['js/i18n.js', 'js/dev.js', 'js/board-ansi.js', `js/language-${c
 const { CHAIN, SIM, ENGINE: E, BOT, MAPKIT } = ctx;
 if (process.argv[4]) BOT.tune.BATCH_KS.max = +process.argv[4];
 if (process.env.BOT_ENGINES === '0') BOT.tune.ENGINES = false;   // the old way: carry everything, automate nothing
+if (process.env.BOT_CPS) BOT.tune.CPS = +process.env.BOT_CPS;     // the planner weighs a wait against typing at this pace
 const SAMPLE_AT = +(process.argv[5] || 3000);
 CHAIN.useMap(mapId);
 const p = E.loadProfile(mapId);
