@@ -458,7 +458,9 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   place for a price — the only gate; accuracy and speed are measured for
   hints, weak-letter weighting and the summary, never as a lock (2026-08-19);
   alphabets come from the recipe graph (`CHAIN.alphabetOf`); drill grammars
-  keys / letters / syllables / clusters / words; word passport with glosses.
+  keys / letters / syllables / clusters / words. (The word passport card and
+  the session summary card, and the footer links that opened them, were
+  removed 2026-09-16; words are still collected into the save.)
 - Three T0 mines (iron а о, copper е н, stone и т) stand from the start;
   automation on a mine is bought (its ore + its own alloy) and the mine
   refuses labor afterwards (hold Space → collect 100); buying a Mk on an
@@ -538,15 +540,12 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   (the addictive one; numbers animate stepping up) → purchase ka-chunk →
   automation fanfare.
 - Side panel inventory with pixel icons; fly-to-inventory animations; float
-  "+N"; icon rows sit on dark plates (legible over windows); welcome card
-  carries a pixel vignette; EN/РУ interface.
-- **The welcome card says four things** (user decision, 2026-08-27): walk
-  with arrow keys and interact by short- or long-pressing spacebar; stand
-  at a machine and type; use mines and machines to create new materials,
-  and materials to build more advanced machines; discover new recipes and
-  the secrets that lie in the most advanced materials. The last two are the
-  goal, added the same day: the card must say what the game is for, not
-  only how it steers. Everything else (menus, building, belts, prices,
+  "+N"; icon rows sit on dark plates (legible over windows); EN/РУ interface.
+- **No welcome card** (user decision, 2026-09-16). A new world used to open
+  on a card of four rules (walk and interact, type at a machine, make
+  materials and build, discover recipes, per the 2026-08-27 decision). The
+  how-to-play link on the world picker teaches all of that now, so a world
+  opens straight onto play. Everything else (menus, building, belts, prices,
   pacing) is taught in place by the caption under the map at the moment it
   applies. The one gap that closed: open ground now carries a dim "hold
   Space to build" caption, shown only while the build menu has a row the
@@ -554,8 +553,7 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
 - **No dialogues once play has started** (user decision, 2026-09-14). The
   new-keys card and the automation card ("… now runs itself") are gone. Keys
   that open come into the lines drawn after; an automation lands with its
-  fanfare, and the caption calls the machine automated. The welcome card
-  comes before play and stays. The rest card (🌅) and the finish card (🏁)
+  fanfare, and the caption calls the machine automated. The rest card (🌅) and the finish card (🏁)
   predate the decision and still pop up.
 - **No mine colours on the keyboard** (user decision, 2026-09-14). Unlocked
   keys used to wear a band along the bottom in the colour of the mine that
@@ -607,9 +605,11 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   stand); tip jar with two rails like Sketchmill's free tier (PayPal
   international + YooMoney RU), each rail crowned by glowing gold coin badges
   straddling the button's top edge ($ £ € fan / single ₽) so the relevant
-  rail reads before any text. Language toggle and reset live only here — off
-  the main screen. The header keeps sound + stats; the footer keeps passport
-  + summary.
+  rail reads before any text. Language toggle and reset live only here, off
+  the main screen. The header keeps sound + stats. The footer row went on
+  2026-09-16 with the passport and summary links; the colophon alone remains,
+  pinned to the bottom-right corner on the space bar's row, so the footer
+  takes no height from the playfield.
 - **Loading card (2026-08-18)**: static markup in `index.html` inside the
   overlay, on screen from the first paint — before pixi and the game scripts
   have downloaded — so a slow load reads as busy, never frozen. Wordmark, a
@@ -2351,9 +2351,12 @@ what makes a lamp read as a lamp burning rather than a patch somebody forgot
 to darken) · precipitation · fog banks · lightning · vignette.
 
 **The clock is invisible.** No dial, no number, nothing to manage. One full
-day is six minutes of play and the game opens mid-morning, so the first
-thing a new player sees is daylight. Twelve keyframed hours interpolate into
-each other, so nothing steps. Midnight runs the world at about a third of its
+day is six minutes of play and a new game opens mid-morning, so the first
+thing a new player sees is daylight. A saved game opens on the hour and under
+the sky it was left in (2026-09-16): each world's save carries `sky`, which is
+the time of day, the weather and how far into its spell, how wet the ground is
+and how much snow is lying, so a reload never snaps back to a clear morning.
+Twelve keyframed hours interpolate into each other, so nothing steps. Midnight runs the world at about a third of its
 noon brightness and blue; the site tape, the ground and the operator all stay
 legible, which was checked on a full-size frame and not on a contact sheet.
 

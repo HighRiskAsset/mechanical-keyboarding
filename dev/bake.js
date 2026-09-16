@@ -246,7 +246,11 @@
     // ---- materials: every material in the chain, the grade marks, the kind icons ----
     {
       const b = builder('materials');
-      for (const kind of Object.keys(CHAIN.MATS).concat('money')) b.add('mat.' + kind, PIXELS.matBodyCanvas(kind));
+      // a fluid is a strip: the marble's wobble, frame by frame
+      for (const kind of Object.keys(CHAIN.MATS).concat('money')) {
+        const frames = PIXELS.matFrameCanvases(kind);
+        b.add('mat.' + kind, frames, frames.length > 1 ? { clock: 'fluid' } : undefined);
+      }
       b.add('grade.1', Array.from({ length: PIXELS.MAT_SPARK_FRAMES }, (_, f) => PIXELS.gradeCanvas(1, f)), { clock: 'spark' });
       b.add('grade.2', Array.from({ length: PIXELS.MAT_SPARK_FRAMES }, (_, f) => PIXELS.gradeCanvas(2, f)), { clock: 'spark' });
       const icons = new Set(['mine', 'smelter', 'foundry', 'constructor', 'molder', 'assembler', 'fastener', 'crane', 'manufacturer', 'default']);

@@ -83,7 +83,6 @@
   const VOWELS = new Set(['a', 'e', 'i', 'o', 'u', 'y']);
   const SEMIS = new Set(['y']);
   const PUNCT = new Set(['.', ',', '?', '!', '-', ':', ';', '"', '(', ')', "'"]);
-  const RARE_LETTERS = new Set(['z', 'q', 'x', 'j']);
   const TOP_BIGRAMS = ['th', 'he', 'in', 'er', 'an', 're', 'on', 'at', 'en', 'nd'];
 
   // CV / VC pairs the smelters drill, weights 1–10; filtered by alphabet live
@@ -140,8 +139,6 @@
     coal:  ['-ly', '-less', '-ss', '-sty', '-self', '-low'],
     oil:   ['-zz', '-que', '-ap', '-ize', '-ous', "-'s"],
   };
-
-  const WORD_SETS = ['func', 'verbs', 'people', 'time', 'nature', 'home', 'rail', 'place', 'adj', 'life', 'work', 'things'];
 
   // [word, gloss, set] — glosses stay empty for the native course (the gloss
   // line only shows when a gloss exists). Grouped by the ladder rung that
@@ -867,8 +864,8 @@
   const WORD_LIST = WORDS.filter(([w]) => (seen.has(w) ? false : (seen.add(w), true)));
 
   window.LANG_EN = {
-    LETTER_FREQ, PAIRS, UNLOCK_ORDER, LEGACY_ORDER, SEED_COUNT, ORE_OF, VOWELS, SEMIS, PUNCT, RARE_LETTERS, TOP_BIGRAMS,
+    LETTER_FREQ, PAIRS, UNLOCK_ORDER, LEGACY_ORDER, SEED_COUNT, ORE_OF, VOWELS, SEMIS, PUNCT, TOP_BIGRAMS,
     MINE_MARKS, SYLLABLES, CLUSTERS, ENDINGS, PHRASES, SENTENCES, NAMES, PAGES,
-    WORD_SETS, WORDS: WORD_LIST,
+    WORDS: WORD_LIST,
   };
 })();

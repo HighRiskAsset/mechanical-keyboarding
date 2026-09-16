@@ -39,9 +39,9 @@
   const HOLD = 650;                  // past app.js HOLD_MS, so a hold always lands
   const TILE = 16;
   // the cards play puts up, whose one button the bot may press; any other
-  // panel (settings, the passport, the map picker) is the player's, and the
+  // panel (settings, the map picker) is the player's, and the
   // bot waits for it to close
-  const DISMISS = new Set(['welcome', 'finish', 'rest']);
+  const DISMISS = new Set(['finish', 'rest']);
 
   let mode = 'off';
   let gen = 0;                       // bumped on every switch, so a stale run stops itself

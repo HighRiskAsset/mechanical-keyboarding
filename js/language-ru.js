@@ -84,9 +84,6 @@
   // Trainable non-letter items (never used inside generated words).
   const PUNCT = new Set(['.', ',', '?', '!', '-', '—', ':', ';', '"', '«', '»', '(', ')', '№', '%', '*', '+', '=', '/', '\\', '[', ']', '{', '}', '<', '>', '@', '#', '$', '&', '^', '~', '|', '_', '`']);
 
-  // Letters that make a collected word a "rare find" in the passport.
-  const RARE_LETTERS = new Set(['ф', 'ъ', 'ё', 'щ', 'ц', 'э']);
-
   // Top bigrams (legacy bigram frames; the cluster table below supersedes).
   const TOP_BIGRAMS = ['ст', 'но', 'ен', 'то', 'на', 'ов', 'ни', 'ра', 'во', 'ко'];
 
@@ -190,9 +187,6 @@
     coal:  ['-ды', '-ция', '-щик', '-чик', '-ющ', '-ущ', '-ич', 'до-', '-ыд', '-ады', '-оды'],
     oil:   ['-ся', '-ый', '-ий', '-ой', '-яя', '-ёт', '-ешь', 'объ-', 'съ-', '-ая', '-яй', '-зя'],
   };
-
-  // Passport set ids (labels live in i18n).
-  const WORD_SETS = ['func', 'verbs', 'people', 'time', 'nature', 'home', 'rail', 'place', 'adj', 'life', 'work', 'things'];
 
   // [word, gloss, set]. е-spellings used where standard print uses them
   // (ещё → еще) so words unlock earlier; ё-words wait for ё.
@@ -794,8 +788,8 @@
   const WORD_LIST = WORDS.filter(([w]) => (seen.has(w) ? false : (seen.add(w), true)));
 
   window.LANG_RU = {
-    LETTER_FREQ, PAIRS, UNLOCK_ORDER, LEGACY_ORDER, SEED_COUNT, ORE_OF, VOWELS, SEMIS, PUNCT, RARE_LETTERS, TOP_BIGRAMS,
+    LETTER_FREQ, PAIRS, UNLOCK_ORDER, LEGACY_ORDER, SEED_COUNT, ORE_OF, VOWELS, SEMIS, PUNCT, TOP_BIGRAMS,
     SYLLABLES, CLUSTERS, ENDINGS, PHRASES, SENTENCES, NAMES, PAGES,
-    WORD_SETS, WORDS: WORD_LIST,
+    WORDS: WORD_LIST,
   };
 })();

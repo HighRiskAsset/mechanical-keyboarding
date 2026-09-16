@@ -1,0 +1,152 @@
+<!doctype html>
+<!-- The fluids (dev only): the marbles that float down the pipes, from the
+     generator (FLUID_ART in dev/gen/pixels.js).
+     PROOF (default): each fluid's cell as the live sheet has it today, its
+     frames large, and a run of real pipe tile (belts.png) at the game's 3x
+     with the marbles riding it at four moments of the clock, so a still can
+     show the wobble. Uploads assets/inbox/mats-fluid.png.
+     LIVE (?live=1): the same runs, moving, at the game's belt speed and beat.
+     ?beat=7 is the ticks per frame (60 ticks a second).
+     STRIP (?strip=1): one row per fluid, its frames left to right, to
+     assets/inbox/mats-fluid-strip.png + .json. dev/mats-fluid-merge.js lays
+     that into the live materials sheet byte for byte (a canvas round trip
+     would nudge the grade twinkles' semi-transparent pixels).
+     Open: http://localhost:8123/dev/mats-fluid.html -->
+<meta charset="utf-8">
+<title>fluids</title>
+<style>
+  body { margin: 0; background: #1a1a20; color: #ddd; font: 12px/1.4 monospace; }
+  canvas { image-rendering: pixelated; display: block; margin: 8px; }
+  #log { padding: 8px; white-space: pre-wrap; }
+</style>
+<div id="log"></div>
+<canvas id="out"></canvas>
+<script src="gen/pixels.js"></script>
+<script src="../js/tree-en.js"></script>
+<script>
+(async function () {
+  const Q = new URLSearchParams(location.search);
+  const logEl = document.getElementById('log');
+  const log = (s) => { logEl.textContent += s + '\n'; };
+  const FLUIDS = TREE_EN.materials.filter((m) => m.fluid);
+  const PX = PIXELS.MAT_PX, N = PIXELS.MAT_FLUID_FRAMES, T = 16;
+  const loadImg = (src) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+  const sheet = async (name) => [await (await fetch('../assets/sprites/' + name + '.json', { cache: 'no-store' })).json(), await loadImg('../assets/sprites/' + name + '.png?' + Date.now())];
+  const [matJson, matImg] = await sheet('materials');
+  const [beltJson, beltImg] = await sheet('belts');
+  const liveCell = (json, img, key, f) => {
+    const e = json.sprites[key];
+    if (!e) return null;
+    const c = document.createElement('canvas');
+    c.width = e.w; c.height = e.h;
+    c.getContext('2d').drawImage(img, e.x + ((f || 0) % (e.n || 1)) * e.w, e.y, e.w, e.h, 0, 0, e.w, e.h);
+    return c;
+  };
+  async function put(name, blob) {
+    const r = await fetch('/upload?name=' + encodeURIComponent(name) + '&dir=inbox', { method: 'POST', body: blob });
+    log('  ' + name + ' -> ' + r.status + ' ' + await r.text());
+  }
+  const toBlob = (c) => new Promise((res) => c.toBlob(res, 'image/png'));
+  const frames = Object.fromEntries(FLUIDS.map((m) => [m.id, PIXELS.matFrameCanvases(m.id)]));
+
+  if (Q.get('strip')) {
+    const c = document.getElementById('out');
+    c.width = N * PX; c.height = FLUIDS.length * PX;
+    const x = c.getContext('2d');
+    FLUIDS.forEach((m, r) => frames[m.id].forEach((f, i) => x.drawImage(f, i * PX, r * PX)));
+    c.style.width = c.width * 6 + 'px';
+    log('strip: ' + FLUIDS.map((m) => m.id).join(' ') + ', ' + N + ' frames each');
+    await put('mats-fluid-strip.png', await toBlob(c));
+    await put('mats-fluid-strip.json', new Blob([JSON.stringify({ ids: FLUIDS.map((m) => m.id), frames: N, px: PX }, null, 1)], { type: 'application/json' }));
+    return;
+  }
+
+  // a run of pipe: RUN tiles, its goods one tile apart, riding at `travel`
+  // world px along, each marble on its own phase (factory.js: index * 5)
+  const RUN = 7, S3 = 3;
+  function drawRun(x, ox, oy, id, clock, travel) {
+    const bf = Math.floor(travel) % 8;
+    for (let i = 0; i < RUN; i++) x.drawImage(liveCell(beltJson, beltImg, 'tile.h.f.p', bf), 0, 0, T, T, ox + i * T * S3, oy, T * S3, T * S3);
+    for (let k = 0; k < RUN; k++) {
+      const along = (k * T + travel) % (RUN * T);
+      if (along + T > RUN * T) continue;
+      const px = along + T / 2 - PX / 2;
+      const f = frames[id][((clock + k * 5) % N + N) % N];
+      x.drawImage(f, 0, 0, PX, PX, ox + Math.round(px) * S3, oy + (T / 2 - PX / 2) * S3, PX * S3, PX * S3);
+    }
+  }
+
+  const out = document.getElementById('out');
+  const x = out.getContext('2d');
+  const text = (s, px, py, col, size) => { x.fillStyle = col; x.font = (size || 11) + 'px monospace'; x.fillText(s, px, py); };
+  const blit = (c, px, py, k) => x.drawImage(c, 0, 0, c.width, c.height, px, py, c.width * k, c.height * k);
+
+  if (Q.get('live')) {
+    const beat = +(Q.get('beat') || 7);
+    out.width = RUN * T * S3 + 140; out.height = FLUIDS.length * (T * S3 + 8) + 8;
+    x.imageSmoothingEnabled = false;
+    let tick = 0;
+    setInterval(() => {
+      tick++;
+      x.fillStyle = '#3b4a2c'; x.fillRect(0, 0, out.width, out.height);
+      FLUIDS.forEach((m, r) => {
+        drawRun(x, 4, 4 + r * (T * S3 + 8), m.id, Math.floor(tick / beat), (tick / 60) * 2 * T);
+        text(m.id + ' ' + m.name, RUN * T * S3 + 12, 4 + r * (T * S3 + 8) + 28, '#fff4dc', 12);
+      });
+    }, 1000 / 60);
+    return;
+  }
+
+  const S = +(Q.get('s') || 6);
+  const ROWH = PX * S + 30, MOMENTS = [0, 2, 6, 10];
+  const W = Math.max(90 + PX * 10 + N * (PX * S + 4), 16 + RUN * T * S3 + 20);
+  const H = 8 + FLUIDS.length * ROWH + 26 + FLUIDS.length * (MOMENTS.length * (T * S3 + 4) + 22) + 26 + 60;
+  out.width = W; out.height = H;
+  x.imageSmoothingEnabled = false;
+  x.fillStyle = '#26262e'; x.fillRect(0, 0, W, H);
+  let y = 8;
+  FLUIDS.forEach((m) => {
+    text(m.id + ' ' + m.name, 8, y + 12, '#e0b860', 12);
+    const before = liveCell(matJson, matImg, 'mat.' + m.id, 0);
+    x.fillStyle = '#1b1928'; x.fillRect(8, y + 18, PX * 8, PX * 8);
+    if (before) blit(before, 8, y + 18, 8);
+    frames[m.id].forEach((f, i) => {
+      const cx = 90 + PX * 8 + i * (PX * S + 4);
+      x.fillStyle = '#1b1928'; x.fillRect(cx, y + 18, PX * S, PX * S);
+      blit(f, cx, y + 18, S);
+    });
+    y += ROWH + 8 * 2;
+  });
+  const framesEnd = y;
+  text('on the pipe at the game\'s 3x, at clock frames ' + MOMENTS.join(', '), 8, y + 14, '#e0b860', 14);
+  y += 26;
+  FLUIDS.forEach((m) => {
+    text(m.id + ' ' + m.name, 8, y + 12, '#fff4dc', 11);
+    y += 18;
+    MOMENTS.forEach((t, j) => {
+      x.fillStyle = '#3b4a2c'; x.fillRect(8, y, RUN * T * S3, T * S3);
+      drawRun(x, 8, y, m.id, t, j * 5);
+      y += T * S3 + 4;
+    });
+    y += 4;
+  });
+  text('the rest frame at 3x, on the band and on the menu plate', 8, y + 14, '#e0b860', 14);
+  y += 22;
+  FLUIDS.forEach((m, i) => {
+    x.fillStyle = '#1b1928'; x.fillRect(8 + i * 80, y, 36, 36);
+    blit(frames[m.id][0], 11 + i * 80, y + 3, 3);
+    x.fillStyle = '#2c2740'; x.fillRect(44 + i * 80, y, 36, 36);
+    blit(frames[m.id][0], 47 + i * 80, y + 3, 3);
+  });
+  await put(Q.get('name') || 'mats-fluid.png', await toBlob(out));
+  // the two halves again on their own, so each can be looked at full size
+  const crop = (y0, y1) => {
+    const c = document.createElement('canvas');
+    c.width = W; c.height = y1 - y0;
+    c.getContext('2d').drawImage(out, 0, y0, W, y1 - y0, 0, 0, W, y1 - y0);
+    return c;
+  };
+  await put('mats-fluid-frames.png', await toBlob(crop(0, framesEnd)));
+  await put('mats-fluid-pipe.png', await toBlob(crop(framesEnd, H)));
+})().catch((e) => { document.getElementById('log').textContent += 'ERROR ' + (e.stack || e); });
+</script>

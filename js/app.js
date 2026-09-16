@@ -1461,7 +1461,6 @@
     A.ding();
     return true;
   }
-  function isRareWord(w) { return [...w].some((c) => L.RARE_LETTERS.has(c)); }
 
   // ---------- stats ----------
   function fmtTime(ms) {
@@ -2199,53 +2198,6 @@
     $('ov-continue').focus();
   }
 
-  function weakestLetters(n) {
-    return E.unlockedLetters(profile)
-      .filter(E.trainable)
-      .map((ch) => ({ ch, r: E.readiness(profile, ch), stats: profile.letters[ch] }))
-      .filter((x) => x.stats.n > 0)
-      .sort((a, b) => a.r - b.r)
-      .slice(0, n);
-  }
-  function showSessionSummary() {
-    overlayRerender = showSessionSummary;
-    const weakest = weakestLetters(3)
-      .map((x) => `<span class="weak-chip">${x.ch} <small>${Math.round(Math.min(1, x.r) * 100)}%</small></span>`)
-      .join(' ');
-    const nexts = CHAIN.rungsInView(profile);
-    const next = CHAIN.nextPairs(profile).length ? { list: (nexts.length ? nexts : [CHAIN.nextPair(profile)]).map((p) => T.t('nextKeyAt', { ch: p.keys.join(' '), place: placeName_(p).toLowerCase() })).join(' · ') } : null;
-    const bar = CHAIN.targetBar(profile);
-    showOverlay(`
-      <div class="card-station">${T.t('blockStation')}</div>
-      <h2>${T.t('blockLines', { n: session.linesDone })}</h2>
-      <div class="summary-grid">
-        <div><span class="sum-val">${sessionAccuracy() === null ? '–' : (sessionAccuracy() * 100).toFixed(1) + '%'}</span><span class="sum-label">${T.t('sumAccuracy')}</span></div>
-        <div><span class="sum-val">${sessionWPM() === null ? '–' : sessionWPM().toFixed(0)}</span><span class="sum-label">${T.t('sumWpm')}</span></div>
-        <div><span class="sum-val">${session.bestStreak}</span><span class="sum-label">${T.t('sumStreak')}</span></div>
-      </div>
-      <p class="muted">${T.t('weakLetters')} ${weakest || '–'}</p>
-      ${next ? `<p class="muted">${T.t('nextKeys', { list: next.list, wpm: bar.wpm, acc: Math.round(bar.acc * 100) })}</p>` : `<p class="muted">${T.t('allUnlocked')}</p>`}
-      <button id="ov-continue" class="btn-primary">${T.t('blockGo')}</button>
-    `);
-    $('ov-continue').onclick = () => { hideOverlay(); };
-    $('ov-continue').focus();
-  }
-
-  function showWelcome() {
-    overlayRerender = showWelcome;
-    const rules = T.t('welcomeRules').map((r) => `<li>${r}</li>`).join('');
-    showOverlay(`
-      <div class="card-station">⛏ ${T.t('mapNames')[mapId]}</div>
-      <img class="pix-scene" src="${PIXELS.vignetteURL()}" width="300" height="144" alt="">
-      <h2>${T.t('welcomeTitle')}</h2>
-      <p>${T.t('welcomeIntro')}</p>
-      <ul class="rules">${rules}</ul>
-      <button id="ov-continue" class="btn-primary">${T.t('welcomeGo')}</button>
-    `, false, 'welcome');
-    $('ov-continue').onclick = () => { hideOverlay(); };
-    $('ov-continue').focus();
-  }
-
   // ---------- how to play: the cards on the world picker ----------
   // Seven cards, read before a world is chosen: what a machine is, where the
   // hands rest, where the eyes stay, how the hands find home again without
@@ -2473,6 +2425,8 @@
     CHAIN.useMap(id);
     profile = E.loadProfile(id);
     E.setLastMap(id);
+    // the world comes back under the hour and the weather it was left in
+    if (window.SKY) profile.sky = SKY.resume(profile.sky);
 
     dock = null; recipe = null; menu = null;
     buildMenu = null; placing = null;
@@ -2504,46 +2458,9 @@
     refreshLessonLights();
     refreshStatus();
     hideOverlay();
-    if (profile.totalChars === 0) showWelcome();
   }
 
-  // ---------- passport ----------
-  function showPassport() {
-    overlayRerender = showPassport;
-    const bySet = {};
-    for (const [w, gloss, set] of L.WORDS) (bySet[set] = bySet[set] || []).push([w, gloss]);
-    const have = Object.keys(profile.collected).length;
-    let sections = '';
-    for (const set of L.WORD_SETS) {
-      const list = bySet[set] || [];
-      if (!list.length) continue;
-      const got = list.filter(([w]) => profile.collected[w]).length;
-      const chips = list.map(([w, gloss]) => {
-        if (profile.collected[w]) {
-          const rare = isRareWord(w) ? ' rare' : '';
-          const rareTitle = isRareWord(w) ? ` · ${T.t('passportRare')}` : '';
-          return `<span class="pw${rare}" title="${gloss}${rareTitle}">${w}</span>`;
-        }
-        return `<span class="pw locked">···</span>`;
-      }).join('');
-      const done = got === list.length ? ' ✦' : '';
-      sections += `<div class="pw-set"><h3>${T.t('setNames')[set] || set} <small>${got}/${list.length}${done}</small></h3><div class="pw-grid">${chips}</div></div>`;
-    }
-    showOverlay(`
-      <div class="card-station">🎫</div>
-      <h2>${T.t('passportTitle')}</h2>
-      <p class="muted">${T.t('passportCount', { have, total: L.WORDS.length })}</p>
-      <div id="passport-body">${sections}</div>
-      <button id="ov-continue" class="btn-primary">${T.t('passportClose')}</button>
-    `);
-    $('ov-continue').onclick = () => hideOverlay();
-    $('ov-continue').focus();
-  }
-
-  // ---------- footer / header ----------
-  $('btn-summary').onclick = () => { if (profile) showSessionSummary(); };
-  $('btn-passport').onclick = () => { if (profile) showPassport(); };
-
+  // ---------- header ----------
   // the colophon's year range extends itself: 2026 stands alone this year, and
   // reads 2026–YYYY from the next one on
   const thisYear = new Date().getFullYear();
@@ -2711,7 +2628,7 @@
         </div>
       </div>
       <button id="set-reset" class="link-btn danger">${T.t('btnReset')}</button>
-      <div><button id="ov-continue" class="btn-primary">${T.t('passportClose')}</button></div>
+      <div><button id="ov-continue" class="btn-primary">${T.t('btnClose')}</button></div>
     `);
     wireSwitches('set', showSettings);
     document.querySelectorAll('#set-sky .seg-btn').forEach((b) => {
@@ -2794,7 +2711,7 @@
           wet: r.wet.toFixed(2), pack: r.pack.toFixed(2),
         }) : ''}</p>
       </div>
-      <div><button id="ov-continue" class="btn-primary">${T.t('passportClose')}</button></div>
+      <div><button id="ov-continue" class="btn-primary">${T.t('btnClose')}</button></div>
     `);
     const wire = (id, set) => {
       document.querySelectorAll('#' + id + ' .seg-btn').forEach((b) => {

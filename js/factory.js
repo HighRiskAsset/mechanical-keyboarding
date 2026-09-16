@@ -108,11 +108,17 @@
   // anchor, so the mark has to be given the same one to sit over the good.
   // (Never stash it in `_anchor` — that is pixi's own field behind `.anchor`,
   // and writing a number over it turns the anchor into a number.)
+  //
+  // A fluid is the one material whose own texture moves: a marble of it that
+  // wobbles and glints as it floats down the pipe (2026-09-16). Its frames are
+  // the sheet's, on a slower beat than the twinkle, and on the same per-sprite
+  // phase, so a pipe of marbles never wobbles in step.
   const SPARK_BEAT = 5;                  // ticks per frame — one cycle a second
-  let matFrame = 0, matPhase = 0;
+  const FLUID_BEAT = 7;                  // ticks per marble frame, sixteen of them a loop
+  let matFrame = 0, matPhase = 0, fluidFrame = 0;
   const matViews = [];
   function matIcon(mat, phase, anchor) {
-    const sp = new PIXI.Sprite(PIXELS.matTex(mat));
+    const sp = new PIXI.Sprite(PIXELS.matTex(mat, 0));
     sp._ph = phase === undefined ? (matPhase = (matPhase + 5) % PIXELS.MAT_SPARK_FRAMES) : phase;
     if (anchor) sp.anchor.set(anchor);
     setMatIcon(sp, mat);
@@ -124,7 +130,8 @@
   // and the mark comes and goes with the grade of whatever is there now.
   function setMatIcon(sp, mat) {
     sp._mat = mat;
-    sp.texture = PIXELS.matTex(mat);
+    sp._n = PIXELS.matFrames(mat);
+    sp.texture = PIXELS.matTex(mat, sp._n > 1 ? fluidFrame + sp._ph : 0);
     sp._lv = PIXELS.matGrade(mat);
     if (!sp._lv) {
       if (sp._mark) { sp.removeChild(sp._mark); sp._mark.destroy(); sp._mark = null; }
@@ -143,6 +150,10 @@
       const sp = matViews[i];
       if (sp.destroyed || !sp.parent) { matViews.splice(i, 1); continue; }
       if (sp._mark) sp._mark.texture = PIXELS.gradeTex(sp._lv, matFrame + sp._ph);
+      if (sp._n > 1) {
+        const t = PIXELS.matTex(sp._mat, fluidFrame + sp._ph);
+        if (sp.texture !== t) sp.texture = t;
+      }
     }
   }
 
@@ -2166,10 +2177,12 @@
     }
 
     frameClock++;
-    // the grade twinkle, on its own clock: bag, belts, ground and menus at once
+    // the grade twinkle and the marbles' wobble, each on its own clock: bag,
+    // belts, pipes, ground and menus at once
     {
       const mf = Math.floor(frameClock / SPARK_BEAT) % PIXELS.MAT_SPARK_FRAMES;
-      if (mf !== matFrame) { matFrame = mf; tickMatIcons(); }
+      const ff = Math.floor(frameClock / FLUID_BEAT);
+      if (mf !== matFrame || ff !== fluidFrame) { matFrame = mf; fluidFrame = ff; tickMatIcons(); }
     }
     // every machine on the map, in its state, on the right clock: the work
     // beat is quick, the idle breath slow, so the two never read alike

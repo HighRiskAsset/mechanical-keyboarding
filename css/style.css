@@ -93,16 +93,6 @@ main {
 @media (max-width: 760px) {
   #keyboard { transform: scale(0.66); transform-origin: top center; margin-bottom: -80px; }
   .current-line { font-size: 26px; }
-  /* narrower gutters and a smaller colophon keep the footer one row down to
-     about a 430px window */
-  footer { padding: 10px 12px 16px; column-gap: 10px; }
-  #colophon { font-size: 11px; }
-}
-/* below that the row genuinely cannot hold both, so the colophon drops under
-   the links rather than being clipped */
-@media (max-width: 430px) {
-  footer { grid-template-columns: 1fr; row-gap: 6px; }
-  #footer-links, #colophon { grid-column: 1; justify-self: center; }
 }
 
 /* ---------- the works ---------- */
@@ -292,28 +282,29 @@ body.night #factory-mount canvas { filter: brightness(0.45) saturate(0.8); }
 }
 
 /* ---------- footer ---------- */
-/* three columns, the outer two equal: the links sit dead centre in the window
-   however wide the colophon grows, and the colophon fills space the row was
-   already wasting — so the bar is the same height it was with links alone */
+/* the colophon alone, and it takes no row of its own: pinned to the window's
+   bottom-right corner on the space bar's row (main's 8px bottom padding plus
+   the 42px cap height, KEY_H in app.js), so the line sits level with the bar
+   in the room the bottom row leaves empty, and the playfield keeps the height
+   the old footer row used to take */
 footer {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: baseline;
-  column-gap: 16px;
-  padding: 10px 28px 16px;
-}
-#footer-links {
-  grid-column: 2;
+  position: fixed;
+  right: 28px;
+  bottom: 8px;
+  height: 42px;
   display: flex;
-  justify-content: center;
-  gap: 26px;
+  align-items: center;
 }
 #colophon {
-  grid-column: 3;
-  justify-self: end;
   font-size: 12px;
   color: #47606b;
   white-space: nowrap;
+}
+/* under about 640px the corner would land on the (already shrunk) bar itself,
+   so the line falls back to a row under the board */
+@media (max-width: 640px) {
+  footer { position: static; height: auto; justify-content: center; padding: 6px 12px 10px; }
+  #colophon { font-size: 11px; }
 }
 #colophon a {
   color: #55707c;
@@ -368,8 +359,6 @@ footer {
   font-size: 13px;
   text-transform: uppercase;
 }
-.pix-scene { image-rendering: pixelated; display: block; margin: 10px auto 0; }
-.rules { text-align: left; margin: 14px 0 8px 20px; line-height: 1.7; font-size: 15px; }
 .btn-primary {
   margin-top: 18px;
   background: var(--brass);
@@ -382,23 +371,6 @@ footer {
   cursor: pointer;
 }
 .btn-primary:hover { filter: brightness(1.1); }
-.summary-grid {
-  display: flex;
-  justify-content: center;
-  gap: 34px;
-  margin: 18px 0 6px;
-}
-.summary-grid .sum-val { display: block; font-size: 28px; color: var(--brass); font-variant-numeric: tabular-nums; }
-.summary-grid .sum-label { font-size: 12px; color: var(--ink-dim); letter-spacing: 1px; }
-.weak-chip {
-  display: inline-block;
-  background: var(--bg-raised);
-  border-radius: 5px;
-  padding: 2px 9px;
-  margin: 0 2px;
-  font-size: 17px;
-}
-.weak-chip small { color: var(--ink-dim); }
 .soft-stop {
   background: rgba(212, 169, 78, 0.1);
   border: 1px solid var(--brass-dim);
@@ -656,29 +628,3 @@ body.night .keycap.home::after { background: #23343d; }
 .set-dev input { accent-color: var(--brass); width: 13px; height: 13px; margin: 0; cursor: pointer; }
 .set-dev-note { min-height: 0; margin: 6px 0 0; }
 
-/* ---------- passport ---------- */
-#passport-body {
-  max-height: 46vh;
-  overflow-y: auto;
-  text-align: left;
-  margin-top: 10px;
-  padding-right: 6px;
-}
-.pw-set h3 {
-  font-size: 15px;
-  color: var(--brass);
-  margin: 14px 0 6px;
-  font-weight: normal;
-  letter-spacing: 1px;
-}
-.pw-set h3 small { color: var(--ink-dim); }
-.pw-grid { display: flex; flex-wrap: wrap; gap: 5px; }
-.pw {
-  background: var(--bg-raised);
-  border-radius: 5px;
-  padding: 2px 9px;
-  font-size: 15px;
-  border: 1px solid transparent;
-}
-.pw.locked { color: #3d545e; background: transparent; border: 1px dashed #22394395; }
-.pw.rare { border-color: var(--brass-dim); color: var(--brass); }

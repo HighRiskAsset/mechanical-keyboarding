@@ -357,7 +357,13 @@
     kindIconTex: (kind) => cellTex('materials', iconName(kind), 0),
     // materials
     MAT_PX: 10, MAT_SPARK_FRAMES: 12, MAT_SPARK_PEAK: 2, matGrade,
-    matTex: (kind) => cellTex('materials', matName(kind), 0),
+    // a material is one frame, a fluid a strip of them (the marble wobbling
+    // down its pipe). The frame wraps here, so each real frame is one texture.
+    matFrames: (kind) => { const e = entry('materials', matName(kind)); return (e && e.n) || 1; },
+    matTex: (kind, frame) => {
+      const name = matName(kind), e = entry('materials', name), n = (e && e.n) || 1;
+      return cellTex('materials', name, n > 1 ? (((frame | 0) % n) + n) % n : 0);
+    },
     gradeTex: (level, frame) => cellTex('materials', 'grade.' + level, frame),
     matCanvas: matFlat,
     matURL: (kind, frame) => matFlat(kind, frame).toDataURL(),

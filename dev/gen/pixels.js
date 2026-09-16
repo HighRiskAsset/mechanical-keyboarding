@@ -2718,14 +2718,6 @@
               '.mmmddd.',
               '..md.d..',
               '........'], t: RAMP.coal },
-    R5: { m: ['...mm...',      // Water: a drop
-              '...mm...',
-              '..lmmm..',
-              '.llmmmd.',
-              '.lwmmmd.',
-              '.mmmmdd.',
-              '..mddd..',
-              '........'], t: { l: P.h2oL, m: P.h2o, d: P.h2oD, w: P.white } },
     R6: { m: ['........',      // Caterium Ore: warm rock seamed with gold
               '..llm...',
               '.lGgmmd.',
@@ -2750,14 +2742,6 @@
               '.mmmmmdd',
               '.mdmmdd.',
               '..d..d..'], t: { l: P.sulL, m: P.sul, d: P.sulD } },
-    R9: { m: ['...dd...',      // Crude Oil: a fat black drop with an oily sheen
-              '..lddd..',
-              '.lmdddd.',
-              '.wmddddd',
-              'lmdddddd',
-              'lmdddddd',
-              '.mddddd.',
-              '..dddd..'], t: RAMP.oil },
     R10: { m: ['........',     // Bauxite: a brick-red chunk with pale grains in it
                '...ll...',
                '..llmm..',
@@ -2774,14 +2758,6 @@
                'mmgmmmdd',
                '.mmmmdd.',
                '..dddd..'], t: { l: P.slateL, m: P.slate, d: P.slateD, g: P.ur, G: P.urL } },
-    R12: { m: ['...be...',     // Nitrogen Gas: a bottle with a brass valve
-               '..baae..',
-               '.lmmmmd.',
-               '.lwmmmd.',
-               '.nnnnnn.',
-               '.lmmmmd.',
-               '.lmmmmd.',
-               '..dddd..'], t: Object.assign({ l: P.nitL, m: P.nit, d: P.nitD, w: P.white, n: P.iron2 }, RAMP.brass) },
     R13: { m: ['.l...l..',     // SAM Ore: violet shards with a light inside
                '.lm..lm.',
                '.lmg.lgd',
@@ -2803,14 +2779,6 @@
               'mmmmmmmd',
               'mmmmmmdd',
               '.dddddd.'], t: Object.assign({ k: P.ink }, RAMP.steel) },
-    S5: { m: ['..hhhh..',      // Iron Slurry: a pail brimming grey-brown
-              '.h....h.',
-              'hlllmmdh',
-              'abbaaaac',
-              '.abaaac.',
-              '.abaaac.',
-              '.aaaacc.',
-              '..cccc..'], t: { h: P.iron2, l: P.slurL, m: P.slur, d: P.slurD, a: P.iron, b: P.ironL, c: P.iron2 } },
     S6: { m: INGOT, t: RAMP.cat },                                         // Caterium Ingot
     S7: { m: ['...lm...',      // Quartz Crystal: one cut stone, out of the rock
               '..lwmm..',
@@ -2846,14 +2814,6 @@
                '.mggedd.',
                '.mmmmdd.',
                '..dddd..'], t: Object.assign({ g: P.ur, G: P.urL, e: P.urD }, RAMP.iron) },
-    S13: { m: ['...ff...',     // Nitric Acid: a fuming flask
-               '...cc...',
-               '...cc...',
-               '..cAac..',
-               '.cAaaae.',
-               '.caaaaee',
-               'caaaaeee',
-               '.eeeeee.'], t: { f: P.acidL, c: P.iB, A: P.acidL, a: P.acid, e: P.acidD } },
     S14: { m: ['........',     // Magnetic Core: copper wound on an iron axle
                '.CcCcCo.',
                '.CcCcCo.',
@@ -3409,6 +3369,126 @@
                'qpqpqpqp'], t: { p: P.paper, q: P.paper2, g: P.gbar, k: P.iron2 } },
   };
 
+  // ---------- the fluids: a marble of the stuff, wobbling down the pipe ----------
+  // A fluid never rides a belt and never sits in the bag: it only ever goes
+  // down a pipe (sim.js). So it is not drawn as a drop or a vessel but as a
+  // ball of the fluid itself, the way a marble of water holds together as it
+  // floats along a tube (2026-09-16). One silhouette for all five, the kind;
+  // the hue says which fluid, the substance; and each has one small thing
+  // going on inside it, so a pipe of them is never quite still.
+  //
+  // FLUID_FRAMES make one loop, laid left to right in one sheet strip. FACTORY
+  // sets the beat, and each sprite runs at its own phase, so the marbles in a
+  // run never wobble in step.
+  //
+  // Nothing inside a marble may sit level with the glint and apart from it:
+  // two dots side by side in a ball are a pair of eyes, and a good must never
+  // read as a face (or a letter, or a digit). Every detail below keeps to the
+  // far side of the ball or moves in the glint's own cluster.
+  const FLUID_FRAMES = 16;
+  // The outlines the ball takes. Drawn rather than cut from an ellipse: at
+  // eight pixels a squash or a stretch comes out as a box or a cog, where a
+  // lean keeps the round. O at rest, R and L rocked each way, F settled a
+  // pixel lower and a pixel shorter.
+  const FLUID_SHAPE = {
+    O: ['..####..', '.######.', '########', '########', '########', '########', '.######.', '..####..'],
+    R: ['..###...', '.#####..', '#######.', '########', '########', '.#######', '..#####.', '...###..'],
+    L: ['...###..', '..#####.', '.#######', '########', '########', '#######.', '.#####..', '..###...'],
+    F: ['........', '..####..', '.######.', '########', '########', '########', '.######.', '..####..'],
+  };
+  // one loop: rock one way and back, the other way and back, settle, then a
+  // quicker jiggle to close it
+  const FLUID_WOBBLE = 'OORROLLOOFFOROLO';
+  // for its first frames the glint is a streak, with a spark standing clear
+  // of the ball's lit shoulder
+  const FLUID_FLARE = 2;
+  // The ball for one frame as tone letters, before any fluid's own detail:
+  // d the rim turned from the light, l the rim toward it, c the light that
+  // comes through and pools low on the far side, w the glint, m the rest.
+  function fluidBall(frame) {
+    const shape = FLUID_SHAPE[FLUID_WOBBLE[frame]];
+    const inside = (cx, cy) => cx >= 0 && cx < 8 && cy >= 0 && cy < 8 && shape[cy][cx] !== '.';
+    const edge = (cx, cy) => !inside(cx + 1, cy) || !inside(cx, cy + 1) || !inside(cx - 1, cy) || !inside(cx, cy - 1);
+    const g = shape.map((row, cy) => [...row].map((ch, cx) => {
+      if (ch === '.') return '.';
+      const s = (cx + cy - 7) / 4;                   // − toward the light (up-left), + away
+      return edge(cx, cy) ? (s > 0.4 ? 'd' : s < -1 ? 'l' : 'm') : (s > 0.6 ? 'c' : 'm');
+    }));
+    g[2][2] = 'w';
+    if (frame < FLUID_FLARE) g[3][1] = 'w';
+    return { g, edge };
+  }
+  // paint a detail over the body, never over the rim or the glint
+  const fluidPut = (b, cx, cy, ch) => {
+    const t = b.g[cy] && b.g[cy][cx];
+    if ((t === 'm' || t === 'c') && !b.edge(cx, cy)) b.g[cy][cx] = ch;
+  };
+  // the caustic's pixels, in reading order, for the fluids that shimmer in it
+  const fluidCaustic = (b) => b.g.flatMap((row, cy) => row.map((t, cx) => (t === 'c' ? [cx, cy] : null))).filter(Boolean);
+  const FLUID_ART = {
+    R5: {      // Water: clear blue, and the light pooled in it shimmers
+      t: { l: P.h2oL, m: P.h2o, d: P.h2oD, c: P.h2oL, w: P.white, s: P.wF },
+      inner(b, f) {
+        const c = fluidCaustic(b);
+        if (c.length) { const [cx, cy] = c[(f >> 1) % c.length]; b.g[cy][cx] = 's'; }
+      },
+    },
+    R9: {      // Crude Oil: near black and opaque, a rainbow film sliding over its lit side
+      t: { l: P.oil, m: P.oil2, d: P.oil2, c: P.oil2, w: P.white, b: P.oil3, e: P.teal3 },
+      inner(b, f) {
+        // a short film, teal at its heart, slides up the lit side and over
+        // the top once a loop. Only ever three pixels, and always touching
+        // the glint: the whole arc lit at once is a corner bracket, and a
+        // film off on its own is a second eye.
+        const arc = [[1, 5], [1, 4], [1, 3], [1, 2], [2, 1], [3, 1]];
+        const at = 1 + Math.floor((f * (arc.length - 1)) / FLUID_FRAMES);
+        arc.forEach(([cx, cy], i) => { if (Math.abs(i - at) <= 1) fluidPut(b, cx, cy, i === at ? 'e' : 'b'); });
+      },
+    },
+    R12: {     // Nitrogen Gas: a bubble, a skin round a pale nothing
+      t: { l: P.nitL, m: P.nitL, d: P.nitD, c: P.nit, w: P.white, r: P.nit, s: P.white },
+      inner(b, f) {
+        b.g.forEach((row, cy) => row.forEach((t, cx) => { if (t === 'm' && b.edge(cx, cy)) row[cx] = 'r'; }));
+        // the second, smaller light a bubble carries low on its far side
+        const c = fluidCaustic(b);
+        if (c.length && (f >> 1) % 2 === 0) { const [cx, cy] = c[(f >> 2) % c.length]; b.g[cy][cx] = 's'; }
+      },
+    },
+    S5: {      // Iron Slurry: thick grey-brown and wet, a fleck of iron turning in it
+      t: { l: P.slurL, m: P.slur, d: P.slurD, c: P.slurL, w: P.white, g: P.iron2 },
+      inner(b, f) {
+        const path = [[4, 4], [5, 4], [5, 5], [4, 5]];
+        const [cx, cy] = path[Math.floor((f * path.length) / FLUID_FRAMES)];
+        fluidPut(b, cx, cy, 'g');
+      },
+    },
+    S13: {     // Nitric Acid: sour yellow-green, fizzing, bubbles rising through it
+      t: { l: P.acidL, m: P.acid, d: P.acidD, c: P.acidL, w: P.white, b: P.white },
+      inner(b, f) {
+        // two bubbles on one path, two rungs apart, gone before the glint's row
+        const path = [[3, 6], [4, 5], [4, 4], [3, 3]];
+        for (const off of [0, 2]) {
+          const [cx, cy] = path[((f >> 1) + off) % path.length];
+          fluidPut(b, cx, cy, 'b');
+        }
+      },
+    },
+  };
+  const isFluidArt = (kind) => !!FLUID_ART[kind];
+  const fluidFrame = (frame) => (((frame | 0) % FLUID_FRAMES) + FLUID_FRAMES) % FLUID_FRAMES;
+  function fluidBody(kind, frame) {
+    const art = FLUID_ART[kind];
+    const f = fluidFrame(frame);
+    const b = fluidBall(f);
+    if (art.inner) art.inner(b, f);
+    const c = matMask(b.g.map((r) => r.join('')), art.t);
+    // the spark: one pixel standing clear of the lit shoulder, never a star
+    // (a plus sign on a good would read as a symbol). The canvas is the mask
+    // moved one in for the rim, so this is the mask's corner outside (1, 1).
+    if (f < FLUID_FLARE) R(c.getContext('2d'), P.white, 1, 1, 1, 1);
+    return c;
+  }
+
   // ---------- grade: the twinkle that says how deep a good was dug ----------
   // A deep or pure ore wears its family's art, so a bag of iron ore and a bag
   // of deep iron were the same picture twice — told apart by a pip one pixel
@@ -3478,6 +3558,7 @@
     return c;
   }
   function matBody(kind) {
+    if (FLUID_ART[kind]) return fluidBody(kind, 0);
     if (MAT_ART[kind]) return matMask(MAT_ART[kind].m, MAT_ART[kind].t);
     const spec = (window.CHAIN && window.CHAIN.MATS && window.CHAIN.MATS[kind]) || null;
     const form = spec ? spec.form : (kind === 'money' ? 'money' : 'crates');
@@ -3740,7 +3821,12 @@
     // flatten the two for callers that can only take a picture.
     MAT_PX,
     MAT_SPARK_FRAMES: SPARK_FRAMES, MAT_SPARK_PEAK: SPARK_PEAK, matGrade,
-    matTex: (kind) => cachedTex('mat:' + kind, () => matBody(kind)),
+    // a fluid is a strip of MAT_FLUID_FRAMES; everything else is the one frame
+    MAT_FLUID_FRAMES: FLUID_FRAMES,
+    matFrames: (kind) => (isFluidArt(kind) ? FLUID_FRAMES : 1),
+    matTex: (kind, frame) => (isFluidArt(kind)
+      ? cachedTex('mat:' + kind + ':' + fluidFrame(frame), () => fluidBody(kind, frame))
+      : cachedTex('mat:' + kind, () => matBody(kind))),
     gradeTex: (level, frame) => cachedTex('grade:' + level + ':' + sparkFrame(frame), () => gradeMark(level, frame)),
     matCanvas: matSprite,
     matURL: (kind, frame) => matSprite(kind, frame).toDataURL(),
@@ -3758,6 +3844,7 @@
     GLYPHS,
     textCanvas,
     matBodyCanvas: matBody,
+    matFrameCanvases: (kind) => (isFluidArt(kind) ? Array.from({ length: FLUID_FRAMES }, (_, f) => fluidBody(kind, f)) : [matBody(kind)]),
     gradeCanvas: gradeMark,
     spoolCanvas: spool,
     matDotCanvas: matDot,

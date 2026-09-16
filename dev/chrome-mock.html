@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>chrome mock</title>
+<!-- A static mock of the game's chrome (docs/chrome-plan.md): the title
+     screen, the play screen, and the pause menu. Nothing here touches the
+     game. The world behind it is a capture of the live canvas
+     (assets/inbox/chrome-mock-world.png, gitignored; re-capture from the game
+     with FACTORY._app.renderer.extract.base64(stage) and POST it to
+     /upload?name=chrome-mock-world.png). The dev bar at the top-left is not
+     part of the design: it switches screen, panel skin, faces and language.
+     Keys: 1 title, 2 play, 3 pause (Escape toggles pause on the play screen).
+
+     Round 2 (2026-09-16): teal page and panels, wood and brass as trim only;
+     smooth faces for every menu word, the pixel face kept for the in-canvas
+     inventory alone; a display face for the title; no header in play, one
+     hovering menu icon (plus dev icons when developer mode is on); the
+     keyboard and drill line exactly as the game draws them today. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Rye&family=Balsamiq+Sans:wght@400;700&family=Nunito:wght@600;800&family=Tiny5&display=swap">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }
+
+  :root {
+    /* the page is the night-train teal the game already had (never
+       criticised); wood and brass are trim on it, not the room itself */
+    --page: #0f1c22;
+    --page-2: #14252d;
+    --ink: #ece2cc;
+    --ink-dim: #93a6ab;
+    /* the warm metal: brass by default; aged brass and copper are the other
+       toggles (the rivets, cursor and gear are redrawn from the same table) */
+    --brass: #dcab4c;
+    --brass-hi: #f7dc8e;
+    --brass-lo: #8a5c22;
+    --wood-lo: #3d2414;
+    --ok: #8fcf7a;
+    --err: #e06a5e;
+    --hint: #e8c877;
+    /* the highlight for menu words (the current row, names, headings):
+       brass by default, and the point of the toggle is that it need not be */
+    /* the four finger tints the game's keyboard uses */
+    --finger-2: #1e2a22; --finger-3: #14282f; --finger-4: #1d2333; --finger-5: #262029;
+    /* panel skin: teal by default; parchment is the other toggle */
+    --panel: rgba(19, 34, 42, 0.94);
+    --panel-ink: var(--ink);
+    --panel-dim: var(--ink-dim);
+    --panel-line: #2b4652;
+  }
+  body { --hl: var(--brass); --hl-hi: var(--brass-hi); --panel-accent: var(--hl); }
+  body[data-hl="cream"] { --hl: #f3e9d2; --hl-hi: #ffffff; }
+  body[data-hl="verdigris"] { --hl: #7fd0bd; --hl-hi: #bdf3e5; }
+  body[data-hl="oxblood"] { --hl: #e2735f; --hl-hi: #f7a793; }
+  body[data-accent="aged"] { --brass: #c39a45; --brass-hi: #e6c97a; --brass-lo: #7a5520; --hint: #d9bb6a; }
+  body[data-accent="copper"] { --brass: #cf8a4a; --brass-hi: #f0b987; --brass-lo: #7d4a1e; --hint: #e0a674; }
+  /* the cool side: teal by default; slate is bluer and greyer, forest greener */
+  body[data-cool="slate"] { --page: #131a22; --page-2: #1a232d; --panel: rgba(23, 31, 41, 0.94); --panel-line: #33404f; --ink-dim: #98a3b3; --finger-3: #17232d; }
+  body[data-cool="forest"] { --page: #0f1d17; --page-2: #15261e; --panel: rgba(19, 36, 28, 0.94); --panel-line: #2c4a3a; --ink-dim: #93aa9b; --finger-3: #14282f; }
+  body[data-panel="parchment"] {
+    --panel: rgba(243, 226, 184, 0.97);
+    --panel-ink: #3a2413;
+    --panel-dim: #7a5a3a;
+    --panel-line: #c9a86f;
+    --panel-accent: #8b5b22;
+    --hl-hi: #8b3a1e;
+  }
+
+  body {
+    background: var(--page);
+    color: var(--ink);
+    font-family: 'Nunito', 'Segoe UI', sans-serif;
+    font-weight: 600;
+    font-size: 19px;
+    line-height: 1.25;
+  }
+  body[data-face="balsamiq"] { font-family: 'Balsamiq Sans', 'Trebuchet MS', sans-serif; font-weight: 400; }
+  .big { font-size: 27px; }
+  .px { image-rendering: pixelated; image-rendering: crisp-edges; }
+  /* the one pixel face left in the chrome: the in-canvas inventory column,
+     a stand-in for the game's own bitmap font */
+  .bitmap { font-family: 'Tiny5', monospace; font-size: 20px; -webkit-font-smoothing: none; }
+
+  /* ---------- the dev bar (not part of the design) ---------- */
+  #devbar {
+    position: fixed; left: 8px; top: 8px; z-index: 100;
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    background: rgba(0, 0, 0, 0.75); color: #ccc;
+    font: 12px/1 system-ui, sans-serif; padding: 6px 8px; border-radius: 4px;
+    opacity: 0.3; transition: opacity 0.2s;
+  }
+  #devbar:hover { opacity: 1; }
+  #devbar span { color: #888; }
+  #devbar button { font: inherit; padding: 3px 7px; border: 1px solid #555; background: #222; color: #ccc; cursor: pointer; border-radius: 3px; }
+  #devbar button.on { background: #d9a441; color: #221a08; border-color: #d9a441; }
+
+  /* ---------- pixel windows: a 9-slice drawn at load, see makeFrame() ---------- */
+  .win {
+    border: 24px solid transparent;
+    border-image: var(--frame-img) 24 fill round;
+    image-rendering: pixelated;
+    color: var(--panel-ink);
+    position: relative;
+  }
+  .win > * { image-rendering: auto; }
+  .win .px { image-rendering: pixelated; }
+  .plate {
+    border: 16px solid transparent;
+    border-image: var(--plate-img) 16 fill round;
+    image-rendering: pixelated;
+    color: var(--panel-ink);
+  }
+  .plate > * { image-rendering: auto; }
+
+  .screen { position: absolute; inset: 0; display: none; }
+  .screen.on { display: block; }
+  .cursor { position: absolute; width: 27px; height: 27px; background: var(--cursor-img) 0 0 / 27px 27px no-repeat; image-rendering: pixelated; display: none; animation: nudge 0.6s steps(2) infinite; }
+  .cur > .cursor { display: block; }
+  @keyframes nudge { from { transform: translateX(0); } to { transform: translateX(6px); } }
+
+  /* ---------- the title ---------- */
+  #title {
+    background: url('../assets/inbox/chrome-mock-world.png') 0 0 / auto no-repeat;
+    image-rendering: pixelated;
+    animation: pan 90s ease-in-out infinite alternate;
+  }
+  @keyframes pan { from { background-position: -700px -500px; } to { background-position: -2300px -1100px; } }
+  /* dusk over the world: dark enough for text, light enough to be the game */
+  #title::before {
+    content: ''; position: absolute; inset: 0;
+    background:
+      linear-gradient(to bottom, rgba(10, 20, 26, 0.72), rgba(10, 20, 26, 0.42) 30%, rgba(10, 20, 26, 0.46) 70%, rgba(10, 20, 26, 0.82)),
+      radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(10, 20, 26, 0.55));
+  }
+  #title-inner { position: relative; height: 100%; display: flex; flex-direction: column; align-items: center; padding: 5vh 24px 0; }
+  /* the title art: a display face with a brass face and an iron extrusion;
+     the real thing will be a drawn PNG, this stands in for it */
+  #logo {
+    font-family: 'Alfa Slab One', Georgia, serif;
+    font-weight: 400;
+    font-size: clamp(40px, 8.5vh, 72px);
+    line-height: 1;
+    letter-spacing: 3px;
+    text-align: center;
+    color: var(--brass);
+    text-shadow:
+      1px 1px 0 var(--brass-hi),
+      3px 3px 0 var(--brass-lo), 5px 5px 0 var(--brass-lo),
+      7px 7px 0 #1a1208, 9px 9px 0 #1a1208,
+      0 0 30px rgba(0, 0, 0, 0.7);
+    margin-top: 2vh;
+  }
+  body[data-logo="rye"] #logo { font-family: 'Rye', Georgia, serif; letter-spacing: 2px; }
+  #logo small { display: block; font-size: clamp(24px, 5vh, 42px); color: var(--ink); letter-spacing: 8px; margin-top: 8px; text-shadow: 3px 3px 0 #1a1208, 5px 5px 0 #1a1208, 0 0 30px rgba(0,0,0,0.7); }
+  #logo-sub { margin-top: clamp(8px, 2vh, 18px); color: var(--ink); text-shadow: 2px 2px 0 #000, 0 0 12px rgba(0, 0, 0, 0.9); letter-spacing: 1px; }
+
+  #slots { display: flex; gap: clamp(14px, 2vw, 28px); margin-top: 3.5vh; align-items: flex-start; }
+  .slot { width: min(330px, 30vw); padding: 4px 6px 8px; text-align: center; cursor: pointer; }
+  .slot .thumb { background: #0b151a; border: 2px solid var(--panel-line); padding: 6px; height: clamp(64px, 16vh, 132px); display: flex; align-items: center; justify-content: center; }
+  .slot .thumb img { max-width: 100%; max-height: 100%; }
+  .slot b { display: block; margin-top: 10px; color: var(--panel-accent); font-weight: 700; font-size: 22px; }
+  .slot .prog { color: var(--panel-dim); margin-top: 4px; min-height: 1.2em; font-size: 16px; }
+  .slot.cur { outline: 3px solid var(--hl); outline-offset: -3px; }
+  .slot .cursor { left: -46px; top: 50%; margin-top: -14px; }
+  #tagline { margin-top: clamp(8px, 2vh, 20px); color: var(--ink); text-shadow: 2px 2px 0 #000, 0 0 12px rgba(0, 0, 0, 0.9); min-height: 1.2em; }
+
+  #rows { margin-top: 2vh; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .row { position: relative; padding: 4px 16px; text-shadow: 2px 2px 0 #000, 0 0 12px rgba(0, 0, 0, 0.9); color: var(--ink); cursor: pointer; font-size: 22px; }
+  .row.cur, .row:hover { color: var(--hl-hi); }
+  .row .cursor { left: -22px; top: 50%; margin-top: -14px; }
+
+  #title-foot { position: absolute; left: 24px; right: 24px; bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end; text-shadow: 2px 2px 0 #000, 0 0 12px rgba(0, 0, 0, 0.9); }
+  .chips { display: flex; gap: 8px; align-items: center; }
+  .chip { padding: 5px 10px; background: rgba(10, 20, 26, 0.8); border: 2px solid #2b4652; color: var(--ink-dim); cursor: pointer; display: inline-flex; gap: 8px; align-items: center; font-size: 16px; text-shadow: none; }
+  .chip.on { border-color: var(--hl); color: var(--ink); }
+  .flag { width: 22px; height: 14px; display: inline-block; image-rendering: pixelated; }
+  .flag.us { background: linear-gradient(#b22234 0 14%, #fff 14% 29%, #b22234 29% 43%, #fff 43% 57%, #b22234 57% 71%, #fff 71% 86%, #b22234 86%); position: relative; }
+  .flag.us::after { content: ''; position: absolute; left: 0; top: 0; width: 9px; height: 8px; background: #3c3b6e; }
+  .flag.ru { background: linear-gradient(#fff 0 33%, #0039a6 33% 66%, #d52b1e 66%); }
+  .help { color: var(--ink-dim); font-size: 17px; }
+  .help b { color: var(--ink); font-weight: 700; }
+  #colophon { color: #55707c; font-size: 12px; font-family: Georgia, serif; text-shadow: none; }
+  #colophon a { color: #55707c; }
+
+  /* ---------- play ---------- */
+  #play { display: none; flex-direction: column; align-items: center; padding: 14px 24px 0; }
+  #play.on { display: flex; }
+  #stage { width: min(100%, 1240px); position: relative; }
+  #world {
+    height: clamp(220px, calc(100vh - 330px), 470px);
+    border: 4px solid var(--wood-lo);
+    outline: 2px solid #0a0603;
+    background: url('../assets/inbox/chrome-mock-world.png') no-repeat;
+    image-rendering: pixelated;
+    position: relative;
+  }
+  /* the one control that hovers over the game: the menu, and beside it the
+     developer switches when developer mode is on */
+  #corner { position: absolute; left: 8px; top: 8px; display: flex; gap: 6px; align-items: center; }
+  .icon-btn { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: rgba(10, 20, 26, 0.72); border: 2px solid #2b4652; cursor: pointer; opacity: 0.75; position: relative; }
+  .icon-btn:hover { opacity: 1; border-color: var(--hl); }
+  .icon-btn i { width: 24px; height: 24px; background: var(--ico) 0 0 / 24px 24px no-repeat; image-rendering: pixelated; }
+  .icon-btn.gear i { --ico: var(--gear-img); }
+  .icon-btn.wrench i { --ico: var(--wrench-img); }
+  .icon-btn.bot i { --ico: var(--bot-img); }
+  .icon-btn .tip { position: absolute; left: 46px; top: 50%; transform: translateY(-50%); white-space: nowrap; color: var(--ink); background: rgba(10, 20, 26, 0.85); border: 2px solid #2b4652; padding: 3px 10px; font-size: 16px; display: none; }
+  .icon-btn:hover .tip { display: block; }
+  .icon-btn .tip kbd { font: inherit; color: var(--ink-dim); margin-left: 8px; }
+  body:not([data-dev="on"]) .icon-btn.dev { display: none; }
+  .icon-btn.dev { filter: saturate(0.6); }
+
+  #inv { position: absolute; right: 8px; top: 8px; width: 210px; padding: 2px 4px; }
+  #inv .ir { display: flex; align-items: center; gap: 10px; height: 30px; }
+  #inv .ir .ico { background: url('../assets/sprites/materials.png') no-repeat; image-rendering: pixelated; transform: scale(2); transform-origin: 0 0; width: 10px; height: 10px; margin-right: 10px; }
+  #inv .ir span { flex: 1; color: var(--panel-dim); font-size: 16px; letter-spacing: 1px; }
+  #inv .ir b { font-weight: normal; font-variant-numeric: tabular-nums; }
+  #inv .ir.lit span { color: var(--panel-accent); }
+  #caption { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); padding: 5px 14px; background: rgba(10, 20, 26, 0.85); border: 2px solid #2b4652; color: var(--ink); white-space: nowrap; font-size: 16px; }
+  #caption b { color: var(--hl); font-weight: 700; }
+
+  /* the drill line and the keyboard: exactly the game's, outside the fourth wall */
+  #drill { margin-top: 14px; text-align: center; height: 62px; font-family: Georgia, 'Times New Roman', serif; }
+  #line { font-size: 34px; letter-spacing: 1px; color: var(--ink); line-height: 1.3; }
+  #line .done { color: #5d7d70; }
+  #line .cur { background: rgba(212, 169, 78, 0.22); box-shadow: 0 2px 0 var(--brass); display: inline-block; transform: scale(1.12); border-radius: 3px; padding: 0 1px; }
+  #gloss { font-size: 16px; font-style: italic; color: var(--ink-dim); margin-top: 2px; }
+  #gloss b { color: var(--brass); font-style: normal; font-weight: normal; }
+
+  #kbd { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+  .krow { display: flex; gap: 6px; }
+  .key {
+    width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;
+    background: var(--page-2); color: var(--ink); border-radius: 6px;
+    font: 16px Arial, sans-serif; position: relative;
+  }
+  .key.f2 { background: var(--finger-2); } .key.f3 { background: var(--finger-3); } .key.f4 { background: var(--finger-4); } .key.f5 { background: var(--finger-5); }
+  .key.inert { background: #0f1a20; color: #31454e; font-size: 13px; }
+  .key.home::after { content: ''; position: absolute; bottom: 6px; width: 12px; height: 2px; border-radius: 1px; background: #3d545e; }
+  .key.hint { background: var(--hint); color: #1a1508; box-shadow: 0 0 18px rgba(232, 200, 119, 0.7); }
+  .key.w15 { width: 66px; } .key.w18 { width: 78px; } .key.w22 { width: 98px; } .key.w25 { width: 108px; } .key.space { width: 300px; }
+  #play #colophon { position: absolute; right: 24px; bottom: 14px; }
+  /* the game scales its board down under 760px; so does the mock */
+  @media (max-width: 900px), (max-height: 640px) {
+    #kbd { transform: scale(0.66); transform-origin: top center; margin-bottom: -80px; }
+    #drill { margin-top: 8px; height: 54px; }
+    #line { font-size: 26px; }
+  }
+
+  /* ---------- pause ---------- */
+  #pause { display: none; align-items: center; justify-content: center; background: rgba(6, 12, 16, 0.55); z-index: 5; }
+  #pause.on { display: flex; }
+  #pause .win { width: 460px; padding: 4px 10px 10px; }
+  #pause h2 { font-weight: 700; text-align: center; color: var(--panel-accent); letter-spacing: 2px; margin-bottom: 10px; }
+  /* the readouts that used to sit in the header live here now */
+  .stats { display: flex; justify-content: space-around; padding: 6px 0 10px; border-bottom: 2px solid var(--panel-line); margin-bottom: 8px; }
+  .stat { text-align: center; }
+  .stat b { display: block; font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat b.good { color: var(--ok); }
+  body[data-panel="parchment"] .stat b.good { color: #3f7d2e; }
+  .stat small { font-size: 13px; color: var(--panel-dim); letter-spacing: 1px; text-transform: uppercase; }
+  .mrow { position: relative; display: flex; justify-content: space-between; padding: 5px 12px 5px 40px; cursor: pointer; font-size: 21px; }
+  .mrow .cursor { left: 6px; top: 50%; margin-top: -14px; }
+  .mrow.cur, .mrow:hover { color: var(--hl-hi); }
+  body[data-panel="parchment"] .mrow.cur, body[data-panel="parchment"] .mrow:hover { color: #8b3a1e; }
+  .mrow em { font-style: normal; color: var(--panel-dim); }
+  .mrow em.on { color: var(--ok); }
+  body[data-panel="parchment"] .mrow em.on { color: #3f7d2e; }
+  .mhelp { margin-top: 12px; text-align: center; color: var(--panel-dim); font-size: 15px; }
+  .mhelp b { color: var(--panel-ink); font-weight: 700; }
+</style>
+</head>
+<body data-panel="teal" data-cool="slate" data-accent="brass" data-hl="cream" data-face="balsamiq" data-logo="slab" data-lang="en" data-dev="off">
+
+<div id="devbar">
+  <span>screen</span>
+  <button data-set="screen" data-val="title" class="on">title</button>
+  <button data-set="screen" data-val="play">play</button>
+  <button data-set="screen" data-val="pause">pause</button>
+  <span>panel</span>
+  <button data-set="panel" data-val="teal" class="on">teal</button>
+  <button data-set="panel" data-val="parchment">parchment</button>
+  <span>face</span>
+  <button data-set="face" data-val="balsamiq" class="on">balsamiq</button>
+  <button data-set="face" data-val="nunito">nunito</button>
+  <span>highlight</span>
+  <button data-set="hl" data-val="brass">brass</button>
+  <button data-set="hl" data-val="cream" class="on">cream</button>
+  <button data-set="hl" data-val="verdigris">verdigris</button>
+  <button data-set="hl" data-val="oxblood">oxblood</button>
+  <span>metal</span>
+  <button data-set="accent" data-val="brass" class="on">brass</button>
+  <button data-set="accent" data-val="aged">aged</button>
+  <button data-set="accent" data-val="copper">copper</button>
+  <span>cool</span>
+  <button data-set="cool" data-val="teal">teal</button>
+  <button data-set="cool" data-val="slate" class="on">slate</button>
+  <button data-set="cool" data-val="forest">forest</button>
+  <span>logo</span>
+  <button data-set="logo" data-val="slab" class="on">slab</button>
+  <button data-set="logo" data-val="rye">rye</button>
+  <span>dev icons</span>
+  <button data-set="dev" data-val="off" class="on">off</button>
+  <button data-set="dev" data-val="on">on</button>
+  <span>lang</span>
+  <button data-set="lang" data-val="en" class="on">en</button>
+  <button data-set="lang" data-val="ru">ru</button>
+</div>
+
+<!-- ============ title ============ -->
+<section id="title" class="screen on">
+  <div id="title-inner">
+    <div id="logo">MECHANICAL<small>KEYBOARDING</small></div>
+    <div id="logo-sub" data-s="logoSub"></div>
+
+    <div id="slots">
+      <div class="slot win cur" data-i="0">
+        <i class="cursor"></i>
+        <div class="thumb"><img class="px" src="../assets/maps/frontier.png" alt="" style="height:100%"></div>
+        <b data-s="frontier"></b>
+        <div class="prog" data-s="frontierProg"></div>
+      </div>
+      <div class="slot win" data-i="1">
+        <i class="cursor"></i>
+        <div class="thumb"><img class="px" src="../assets/maps/range.png" alt="" style="width:100%"></div>
+        <b data-s="range"></b>
+        <div class="prog" data-s="rangeProg"></div>
+      </div>
+    </div>
+    <div id="tagline" data-s="frontierTag"></div>
+
+    <div id="rows">
+      <div class="row" data-i="2"><i class="cursor"></i><span data-s="howTo"></span></div>
+      <div class="row" data-i="3"><i class="cursor"></i><span data-s="settings"></span></div>
+    </div>
+  </div>
+  <div id="title-foot">
+    <div class="chips">
+      <span class="chip on"><i class="flag us"></i>EN</span>
+      <span class="chip"><i class="flag ru"></i>RU</span>
+      <span style="width:14px"></span>
+      <span class="chip on">QWERTY</span>
+      <span class="chip">ЙЦУКЕН</span>
+    </div>
+    <div class="help" data-s="titleHelp"></div>
+    <small id="colophon">&copy; 2026 <a href="#">Fox Forger</a>, <a href="#">Digitalis LLC</a></small>
+  </div>
+</section>
+
+<!-- ============ play ============ -->
+<section id="play" class="screen">
+  <div id="stage">
+    <div id="world">
+      <div id="corner">
+        <div class="icon-btn gear"><i></i><span class="tip"><span data-s="menu"></span><kbd>Esc</kbd></span></div>
+        <div class="icon-btn wrench dev"><i></i><span class="tip" data-s="devSettings"></span></div>
+        <div class="icon-btn bot dev"><i></i><span class="tip" data-s="bot"></span></div>
+      </div>
+      <div id="inv" class="plate bitmap">
+        <div class="ir lit"><i class="ico" style="background-position:0 0"></i><span data-s="iron"></span><b>38</b></div>
+        <div class="ir"><i class="ico" style="background-position:-90px 0"></i><span data-s="coal"></span><b>12</b></div>
+        <div class="ir"><i class="ico" style="background-position:-20px 0"></i><span data-s="copper"></span><b>7</b></div>
+        <div class="ir"><i class="ico" style="background-position:-40px 0"></i><span data-s="stone"></span><b>21</b></div>
+        <div class="ir"><i class="ico" style="background-position:-60px 0"></i><span data-s="quartz"></span><b>3</b></div>
+      </div>
+      <div id="caption" data-s="caption"></div>
+    </div>
+    <div id="drill">
+      <div id="line" data-s="line"></div>
+      <div id="gloss" data-s="gloss"></div>
+    </div>
+    <div id="kbd"></div>
+  </div>
+  <small id="colophon">&copy; 2026 <a href="#">Fox Forger</a>, <a href="#">Digitalis LLC</a></small>
+</section>
+
+<!-- ============ pause ============ -->
+<section id="pause" class="screen">
+  <div class="win">
+    <h2 class="big" data-s="paused"></h2>
+    <div class="stats">
+      <div class="stat"><b class="good">97%</b><small data-s="acc"></small></div>
+      <div class="stat"><b>32</b><small data-s="wpm"></small></div>
+      <div class="stat"><b>14</b><small data-s="streak"></small></div>
+      <div class="stat"><b>4:12</b><small data-s="atKeys"></small></div>
+    </div>
+    <div class="mrow cur"><i class="cursor"></i><span data-s="resume"></span></div>
+    <div class="mrow"><i class="cursor"></i><span data-s="sound"></span><em class="on" data-s="on"></em></div>
+    <div class="mrow"><i class="cursor"></i><span data-s="music"></span><em data-s="off"></em></div>
+    <div class="mrow"><i class="cursor"></i><span data-s="sky"></span><em class="on" data-s="full"></em></div>
+    <div class="mrow"><i class="cursor"></i><span data-s="howTo"></span></div>
+    <div class="mrow"><i class="cursor"></i><span data-s="settings"></span></div>
+    <div class="mrow"><i class="cursor"></i><span data-s="changeWorld"></span></div>
+    <div class="mhelp" data-s="menuHelp"></div>
+  </div>
+</section>
+
+<script>
+(() => {
+  // ---------- strings, both languages, the game's own where they exist ----------
+  const S = {
+    en: {
+      logoSub: 'learn to type by running the machines',
+      frontier: 'The Frontier', range: 'Open Range',
+      frontierProg: '14 letters · 6 machines · played today',
+      rangeProg: 'Untouched',
+      frontierTag: 'One wide meadow, six lands around its rim, and everything to go and see.',
+      rangeTag: 'One wide plain, every vein in a row, and room to build wherever you like.',
+      howTo: 'How to play', settings: 'Settings',
+      titleHelp: '<b>←→</b> choose a world · <b>Enter</b> begin',
+      acc: 'accuracy', wpm: 'WPM', streak: 'streak', atKeys: 'at the keys', menu: 'Menu',
+      devSettings: 'Developer settings', bot: 'Bot',
+      iron: 'IRON ORE', coal: 'COAL', copper: 'COPPER ORE', stone: 'STONE', quartz: 'QUARTZ',
+      caption: '<b>Mine</b> · iron ore · type to work it',
+      line: '<span class="done">the works </span><span class="cur">s</span><span class="todo">tand still until you type</span>',
+      gloss: '<b>stand</b> · 5 letters · iron ore',
+      paused: 'PAUSED', resume: 'Resume', sound: 'Sound', music: 'Music', sky: 'Sky and weather',
+      on: 'on', off: 'off', full: 'full', changeWorld: 'Change world',
+      menuHelp: '<b>↑↓</b> choose · <b>Enter</b> pick · <b>Esc</b> back',
+    },
+    ru: {
+      logoSub: 'учитесь печатать, запуская машины',
+      frontier: 'Фронтир', range: 'Вольная степь',
+      frontierProg: 'букв: 14 · машин: 6 · играли сегодня',
+      rangeProg: 'Нетронутый',
+      frontierTag: 'Один широкий луг, шесть земель по краям — и есть куда сходить.',
+      rangeTag: 'Одна широкая равнина, все жилы в ряд, и строить есть где.',
+      howTo: 'Как играть', settings: 'Настройки',
+      titleHelp: '<b>←→</b> выбрать мир · <b>Enter</b> начать',
+      acc: 'точность', wpm: 'WPM', streak: 'серия', atKeys: 'за клавишами', menu: 'Меню',
+      devSettings: 'Настройки разработчика', bot: 'Бот',
+      iron: 'ЖЕЛ. РУДА', coal: 'УГОЛЬ', copper: 'МЕДН. РУДА', stone: 'КАМЕНЬ', quartz: 'КВАРЦ',
+      caption: '<b>Шахта</b> · железная руда · печатайте, чтобы работать',
+      line: '<span class="done">машины </span><span class="cur">с</span><span class="todo">тоят, пока вы не печатаете</span>',
+      gloss: '<b>стоят</b> · 5 букв · железная руда',
+      paused: 'ПАУЗА', resume: 'Продолжить', sound: 'Звук', music: 'Музыка', sky: 'Небо и погода',
+      on: 'вкл', off: 'выкл', full: 'полностью', changeWorld: 'Сменить мир',
+      menuHelp: '<b>↑↓</b> выбрать · <b>Enter</b> открыть · <b>Esc</b> назад',
+    },
+  };
+  function applyStrings() {
+    const t = S[document.body.dataset.lang];
+    document.querySelectorAll('[data-s]').forEach((el) => { el.innerHTML = t[el.dataset.s] || ''; });
+  }
+
+  // ---------- the pixel art the chrome is built from, drawn at load ----------
+  // a 9-slice tile: a wood frame `T` source pixels thick, drawn at `scale`
+  // so the browser never resamples it; corner rivets in brass when `rivets`
+  const rnd = (seed) => () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  function makeFrame({ T, scale, rivets, panel, plain }) {
+    const N = T * 4;
+    const c = document.createElement('canvas');
+    c.width = c.height = N * scale;
+    const g = c.getContext('2d');
+    const px = (x, y, col) => { g.fillStyle = col; g.fillRect(x * scale, y * scale, scale, scale); };
+    const r = rnd(7);
+    const grain = []; for (let i = 0; i < N; i++) grain.push(r());
+    const band = ['#100a05', '#b47d49', '#8a5a33', '#6d4429', '#6d4429', '#5c3822', '#6d4429', '#5c3822', '#4a2b18', '#3d2414', '#1a0f07', 'panel-line'];
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const d = Math.min(x, y, N - 1 - x, N - 1 - y);
+      if (d >= T) { g.fillStyle = panel; g.fillRect(x * scale, y * scale, scale, scale); continue; }
+      const along = (d === x || d === N - 1 - x) ? y : x;
+      let col = band[Math.min(d, band.length - 1)];
+      if (col === 'panel-line') col = 'rgba(0,0,0,0.35)';
+      if (d >= 2 && d <= 9) {
+        const gv = grain[(along + d * 7) % N];
+        if (gv < 0.18) col = '#7d4f2e'; else if (gv > 0.86) col = '#4f3019';
+      }
+      px(x, y, col);
+    }
+    if (rivets) {
+      const riv = (cx, cy) => {
+        const m = [' ####  ', '#hhbb# ', '#hbbbb#', '#bbbbs#', '#bbbss#', ' #sss# ', '  ###  '];
+        const col = { '#': '#100a05', h: PAL.h, b: PAL.b, s: PAL.s };
+        m.forEach((row, j) => [...row].forEach((ch, i) => { if (ch !== ' ') px(cx + i, cy + j, col[ch]); }));
+      };
+      riv(2, 2); riv(N - 9, 2); riv(2, N - 9); riv(N - 9, N - 9);
+    }
+    return c.toDataURL();
+  }
+  function makeSprite(rows, pal, scale) {
+    const c = document.createElement('canvas');
+    c.width = rows[0].length * scale; c.height = rows.length * scale;
+    const g = c.getContext('2d');
+    rows.forEach((row, j) => [...row].forEach((ch, i) => { if (ch !== ' ') { g.fillStyle = pal[ch]; g.fillRect(i * scale, j * scale, scale, scale); } }));
+    return c.toDataURL();
+  }
+  const cssVar = (n) => getComputedStyle(document.body).getPropertyValue(n).trim();
+  let PAL, CURSOR, GEAR, WRENCH, BOT;
+  function buildSprites() {
+  PAL = { '#': '#100a05', b: cssVar('--brass'), h: cssVar('--brass-hi'), s: cssVar('--brass-lo'), i: '#9fb2b5', d: '#4d5e64', r: '#e06a5e' };
+  CURSOR = makeSprite([
+    '##       ', '#b#      ', '#bb#     ', '#bhb#    ', '#bhhb#   ', '#bhhhb#  ',
+    '#bhhhhb# ', '#bhhhhhb#', '#bhhhb###', '#bbb#s#  ', '#b#  #s# ', '##    #  ',
+  ], PAL, 3);
+  GEAR = makeSprite([
+    '   ##  ##   ', '  #bb##bb#  ', ' ##bbbbbb## ', '#bbbb##bbbb#', '#bbb#  #bbb#', ' #bb#  #bb# ',
+    ' #bb#  #bb# ', '#bbb#  #bbb#', '#bbbb##bbbb#', ' ##bbbbbb## ', '  #bb##bb#  ', '   ##  ##   ',
+  ], PAL, 2);
+  WRENCH = makeSprite([
+    '        ##  ', '       #ii# ', '      #i##i#', '      #i# #i', '     #ii#  #', '    #iii#   ',
+    '   #iii#    ', '  #iii#     ', ' #iii#      ', '#ii##       ', '#i#         ', ' #          ',
+  ], PAL, 2);
+  BOT = makeSprite([
+    '     ##     ', '    #ii#    ', ' ########## ', '#iiiiiiiiii#', '#i#ii##ii#i#', '#i#ii##ii#i#',
+    '#iiiiiiiiii#', '#ii#rrrr#ii#', '#iiiiiiiiii#', ' ########## ', '  #ii##ii#  ', '  ##    ##  ',
+  ], PAL, 2);
+  }
+
+  function buildFrames() {
+    buildSprites();
+    const panel = cssVar('--panel');
+    const win = makeFrame({ T: 12, scale: 2, rivets: true, panel });
+    const plate = makeFrame({ T: 8, scale: 2, rivets: false, panel, plain: true });
+    const rs = document.documentElement.style;
+    rs.setProperty('--frame-img', `url(${win})`);
+    rs.setProperty('--plate-img', `url(${plate})`);
+    rs.setProperty('--cursor-img', `url(${CURSOR})`);
+    rs.setProperty('--gear-img', `url(${GEAR})`);
+    rs.setProperty('--wrench-img', `url(${WRENCH})`);
+    rs.setProperty('--bot-img', `url(${BOT})`);
+  }
+
+  // ---------- the keyboard, as the game draws it ----------
+  const ROWS = [
+    [['`', 'inert'], ['1', 'inert'], ['2', 'inert'], ['3', 'inert'], ['4', 'inert'], ['5', 'inert'], ['6', 'inert'], ['7', 'inert'], ['8', 'inert'], ['9', 'inert'], ['0', 'inert'], ['-', 'inert'], ['=', 'inert'], ['⌫', 'w22 inert']],
+    [['⇥', 'w15 inert'], 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '[', ']', ['\\', 'w15 inert']],
+    [['⇪', 'w18 inert'], 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', '\'', ['⏎', 'w25 inert']],
+    [['⇧', 'w25 inert'], 'Z', 'X', 'C', 'V', 'B', 'N', 'M', ',', '.', '/', ['⇧', 'w25 inert']],
+    [['', 'space']],
+  ];
+  const FINGER = { Q: 5, A: 5, Z: 5, W: 4, S: 4, X: 4, E: 3, D: 3, C: 3, R: 2, F: 2, V: 2, T: 2, G: 2, B: 2,
+    Y: 2, H: 2, N: 2, U: 2, J: 2, M: 2, I: 3, K: 3, ',': 3, O: 4, L: 4, '.': 4, P: 5, ';': 5, '/': 5, '[': 5, ']': 5, '\'': 5 };
+  function buildKeyboard() {
+    const k = document.getElementById('kbd');
+    k.innerHTML = ROWS.map((row) => `<div class="krow">${row.map((key) => {
+      const [label, cls] = Array.isArray(key) ? key : [key, ''];
+      const f = FINGER[label] ? ` f${FINGER[label]}` : '';
+      const home = 'ASDFJKL;'.includes(label) && label ? ' home' : '';
+      const hint = label === 'S' ? ' hint' : '';
+      return `<div class="key ${cls}${f}${home}${hint}">${label}</div>`;
+    }).join('')}</div>`).join('');
+  }
+
+  // the play viewport: the capture is at 2x, centred on the operator
+  function placeWorld() {
+    const w = document.getElementById('world');
+    const PX = 1410, PY = 965;
+    w.style.backgroundPosition = `${Math.round(w.clientWidth / 2 - PX)}px ${Math.round(w.clientHeight / 2 - PY)}px`;
+  }
+
+  // ---------- the dev bar ----------
+  function setScreen(v) {
+    document.getElementById('title').classList.toggle('on', v === 'title');
+    document.getElementById('play').classList.toggle('on', v !== 'title');
+    document.getElementById('pause').classList.toggle('on', v === 'pause');
+    if (v !== 'title') placeWorld();
+  }
+  document.querySelectorAll('#devbar button').forEach((b) => {
+    b.onclick = () => {
+      document.querySelectorAll(`#devbar button[data-set="${b.dataset.set}"]`).forEach((x) => x.classList.toggle('on', x === b));
+      if (b.dataset.set === 'screen') setScreen(b.dataset.val);
+      else { document.body.dataset[b.dataset.set] = b.dataset.val; if (/panel|accent|cool/.test(b.dataset.set)) buildFrames(); applyStrings(); }
+    };
+  });
+  const press = (set, val) => document.querySelector(`#devbar button[data-set="${set}"][data-val="${val}"]`).click();
+  document.addEventListener('keydown', (e) => {
+    if (e.key === '1') press('screen', 'title');
+    if (e.key === '2') press('screen', 'play');
+    if (e.key === '3') press('screen', 'pause');
+    if (e.key === 'Escape') press('screen', document.getElementById('pause').classList.contains('on') ? 'play' : 'pause');
+    if (document.getElementById('title').classList.contains('on') && /Arrow/.test(e.key)) {
+      const items = [...document.querySelectorAll('.slot, .row')];
+      let i = items.findIndex((x) => x.classList.contains('cur'));
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') i = (i + items.length - 1) % items.length;
+      else i = (i + 1) % items.length;
+      items.forEach((x, j) => x.classList.toggle('cur', j === i));
+      const t = S[document.body.dataset.lang];
+      document.getElementById('tagline').innerHTML = i === 0 ? t.frontierTag : i === 1 ? t.rangeTag : '';
+      e.preventDefault();
+    }
+  });
+  document.querySelectorAll('.slot, .row').forEach((el) => el.addEventListener('mouseenter', () => {
+    document.querySelectorAll('.slot, .row').forEach((x) => x.classList.toggle('cur', x === el));
+  }));
+  document.querySelector('.icon-btn.gear').onclick = () => press('screen', 'pause');
+  window.addEventListener('resize', placeWorld);
+
+  buildFrames();
+  buildKeyboard();
+  applyStrings();
+})();
+</script>
+</body>
+</html>

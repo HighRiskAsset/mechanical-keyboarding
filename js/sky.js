@@ -41,8 +41,10 @@
 //  10. vignette          a permanent soft frame, a touch heavier at night
 //
 // The clock is invisible on purpose: no dial, no number, nothing to manage.
-// One full day is DAY_LEN seconds of play, and the game opens mid-morning so
-// the first thing a new player sees is daylight. Weather runs its own slow
+// One full day is DAY_LEN seconds of play, and a new game opens mid-morning so
+// the first thing a new player sees is daylight. A saved game opens on the
+// hour and under the sky it was put down in: each world's save carries its
+// sky, and resume() below is how it gets back. Weather runs its own slow
 // chain: every sky picks the next one from a short table of the skies it can
 // honestly turn into, so an hour walks clear, cloudy, drizzle, rain rather
 // than teleporting from sunshine to blizzard.
@@ -72,9 +74,10 @@
   'use strict';
 
   const DAY_LEN = 360;          // seconds of play in one full day, midnight to midnight
-  const START_T = 0.36;         // the game opens mid-morning
+  const START_T = 0.36;         // a new game opens mid-morning
   const FADE = 8;               // seconds a sky takes to become the next one
   const SPELL_MIN = 35, SPELL_VAR = 60;
+  const FIRST_SPELL = 110;      // the opening sky holds a while before the chain starts
   const PREF_KEY = 'mk.sky';    // 'full' | 'calm' | 'off'
 
   // ---------- the hours ----------
@@ -180,7 +183,7 @@
 
   let clock = START_T * DAY_LEN;
   let held = null;                        // a clock the dev page froze, or null
-  let curSky = 'clear', prevSky = 'clear', spell = 0, spellLen = 110, mixK = 1;
+  let curSky = 'clear', prevSky = 'clear', spell = 0, spellLen = FIRST_SPELL, mixK = 1;
   // A front arrives from one side or the other and the whole spell leans that
   // way, so the rain does not slant the same direction for an entire session.
   let curDir = 1, prevDir = 1;
@@ -195,6 +198,7 @@
   let wet = 0;                            // 0..1, rises in rain and dries off slowly
   let pack = 0;                           // 0..1, snow lying on the ground
   let sheenPh = 0;
+  let saved = null;                       // the save's copy of the sky, kept current by tick()
   // A/B switches, developer only: either effect can be taken out without
   // touching the other or the rest of the sky.
   const FX_KEYS = { wet: 'mk.fx.wet', pack: 'mk.fx.pack', lightmap: 'mk.fx.lightmap' };
@@ -706,6 +710,37 @@
     return { c: mixColor(ac, bc, mixK), a: lerp(a ? a.a : 0, b ? b.a : 0, mixK) };
   }
 
+  // ---------- the sky a save left ----------
+  // A world's save carries the sky it was left under, so picking a game up
+  // again does not throw it back to the morning a new one opens on. app.js
+  // hands resume() the record from the save (nothing, for a new world or a
+  // save from before) and puts back the live record this returns; tick()
+  // keeps that one current, so every save of the world writes the sky as it
+  // stands at that moment. A sky part way through becoming the next one comes
+  // back as the next one: eight seconds of fade are not worth keeping. A sky
+  // the dev page has pinned stays pinned.
+  function resume(s) {
+    const r = s && typeof s === 'object' ? s : {};
+    const num = (v, lo, hi, dflt) => (typeof v === 'number' && isFinite(v) ? Math.min(hi, Math.max(lo, v)) : dflt);
+    clock = num(r.t, 0, 1, START_T) * DAY_LEN;
+    if (!forced) curSky = SKIES[r.sky] ? r.sky : 'clear';
+    prevSky = curSky; mixK = 1;
+    spellLen = num(r.len, SPELL_MIN, Math.max(FIRST_SPELL, SPELL_MIN + SPELL_VAR), FIRST_SPELL);
+    spell = num(r.spell, 0, spellLen, 0);
+    curDir = prevDir = r.dir === -1 ? -1 : 1;
+    wet = fx.wet ? num(r.wet, 0, 1, 0) : 0;
+    pack = fx.pack ? num(r.pack, 0, 1, 0) : 0;
+    saved = {};
+    keep();
+    return saved;
+  }
+  function keep() {
+    if (!saved) return;
+    saved.t = (((clock % DAY_LEN) + DAY_LEN) % DAY_LEN) / DAY_LEN;
+    saved.sky = curSky; saved.spell = spell; saved.len = spellLen; saved.dir = curDir;
+    saved.wet = wet; saved.pack = pack;
+  }
+
   // ---------- the frame ----------
   // dt is the ticker's delta (1 at 60fps); cam is the camera's world origin.
   function tick(dt, cam) {
@@ -754,6 +789,7 @@
     pack = clamp01(pack + (falling > 0 ? (sec / 27.5) * falling : -sec / 22.5));
     if (!fx.wet) wet = 0;
     if (!fx.pack) pack = 0;
+    keep();
 
     // Cloud takes far more off a bright afternoon than it does off a night that
     // is already dark, so the weather wash is pulled back as the hour darkens.
@@ -1193,7 +1229,7 @@
 
   // ---------- what the rest of the game asks ----------
   window.SKY = {
-    init, resize, tick, setLights, follow, setBeat, setClimate, setMode, setFx,
+    init, resize, tick, setLights, follow, setBeat, setClimate, setMode, setFx, resume,
     fx: () => ({ wet: fx.wet, pack: fx.pack, lightmap: fx.lightmap }),
     mode: () => mode,
     // 0..1: how hard every light on the map should burn right now

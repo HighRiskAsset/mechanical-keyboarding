@@ -67,7 +67,7 @@
       unlockLog: [],     // {id, keys, at}
       km: 0,
       nightBlocks: 0,
-      collected: {},     // word → {n, clean, at} — the passport
+      collected: {},     // word → {n, clean, at}: every word typed whole, kept in the save
       bag: {},           // material id → count
       seen: {},          // material id → true once held (progressive reveal)
       machines: sm.machines, // {id, kind, ore?, node?, at, face, recipe?, autoOn?}
