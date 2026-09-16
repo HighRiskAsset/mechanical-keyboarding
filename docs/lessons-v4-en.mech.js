@@ -38,8 +38,11 @@ module.exports = {
   fluids: ['R5', 'R9', 'R12'],
   // the raws drawn from a pool rather than a seam: a map lays each one as a
   // small authored pool that takes exactly one four-by-four extractor, so
-  // supply stays countable the way a vein's is (user ruling 2026-09-16)
-  pools: ['R5', 'R9'],
+  // supply stays countable the way a vein's is (user ruling 2026-09-16).
+  // Not `pools` above: that key is how many recipes may share a material,
+  // and a second `pools` here once silently replaced it, folding 84
+  // materials into 28 (2026-09-16).
+  poolRaws: ['R5', 'R9'],
   // byproducts come out beside a lesson's material: one from three of the
   // gathers (2:2) and from five key-group recipes (1:2), two from the other
   // three gathers (2:3)

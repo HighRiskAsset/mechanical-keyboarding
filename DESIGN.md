@@ -2224,8 +2224,10 @@ water. That was reversed: it made water trivial to find and let ten
 extractors crowd one pond, where a resource should sit in strategic places.)
 The seams the two raws used to hold stay as empty `kind: null` slots so every
 later node index holds, and a save's extractors are moved onto free pools.
-The rule lives in the tree (`pools` in `docs/lessons-v4-*.mech.js`, emitted as
-a mine's `ground`) and `CHAIN.onPool` reads it; the maps name the pool raws
+The rule lives in the tree (`poolRaws` in `docs/lessons-v4-*.mech.js`, emitted
+as a mine's `ground`; not `pools`, which is the recipe-sharing switch, and a
+second key of that name once folded 84 materials into 28) and `CHAIN.onPool`
+reads it; the maps name the pool raws
 again to lay their ground, since a map loads before the tree is read. The
 water extractor and the oil derrick each have a sprite sheet of their own.
 
