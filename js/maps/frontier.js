@@ -39,7 +39,7 @@
 //   · THE OUTSKIRTS ARE THE INTERESTING PART. Every one of the five outer
 //     edges carries a landmark and a seam you have to go out to: the summit
 //     and its coal, the mesa's north edge and its stone, the east crystal
-//     bench and its quartz, the badland butte and its copper, the reed lagoon
+//     bench and its quartz, the badland butte and its uranium, the reed lagoon
 //     and the oil on its shore. Four of the five are a climb.
 //   · Nothing is gated. Every crossing carries `free`, so the bridges and the
 //     west causeway stand built from the first second.
@@ -352,7 +352,7 @@
     { kind: 'R2',  x: 640,  y: 80 },               // the mesa's north edge, up under the treeline
     { kind: 'R3',   x: 128,  y: 96,  vert: true },  // the summit, the highest seam on the map
     { kind: 'R4', x: 1792, y: 96 },               // the east crystal bench, over the east works
-    { kind: null, x: 96,   y: 768, vert: true },  // the badland butte, the far south-west (no seam: see R5 above)
+    { kind: 'R11', x: 96,  y: 768, vert: true },  // the badland butte, the far south-west: the uranium seam came out here 2026-09-16, when water gave the butte up
     { kind: 'R6',    x: 1600, y: 832, vert: true },  // the reed lagoon's west shore, past the lake
     // ---- the v4 seams (2026-09-13) ----
     // Thirteen raws where there were six, and seven of them stood on one seam
@@ -372,7 +372,7 @@
     { kind: 'R8',  x: 480,  y: 880 },               // the lower flats, by the deep seep
     { kind: 'R9',  x: 352,  y: 800, vert: true },  // the tar flats, between the seeps
     { kind: 'R10', x: 1776, y: 544, vert: true },  // the east shale, below the east works
-    { kind: 'R11', x: 464,  y: 160 },               // the north snow, under the mesa's west face
+    { kind: null,  x: 464,  y: 160 },               // (the north snow's uranium went out to the badland butte, 2026-09-16: open snow under a cliff was the least interesting ground any seam stood on)
     { kind: 'R12', x: 96,   y: 432 },               // the far west, beside the broken crevasse
     { kind: 'R13', x: 1776, y: 672 },               // the far east corner, past the bog
   ];
@@ -564,6 +564,17 @@
   // deepest south-east there is, and the oil seam sits on its west shore
   lay('sand', blob(110, 53, 6.4, 3.6, 83, 0.2));
   lay('water', blob(110, 53, 5.2, 2.7, 83, 0.2));
+
+  // - THE BASIN'S POND (2026-09-16). Water is drawn from open water, and
+  // every drop of it was out on the rim: the nearest lake to the landing was
+  // a trek, and the bog's own lake is cut into channels by the island and
+  // its bridges that no extractor fits in. So the meadow has a pond of its
+  // own, eleven tiles by eight with a sand shore, out in the open south of
+  // the track and well clear of the seams, the spur to the lake and the
+  // landing. It is the one piece of water in the basin, and it is there to
+  // be built in: it takes two extractors with room to walk between them.
+  lay('sand', blob(62, 33.5, 6.6, 4.6, 89, 0.18));
+  lay('water', blob(62, 33.5, 5.4, 3.6, 89, 0.18));
 
   // - the flats: tar seeps, and a third one out in the deep south where the
   // pan used to run flat to the trees

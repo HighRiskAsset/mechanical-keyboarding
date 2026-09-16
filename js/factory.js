@@ -159,8 +159,12 @@
     M1: 'bigrams', M2: 'foundry', M3: 'manufacturer', M4: 'words', M5: 'molder', M6: 'lines',
     M7: 'foundry', M8: 'words', M9: 'molder', M10: 'fastener', M11: 'crane', M12: 'manufacturer',
   };
-  // an automated mine is a different machine to look at, not a different state
-  const lookOf = (kind, auto) => kind === 'mine' ? (auto ? 3 : 1) : (STATION_LOOK[kind] || 'lines');
+  // an automated mine is a different machine to look at, not a different state.
+  // A mine on open water is not a rig at all: the extractor has a sheet of its
+  // own, and it wears it whether it is worked by hand or by itself.
+  const lookOf = (kind, auto, ore) => (kind === 'mine'
+    ? (CHAIN.drawsWater(ore) ? 'extractor' : (auto ? 3 : 1))
+    : (STATION_LOOK[kind] || 'lines'));
   function band(look, mode, facing) {
     const face = facing || 's';
     const k = look + ':' + mode + ':' + face;
@@ -824,7 +828,7 @@
   // the pose a machine is built in: automated ones start on the idle breath,
   // the rest stand still. The ticker takes over from the next frame.
   function stationSpriteTex(m) {
-    return band(lookOf(m.kind, m.autoLive), m.autoLive ? 'idle' : 'still', SIM.facingOf(m))[0];
+    return band(lookOf(m.kind, m.autoLive, m.ore), m.autoLive ? 'idle' : 'still', SIM.facingOf(m))[0];
   }
 
   // Build the world from the save: machines on the ground and on nodes,
@@ -1009,7 +1013,7 @@
     if (!st || st.def.kind !== 'mine') return;
     st.auto = live;
     st.simState = live ? 'run' : 'off';
-    st.sp.texture = band(lookOf(st.def.kind, live), live ? 'idle' : 'still', SIM.facingOf(st.def.m))[0];
+    st.sp.texture = band(lookOf(st.def.kind, live, st.def.m && st.def.m.ore), live ? 'idle' : 'still', SIM.facingOf(st.def.m))[0];
   }
 
   // ---------- belts on the map (phase 3) ----------
@@ -1691,7 +1695,7 @@
     const b = bodyBox(m);
     const foot = m.kind === 'mine' ? 2 : 10;
     const wet = m.kind === 'mine' && CHAIN.drawsWater(m.ore);
-    const tex0 = band(lookOf(m.kind, false), 'still', SIM.facingOf(m))[0];
+    const tex0 = band(lookOf(m.kind, false, m.ore), 'still', SIM.facingOf(m))[0];
     const sp = new PIXI.Sprite(tex0);
     sp.position.set(b.c0 * T16 + ((b.w * T16 - tex0.width) >> 1), wet ? b.r0 * T16 + ((b.h * T16 - tex0.height) >> 1) : b.r0 * T16 + b.h * T16 - foot - tex0.height);
     sp.alpha = 0.6;

@@ -1386,10 +1386,141 @@
     doorsE(x, kind, W, H, west);
     return c;
   }
+  // ---------- the water extractor 62x62 (2026-09-16) ----------
+  // Water is drawn from open water and not from a seam, so this is the one
+  // machine that stands IN the lake: four tiles by four of riveted pontoon
+  // with a pump house on it and the water lapping at its rim. Same kit as
+  // every other machine — iron plate, brass trim, one fire, one thing that
+  // moves — and what moves is a walking beam driving the pump rod down its
+  // well, which is how the frontier lifts water. The deck is what makes it
+  // read as afloat: the hull's shadow sits in the water below it and a foam
+  // line breathes along the waterline, so the machine never looks as though
+  // somebody built it on a puddle.
+  const EXT = 62;
+  // the hull and its water, shared by every facing: shadow, pontoon, foam
+  function extHull(x, b) {
+    const f = b.run ? [0, 1, 2, 1][b.f] : 0;
+    // the lake the thing sits in: deep shadow under the hull, a ring of
+    // ripples riding out from it, and foam where the iron meets the water
+    R(x, P.wC, 1, 51, 60, 10);
+    R(x, P.wO, 3, 53, 56, 7);
+    R(x, P.water2, 0, 56 + f, 4, 1); R(x, P.water2, 58 - f, 57, 4, 1);
+    R(x, P.water3, 2 + f, 60, 6, 1); R(x, P.water3, 52 - f, 60, 7, 1);
+    M.plate(x, 4, 45, 54, 12);                                    // the pontoon deck
+    M.band(x, 6, 49, 50);
+    M.rivets(x, 7, 54, 48, 5);
+    R(x, P.wF, 3 + f, 57, 15, 2);                                 // foam along the waterline
+    R(x, P.wF, 26 - f, 58, 16, 1);
+    R(x, P.wF, 44 + f, 57, 13, 2);
+  }
+  // the beam: it rocks on its post, one arm down as the other rises
+  // the beam's throw: two pixels each way, which is what makes a rock read
+  // at this size. One a frame is a machine that looks broken, not working.
+  const extTilt = (b) => (b.run ? [0, 2, 0, -2][b.f] : 0);
+  // The walking beam on its A-frame. Each arm is stepped — an inner segment
+  // at half the throw, an outer at the full — so the beam reads as a rocking
+  // see-saw rather than a bar laid across the roof.
+  function extBeam(x, b, tilt) {
+    const half = tilt >> 1;
+    R(x, P.ironO, 25, 10, 12, 20); R(x, P.iron2, 26, 11, 10, 19); R(x, P.iron, 26, 11, 4, 19);  // the A-frame
+    R(x, P.iron3, 22, 25, 18, 2); M.rivets(x, 24, 25, 14, 4);                                   // its tie bar
+    R(x, P.ironO, 17, 12 + half, 10, 4); R(x, P.iron2, 18, 13 + half, 8, 2);                    // near arm, inner
+    R(x, P.ironO, 4, 13 + tilt, 14, 4); R(x, P.iron2, 5, 14 + tilt, 12, 2); R(x, P.ironL, 5, 14 + tilt, 12, 1);
+    R(x, P.ironO, 35, 12 - half, 10, 4); R(x, P.iron2, 36, 13 - half, 8, 2);                    // far arm, inner
+    R(x, P.ironO, 44, 13 - tilt, 14, 4); R(x, P.iron2, 45, 14 - tilt, 12, 2); R(x, P.ironL, 45, 14 - tilt, 12, 1);
+    R(x, P.brass1, 26, 12, 10, 4); R(x, P.brass2, 27, 12, 6, 1);                                // the pivot bearing
+  }
+  function extractorS(frame, mode) {
+    const [c, x] = canvas(EXT, EXT);
+    const b = beat(mode === undefined ? 'work' : mode, frame);
+    const tilt = extTilt(b);
+    extHull(x, b);
+    extBeam(x, b, tilt);
+    M.plate(x, 10, 31, 42, 15);                                   // the pump house
+    R(x, P.ironO, 8, 27, 46, 5); R(x, P.iron, 9, 28, 44, 3); R(x, P.ironL, 9, 28, 44, 1);      // the roofline
+    R(x, P.ironO, 17, 23, 28, 5); R(x, P.iron2, 18, 24, 26, 3); R(x, P.ironL, 18, 24, 26, 1);  // the hood over the well head
+    M.band(x, 11, 36, 40);
+    M.rivets(x, 12, 42, 38, 5);
+    // the pump rod follows the near arm of the beam down into its well, and
+    // the well answers with a slap of water at the bottom of every stroke
+    R(x, P.ironO, 7, 16 + tilt, 5, 30 - tilt); R(x, P.steel, 8, 17 + tilt, 3, 28 - tilt);
+    R(x, P.ironO, 5, 43, 9, 4); R(x, P.soot, 6, 44, 7, 2);                                      // the well mouth
+    if (tilt > 0) { R(x, P.wF, 4, 43, 11, 1); R(x, P.water3, 3, 42, 2, 1); R(x, P.water3, 14, 42, 2, 1); }
+    M.gauge(x, 17, 33); M.gauge(x, 22, 33);
+    M.firebox(x, 28, 38, 8, 6, b.heat);
+    M.wheel(x, 45, 37, 5, b.f);                                   // the flywheel on the engine's end
+    // the launder: what the machine is for. It runs while the beam does, and
+    // the water it lifts falls off the deck in front of the eye.
+    R(x, P.ironO, 40, 42, 15, 4); R(x, P.copper2, 41, 43, 13, 2); R(x, P.copper, 41, 43, 13, 1);
+    if (b.run) {
+      const j = b.f % 2;
+      R(x, P.water2, 52, 46, 3, 8); R(x, P.water3, 53, 46, 1, 6);
+      R(x, P.wF, 50 + j, 53, 6, 2); R(x, P.water3, 49 - j, 52, 2, 1);
+    }
+    M.flue(x, 43, 3, 24); M.puff(x, 44, 2, b.f);
+    M.lamp(x, 48, 30, b.lamp);
+    return c;
+  }
+  // the back: the same massing mirrored, the fire and the dials away, and
+  // what shows is service iron — the ladder to the beam, rivets, the flue
+  function extractorN(frame, mode) {
+    const [c, x] = canvas(EXT, EXT);
+    const b = beat(mode === undefined ? 'work' : mode, frame);
+    const tilt = -extTilt(b);
+    extHull(x, b);
+    extBeam(x, b, tilt);
+    M.plate(x, 10, 31, 42, 15);
+    R(x, P.ironO, 8, 27, 46, 5); R(x, P.iron, 9, 28, 44, 3); R(x, P.ironL, 9, 28, 44, 1);
+    R(x, P.ironO, 17, 23, 28, 5); R(x, P.iron2, 18, 24, 26, 3); R(x, P.ironL, 18, 24, 26, 1);   // the same hood from behind
+    M.rivets(x, 12, 34, 38, 5);
+    M.rivets(x, 12, 42, 38, 5);
+    R(x, P.ironO, 50, 16 - tilt, 5, 30 + tilt); R(x, P.steel, 51, 17 - tilt, 3, 28 + tilt);     // the rod, the far side now
+    R(x, P.ironO, 48, 43, 9, 4); R(x, P.soot, 49, 44, 7, 2);
+    if (tilt < 0) { R(x, P.wF, 47, 43, 11, 1); R(x, P.water3, 46, 42, 2, 1); }
+    R(x, P.iron3, 24, 32, 1, 15); R(x, P.iron3, 28, 32, 1, 15);                                 // the service ladder
+    for (let ry = 34; ry < 47; ry += 3) R(x, P.iron3, 25, ry, 3, 1);
+    M.flue(x, 15, 4, 23); M.puff(x, 16, 3, b.f);
+    M.lamp(x, 11, 30, b.lamp);
+    return c;
+  }
+  // the flank: the beam runs away from the eye, so what the side shows is
+  // the flywheel full on, the rod at the near corner and the long hull
+  function extractorE(frame, mode) {
+    const [c, x] = canvas(EXT, EXT);
+    const b = beat(mode === undefined ? 'work' : mode, frame);
+    const tilt = extTilt(b);
+    extHull(x, b);
+    R(x, P.ironO, 25, 12, 10, 19); R(x, P.iron2, 26, 13, 8, 18); R(x, P.iron, 26, 13, 3, 18);   // the post, end on
+    R(x, P.ironO, 22, 14 + tilt, 16, 4); R(x, P.iron2, 23, 15 + tilt, 14, 2); R(x, P.ironL, 23, 15 + tilt, 14, 1);
+    R(x, P.brass1, 27, 16, 6, 3); R(x, P.brass2, 27, 16, 3, 1);
+    M.plate(x, 8, 31, 46, 15);
+    R(x, P.ironO, 6, 27, 50, 5); R(x, P.iron, 7, 28, 48, 3); R(x, P.ironL, 7, 28, 48, 1);
+    R(x, P.ironO, 15, 23, 30, 5); R(x, P.iron2, 16, 24, 28, 3); R(x, P.ironL, 16, 24, 28, 1);   // the hood, down the flank
+    M.band(x, 9, 36, 44);
+    M.rivets(x, 10, 42, 42, 5);
+    R(x, P.ironO, 46, 16 + tilt, 5, 30 - tilt); R(x, P.steel, 47, 17 + tilt, 3, 28 - tilt);     // the rod at the front corner
+    R(x, P.ironO, 44, 43, 9, 4); R(x, P.soot, 45, 44, 7, 2);
+    if (tilt > 0) { R(x, P.wF, 43, 43, 11, 1); R(x, P.water3, 53, 42, 2, 1); }
+    // the launder pours off the flank's front corner while the beam works
+    if (b.run) { R(x, P.water2, 53, 46, 3, 7); R(x, P.wF, 51 + (b.f % 2), 52, 6, 2); }
+    M.wheel(x, 20, 38, 7, b.f);                                   // the flywheel, full on
+    M.gauge(x, 10, 33);
+    M.firebox(x, 30, 41, 7, 5, b.heat);
+    M.flue(x, 12, 4, 23); M.puff(x, 13, 3, b.f);
+    M.lamp(x, 50, 30, b.lamp);
+    return c;
+  }
+
   // one station, four ways up: s is the authored front, n the authored
   // back, e the authored flank — and w is e flipped, the way the operator's
   // own side sprite turns, with the doors of the flank that actually shows
   function station(kind, frame, mode, facing) {
+    if (kind === 'extractor') {
+      if (facing === 'n') return extractorN(frame, mode);
+      if (facing === 'e') return extractorE(frame, mode);
+      if (facing === 'w') return flipX(extractorE(frame, mode));
+      return extractorS(frame, mode);
+    }
     if (facing === 'n') return stationN(kind, frame, mode);
     if (facing === 'e') return stationE(kind, frame, mode);
     if (facing === 'w') return flipX(stationE(kind, frame, mode, true));

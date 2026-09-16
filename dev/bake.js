@@ -77,14 +77,20 @@
   // ---------- enumerations off the live data ----------
   const MAPS = Object.values(window.MAPKIT.MAPS);
   const STYLES = TILES.STYLE_IDS;                       // tan grey violet snow drift
-  const LOOKS = ['bigrams', 'foundry', 'words', 'molder', 'lines', 'fastener', 'crane', 'manufacturer'];
+  const LOOKS = ['bigrams', 'foundry', 'words', 'molder', 'lines', 'fastener', 'crane', 'manufacturer', 'extractor'];
+  // One sheet at a time, for adding art to a folder artists own: with
+  // ?only=station-extractor (a comma-separated list) every other sheet is
+  // skipped, so a new look can be baked straight to assets/sprites without
+  // the rest of the bake landing on top of hand-painted work.
+  const ONLY = (new URLSearchParams(location.search).get('only') || '').split(',').map((s) => s.trim()).filter(Boolean);
+  const wanted = (name) => !ONLY.length || ONLY.includes(name);
   const FACINGS = ['s', 'n', 'e', 'w'];
   const MODES = [['work', PIXELS.WORK_FRAMES], ['idle', PIXELS.IDLE_FRAMES], ['still', 1]];
   const GROUND_VARIANTS = 4;
 
   async function bakeAll() {
     const sheetNames = [];
-    const run = async (b) => { sheetNames.push(b.name); await bakeSheet(b); };
+    const run = async (b) => { if (!wanted(b.name)) { log('  ' + b.name + ': skipped (?only)'); return; } sheetNames.push(b.name); await bakeSheet(b); };
 
     // ---- ground: 4 static variants per kind; water's variants animate ----
     {
