@@ -78,18 +78,13 @@ function apply(a) {
   }
   if (a.type === 'build') {
     if (a.kind === 'mine') {
-      // a raw drawn from open water stands on no vein (2026-09-16)
-      const water = CHAIN.drawsWater(a.ore);
-      const n = water ? null : CHAIN.unbuiltNodes(p).find((x) => x.ore === a.ore);
-      if (!water && !n) fail('no vein', a);
+      const n = CHAIN.unbuiltNodes(p).find((x) => x.ore === a.ore);
+      if (!n) fail('no vein', a);
       const price = CHAIN.oreOpen(p, a.ore) ? CHAIN.priceExtraMine(a.ore) : CHAIN.priceNode(a.ore);
       if (price && !CHAIN.affordable(p.bag, price)) fail('mine not affordable', a);
       CHAIN.spendCost(p.bag, price);
-      if (water) p.machines.push({ id: 'm' + (p.nextMachineId++), kind: 'mine', ore: a.ore, at: [300 + (slot += 5), 320], face: 's', auto: false });
-      else {
-        const seat = MAPKIT.veinBox({ ...n, vert: false });
-        p.machines.push({ id: 'm' + (p.nextMachineId++), kind: 'mine', ore: a.ore, node: n.index, at: [seat.c0, seat.r0], face: 's', auto: false });
-      }
+      const seat = CHAIN.nodeSeat(n, 's');   // a vein's seat, or a pool's four by four
+      p.machines.push({ id: 'm' + (p.nextMachineId++), kind: 'mine', ore: a.ore, node: n.index, at: [seat.c0, seat.r0], face: 's', auto: false });
       E.unlockIntro(p, CHAIN.mineLesson(a.ore));
     } else {
       const price = CHAIN.priceMachine(a.kind, CHAIN.machinesOfKind(p, a.kind).length + 1);

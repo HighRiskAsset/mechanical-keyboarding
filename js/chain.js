@@ -34,9 +34,10 @@
   const MINES = TREE.mines;   // {lesson, raw, name, opens, price, autoPrice, free}
   const MINE_BY_RAW = {};
   for (const m of MINES) MINE_BY_RAW[m.raw] = m;
-  // a raw drawn from open water (the tree's `ground`, 2026-09-16) has no seam:
-  // its extractor stands on the map's water tiles, wherever they will take it
-  const drawsWater = (ore) => !!(MINE_BY_RAW[ore] && MINE_BY_RAW[ore].ground === 'water');
+  // a raw drawn from a pool rather than a seam (the tree's `ground`,
+  // 2026-09-16): water and crude oil. A map lays each pool as a node, and a
+  // pool takes exactly one extractor, so supply is counted the way veins are.
+  const onPool = (ore) => !!(MINE_BY_RAW[ore] && MINE_BY_RAW[ore].ground === 'pool');
   const ORE_IDS = MINES.map((m) => m.raw);
   const ORES = {};
   ORE_IDS.forEach((id, i) => { ORES[id] = { id, node: id, order: i, lesson: MINE_BY_RAW[id].lesson, name: MINE_BY_RAW[id].name }; });
@@ -290,11 +291,24 @@
   }
   const nodeFace = (i) => ((cur.MAP.NODES[i] || {}).vert ? 'e' : 's');
   // the tiles a machine takes, [across, deep]: its kind's, except that an
-  // extractor standing in open water is four by four (user ruling 2026-09-16)
-  const WATER_SIZE = [4, 4];
-  const sizeOf = (kind, ore) => (kind === 'mine' && drawsWater(ore) ? WATER_SIZE : ((KINDS[kind] || {}).size || [2, 2]));
+  // extractor standing on a pool takes the pool's four by four (2026-09-16)
+  const sizeOf = (kind, ore) => (kind === 'mine' && onPool(ore) ? [MAPKIT.POOL, MAPKIT.POOL] : ((KINDS[kind] || {}).size || [2, 2]));
+  // The ground a node is (a vein's two tiles, a pool's four by four), and
+  // where a mine facing `face` stands on it: a pool is square, so every
+  // facing stands on the pool itself, while a vein turns to match the mine.
+  const nodeBox = (n) => (onPool(n.ore || ORE_BY_NODE[n.kind]) ? MAPKIT.poolBox(n) : MAPKIT.veinBox(n));
+  function nodeSeat(n, face) {
+    const ore = n.ore || ORE_BY_NODE[n.kind];
+    if (onPool(ore)) return MAPKIT.poolBox(n);
+    const fp = MAPKIT.footprint(sizeOf('mine', ore), face || 's');
+    return MAPKIT.veinBox({ ...n, vert: fp[1] > fp[0] });
+  }
   function machineBox(m) {
     const size = sizeOf(m.kind, m.ore);
+    // an extractor carried over from an older save may name only its pool
+    if (!Array.isArray(m.at) && m.kind === 'mine' && onPool(m.ore) && m.node !== undefined && m.node !== null && cur.MAP.NODES[m.node]) {
+      return MAPKIT.poolBox(cur.MAP.NODES[m.node]);
+    }
     const face = MAPKIT.FACINGS.includes(m.face) ? m.face : 's';
     if (Array.isArray(m.at)) return MAPKIT.boxAt(m.at, size, face);
     const a = machineAnchor(m);
@@ -314,7 +328,7 @@
   function unbuiltNodes(profile) {
     const out = [];
     cur.MAP.NODES.forEach((n, i) => {
-      if (ORE_BY_NODE[n.kind] && !drawsWater(n.kind) && !nodeBuilt(profile, i)) out.push({ ...n, index: i, ore: ORE_BY_NODE[n.kind] });
+      if (ORE_BY_NODE[n.kind] && !nodeBuilt(profile, i)) out.push({ ...n, index: i, ore: ORE_BY_NODE[n.kind] });
     });
     return out;
   }
@@ -343,7 +357,7 @@
   function starterNodes() {
     const out = [];
     for (const ore of ORE_IDS) {
-      if (!mineFree(ore) || drawsWater(ore)) continue;
+      if (!mineFree(ore)) continue;
       const i = cur.MAP.NODES.findIndex((n) => ORE_BY_NODE[n.kind] === ore);
       if (i >= 0) out.push({ ore, index: i, lesson: mineLesson(ore) });
     }
@@ -375,7 +389,7 @@
     priceNode, priceExtraMine, priceMachine, priceAuto, priceCompletion, priceCrossing, scaleCost, autoKey, autoOn, closedCrossings,
     unlockedIntros, introUnlocked, unlockedKeys, capsUnlocked, nextPairs, nextPair, introRung, newestPair, targetBar, currentTier,
     oreOpen, matExists, offerable, offerableRecipes, inputsExist, kindLive, whatUnlocks, affordable, matInReach, visibleKinds, buildableKinds, kindEverLive, rungsInView, mineMat,
-    machineBox, machinePos, machineFoot, machineAnchor, nodeFace, machinesOfKind, machinesOfOre, nodeBuilt, unbuiltNodes, drawsWater, sizeOf,
+    machineBox, machinePos, machineFoot, machineAnchor, nodeFace, machinesOfKind, machinesOfOre, nodeBuilt, unbuiltNodes, onPool, sizeOf, nodeBox, nodeSeat,
     MAPS, MAP_IDS, DEFAULT_MAP, useMap, currentMap, starterNodes, siteById, crossingOpen, regionAt,
   };
   useMap(DEFAULT_MAP);

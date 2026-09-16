@@ -5,7 +5,7 @@
 // FREE BUILD since 2026-08-28. The map used to carry fifty-seven surveyed
 // sites in three ranks, and a machine could only stand on one of them; the
 // sites are gone, so a body may go down on any clear
-// ground. The obstacles still rule: the treeline, the scenery, the pond and
+// ground. The obstacles still rule: the treeline, the scenery, the pools and
 // the seams themselves refuse a placement, and belts still have to find a
 // lane between whatever you put in their way. The Frontier was meant to
 // keep its sites so the two styles could be played against each other; it
@@ -43,20 +43,27 @@
   // and R7 to R13 had one seam each. The row grew east again on the same
   // pitch, with the new seams appended so every old one keeps its index.
   //
-  // R5 has no seams since 2026-09-16: Water is drawn from open water, and its
-  // four-by-four extractor stands in the pond. Its three places in the row are
-  // `null`, empty ground a save may still name, so every index holds.
+  // R5 and R9 have no seams since 2026-09-16: water and crude oil come from
+  // pools, each taking exactly one four-by-four extractor, laid in a second
+  // row below the seams under the slot each one used to hold. Their places in
+  // the seam row are `null`, empty ground a save may still name, so every
+  // index holds.
   const COLS = Array.from({ length: 34 }, (_, k) => 112 + 80 * k);
   const NODE_KINDS = ['R1', 'R2', 'R3', 'R4', null, 'R6',
-    'R7', 'R8', 'R9', 'R10', 'R11', 'R12',
+    'R7', 'R8', null, 'R10', 'R11', 'R12',
     'R13', 'R1', 'R2', 'R3', 'R4', null, 'R6',
-    'R7', 'R8', 'R9', 'R10', 'R11', 'R12', 'R13',
+    'R7', 'R8', null, 'R10', 'R11', 'R12', 'R13',
     'R1', 'R2', 'R3', 'R4', null, 'R1', 'R2', 'R1'];
   // every raw with two seams or more gets one of each seating
   const VERT = new Set([0, 3, 4, 7, 8, 11, 13, 14, 16, 17, 19, 22, 23, 25, 27, 28, 31]);
   const NODES = COLS.map((x, k) => (VERT.has(k)
     ? { kind: NODE_KINDS[k], x, y: 48, vert: true }
     : { kind: NODE_KINDS[k], x, y: 48 }));
+  // the pools, appended so no index moves: each a four by four on tile lines
+  // in rows 10 to 13, under the seam slot its raw gave up. The raws named
+  // here must agree with the tree's `pools`.
+  const POOL_RAWS = new Set(['R5', 'R9']);
+  for (const [k, kind] of [[4, 'R5'], [17, 'R5'], [30, 'R5'], [8, 'R9'], [21, 'R9']]) NODES.push({ kind, x: 112 + 80 * k, y: 160 });
 
   const SCENERY = [
     sc('tree', 5, 24), sc('tree2', 12, 25), sc('rock', 19, 24), sc('tree', 26, 25),
@@ -93,7 +100,7 @@
     ],
     GROUND: [
       // the dish under every seam, lying the way the seam does
-      ...NODES.filter((n) => n.kind).map((n) => (n.vert
+      ...NODES.filter((n) => n.kind && !POOL_RAWS.has(n.kind)).map((n) => (n.vert
         ? { kind: 'dirt', x: n.x - 8, y: n.y - 4, w: 32, h: 48 }
         : { kind: 'dirt', x: n.x - 4, y: n.y - 8, w: 48, h: 32 })),
       { kind: 'pad', x: 32, y: 128, w: 48, h: 32 },
@@ -106,12 +113,13 @@
       // dirt reads as an invitation to stand on it, and this ground has no
       // favourites any more.
       //
-      // the pond sits out in the meadow, well clear of the vein row, and is
-      // ten tiles by six so it takes two Water Extractors side by side (each
-      // four by four, standing in open water, 2026-09-16) with shore to work
-      // them from
-      { kind: 'sand', x: 976, y: 208, w: 192, h: 128 },
-      { kind: 'water', x: 992, y: 224, w: 160, h: 96 },
+      // each pool in its own shore: sand round the water, a stained dirt rim
+      // round the crude, and the pool itself the four by four an extractor
+      // stands on (2026-09-16)
+      ...NODES.filter((n) => POOL_RAWS.has(n.kind)).flatMap((n) => [
+        { kind: n.kind === 'R9' ? 'dirt' : 'sand', x: n.x - 16, y: n.y - 16, w: 96, h: 96 },
+        { kind: n.kind === 'R9' ? 'tar' : 'water', x: n.x, y: n.y, w: 64, h: 64 },
+      ]),
     ],
     PLATEAUS: [],
     WALLS: [],

@@ -36,9 +36,10 @@ module.exports = {
   machinesCap: 11,
   // three raws travel by pipe; a syllable recipe fed by a fluid makes a fluid
   fluids: ['R5', 'R9', 'R12'],
-  // the raws drawn from open water rather than a seam: their extractor
-  // stands on the map's water tiles, and no vein is laid for them
-  water: ['R5'],
+  // the raws drawn from a pool rather than a seam: a map lays each one as a
+  // small authored pool that takes exactly one four-by-four extractor, so
+  // supply stays countable the way a vein's is (user ruling 2026-09-16)
+  pools: ['R5', 'R9'],
   // byproducts come out beside a lesson's material: one from three of the
   // gathers (2:2) and from five key-group recipes (1:2), two from the other
   // three gathers (2:3)

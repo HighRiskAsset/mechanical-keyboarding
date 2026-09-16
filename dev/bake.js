@@ -77,7 +77,7 @@
   // ---------- enumerations off the live data ----------
   const MAPS = Object.values(window.MAPKIT.MAPS);
   const STYLES = TILES.STYLE_IDS;                       // tan grey violet snow drift
-  const LOOKS = ['bigrams', 'foundry', 'words', 'molder', 'lines', 'fastener', 'crane', 'manufacturer', 'extractor'];
+  const LOOKS = ['bigrams', 'foundry', 'words', 'molder', 'lines', 'fastener', 'crane', 'manufacturer', 'extractor', 'derrick'];
   // One sheet at a time, for adding art to a folder artists own: with
   // ?only=station-extractor (a comma-separated list) every other sheet is
   // skipped, so a new look can be baked straight to assets/sprites without

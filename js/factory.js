@@ -160,10 +160,11 @@
     M7: 'foundry', M8: 'words', M9: 'molder', M10: 'fastener', M11: 'crane', M12: 'manufacturer',
   };
   // an automated mine is a different machine to look at, not a different state.
-  // A mine on open water is not a rig at all: the extractor has a sheet of its
-  // own, and it wears it whether it is worked by hand or by itself.
+  // A mine on a pool is not a rig at all: each pool raw has a sheet of its own
+  // (the water extractor, the oil derrick), worn worked by hand or by itself.
+  const POOL_LOOK = { R5: 'extractor', R9: 'derrick' };
   const lookOf = (kind, auto, ore) => (kind === 'mine'
-    ? (CHAIN.drawsWater(ore) ? 'extractor' : (auto ? 3 : 1))
+    ? (CHAIN.onPool(ore) ? (POOL_LOOK[ore] || 'extractor') : (auto ? 3 : 1))
     : (STATION_LOOK[kind] || 'lines'));
   function band(look, mode, facing) {
     const face = facing || 's';
@@ -550,7 +551,7 @@
     // terrain pass cannot do it here because it has no profile.
     nodeSprites = [];
     CHAIN.MAP.NODES.forEach((n, i) => {
-      if (!n.kind) return;             // a slot a save may still name, with no seam in it
+      if (!n.kind || CHAIN.onPool(n.kind)) return;   // an empty slot a save may still name, or a pool (its ground is the pool)
       const sp = keep(new PIXI.Sprite(PIXELS.nodeTex(n.kind, !!n.vert)));
       sp.position.set(n.x, n.y);
       sp.zIndex = -960;
@@ -933,9 +934,8 @@
       const live = !!(autoLive && autoLive(m));
       const root = new PIXI.Container();
       const sp = new PIXI.Sprite(stationSpriteTex({ ...m, autoLive: live }));
-      // an extractor's rig stands in the middle of the water it takes (it
-      // wears the mine's art until it has its own)
-      const wet = m.kind === 'mine' && CHAIN.drawsWater(m.ore);
+      // an extractor's art covers the pool it stands on, centred on it
+      const wet = m.kind === 'mine' && CHAIN.onPool(m.ore);
       sp.position.set((bwPx - sp.texture.width) >> 1, wet ? (bhPx - sp.texture.height) >> 1 : bhPx - foot - sp.texture.height);
       root.addChild(sp);
       const bw = bwPx - 2;
@@ -961,9 +961,9 @@
       cameraC.addChild(root);
       const id = 'm:' + m.id;
       stations[id] = {
-        // An extractor stands in open water, and the row in front of it may
-        // be water too, so it is worked from any shore that touches it: its
-        // whole body is what a walker has to be in reach of (stationAt).
+        // An extractor covers its pool, four tiles by four, so it is worked
+        // from any side that touches it: its whole body is what a walker has
+        // to be in reach of (stationAt).
         def: { id, x: bx + 1, y: by + bhPx - 5, kind: m.kind, m, bw, reach: wet ? { x: bx, y: by, w: bwPx, h: bhPx } : null }, root, sp, glow, mark, built: true, auto: live, sqTtl: 0,
         spBase: sp.y,
         light,
@@ -989,7 +989,7 @@
     // mine is two tiles by one, so its mark is that size, laid across or
     // bedded on end, whichever way the map seated the seam.
     for (const n of CHAIN.unbuiltNodes(profile)) {
-      const b = MAPKIT.veinBox(n);
+      const b = CHAIN.nodeBox(n);
       const sp = new PIXI.Sprite(PIXELS.siteTex(b.w * T16, b.h * T16));
       sp.position.set(b.c0 * T16, b.r0 * T16);
       sp.zIndex = -700;
@@ -1126,24 +1126,6 @@
     }
     return out;
   }
-  // Open water, for an extractor (Water is drawn from water since 2026-09-16,
-  // not from a seam): a water tile inside the treeline with no crossing over
-  // it, since a bridge is the way across and a body under one corks it.
-  function waterAt(tx, ty) {
-    if (!grid || tx < 0 || ty < 0 || tx >= grid.cols || ty >= grid.rows) return false;
-    if (tx < FENCE.c0 || tx > FENCE.c1 || ty < FENCE.r0 || ty > FENCE.r1) return false;
-    const cx = tx * T16 + 8, cy = ty * T16 + 8;
-    const inRect = (r) => cx >= r.x && cx < r.x + r.w && cy >= r.y && cy < r.y + r.h;
-    if (closedRects.some(inRect) || openRects.some(inRect)) return false;
-    return !!(grid.flags[ty * grid.cols + tx] & TILES.FL.WATER);
-  }
-  // the tiles of `box` an extractor may stand on, as buildZone answers for dry ground
-  function waterZone(box) {
-    const out = new Set();
-    for (let ty = box.r0; ty <= box.r1; ty++) for (let tx = box.c0; tx <= box.c1; tx++) if (waterAt(tx, ty)) out.add(tx + ',' + ty);
-    return out;
-  }
-  const hasWater = () => !!(grid && grid.water && grid.water.length);
   // can a belt lie on this tile: clear ground, not under a machine, and
   // either clear of other runs or square across a single one
   function beltFree(profile, tx, ty, blocked, beltAt, axis) {
@@ -1694,7 +1676,7 @@
     // stands in front of it or behind it the way they will once it is real
     const b = bodyBox(m);
     const foot = m.kind === 'mine' ? 2 : 10;
-    const wet = m.kind === 'mine' && CHAIN.drawsWater(m.ore);
+    const wet = m.kind === 'mine' && CHAIN.onPool(m.ore);
     const tex0 = band(lookOf(m.kind, false, m.ore), 'still', SIM.facingOf(m))[0];
     const sp = new PIXI.Sprite(tex0);
     sp.position.set(b.c0 * T16 + ((b.w * T16 - tex0.width) >> 1), wet ? b.r0 * T16 + ((b.h * T16 - tex0.height) >> 1) : b.r0 * T16 + b.h * T16 - foot - tex0.height);
@@ -2348,7 +2330,7 @@
     scale: () => S,                    // device px per world px, so the DOM can match the canvas
     screenPos, setDockGlow, showInfo, clearInfo, showMenu, clearMenu, setAutoLook,
     routeBelt, beltReaches, machinePorts, portsOpen, showGhost, clearGhost, setSpool, markStations, setSocketTarget,
-    showBuildGhost, clearBuildGhost, buildZone, waterAt, waterZone, hasWater, callVeins,
+    showBuildGhost, clearBuildGhost, buildZone, callVeins,
     // the walker's own rules, for a caller planning a walk (js/bot.js)
     canStep, dockAt, SPEED, DOCK_RANGE,
     setInvValue, invScreenPos, setHudKeys, setInvMarks, setCharge, pulseInv,

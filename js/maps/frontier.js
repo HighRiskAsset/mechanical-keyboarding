@@ -302,11 +302,12 @@
   // two. dev/ore-load.js still speaks the v3 API and did not compute this;
   // recompute it when that tool is ported, rather than trusting the number.
   //
-  // R5 HAS NO SEAMS (user ruling 2026-09-16). Water is drawn from open water:
-  // its extractor is four tiles by four and stands on the lakes, wherever
-  // they take it. Its three slots below stay as `kind: null`, a place a save
-  // may still name with nothing in it, so every node after them keeps its
-  // index.
+  // R5 AND R9 COME FROM POOLS (user rulings 2026-09-16). Water and crude oil
+  // have no seams: each is laid as a pool at the end of this list, three of
+  // water and two of oil (the cut the seams had), and a pool takes exactly
+  // one four-by-four extractor. The seams they used to hold stay as
+  // `kind: null`, a place a save may still name with nothing in it, so every
+  // node after them keeps its index.
   //
   // WHERE they go is this file's business. THE BASIN HOLDS ONE OF EVERY ORE
   // AND THE SECOND IRON. That second one stays in reach on purpose: it is
@@ -335,7 +336,7 @@
     { kind: 'R6',    x: 512,  y: 544, vert: true },
     { kind: 'R7',   x: 1360, y: 544 },
     { kind: 'R8', x: 752,  y: 272, vert: true },  // ── the ring: a reason to walk to each landmark
-    { kind: 'R9',  x: 1520, y: 400, vert: true },  // the canyon shelf
+    { kind: null,  x: 1520, y: 400, vert: true },  // the canyon shelf (no seam: crude oil comes from pools, see R9 above)
     { kind: 'R10', x: 1552, y: 224 },              // the canyon head, beside the creek
     { kind: 'R11',   x: 1328, y: 704 },              // the island
     { kind: 'R12',    x: 512,  y: 720, vert: true },  // the tar flats
@@ -370,12 +371,28 @@
     { kind: null,  x: 1472, y: 880, vert: true },  // the lake's south shore (no seam: see R5 above)
     { kind: 'R7',  x: 1344, y: 80 },                // on top of the west crystal bench
     { kind: 'R8',  x: 480,  y: 880 },               // the lower flats, by the deep seep
-    { kind: 'R9',  x: 352,  y: 800, vert: true },  // the tar flats, between the seeps
+    { kind: null,  x: 352,  y: 800, vert: true },  // the tar flats, between the seeps (no seam: crude oil comes from pools)
     { kind: 'R10', x: 1776, y: 544, vert: true },  // the east shale, below the east works
     { kind: null,  x: 464,  y: 160 },               // (the north snow's uranium went out to the badland butte, 2026-09-16: open snow under a cliff was the least interesting ground any seam stood on)
     { kind: 'R12', x: 96,   y: 432 },               // the far west, beside the broken crevasse
     { kind: 'R13', x: 1776, y: 672 },               // the far east corner, past the bog
+    // ---- the pools (2026-09-16) ----
+    // Each takes exactly one extractor, four tiles by four; the node names
+    // the pool's top-left tile, and the terrain pass lays the pool and its
+    // shore there. Every site was picked by scanning for a four by four whose
+    // ring of ground is clear, level and away from every seam, so each pool
+    // can be worked from all round. Appended, like every seam, so no save's
+    // index moves.
+    { kind: 'R5', x: 960,  y: 512 },   // the basin, out in the meadow south of the track: the water within reach of the landing
+    { kind: 'R5', x: 864,  y: 64 },    // the flooded pit on the mesa, a climb from the quarry works
+    { kind: 'R5', x: 1392, y: 848 },   // the south marsh, below the bridges off the island
+    { kind: 'R9', x: 688,  y: 848 },   // the lower flats, on the cracked pan south of the tar seeps
+    { kind: 'R9', x: 1008, y: 800 },   // the bog's west bank, beside its works
   ];
+  // Which raws are pools. The tree says so (`pools` in the mech file, a mine's
+  // `ground`), but a map is loaded before chain.js reads the tree, so the two
+  // are named here to lay their ground; they must agree.
+  const POOL_RAWS = new Set(['R5', 'R9']);
 
   // ======================================================================
   // high ground — a face is two rows at most, every approachable side carries
@@ -531,8 +548,7 @@
   // - the quarry: a pit on the mesa's north-east that filled with rain. The
   // mesa top is the whole quarry now that it reaches the treeline, and a
   // plateau with nothing on it is a plateau nobody crosses twice.
-  lay('sand', blob(56, 5.5, 3.2, 2.2, 81, 0.3));
-  lay('water', blob(56, 5.5, 2.1, 1.4, 81, 0.3));
+  // (its water is a pool now, laid with the others at the end of this pass)
 
   // - the canyon: a creek at the head of it, sand banks either side. It runs
   // the full depth of the head now: the creek came out of the border forest
@@ -565,17 +581,6 @@
   lay('sand', blob(110, 53, 6.4, 3.6, 83, 0.2));
   lay('water', blob(110, 53, 5.2, 2.7, 83, 0.2));
 
-  // - THE BASIN'S POND (2026-09-16). Water is drawn from open water, and
-  // every drop of it was out on the rim: the nearest lake to the landing was
-  // a trek, and the bog's own lake is cut into channels by the island and
-  // its bridges that no extractor fits in. So the meadow has a pond of its
-  // own, eleven tiles by eight with a sand shore, out in the open south of
-  // the track and well clear of the seams, the spur to the lake and the
-  // landing. It is the one piece of water in the basin, and it is there to
-  // be built in: it takes two extractors with room to walk between them.
-  lay('sand', blob(62, 33.5, 6.6, 4.6, 89, 0.18));
-  lay('water', blob(62, 33.5, 5.4, 3.6, 89, 0.18));
-
   // - the flats: tar seeps, and a third one out in the deep south where the
   // pan used to run flat to the trees
   lay('tar', blob(18, 45, 3.2, 1.9, 41, 0.4));
@@ -597,7 +602,7 @@
 
   // - every ore node sits in its own worn dish, lying the way the seam does
   for (const n of NODES) {
-    if (!n.kind) continue;
+    if (!n.kind || POOL_RAWS.has(n.kind)) continue;
     lay('dirt', n.vert
       ? blob((n.x + 8) / T, (n.y + 18) / T, 1.6, 2.3, n.x + n.y, 0.45)
       : blob((n.x + 18) / T, (n.y + 8) / T, 2.3, 1.6, n.x + n.y, 0.45));
@@ -610,6 +615,16 @@
       ? [[x0, y0 - 1, x1, y0], [x0, y1, x1, y1 + 1]]
       : [[x0 - 1, y0, x0, y1], [x1, y0, x1 + 1, y1]];
     for (const [a, b, cc, d] of ends) lay('sand', (tx, ty) => tx >= a && tx < cc && ty >= b && ty < d);
+  }
+
+  // - every pool in its own shore: sand round the water, a stained dirt rim
+  // round the crude, and the pool itself exactly the four by four its
+  // extractor stands on, laid last so no track or dish can run across it
+  for (const n of NODES) {
+    if (!n.kind || !POOL_RAWS.has(n.kind)) continue;
+    const oil = n.kind === 'R9';
+    lay(oil ? 'dirt' : 'sand', blob(n.x / T + 2, n.y / T + 2, 3.6, 3.4, n.x + n.y, 0.22));
+    lay(oil ? 'tar' : 'water', box(n.x, n.y, 64, 64));
   }
 
   function groundAt(tx, ty) {

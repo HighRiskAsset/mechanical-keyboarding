@@ -175,7 +175,6 @@
   for (const id of C.MAP_IDS) {
     const m = C.MAPS[id];
     for (const ore of C.ORE_IDS) {
-      if (C.drawsWater && C.drawsWater(ore)) continue;   // drawn from open water, not a seam (2026-09-16)
       const has = m.MAP.NODES.some((n) => C.ORE_BY_NODE[n.kind] === ore);
       if (!has) nodeBad.push(`${id}: no ${ore} node`);
     }
@@ -327,7 +326,7 @@
     // the time, in red, before anything is spent.
     const biggest = C.KIND_IDS.filter((k) => k !== 'mine')
       .reduce((a, b) => (C.KINDS[b].size[0] * C.KINDS[b].size[1] > C.KINDS[a].size[0] * C.KINDS[a].size[1] ? b : a));
-    const sites = spots.map((s) => s.kind === 'site' ? MAPKIT.siteBox({ x: s.x, y: s.y }) : MAPKIT.veinBox(s.node));
+    const sites = spots.map((s) => s.kind === 'site' ? MAPKIT.siteBox({ x: s.x, y: s.y }) : C.nodeBox(s.node));
     const taken = new Set();
     sites.forEach((b) => { for (let ty = b.r0; ty <= b.r1; ty++) for (let tx = b.c0; tx <= b.c1; tx++) taken.add(tx + ',' + ty); });
     const tileFree = (tx, ty, own, body) => {

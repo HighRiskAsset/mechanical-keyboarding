@@ -121,19 +121,6 @@
     // a fluid never sits in the bag (it cannot be carried); a save that
     // somehow holds one drops it
     for (const k of Object.keys(p.bag)) if (C().isFluid(k)) delete p.bag[k];
-    // An extractor saved on a seam, from before its raw was drawn from open
-    // water (2026-09-16), has no seam left to stand on and is four tiles by
-    // four now, so it is taken down the way the player would take one down:
-    // its price back in the bag (ahead of the spill below, so what the cap
-    // cannot hold lands at the spawn), its keys kept, its runs gone with it.
-    if (Array.isArray(p.machines)) {
-      for (const m of p.machines.slice()) {
-        if (m.kind !== 'mine' || !C().drawsWater(m.ore) || m.node === undefined || m.node === null) continue;
-        for (const [mat, n] of Object.entries(C().priceExtraMine(m.ore) || {})) p.bag[mat] = (p.bag[mat] || 0) + n;
-        if (Array.isArray(p.belts)) p.belts = p.belts.filter((b) => b.from !== m.id && b.to !== m.id);
-        p.machines.splice(p.machines.indexOf(m), 1);
-      }
-    }
     // a save from before the cap spills its surplus onto the ground at the
     // spawn, once — clamping would be theft. The piles never expire.
     const bagCap = C().TUNING.BAG_CAP;
@@ -159,20 +146,29 @@
     // no longer, is gone (the tree changed under the save)
     p.machines = p.machines.filter((m) => (m.kind === 'mine' ? !!C().ORES[m.ore] : !!C().KINDS[m.kind]));
     // a machine on a node this map doesn't have (map data changed) is re-homed
-    // to the first unbuilt node of its ore, else dropped
-    // (an extractor in open water stands on no node, and is left where it is)
+    // to the first unbuilt node of its ore, else dropped. That covers the
+    // pool raws too (2026-09-16): an extractor saved on an old seam, or one
+    // from the few hours water could be drawn anywhere on open water, which
+    // has no node at all, goes onto the first free pool of its raw. One with
+    // no free pool left is taken down the way the player would take it down,
+    // its price back in the bag and its runs gone with it.
     for (const m of p.machines.slice()) {
-      if (m.kind !== 'mine' || C().drawsWater(m.ore)) continue;
+      if (m.kind !== 'mine') continue;
       const n = C().MAP.NODES[m.node];
       if (n && C().ORE_BY_NODE[n.kind] === m.ore) continue;
       const alt = C().unbuiltNodes(p).find((nd) => nd.ore === m.ore);
-      if (alt) { m.node = alt.index; m.face = C().nodeFace(alt.index); delete m.at; } else p.machines.splice(p.machines.indexOf(m), 1);
+      if (alt) { m.node = alt.index; m.face = C().nodeFace(alt.index); delete m.at; continue; }
+      if (C().onPool(m.ore)) {
+        for (const [mat, k] of Object.entries(C().priceExtraMine(m.ore) || {})) C().bagAdd(p.bag, mat, k);
+        if (Array.isArray(p.belts)) p.belts = p.belts.filter((b) => b.from !== m.id && b.to !== m.id);
+      }
+      p.machines.splice(p.machines.indexOf(m), 1);
     }
-    // a mine whose seam moved under it (the map was re-laid) is stood back
-    // on its vein, at the facing the seam is bedded at
+    // a mine whose seam (or pool) moved under it (the map was re-laid) is
+    // stood back on it, at the facing the seam is bedded at
     for (const m of p.machines) {
       if (m.kind !== 'mine' || m.node === undefined || m.node === null || !Array.isArray(m.at)) continue;
-      const v = MAPKIT.veinBox(C().MAP.NODES[m.node]);
+      const v = C().nodeBox(C().MAP.NODES[m.node]);
       const b = C().machineBox(m);
       if (b.c0 > v.c1 || b.c1 < v.c0 || b.r0 > v.r1 || b.r1 < v.r0) { m.face = C().nodeFace(m.node); delete m.at; }
     }

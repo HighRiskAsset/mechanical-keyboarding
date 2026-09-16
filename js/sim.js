@@ -69,7 +69,7 @@
   // have one outlet (the mine); three outlets or three inlets need a body
   // three across.
   const FACINGS = ['s', 'w', 'n', 'e'];         // a clockwise quarter each
-  const sizeOf = (m) => C().sizeOf(m.kind, m.ore);   // chain.js: an extractor in open water is 4x4
+  const sizeOf = (m) => C().sizeOf(m.kind, m.ore);   // chain.js: an extractor on a pool is 4x4
   const faceOf = (m) => (m && FACINGS.includes(m.face)) ? m.face : 's';
   const facingOf = faceOf;                      // the side the product leaves by
   const footprintOf = (m) => window.MAPKIT.footprint(sizeOf(m), faceOf(m));

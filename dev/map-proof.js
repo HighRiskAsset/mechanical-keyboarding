@@ -24,7 +24,7 @@ const bakeWorld = (mapId, outlines) => {
     const art = TILES.crossing(cr.kind, cr.w / T, cr.h / T, open, cr.style, cr.x, cr.dir);
     if (art) late.push({ z: open ? -900 : cr.y, draw: () => x.drawImage(art.c, cr.x - (art.dx || 0), cr.y - (art.dy || 0)) });
   }
-  for (const n of m.MAP.NODES) if (n.kind) late.push({ z: -960, draw: () => x.drawImage(PIXELS.nodeCanvas(n.kind, !!n.vert), n.x, n.y) });
+  for (const n of m.MAP.NODES) if (n.kind && !(window.CHAIN && CHAIN.onPool(n.kind))) late.push({ z: -960, draw: () => x.drawImage(PIXELS.nodeCanvas(n.kind, !!n.vert), n.x, n.y) });
 
   const F = m.MAP.FOREST || {}, cols = Math.ceil(m.W / T), rows = Math.ceil(m.H / T);
   const regionAt = (px, py) => {
@@ -63,7 +63,7 @@ const bakeWorld = (mapId, outlines) => {
     x.strokeStyle = 'rgba(140, 220, 255, 0.85)';
     for (const n of m.MAP.NODES) {
       if (!n.kind) continue;
-      const b = MAPKIT.veinBox(n);
+      const b = window.CHAIN ? CHAIN.nodeBox(n) : MAPKIT.veinBox(n);
       x.strokeRect(b.c0 * T + 0.5, b.r0 * T + 0.5, b.w * T - 1, b.h * T - 1);
     }
   }

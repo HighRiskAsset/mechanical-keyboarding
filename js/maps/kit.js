@@ -188,6 +188,15 @@
   const veinBox = (n) => (n && n.vert
     ? bodyBox(n.x + 4, n.y + 24, 1, 2)
     : bodyBox(n.x + 4, n.y + 12, 2, 1));
+  // A pool's ground (2026-09-16). Water and crude oil come from small
+  // authored pools, not seams, and a pool takes exactly one extractor, four
+  // tiles by four, whichever way it faces. The node names the pool's top-left
+  // corner on a tile line, so its tiles are exactly the four by four you see.
+  const POOL = 4;
+  const poolBox = (n) => {
+    const c0 = Math.floor(n.x / T), r0 = Math.floor(n.y / T);
+    return { c0, c1: c0 + POOL - 1, r0, r1: r0 + POOL - 1, w: POOL, h: POOL };
+  };
 
   // ---------- the registry ----------
   const MAPS = {};
@@ -208,7 +217,7 @@
     T, FOOT_W, sc, hash, noise, fbm, field, apron, nodeApron,
     blob, anyOf, box, path,
     bodyBox, portTile, PORT_AWAY,
-    FACINGS, BODY_SIDE, footprint, boxAt, SITE, siteBox, veinBox,
+    FACINGS, BODY_SIDE, footprint, boxAt, SITE, siteBox, veinBox, POOL, poolBox,
     register, MAPS, IDS,
     get DEFAULT() { return IDS[0]; },
   };

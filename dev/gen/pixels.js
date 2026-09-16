@@ -1398,20 +1398,23 @@
   // somebody built it on a puddle.
   const EXT = 62;
   // the hull and its water, shared by every facing: shadow, pontoon, foam
-  function extHull(x, b) {
+  // the pool the thing sits in, water or crude: deep shadow under the hull,
+  // ripples riding out from it, and a lip where the iron meets the liquid,
+  // white foam on water and a violet sheen on oil
+  function extHull(x, b, oil) {
     const f = b.run ? [0, 1, 2, 1][b.f] : 0;
-    // the lake the thing sits in: deep shadow under the hull, a ring of
-    // ripples riding out from it, and foam where the iron meets the water
-    R(x, P.wC, 1, 51, 60, 10);
-    R(x, P.wO, 3, 53, 56, 7);
-    R(x, P.water2, 0, 56 + f, 4, 1); R(x, P.water2, 58 - f, 57, 4, 1);
-    R(x, P.water3, 2 + f, 60, 6, 1); R(x, P.water3, 52 - f, 60, 7, 1);
+    const deep = oil ? P.tA : P.wO, body = oil ? P.tB : P.wC, ripple = oil ? P.tC : P.water2;
+    const glint = oil ? P.oil3 : P.water3, lip = oil ? P.oil3 : P.wF;
+    R(x, body, 1, 51, 60, 10);
+    R(x, deep, 3, 53, 56, 7);
+    R(x, ripple, 0, 56 + f, 4, 1); R(x, ripple, 58 - f, 57, 4, 1);
+    R(x, glint, 2 + f, 60, 6, 1); R(x, glint, 52 - f, 60, 7, 1);
     M.plate(x, 4, 45, 54, 12);                                    // the pontoon deck
     M.band(x, 6, 49, 50);
     M.rivets(x, 7, 54, 48, 5);
-    R(x, P.wF, 3 + f, 57, 15, 2);                                 // foam along the waterline
-    R(x, P.wF, 26 - f, 58, 16, 1);
-    R(x, P.wF, 44 + f, 57, 13, 2);
+    R(x, lip, 3 + f, 57, 15, oil ? 1 : 2);                        // the lip along the waterline
+    R(x, lip, 26 - f, 58, 16, 1);
+    R(x, lip, 44 + f, 57, 13, oil ? 1 : 2);
   }
   // the beam: it rocks on its post, one arm down as the other rises
   // the beam's throw: two pixels each way, which is what makes a rock read
@@ -1511,6 +1514,77 @@
     return c;
   }
 
+  // ---------- the oil derrick 62x62 (2026-09-16) ----------
+  // Crude comes up from a pool too, and the derrick is what stands in it: the
+  // same riveted pontoon as the water extractor, dark with the slick, and on
+  // it a timber derrick over the bore, a pump jack whose horse head bows to
+  // the well, a crank turning, and a banded tank the crude fills. The horse
+  // head is the one thing that moves, and it moves a long way.
+  const derrickNod = (b) => (b.run ? [0, 2, 3, 2][b.f] : 0);
+  // the front; with `back`, the rear before it is turned about, which hides
+  // the fire and the dial and shows service iron in their place
+  function derrickS(frame, mode, back) {
+    const [c, x] = canvas(EXT, EXT);
+    const b = beat(mode === undefined ? 'work' : mode, frame);
+    const nod = derrickNod(b), half = nod >> 1;
+    extHull(x, b, true);
+    // the derrick: two timber legs, girts across them, the crown block on top
+    for (const lx of [4, 16]) { R(x, P.ironO, lx - 1, 5, 4, 41); R(x, P.trunk2, lx, 5, 2, 41); R(x, P.trunk, lx, 5, 1, 41); }
+    for (let yy = 12; yy < 44; yy += 8) { R(x, P.ironO, 4, yy, 14, 2); R(x, P.trunk2, 5, yy, 12, 1); }
+    R(x, P.ironO, 5, 1, 13, 5); R(x, P.iron2, 6, 2, 11, 3); R(x, P.brass1, 8, 2, 7, 1);
+    R(x, P.steel, 10, 6, 1, 38);                                                        // the line down the bore
+    // the pump jack: samson post, the beam stepped off its saddle, the horse head
+    R(x, P.ironO, 36, 21, 6, 25); R(x, P.iron2, 37, 22, 4, 24); R(x, P.iron, 37, 22, 1, 24);
+    R(x, P.ironO, 25, 18 + nod, 12, 4); R(x, P.iron2, 26, 19 + nod, 10, 2); R(x, P.ironL, 26, 19 + nod, 10, 1);
+    R(x, P.ironO, 35, 18 + half, 9, 4); R(x, P.iron2, 36, 19 + half, 7, 2);
+    R(x, P.ironO, 43, 18 - half, 10, 4); R(x, P.iron2, 44, 19 - half, 8, 2); R(x, P.ironL, 44, 19 - half, 8, 1);
+    R(x, P.brass1, 37, 19, 4, 3); R(x, P.brass2, 38, 19, 2, 1);                        // the saddle bearing
+    R(x, P.ironO, 21, 15 + nod, 6, 13); R(x, P.iron, 22, 16 + nod, 4, 11); R(x, P.ironL, 22, 16 + nod, 1, 11);   // the horse head
+    R(x, P.steel, 23, 28 + nod, 1, 15 - nod);                                           // the polished rod
+    R(x, P.ironO, 19, 43, 9, 3); R(x, P.brass1, 20, 44, 7, 1);                          // the wellhead
+    if (nod >= 3) { R(x, P.oil3, 18, 42, 2, 1); R(x, P.tC, 27, 42, 2, 1); }             // crude slops at the bottom of the stroke
+    // the crank and its pitman at the tail, and the tank the crude fills
+    M.wheel(x, 50, 29, 4, b.f);
+    R(x, P.ironO, 48, 21 - half, 3, 8 + half); R(x, P.iron3, 49, 22 - half, 1, 7 + half);
+    R(x, P.ironO, 43, 36, 17, 10); R(x, P.oil2, 44, 37, 15, 8); R(x, P.oil, 44, 37, 15, 2); R(x, P.oil3, 45, 37, 3, 1);
+    M.band(x, 43, 40, 17);
+    if (back) {
+      M.rivets(x, 44, 43, 15, 4);
+      R(x, P.iron3, 30, 24, 1, 20); R(x, P.iron3, 33, 24, 1, 20);                      // a service ladder up the post side
+      for (let ry = 26; ry < 44; ry += 3) R(x, P.iron3, 31, ry, 2, 1);
+    } else {
+      M.gauge(x, 54, 42);
+      M.firebox(x, 6, 46, 8, 5, b.heat);
+    }
+    M.flue(x, 57, 3, 34); M.puff(x, 58, 2, b.f);
+    M.lamp(x, 17, 2, b.lamp);
+    return c;
+  }
+  // the flank: the jack runs toward the eye, so the horse head is seen end on
+  // bobbing over the well, the crank turns full face, and the tank is the
+  // long thing down the side
+  function derrickE(frame, mode) {
+    const [c, x] = canvas(EXT, EXT);
+    const b = beat(mode === undefined ? 'work' : mode, frame);
+    const nod = derrickNod(b);
+    extHull(x, b, true);
+    for (const lx of [6, 14]) { R(x, P.ironO, lx - 1, 7, 4, 39); R(x, P.trunk2, lx, 7, 2, 39); R(x, P.trunk, lx, 7, 1, 39); }
+    for (let yy = 14; yy < 44; yy += 8) { R(x, P.ironO, 6, yy, 10, 2); R(x, P.trunk2, 7, yy, 8, 1); }
+    R(x, P.ironO, 7, 3, 9, 5); R(x, P.iron2, 8, 4, 7, 3); R(x, P.brass1, 9, 4, 5, 1);
+    R(x, P.ironO, 28, 20, 6, 26); R(x, P.iron2, 29, 21, 4, 25); R(x, P.iron, 29, 21, 1, 25);         // the samson post
+    R(x, P.ironO, 26, 15 + nod, 10, 8); R(x, P.iron, 27, 16 + nod, 8, 6); R(x, P.ironL, 27, 16 + nod, 8, 1);   // the horse head, end on
+    R(x, P.steel, 30, 23 + nod, 1, 20 - nod);
+    R(x, P.ironO, 26, 43, 10, 3); R(x, P.brass1, 27, 44, 8, 1);
+    if (nod >= 3) { R(x, P.oil3, 25, 42, 2, 1); R(x, P.tC, 35, 42, 2, 1); }
+    M.wheel(x, 46, 28, 6, b.f);                                                         // the crank, full on
+    R(x, P.ironO, 38, 36, 21, 10); R(x, P.oil2, 39, 37, 19, 8); R(x, P.oil, 39, 37, 19, 2); R(x, P.oil3, 40, 37, 4, 1);
+    M.band(x, 38, 40, 21);
+    M.firebox(x, 18, 46, 7, 5, b.heat);
+    M.flue(x, 20, 20, 24); M.puff(x, 21, 19, b.f);
+    M.lamp(x, 17, 3, b.lamp);
+    return c;
+  }
+
   // one station, four ways up: s is the authored front, n the authored
   // back, e the authored flank — and w is e flipped, the way the operator's
   // own side sprite turns, with the doors of the flank that actually shows
@@ -1520,6 +1594,12 @@
       if (facing === 'e') return extractorE(frame, mode);
       if (facing === 'w') return flipX(extractorE(frame, mode));
       return extractorS(frame, mode);
+    }
+    if (kind === 'derrick') {
+      if (facing === 'n') return flipX(derrickS(frame, mode, true));
+      if (facing === 'e') return derrickE(frame, mode);
+      if (facing === 'w') return flipX(derrickE(frame, mode));
+      return derrickS(frame, mode);
     }
     if (facing === 'n') return stationN(kind, frame, mode);
     if (facing === 'e') return stationE(kind, frame, mode);

@@ -318,10 +318,7 @@
   const workTile = (b) => [b.c0 + (b.w >> 1), b.r1 + 1];
   // the ground a mine on a free vein will take: the ghost seats it on the
   // seam the way the mine faces (app.js), so every way it could face
-  const seatsOf = (n) => [MAPKIT.veinBox(n)].concat(MAPKIT.FACINGS.map((f) => {
-    const fp = MAPKIT.footprint(CHAIN.KINDS.mine.size, f);
-    return MAPKIT.veinBox({ ...n, vert: fp[1] > fp[0] });
-  }));
+  const seatsOf = (n) => [CHAIN.nodeBox(n)].concat(MAPKIT.FACINGS.map((f) => CHAIN.nodeSeat(n, f)));
   // What stands, and what is bound to: the bodies and the rows they are
   // worked from, the runs, and the seat of every free vein, since a mine will
   // stand there one day and a body built against it now is boxed in then.
@@ -406,12 +403,11 @@
   function findVein(p, ore) {
     const reach = flood(null).dist;
     const t = taken(p);
-    const fp = MAPKIT.footprint(CHAIN.KINDS.mine.size, 's');
     let best = null;
     for (const n of CHAIN.unbuiltNodes(p)) {
       if (n.ore !== ore) continue;
-      const vb = MAPKIT.veinBox(n);
-      const seat = MAPKIT.veinBox({ ...n, vert: fp[1] > fp[0] });
+      const vb = CHAIN.nodeBox(n);                 // a vein, or a pool (2026-09-16)
+      const seat = CHAIN.nodeSeat(n, 's');
       const work = workTile(seat);
       if (!reach.has(k2(work[0], work[1])) || t.bodies.has(k2(work[0], work[1]))) continue;
       if (boxTiles(seat).some(([x, y]) => t.bodies.has(k2(x, y)) || t.works.has(k2(x, y)))) continue;
@@ -428,44 +424,8 @@
     }
     return best;
   }
-  // Open water to stand an extractor in, for a raw drawn from water rather
-  // than a seam (2026-09-16). Every tile of the body on water; the tile its
-  // outlet opens on walkable and clear, so a pipe can leave it; and a shore
-  // tile to aim from, which is also one it is worked from, since an extractor
-  // docks from any side of its body (factory.js stationAt). Of those, one
-  // with no body near it first, then the nearest walk.
-  function findWater(p, ore) {
-    const reach = flood(null).dist;
-    const t = taken(p);
-    const size = CHAIN.sizeOf('mine', ore);
-    const cols = Math.ceil(CHAIN.WORLD_W / TILE), rows = Math.ceil(CHAIN.WORLD_H / TILE);
-    let best = null;
-    for (const face of MAPKIT.FACINGS) {
-      const fp = MAPKIT.footprint(size, face);
-      for (let r0 = 0; r0 + fp[1] <= rows; r0++) for (let c0 = 0; c0 + fp[0] <= cols; c0++) {
-        if (!FACTORY.waterAt(c0, r0) || badSpots.has('mine@' + c0 + ',' + r0 + face)) continue;
-        const box = MAPKIT.boxAt([c0, r0], size, face);
-        if (boxTiles(box).some(([x, y]) => !FACTORY.waterAt(x, y) || t.bodies.has(k2(x, y)))) continue;
-        const out = FACTORY.machinePorts({ id: 'bot-ghost', kind: 'mine', ore, at: [c0, r0], face }).out[0];
-        if (!out || !reach.has(k2(out.tx, out.ty)) || t.bodies.has(k2(out.tx, out.ty)) || t.belts.has(k2(out.tx, out.ty))) continue;
-        const grade = boxTiles(grow(box, 2)).some(([x, y]) => !inBox(box, x, y) && t.bodies.has(k2(x, y))) ? 1 : 0;
-        for (const dir of ['n', 'w', 'e', 's']) {
-          const stand = standFor(box, dir);
-          const d = reach.get(k2(stand[0], stand[1]));
-          if (d === undefined) continue;
-          const score = d + grade * 1e6;
-          if (!best || score < best.score) best = { kind: 'mine', ore, at: [c0, r0], face, stand, dir, score };
-        }
-      }
-    }
-    return best;
-  }
-  // Somewhere left to stand another mine of `ore`: a free vein, or for a raw
-  // drawn from open water, any water on the map. A lake is not used up one
-  // extractor at a time the way a seam is; findWater answers for the spot.
-  const mineRoom = (p, ore) => (CHAIN.drawsWater(ore)
-    ? !(window.FACTORY && FACTORY.hasWater) || FACTORY.hasWater()
-    : CHAIN.unbuiltNodes(p).some((n) => n.ore === ore));
+  // somewhere left to stand another mine of `ore`: a free vein or pool of it
+  const mineRoom = (p, ore) => CHAIN.unbuiltNodes(p).some((n) => n.ore === ore);
   // a machine's ghost standing somewhere other than aimed is as good as the
   // aim wherever the ground is as good (and a pipe would still reach it)
   function goodGhost(v, s) {
@@ -809,7 +769,7 @@
   const EXTRA_MINE_AT = 200;         // ore still wanted, per mine standing, before another goes up
   const saving = new Map();          // ore → the price of another mine, collected for it and not to be spent on anything else
   function buildMine(p, ore, depth) {
-    if (!mineRoom(p, ore)) throw new Error((T.t('botWhy') || {})[CHAIN.drawsWater(ore) ? 'water' : 'vein']({ mat: matName(ore), kind: mineName(ore) }));
+    if (!mineRoom(p, ore)) throw new Error((T.t('botWhy') || {})[CHAIN.onPool(ore) ? 'pool' : 'vein']({ mat: matName(ore), kind: mineName(ore) }));
     const price = minePrice(p, ore);
     if (!price && !CHAIN.mineFree(ore)) throw new Error(`${mineName(ore)} cannot be built`);
     return need(p, price, depth) || { type: 'build', kind: 'mine', ore };
@@ -1112,8 +1072,7 @@
   // where an ore is: its mines, and the seats of its free veins, since a
   // mine will stand there
   function orePlaces(p, ore) {
-    const fp = MAPKIT.footprint(CHAIN.KINDS.mine.size, 's');
-    const seat = (n) => workTile(MAPKIT.veinBox({ ...n, vert: fp[1] > fp[0] }));
+    const seat = (n) => workTile(CHAIN.nodeSeat(n, 's'));
     return CHAIN.machinesOfOre(p, ore).map(boxMid).concat(CHAIN.unbuiltNodes(p).filter((n) => n.ore === ore).map(seat));
   }
   // Where a player would stand a machine, for a build move. One a run comes
@@ -1189,10 +1148,9 @@
     const name = a.kind === 'mine' ? mineName(a.ore) : kindName(a.kind);
     say(T.t('botBuild', { place: name }));
     let s;
-    const water = a.kind === 'mine' && CHAIN.drawsWater(a.ore);
-    if (a.kind === 'mine') s = water ? findWater(p, a.ore) : findVein(p, a.ore);
+    if (a.kind === 'mine') s = findVein(p, a.ore);
     else s = spotFor(p, a);
-    if (!s) return failed(a, water ? 'water' : a.kind === 'mine' ? 'vein' : 'site', { mat: matName(a.ore), kind: name });
+    if (!s) return failed(a, a.kind === 'mine' ? (CHAIN.onPool(a.ore) ? 'pool' : 'vein') : 'site', { mat: matName(a.ore), kind: name });
     const before = new Set(p.machines.map((m) => m.id));
     const res = await place(g, s);
     if (res !== true) return failed(a, res, { place: name, kind: name });

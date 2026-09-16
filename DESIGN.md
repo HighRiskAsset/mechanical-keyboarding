@@ -2212,16 +2212,22 @@ The derivation, and why it is available at all:
   not copper. So an ore's share is not one number off the cheapest path: it is
   what the best *blend* consumes, which is a linear program.
 
-**Water has no veins (user ruling 2026-09-16).** Its extractor stands in open
-water instead of on a seam: every tile of its body on a water tile, and four
-tiles by four for variety where a mine is two by one. Water may lie in front
-of it as well as under it, so it is worked from any shore that touches its
-body, not only from its front row. Its supply is placement on the lakes, so
-the derivation above does not count it, and the maps lay no seam for it: their
-three R5 slots stay as empty `kind: null` entries so every later node index
-holds. The rule lives in the tree (`water` in `docs/lessons-v4-*.mech.js`,
-emitted as a mine's `ground`), and `CHAIN.drawsWater` reads it. The Open
-Range pond grew to ten tiles by six to take two extractors.
+**Water and crude oil come from pools (user rulings 2026-09-16).** Neither
+has a seam. Each map lays a fixed number of small authored pools, and a pool
+takes exactly one extractor, four tiles by four for variety where a mine is
+two by one, worked from any side that touches it. A pool is a node like a
+vein, so supply stays countable and the derivation above counts pools exactly
+as it counts seams: three of water and two of oil, the cut the seams had.
+Lakes and tar seeps elsewhere are scenery, and an extractor cannot be dropped
+anywhere on them. (Earlier the same day water could be drawn anywhere on open
+water. That was reversed: it made water trivial to find and let ten
+extractors crowd one pond, where a resource should sit in strategic places.)
+The seams the two raws used to hold stay as empty `kind: null` slots so every
+later node index holds, and a save's extractors are moved onto free pools.
+The rule lives in the tree (`pools` in `docs/lessons-v4-*.mech.js`, emitted as
+a mine's `ground`) and `CHAIN.onPool` reads it; the maps name the pool raws
+again to lay their ground, since a map loads before the tree is read. The
+water extractor and the oil derrick each have a sprite sheet of their own.
 
 The test is **local optimality, not a target**, and it runs both ways: a map
 is **short** when a seam that is not there would buy more than 15%, and
