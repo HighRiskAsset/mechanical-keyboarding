@@ -218,6 +218,19 @@
     return normalize(p, mapId);
   }
 
+  // a save nobody has played: no keystrokes, no lesson beyond the seeded
+  // first one, no machine beyond the free first mine, nothing carried. The
+  // picker's "where to begin" card is for these alone, and the found works
+  // are only ever laid over one of these.
+  function isFresh(p) {
+    if (!p || p.totalChars > 0 || (p.unlockLog || []).length) return false;
+    const seeded = new Set(C().starterNodes().map((s) => s.lesson).filter(Boolean));
+    const open = Object.keys(p.unlocked || {}).filter((k) => p.unlocked[k]);
+    if (open.length !== seeded.size || open.some((k) => !seeded.has(k))) return false;
+    if ((p.machines || []).length !== C().starterNodes().length) return false;
+    if ((p.belts || []).length || Object.values(p.bag || {}).some((n) => n > 0)) return false;
+    return true;
+  }
   // a look at a map's save without adopting it (the picker's progress line)
   function peekProfile(mapId) {
     try {
@@ -228,6 +241,7 @@
       const letters = C().unlockedKeys({ unlocked: p.unlocked || {} }).length;
       return {
         letters, machines: (p.machines || []).length,
+        fresh: isFresh(p),
         totalChars: p.totalChars || 0,
         savedAt: typeof p.savedAt === 'number' ? p.savedAt : null,
       };
@@ -665,7 +679,7 @@
 
   window.ENGINE = {
     MIN_SAMPLES, MAX_LATENCY,
-    loadProfile, saveProfile, resetProfile, peekProfile, adoptProfile, getLastMap, setLastMap,
+    loadProfile, saveProfile, resetProfile, peekProfile, adoptProfile, isFresh, getLastMap, setLastMap,
     unlockedLetters, nextPair, readiness, unlockIntro, unlockPair, unlockNextPair, trainable,
     recordHit, recordMiss,
     generateLine, realWordPool, phrasePool, sentencePool, namePool, pagePool,

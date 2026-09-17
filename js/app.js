@@ -2448,7 +2448,7 @@
     const focusId = mapId || E.getLastMap() || CHAIN.DEFAULT_MAP;
     const slots = CHAIN.MAP_IDS.map((id) => {
       const peek = E.peekProfile(id);
-      const progress = peek && peek.totalChars > 0
+      const progress = peek && !peek.fresh
         ? `${T.t('mapProgress', { letters: peek.letters, machines: peek.machines, chars: peek.totalChars })}${peek.savedAt ? ` · ${T.t('mapLast', { day: fmtDay(peek.savedAt) })}` : ''}`
         : T.t('mapNew');
       return `
@@ -2535,15 +2535,66 @@
     (items.find((el) => el.dataset.map === focusId) || items[0]).focus();
   }
 
-  function startMap(id) {
+  // a world nobody has played (engine isFresh: nothing typed, opened, built
+  // or carried beyond what a fresh save is born with): the one on screen by
+  // what it holds, any other by its save
+  function untouched(id) {
+    if (id === mapId && profile) return E.isFresh(profile);
+    const peek = E.peekProfile(id);
+    return !peek || peek.fresh;
+  }
+  function startMap(id, opts) {
     if (!CHAIN.MAPS[id]) id = CHAIN.DEFAULT_MAP;
-    if (id === mapId && profile) { hideOverlay(); return; }
-    loadWorld(id);
+    // an untouched world asks where to begin first; opts carries the answer
+    if (!opts && untouched(id)) { showStartChoice(id); return; }
+    if (id === mapId && profile && !(opts && opts.works)) { hideOverlay(); return; }
+    loadWorld(id, opts);
     hideOverlay();
+  }
+  // ---------- where to begin: the first key, or the full keyboard ----------
+  // An untouched world asks once, before play (no dialogues after it has
+  // begun). The second answer opens the found works (js/works.js): the letter
+  // lessons done and their machines running, the pages ahead.
+  function showStartChoice(id) {
+    overlayRerender = () => showStartChoice(id);
+    backTo = () => showMapSelect();
+    const rows = [
+      { id: 'start-first', label: T.t('startFirstKey'), note: T.t('startFirstKeyNote'), opts: { first: true } },
+      { id: 'start-works', label: T.t('startWorks'), note: T.t('startWorksNote'), opts: { works: true } },
+    ];
+    showOverlay(`
+      <div class="card-station">${T.t('mapNames')[id]}</div>
+      <h2>${T.t('startTitle')}</h2>
+      <div class="rows">
+        ${rows.map((r) => `<button class="row" id="${r.id}"><i class="cursor"></i>${r.label}</button>`).join('')}
+      </div>
+      <div class="start-notes">${rows.map((r) => `<p class="muted" id="${r.id}-note">${r.note}</p>`).join('')}</div>
+      <button id="start-back" class="link-btn">${T.t('mapSelectBack')}</button>
+    `, false, 'start');
+    // every note is in the card, stacked on one spot, so the card is the
+    // size of the tallest and never moves as the cursor does
+    const notes = rows.map((r) => $(r.id + '-note'));
+    const els = rows.map((r) => $(r.id));
+    els.forEach((el, i) => {
+      el.addEventListener('focus', () => { notes.forEach((n, j) => n.classList.toggle('on', j === i)); });
+      el.addEventListener('mouseenter', () => el.focus());
+      el.onclick = () => startMap(id, rows[i].opts);
+    });
+    $('start-back').onclick = () => goBack();
+    overlayCard.onkeydown = (e) => {
+      const k = keyName(e), i = els.indexOf(document.activeElement);
+      if (k === 'ArrowUp' || k === 'ArrowDown') els[i < 0 ? 0 : (i + (k === 'ArrowDown' ? 1 : els.length - 1)) % els.length].focus();
+      else if ((k === 'Enter' || k === 'Space') && i >= 0) { if (!e.repeat) els[i].click(); }
+      else if (k === 'Escape') goBack();
+      else return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    els[0].focus();
   }
   // the world comes up under whatever card is showing: the title at boot,
   // so the title has the game behind it before a world is even picked
-  function loadWorld(id) {
+  function loadWorld(id, opts) {
     if (!CHAIN.MAPS[id]) id = CHAIN.DEFAULT_MAP;
     if (profile) E.saveProfile(profile);
     mapId = id;
@@ -2573,6 +2624,13 @@
     startClock();
 
     FACTORY.loadMap();
+    // a world opened at the full keyboard: the found works are derived now,
+    // on this map with this tree (js/works.js)
+    if (opts && opts.works && E.isFresh(profile)) {
+      const w = WORKS.found(profile);
+      if (w.missed.length) console.warn('[works] no ground for', w.missed.join(', '));
+      E.saveProfile(profile);
+    }
     // a save from before machines had ports has runs meeting them nowhere:
     // the build re-lays what it can, and that is worth keeping
     const relaid = rebuildWorld();

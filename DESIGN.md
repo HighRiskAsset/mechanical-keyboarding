@@ -599,6 +599,30 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   Escape leaves, and the last card sends the player back to the worlds.
   The teaching stops there: nothing about mechanics beyond what operating
   a machine needs.
+- **Where to begin (user decision, 2026-09-17).** An untouched world asks
+  once, before play: "From the Beginning" (lessons start with the first
+  keys) or "Typing Practice" (lessons start with the full keyboard). The
+  card's notes share one spot, so it never stretches as the cursor moves.
+  The second answer is the door for a player who already touch-types and
+  wants the practice game, and it opens the **found works** (`js/works.js`). Nothing is
+  stored and nothing is bought: every time such a world is opened the works
+  are derived again from the tree and the map as they stand, so price
+  tuning, a rebuild of the tree or an edit to a map flows through. The rule:
+  the start column is the column of the first page lesson (computed, never
+  written down; 22 in both trees today), and every lesson before it is done:
+  its keys open, its materials seen, one automated machine per recipe with
+  its recipe set, one automated mine per raw (the free first mine is kept),
+  belts and pipes wherever a run can be routed from the nearest maker with
+  an outlet free, every bin and hopper full at birth, the bag empty. The
+  last letter lesson of the page column (EN z, RU щ ё ъ) stays as the
+  on-ramp; every page lesson lies ahead. Placement is the bot's model of a
+  player and routing is the factory's, so the works stand where a player
+  would have stood them; a machine with no ground is not built. Rejected the
+  same day: tiers with checkpoint submissions (prices are already the
+  distributed checkpoint, and a bundle moves practice away from the keys it
+  was for). "Untouched" means no keystrokes and no lesson opened after the
+  seeded first one. `dev/works-check.js` checks the derivation for both
+  courses on both maps without a screen.
 - **The two switches** (on the map picker, and again in settings): interface
   language and keyboard course, stacked, language above layout. Both are
   flags — drawn in `flags.js` on a 21×14 pixel grid, because Windows ships no

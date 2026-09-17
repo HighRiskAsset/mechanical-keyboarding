@@ -1334,6 +1334,9 @@
     // where a machine would go up from a save, as doBuild would stand it:
     // for asking the map what the model makes of it without playing there
     spotFor: (p, a) => { const s = spotFor(p, a); return s && { kind: s.kind, at: s.at, face: s.face, stand: s.stand, lane: s.lane }; },
+    // the whole site for a build as doBuild would take it: a mine's vein or
+    // pool, any other machine's spot (the found works stand on these, js/works.js)
+    siteFor: (p, a) => (a.kind === 'mine' ? findVein(p, a.ore) : spotFor(p, a)),
     outstanding,                   // what the rest of the game still asks for, for the harness's post-mortem
     // ENGINES off plays the old way, carrying everything and buying no
     // automation: the A/B for dev/bot-sim.js
