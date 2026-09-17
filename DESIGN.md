@@ -596,8 +596,22 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   case (`.map-tagline`, `.map-progress`, `.map-note`, `.set-note`, `.set-row`),
   so switching EN↔РУ leaves the card the same height and every control where
   it was. Any new translated block on those screens owes the same reserve.
-- **Settings menu** (⚙ header button → overlay card): the current world +
-  «Change» (back to the map picker); the same two switches; save file
+- **The chrome (2026-09-17, docs/chrome-plan.md):** the page is a slate
+  room with walnut-and-brass window frames drawn at load by `js/chrome.js`;
+  brass is metal only (the title, the rivets, the cursor) and never a word's
+  colour, words that stand out are cream. Menus are Balsamiq Sans, the typed
+  line keeps Georgia, the title is Alfa Slab One (all bundled in
+  assets/fonts). **The title screen** replaces the world picker: the last
+  world is loaded first and plays behind it under a dusk; the worlds are
+  window slots with one cursor, How to play and Settings are rows under
+  them, the language and layout switches sit bottom-left. **There is no
+  header in play.** One gear hovers at the world's top-left corner (the
+  wrench and the bot beside it with developer mode on), and Escape or the
+  gear opens **the pause menu**: the session readouts (accuracy, WPM,
+  streak, time at the keys), Sound, Music, Sky and weather, How to play,
+  Settings, Change world. A card opened from a menu closes back to it.
+- **Settings menu** (a row of the pause menu, or of the title → overlay
+  card): the current world + «Change» (to the title screen); the same two switches; save file
   export/import (JSON wrapper `{app, version:1, map, profile, sound,
   uilang}`; the file names its world and imports into that world's slot — a
   pre-maps file lands on the Frontier; import confirms, then reloads); reset
@@ -2592,7 +2606,8 @@ one bus and the switches move the bus, never the sounds:
   has today, so it answers the music switch and not the sfx one.
 - **weather** the sky's ambience, and nothing else, ever.
 
-**Two switches in the header, and they are the player's.** 🔊 and 🎵, neither
+**Two switches, and they are the player's.** Sound and Music, rows of the
+pause menu since 2026-09-17 (header buttons before that), neither
 hidden, neither behind developer mode. The old single switch keeps its
 storage key as the sfx one, and somebody who had turned it off starts with the
 music switch off too, because what they wanted was silence.
@@ -2676,8 +2691,10 @@ does not mean waiting for the weather.
   moment that file exists (`courses.js` reads readiness from it). Doing
   this early is the honest test of invariant 5; the longer it waits, the more
   Russian assumptions leak into the engine.
-- UI chrome reskin to match the bright outdoor world (the page frame is
-  still night-train blue). Naming is done: Mechanical Keyboarding.
+- UI chrome reskin: done 2026-09-17 (title screen, pause menu, walnut
+  frames, see THE CHROME above and docs/chrome-plan.md); a drawn title PNG
+  and artist-drawn frames in assets/ui can replace the generated ones
+  later. Naming is done: Mechanical Keyboarding.
 - Art polish: shoreline fringe tiles. (Smelter-reads-house-like is done —
   it is a tapered blast furnace now, 2026-08-19 steampunk pass.)
 - Polish debt: re-voice the typing-rhythm layer (still train clacks);
@@ -2747,7 +2764,7 @@ material proof sheets (every material in the bag and on the band) ·
 only thing that writes them, run on every map edit ·
 `dev/sim.html` simulation harness · `dev/play.html` the game headless (rAF
 shim) · `js/bot.js` the bot that plays the game, developer mode only (the
-robot in the header or Ctrl+Alt+B: 30 WPM, machine speed, off); it plans from
+robot in the world's corner or Ctrl+Alt+B: 30 WPM, machine speed, off); it plans from
 the tree each move and plays through the real keys, menus and ghosts ·
 `dev/bot-sim.js` the bot's plan played out headless in node against the real
 tree and SIM, for checking that it still finds its way after the tree or the

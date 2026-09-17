@@ -64,6 +64,9 @@ jobs:
           # they were chosen from and stays off the site: it is four times the
           # weight and nothing plays it.
           cp -r assets/bgm _site/assets/
+          # The menu faces css/style.css loads (Balsamiq Sans, Alfa Slab One),
+          # bundled so the chrome needs no font service to look like itself.
+          cp -r assets/fonts _site/assets/
           cp deploy/htaccess _site/.htaccess
           echo "--- staged for upload ---"
           find _site -type f | sort

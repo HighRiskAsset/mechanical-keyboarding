@@ -344,6 +344,20 @@ Never Press Start 2P or any square-capitals face (rule 5).
    in a menu; the whole game playable from the keyboard (arrows, Enter,
    Space, Escape); the bot still runs; a cropped screenshot passes rule 9.
 
+## Built (2026-09-17)
+
+Steps 1 to 3 are in the game, as the round 4 mock showed them: the fonts in
+assets/fonts, the frames, cursor and corner icons generated at load by
+js/chrome.js (an artist's PNGs in assets/ui can replace them by pointing
+the four CSS properties at files), the title screen over the live world
+(boot loads the last world first), no header in play, the gear and the
+developer icons in the world's corner, the pause menu on Escape with the
+readouts and every former header switch, and every card on the window
+frame. Cards opened from a menu close back to it. The typed line and the
+keyboard are untouched apart from the palette. Not done: a drawn title PNG
+(the slab face stands in), and the settings card still scrolls on a short
+window rather than paging.
+
 ## Out of scope
 
 The world canvas and every sprite in it, the in-canvas place and build

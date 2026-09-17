@@ -232,8 +232,16 @@
     uiC.scale.set(S);
     uiC.position.set((viewW - HUD_W - 2) * S, 2 * S);
   }
+  // the title screen asks for the bag to be out of sight (the world behind
+  // the title is scenery, not play); the flag outlives a rebuild of the panel
+  let hudShown = true;
+  function setHudShown(on) {
+    hudShown = !!on;
+    if (uiC) uiC.visible = hudShown;
+  }
   function buildHud() {
     uiC = new PIXI.Container();
+    uiC.visible = hudShown;
     app.stage.addChild(uiC);
     setHudKeys(hudKeys);
     layoutHud();
@@ -2346,7 +2354,7 @@
     showBuildGhost, clearBuildGhost, buildZone, callVeins,
     // the walker's own rules, for a caller planning a walk (js/bot.js)
     canStep, dockAt, SPEED, DOCK_RANGE,
-    setInvValue, invScreenPos, setHudKeys, setInvMarks, setCharge, pulseInv,
+    setInvValue, invScreenPos, setHudKeys, setInvMarks, setCharge, pulseInv, setHudShown,
     hudCapacity: () => Math.max(1, Math.floor((viewH - 7) / HUD_ROW)),   // rows the panel can show without leaving the canvas
     onDock: null,
   };

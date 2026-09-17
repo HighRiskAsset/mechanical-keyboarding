@@ -1475,13 +1475,23 @@
     if (session.activeMs < 10000) return null;
     return (session.timedChars / 5) / (session.activeMs / 60000);
   }
+  // the readouts live in the pause menu (2026-09-17): they are on screen only
+  // while it is up, and they keep counting there
+  const statText = () => {
+    const acc = sessionAccuracy(), wpm = sessionWPM();
+    return {
+      acc: acc === null ? '–' : (acc * 100).toFixed(1) + '%',
+      wpm: wpm === null ? '–' : wpm.toFixed(0),
+      streak: String(session.streak),
+      time: fmtTime(session.activeMs),
+    };
+  };
   function refreshStats() {
-    const acc = sessionAccuracy();
-    $('stat-acc').textContent = acc === null ? '–' : (acc * 100).toFixed(1) + '%';
-    const wpm = sessionWPM();
-    $('stat-wpm').textContent = wpm === null ? '–' : wpm.toFixed(0);
-    $('stat-streak').textContent = session.streak;
-    $('stat-time').textContent = fmtTime(session.activeMs);
+    const t = statText();
+    for (const k of ['acc', 'wpm', 'streak', 'time']) {
+      const el = $('stat-' + k);
+      if (el) el.textContent = t[k];
+    }
   }
 
   // ---------- input ----------
@@ -1767,6 +1777,13 @@
   window.addEventListener('keydown', (e) => {
     noteRealKeyboard(e);
     const overlayOpen = !overlay.classList.contains('hidden');
+    // a card with keys of its own (the title, the pause menu, the guide)
+    // hears them even when focus has wandered off it, so a click on blank
+    // space never strands the cursor
+    if (overlayOpen && overlayCard.onkeydown && !overlayCard.contains(e.target)) {
+      overlayCard.onkeydown(e);
+      if (e.defaultPrevented) return;
+    }
     const ARROWS = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
     if (((e.ctrlKey && e.altKey && e.code === 'KeyM') || (e.ctrlKey && e.shiftKey && e.code === 'KeyQ')) && !overlayOpen && profile && DEVMODE.isEnabled()) {
       e.preventDefault();
@@ -1804,6 +1821,7 @@
       if (menu) { e.preventDefault(); closeMenu(); refreshStatus(); return; }
       if (buildMenu) { e.preventDefault(); closeBuildMenu(); refreshStatus(); return; }
       if (placing) { e.preventDefault(); cancelPlacing(); refreshStatus(); return; }
+      if (profile) { e.preventDefault(); showPause(); return; }
     }
     if (e.code === 'Space' && !overlayOpen) {
       e.preventDefault();
@@ -2161,14 +2179,52 @@
     FACTORY.setMove('down', false);
     overlayCard.classList.toggle('wide', !!wide);
     overlayCard.onkeydown = null;   // a card's own keys (the guide's arrows) go with the card
+    // a press on blank card (or the title's open ground) keeps the focus
+    // where it is; only a control takes it
+    overlayCard.onmousedown = (e) => { if (!e.target.closest('button, a, input, select, textarea, [tabindex]')) e.preventDefault(); };
     overlayCard.innerHTML = html;
     overlayName = name || null;
+    // the title owns the viewport and the pause menu is a narrow window; every
+    // other card is the plain window (css/style.css)
+    overlay.classList.toggle('title', name === 'title');
+    overlayCard.classList.toggle('pause', name === 'pause');
+    // under the title only the world shows: the keyboard, the drill line and
+    // the corner keep their room (nothing resizes) but not their paint
+    document.body.classList.toggle('title-up', name === 'title');
+    // and the bag's panel in the canvas goes with them: under the title the
+    // world is scenery, and the panel comes back the moment play resumes
+    if (name === 'title') FACTORY.setHudShown(false);
     overlay.classList.remove('hidden');
   }
   function hideOverlay() {
+    document.body.classList.remove('title-up');
+    FACTORY.setHudShown(true);
+    // the card's keys go with it, and so does its focus: a hidden button
+    // must not keep hearing Enter and Escape
+    overlayCard.onkeydown = null;
+    if (overlayCard.contains(document.activeElement)) document.activeElement.blur();
     overlay.classList.add('hidden');
     overlayRerender = null;
     overlayName = null;
+    backTo = null;
+  }
+  // a card opened from a menu (the guide or settings, from the title or the
+  // pause menu) goes back to that menu when it closes: the menu sets backTo
+  // before opening it, and the card's close consumes it. With nothing set, a
+  // close is a return to the game.
+  let backTo = null;
+  function goBack() { const f = backTo; backTo = null; if (f) f(); else hideOverlay(); }
+  // the name of a menu key, whatever the event carries: code, key, or only
+  // the old keyCode (some synthetic keyboards send nothing else)
+  const KEYCODES = { 13: 'Enter', 27: 'Escape', 32: 'Space', 37: 'ArrowLeft', 38: 'ArrowUp', 39: 'ArrowRight', 40: 'ArrowDown' };
+  function keyName(e) {
+    if (e.code) return e.code;
+    if (e.key === ' ') return 'Space';
+    return e.key || KEYCODES[e.keyCode] || '';
+  }
+  function colophonYears() {
+    const y = new Date().getFullYear();
+    return y > 2026 ? '2026–' + y : '2026';
   }
 
   // the finish: the frontier is built. Free play continues — raised bars,
@@ -2271,13 +2327,13 @@
       </div>
     `, true, 'guide');
     $('guide-back').onclick = () => showGuide(guideStep - 1);
-    $('guide-next').onclick = () => (last ? showMapSelect() : showGuide(guideStep + 1));
+    $('guide-next').onclick = () => (last ? goBack() : showGuide(guideStep + 1));
     // the arrows page, Escape leaves; both stop here so the walker never hears them
     overlayCard.onkeydown = (e) => {
-      const k = e.code || e.key;   // the same name either way for these three
+      const k = keyName(e);
       if (k === 'ArrowRight') { if (!last) showGuide(guideStep + 1); }
       else if (k === 'ArrowLeft') { if (guideStep > 0) showGuide(guideStep - 1); }
-      else if (k === 'Escape') showMapSelect();
+      else if (k === 'Escape') goBack();
       else return;
       e.preventDefault();
       e.stopPropagation();
@@ -2367,59 +2423,120 @@
     });
   }
 
-  function showMapSelect() {
-    overlayRerender = showMapSelect;
+  // ---------- the title screen: the worlds, over the live world ----------
+  // The world the player last left is loaded before the title goes up (boot
+  // does that), so the title is the game under a dusk, not a page. The
+  // arrows walk one cursor across the two worlds and down the rows; Enter or
+  // Space picks; Escape goes back to the game when the title was opened
+  // from it (the pause menu's "Change world"). The mock it follows is
+  // dev/chrome-mock.html; the plan is docs/chrome-plan.md.
+  let titleFromPlay = false;
+  const attr = (v) => String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  function showMapSelect(fromPlay) {
+    if (fromPlay !== undefined) titleFromPlay = !!fromPlay;
+    overlayRerender = () => showMapSelect();
+    backTo = null;
+    refreshCorner();
     const focusId = mapId || E.getLastMap() || CHAIN.DEFAULT_MAP;
-    const cards = CHAIN.MAP_IDS.map((id) => {
+    const slots = CHAIN.MAP_IDS.map((id) => {
       const peek = E.peekProfile(id);
-      const th = mapThumb(id);
       const progress = peek && peek.totalChars > 0
         ? `${T.t('mapProgress', { letters: peek.letters, machines: peek.machines, chars: peek.totalChars })}${peek.savedAt ? ` · ${T.t('mapLast', { day: fmtDay(peek.savedAt) })}` : ''}`
         : T.t('mapNew');
-      const go = peek && peek.totalChars > 0 ? T.t('mapContinue') : T.t('mapPlay');
-      const cur = id === mapId ? ' current' : '';
       return `
-        <button class="map-card${cur}" data-map="${id}">
-          <span class="map-thumb"><img src="${th}" alt="" decoding="async"></span>
+        <button class="slot" data-map="${id}" data-tagline="${attr(T.t('mapTaglines')[id])}">
+          <i class="cursor"></i>
+          <span class="thumb"><img src="${mapThumb(id)}" alt="" decoding="async"></span>
           <b>${T.t('mapNames')[id]}</b>
-          <span class="map-tagline">${T.t('mapTaglines')[id]}</span>
-          <span class="map-progress">${progress}</span>
-          <span class="map-go">${go}</span>
+          <span class="prog">${progress}</span>
         </button>`;
     }).join('');
     showOverlay(`
-      <div class="card-station">${T.t('mapSelectStation')}</div>
-      <h2>${T.t('mapSelectTitle')}</h2>
-      <p class="muted map-note">${T.t('mapSelectNote')}</p>
-      <button id="map-guide" class="guide-link">${T.t('guideLink')}</button>
-      <div class="map-cards" id="map-cards">${cards}</div>
-      <div class="map-foot">
-        ${switchesHTML('map')}
-        ${mapId ? `<button id="ov-cancel" class="link-btn">${T.t('mapSelectBack')}</button>` : ''}
+      <div class="title-inner">
+        <div class="logo">MECHANICAL<small>KEYBOARDING</small></div>
+        <div class="title-sub">${T.t('titleSub')}</div>
+        <div class="title-switches">
+          <div class="tsw"><span class="switch-label" title="${T.t('setLanguage')}">${ICONS.svg('globe', T.t('setLanguage'))}</span><span class="seg seg-lang" id="map-lang">${langSwitchHTML()}</span></div>
+          <div class="tsw"><span class="switch-label" title="${T.t('setLayout')}">${ICONS.svg('keyboard', T.t('setLayout'))}</span><span class="seg seg-course" id="map-course">${courseSwitchHTML()}</span></div>
+        </div>
+        <div class="slots" id="title-slots">${slots}</div>
+        <div class="tagline" id="title-tagline"></div>
+        <div class="rows" id="title-rows">
+          <button class="row" id="title-guide"><i class="cursor"></i>${T.t('titleHowTo')}</button>
+          <button class="row" id="title-settings"><i class="cursor"></i>${T.t('settingsTitle')}</button>
+        </div>
       </div>
-    `, true);
-    wireSwitches('map', showMapSelect);
-    $('map-guide').onclick = () => showGuide(0);
-    const btns = [...document.querySelectorAll('#map-cards .map-card')];
-    btns.forEach((b) => { b.onclick = () => startMap(b.dataset.map); });
-    $('map-cards').onkeydown = (e) => {
-      const i = btns.indexOf(document.activeElement);
-      if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') {
-        const j = i < 0 ? 0 : (i + (e.code === 'ArrowRight' ? 1 : btns.length - 1)) % btns.length;
-        btns[j].focus();
-      } else if ((e.code === 'Enter' || e.code === 'Space') && i >= 0) {
-        if (!e.repeat) startMap(btns[i].dataset.map);
-      } else return;
+      <div class="title-foot">
+        <span></span>
+        <div class="title-help">${titleFromPlay && profile ? T.t('titleResume') : T.t('titleHelp')}</div>
+        <small class="colophon">&copy; ${colophonYears()} <a href="https://FoxForger.com" target="_blank" rel="noopener">Fox Forger</a>, <a href="https://Digitalis.tech" target="_blank" rel="noopener">Digitalis LLC</a></small>
+      </div>
+    `, false, 'title');
+    // a language switch redraws the title in the new language and leaves the
+    // cursor on the language it picked
+    wireSwitches('map', () => { showMapSelect(); const b = document.querySelector('#map-lang .seg-btn.active'); if (b) b.focus(); });
+    // one cursor over everything, in lines: the language bar, the layout
+    // grid (three to a row), the two worlds, then each row. Up and down move
+    // between lines, left and right along one; Enter or Space picks (a
+    // switch is clicked, a world begins, a row opens)
+    const chunk = (arr, n) => { const out = []; for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n)); return out; };
+    const lines = [
+      [...document.querySelectorAll('#map-lang .seg-btn')],
+      ...chunk([...document.querySelectorAll('#map-course .seg-btn:not([disabled])')], 3),
+      [...document.querySelectorAll('#title-slots .slot')],
+      [$('title-guide')], [$('title-settings')],
+    ].filter((l) => l.length);
+    const items = lines.flat();
+    const tagline = $('title-tagline');
+    items.forEach((el) => {
+      el.addEventListener('focus', () => { tagline.textContent = el.dataset.tagline || ''; });
+      el.addEventListener('mouseenter', () => el.focus());
+    });
+    const pick = (el) => {
+      if (el.dataset.map) startMap(el.dataset.map);
+      else if (el.id === 'title-guide') { backTo = () => showMapSelect(); showGuide(0); }
+      else if (el.id === 'title-settings') { backTo = () => showMapSelect(); showSettings(); }
+      else el.click();                                  // a language or a layout: its own switch
+    };
+    document.querySelectorAll('#title-slots .slot, #title-rows .row').forEach((el) => { el.onclick = () => pick(el); });
+    const where = () => {
+      for (let li = 0; li < lines.length; li++) {
+        const ci = lines[li].indexOf(document.activeElement);
+        if (ci >= 0) return [li, ci];
+      }
+      return [-1, -1];
+    };
+    const go = (li, ci) => {
+      const line = lines[(li + lines.length) % lines.length];
+      line[Math.max(0, Math.min(ci, line.length - 1))].focus();
+    };
+    overlayCard.onkeydown = (e) => {
+      const [li, ci] = where();
+      const k = keyName(e);
+      if (li < 0 && /^Arrow/.test(k)) go(0, 0);
+      else if (k === 'ArrowUp') go(li - 1, ci);
+      else if (k === 'ArrowDown') go(li + 1, ci);
+      else if (k === 'ArrowLeft') go(li, (ci + lines[li].length - 1) % lines[li].length);
+      else if (k === 'ArrowRight') go(li, (ci + 1) % lines[li].length);
+      else if ((k === 'Enter' || k === 'Space') && li >= 0) { if (!e.repeat) pick(lines[li][ci]); }
+      else if (k === 'Escape') { if (titleFromPlay && profile) hideOverlay(); }
+      else return;
       e.preventDefault();
       e.stopPropagation();
     };
-    if ($('ov-cancel')) $('ov-cancel').onclick = () => hideOverlay();
-    (btns.find((b) => b.dataset.map === focusId) || btns[0]).focus();
+    (items.find((el) => el.dataset.map === focusId) || items[0]).focus();
   }
 
   function startMap(id) {
     if (!CHAIN.MAPS[id]) id = CHAIN.DEFAULT_MAP;
     if (id === mapId && profile) { hideOverlay(); return; }
+    loadWorld(id);
+    hideOverlay();
+  }
+  // the world comes up under whatever card is showing: the title at boot,
+  // so the title has the game behind it before a world is even picked
+  function loadWorld(id) {
+    if (!CHAIN.MAPS[id]) id = CHAIN.DEFAULT_MAP;
     if (profile) E.saveProfile(profile);
     mapId = id;
     CHAIN.useMap(id);
@@ -2457,31 +2574,76 @@
     scheduleHint();
     refreshLessonLights();
     refreshStatus();
-    hideOverlay();
   }
 
-  // ---------- header ----------
-  // the colophon's year range extends itself: 2026 stands alone this year, and
-  // reads 2026–YYYY from the next one on
-  const thisYear = new Date().getFullYear();
-  if (thisYear > 2026) $('colophon-years').textContent = '2026–' + thisYear;
+  // ---------- the colophon ----------
+  // its year range extends itself: 2026 stands alone this year, and reads
+  // 2026–YYYY from the next one on
+  $('colophon-years').textContent = colophonYears();
 
-  // Two switches in the header, and they are the player's: the events the game
-  // makes at you, and the rhythm layer under them. Neither is hidden and
-  // neither depends on developer mode. The weather bed answers the sfx switch
-  // as well, because "sound effects off" has to mean the game goes quiet; its
-  // own switch is a developer one while the bed is still being judged.
-  const sfxBtn = $('btn-sfx'), musicBtn = $('btn-music');
-  function refreshSoundBtn() {
-    sfxBtn.textContent = A.isSfx() ? '🔊' : '🔇';
-    // there is no struck-through note in the emoji set that renders anywhere,
-    // so the music switch says off by going dim, and its title says it in words
-    musicBtn.classList.toggle('btn-off', !A.isMusic());
-    sfxBtn.title = T.t(A.isSfx() ? 'sndSfxOn' : 'sndSfxOff');
-    musicBtn.title = T.t(A.isMusic() ? 'sndMusicOn' : 'sndMusicOff');
+  // The two sound switches are the player's: the events the game makes at
+  // you, and the rhythm layer under them. Neither depends on developer mode.
+  // They were header buttons until 2026-09-17; they are rows in the pause
+  // menu now, which redraws itself when either is flipped, so a refresh of
+  // the switches is a redraw of the menu.
+  function refreshSoundBtn() { if (overlayName === 'pause') showPause(); }
+
+  // ---------- the pause menu ----------
+  // Escape, or the gear in the corner. Everything the header used to carry:
+  // the session's readouts, the two sound switches, the sky, the guide,
+  // settings, and the way to another world. One list, one cursor; nothing
+  // in it stops the factory (SIM keeps its own clock). The rows are a table,
+  // so a row can be added without touching the plumbing.
+  function showPause() {
+    if (!profile) return;
+    overlayRerender = showPause;
+    backTo = null;
+    refreshCorner();
+    const st = statText();
+    const onOff = (on) => `<em class="${on ? 'on' : ''}">${T.t(on ? 'pauseOn' : 'pauseOff')}</em>`;
+    const skyMode = window.SKY ? SKY.mode() : 'off';
+    const rows = [
+      { id: 'pm-resume', label: T.t('pauseResume'), act: () => hideOverlay() },
+      { id: 'pm-sfx', label: T.t('pauseSound'), right: onOff(A.isSfx()), act: () => { A.setSfx(!A.isSfx()); showPause(); focusRow('pm-sfx'); } },
+      { id: 'pm-music', label: T.t('pauseMusic'), right: onOff(A.isMusic()), act: () => { A.setMusic(!A.isMusic()); showPause(); focusRow('pm-music'); } },
+      { id: 'pm-sky', label: T.t('setSky'), right: `<em class="${skyMode === 'off' ? '' : 'on'}">${T.t('setSkyModes')[skyMode]}</em>`, act: () => {
+        if (window.SKY) SKY.setMode(SKY_MODES[(SKY_MODES.indexOf(SKY.mode()) + 1) % SKY_MODES.length]);
+        showPause(); focusRow('pm-sky');
+      } },
+      { id: 'pm-guide', label: T.t('titleHowTo'), act: () => { backTo = showPause; showGuide(0); } },
+      { id: 'pm-settings', label: T.t('settingsTitle'), act: () => { backTo = showPause; showSettings(); } },
+      { id: 'pm-world', label: T.t('pauseChangeWorld'), act: () => showMapSelect(true) },
+    ];
+    const stat = (k, key) => `<div class="stat"><span class="stat-value" id="stat-${k}">${st[k]}</span><span class="stat-label">${T.t(key)}</span></div>`;
+    showOverlay(`
+      <div class="pause-title">${T.t('pauseTitle')}</div>
+      <div class="pause-stats">
+        ${stat('acc', 'statAccuracy')}${stat('wpm', 'statWpm')}${stat('streak', 'statStreak')}${stat('time', 'statAtKeys')}
+      </div>
+      ${rows.map((r) => `<button class="mrow" id="${r.id}"><i class="cursor"></i><span>${r.label}</span>${r.right || ''}</button>`).join('')}
+      <div class="pause-help">${T.t('pauseHelp')}</div>
+    `, false, 'pause');
+    const btns = rows.map((r) => $(r.id));
+    rows.forEach((r, i) => { btns[i].onclick = r.act; btns[i].addEventListener('mouseenter', () => btns[i].focus()); });
+    overlayCard.onkeydown = (e) => {
+      const i = btns.indexOf(document.activeElement);
+      const k = keyName(e);
+      if (k === 'ArrowUp') btns[(i < 0 ? 0 : i + btns.length - 1) % btns.length].focus();
+      else if (k === 'ArrowDown') btns[(i < 0 ? 0 : i + 1) % btns.length].focus();
+      else if ((k === 'Enter' || k === 'Space') && i >= 0) { if (!e.repeat) rows[i].act(); }
+      else if (k === 'Escape') hideOverlay();
+      else return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    btns[0].focus();
   }
-  sfxBtn.onclick = () => { A.setSfx(!A.isSfx()); refreshSoundBtn(); sfxBtn.blur(); };
-  musicBtn.onclick = () => { A.setMusic(!A.isMusic()); refreshSoundBtn(); musicBtn.blur(); };
+  function focusRow(id) { const el = $(id); if (el) el.focus(); }
+  // the corner's tooltips follow the language
+  function refreshCorner() {
+    $('btn-settings').title = T.t('menuTip');
+    if ($('btn-debug')) $('btn-debug').title = T.t('dbgTitle');
+  }
 
   // ---------- settings ----------
   const DONATE = [
@@ -2634,7 +2796,7 @@
     document.querySelectorAll('#set-sky .seg-btn').forEach((b) => {
       b.onclick = () => { if (window.SKY) SKY.setMode(b.dataset.sky); showSettings(); };
     });
-    $('set-map').onclick = () => showMapSelect();
+    $('set-map').onclick = () => showMapSelect(true);
     $('set-export').onclick = () => exportSave();
     $('set-import').onclick = () => pickImportFile();
     $('set-dev').onchange = (e) => {
@@ -2643,10 +2805,11 @@
       refreshDebugBtn();                       // the 🔧 comes and goes with it
     };
     $('set-reset').onclick = () => showResetConfirm();
-    $('ov-continue').onclick = () => hideOverlay();
+    $('ov-continue').onclick = () => goBack();
     $('ov-continue').focus();
   }
-  $('btn-settings').onclick = () => { $('btn-settings').blur(); if (profile) showSettings(); };
+  // the gear in the corner is the menu, the same one Escape opens
+  $('btn-settings').onclick = () => { $('btn-settings').blur(); showPause(); };
 
   // ---------- developer settings ----------
   // A second panel behind a second icon, and the icon is only on screen with
@@ -2797,12 +2960,14 @@
     applyI18n();
     buildKeyboard();
     refreshStats();
-    refreshSoundBtn();
     refreshDebugBtn();
+    refreshCorner();
     FACTORY.init(document.getElementById('factory-mount')).then(() => {
       if (loadingCard) loadingCard.classList.add('s3');
       clearLine();
-      setTimeout(needsKeyboardCheck() ? showKeyboardCard : showMapSelect, 30);
+      // the world the player last left, under the title
+      loadWorld(E.getLastMap() || CHAIN.DEFAULT_MAP);
+      setTimeout(() => (needsKeyboardCheck() ? showKeyboardCard() : showMapSelect(false)), 30);
     });
   }
   // The heavy work waits two frames: the first callback lands before a paint,

@@ -21,8 +21,8 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { height: 100%; }
   body {
-    background: #0e1b21;
-    color: #e8e2d4;
+    background: #131a22;
+    color: #ece2cc;
     font-family: Georgia, 'Times New Roman', serif;
     display: flex;
     flex-direction: column;
@@ -31,7 +31,7 @@
   #overlay {
     position: fixed;
     inset: 0;
-    background: rgba(8, 15, 19, 0.82);
+    background: rgba(6, 12, 16, 0.6);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -39,9 +39,9 @@
   }
   #overlay.hidden { display: none; }
   #overlay-card {
-    background: #1a303a;
-    border: 1px solid #2c4a58;
-    border-radius: 12px;
+    background: #171f29;
+    border: 2px solid #33404f;
+    border-radius: 0;
     padding: 32px 40px;
     max-width: 520px;
     width: calc(100% - 40px);
@@ -105,31 +105,18 @@
 </script>
 </head>
 <body>
-  <header id="topbar">
-    <div id="wordmark">MECHANICAL <span>KEYBOARDING</span></div>
-    <div id="topbar-right">
-      <div id="session-stats">
-        <div class="stat"><span class="stat-value" id="stat-acc">–</span><span class="stat-label" data-i18n="statAccuracy"></span></div>
-        <div class="stat"><span class="stat-value" id="stat-wpm">–</span><span class="stat-label" data-i18n="statWpm"></span></div>
-        <div class="stat"><span class="stat-value" id="stat-streak">0</span><span class="stat-label" data-i18n="statStreak"></span></div>
-        <div class="stat"><span class="stat-value" id="stat-time">0:00</span><span class="stat-label" data-i18n="statAtKeys"></span></div>
-      </div>
-      <!-- the same three the game carries. This harness had one `btn-sound`
-           from before the sound switch split in two, and app.js sets an
-           onclick on each of these unconditionally: a missing one threw
-           during boot and the page sat on the loading card forever. A dev
-           harness that cannot boot is worse than no harness. -->
-      <button id="btn-sfx" title="sound effects">🔊</button>
-      <button id="btn-music" title="music">🎵</button>
-      <button id="btn-debug" title="developer settings" hidden>🔧</button>
-      <button id="btn-settings" title="settings">⚙️</button>
-    </div>
-  </header>
-
   <main>
     <section id="playfield">
       <div id="factory">
         <div id="factory-mount"></div>
+        <!-- the one control over the game: the menu (Escape opens it too),
+             and beside it the developer switches, on screen only with
+             developer mode on. The icons are drawn by js/chrome.js. -->
+        <div id="corner">
+          <button id="btn-settings" class="icon-btn gear" title="menu"><i></i></button>
+          <button id="btn-debug" class="icon-btn wrench dev" title="developer settings" hidden><i></i></button>
+          <button id="btn-bot" class="icon-btn bot dev" title="bot" hidden><i></i></button>
+        </div>
         <div id="place-caption" class="hidden"></div>
       </div>
     </section>
@@ -172,6 +159,7 @@
   <script defer src="../libs/pixi.min.js"></script>
   <script defer src="../js/flags.js"></script>
   <script defer src="../js/icons.js"></script>
+  <script defer src="../js/chrome.js"></script>
   <script defer src="../js/i18n.js"></script>
   <script defer src="../js/dev.js"></script>
   <!-- course data: one physical board, a layout + a course per keyboard -->

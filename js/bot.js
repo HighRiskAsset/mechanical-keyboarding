@@ -1267,7 +1267,7 @@
     if (sig === btnSig) return;
     btnSig = sig;
     btn.hidden = !on;
-    btn.innerHTML = '🤖' + (mode === 'off' ? '' : `<span class="bot-pace">${esc(pace)}</span>`);
+    btn.innerHTML = '<i></i>' + (mode === 'off' ? '' : `<span class="bot-pace">${esc(pace)}</span>`);
     btn.classList.toggle('btn-off', mode === 'off');
     btn.title = (T.t('botTitle') || {})[mode] || 'bot';
   }

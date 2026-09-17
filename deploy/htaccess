@@ -19,5 +19,9 @@ DirectoryIndex index.html
 # utf-8; a host defaulting to latin-1 turns every one of them into mojibake.
 AddDefaultCharset utf-8
 
+# The bundled menu faces (assets/fonts), under their own type rather than
+# whatever an older server guesses for .woff2.
+AddType font/woff2 .woff2
+
 # Served as a plain static site: no directory listings if a path is mistyped.
 Options -Indexes
