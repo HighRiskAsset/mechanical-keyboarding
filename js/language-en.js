@@ -564,14 +564,14 @@
     // --- the v4 pass (2026-09-15): what the lesson plan's columns lean on.
     // A word already listed above keeps its first entry (WORD_LIST dedupes),
     // so these only add. Grouped by the column that first needs them. ---
-    // C3, the first words over e t a o i n
+    // C3, the first words typed with e t a o i n
     ['to', '', 'func'], ['at', '', 'func'], ['in', '', 'func'], ['on', '', 'func'], ['an', '', 'func'], ['it', '', 'func'],
     ['no', '', 'func'], ['not', '', 'func'], ['one', '', 'func'], ['into', '', 'func'], ['onto', '', 'func'], ['none', '', 'func'],
     ['ten', '', 'things'], ['nine', '', 'things'], ['tin', '', 'things'], ['tie', '', 'things'], ['toe', '', 'people'], ['tea', '', 'things'],
     ['eat', '', 'verbs'], ['ate', '', 'verbs'], ['oat', '', 'nature'], ['ton', '', 'things'], ['tone', '', 'life'], ['note', '', 'things'],
     ['neat', '', 'adj'], ['tent', '', 'things'], ['tan', '', 'adj'], ['net', '', 'things'], ['noon', '', 'time'], ['onion', '', 'nature'],
     ['inn', '', 'place'], ['tint', '', 'things'], ['item', '', 'things'], ['nation', '', 'place'], ['notion', '', 'life'], ['tenant', '', 'people'],
-    // C4, nouns over e t i n h s and the little words over eight letters
+    // C4, nouns typed with e t i n h s and the little words typed with eight letters
     ['nest', '', 'nature'], ['sheet', '', 'things'], ['teeth', '', 'people'], ['shin', '', 'people'], ['thistle', '', 'nature'], ['shine', '', 'nature'],
     ['ninth', '', 'things'], ['tenth', '', 'things'], ['thesis', '', 'life'], ['tennis', '', 'life'], ['siesta', '', 'life'], ['stint', '', 'work'],
     ['hiss', '', 'verbs'], ['insist', '', 'verbs'], ['tense', '', 'adj'], ['teen', '', 'people'], ['sit', '', 'verbs'], ['set', '', 'verbs'],
@@ -650,7 +650,7 @@
     ['hazel', '', 'nature'], ['lizard', '', 'nature'], ['wizard', '', 'people'], ['ozone', '', 'nature'], ['citizen', '', 'people'], ['organize', '', 'verbs'],
     ['realize', '', 'verbs'], ['recognize', '', 'verbs'], ['magazine', '', 'things'], ['horizon', '', 'nature'], ['bazaar', '', 'place'], ['plaza', '', 'place'],
     ['waltz', '', 'life'], ['topaz', '', 'things'], ['blizzard', '', 'nature'], ['drizzle', '', 'nature'], ['puzzle', '', 'life'], ['jazz', '', 'life'],
-    // the home-row seed (2026-09-15): what the first columns write over
+    // the home-row seed (2026-09-15): what the first columns write with
     // s l, then a h, then e i, then t n, then d o
     ['shall', '', 'func'], ['alas', '', 'func'], ['salsa', '', 'things'], ['all', '', 'func'], ['ha', '', 'func'], ['lass', '', 'people'],
     ['she', '', 'func'], ['he', '', 'func'], ['his', '', 'func'], ['is', '', 'func'], ['else', '', 'func'], ['has', '', 'func'],
@@ -720,7 +720,7 @@
     // --- typeable from pair 17 ---
     ['fix the pipe', ''], ['the next exit', ''], ['a dozen boxes', ''],
     ['fix the axle', ''],
-    // --- the v4 pass (2026-09-15): phrases over the plan's first ten
+    // --- the v4 pass (2026-09-15): phrases typed with the plan's first ten
     // letters (C5: e t a o i n h s r u; no d, so no "and" yet) and its first
     // twelve (C6, with l d), for E-08 and the first gather ---
     ['here it is', ''], ['sit here', ''], ['one at a time', ''], ['at the station', ''], ['on the train', ''],
@@ -736,7 +736,7 @@
     ['down the hill', ''], ['the old road', ''], ['lead and tin', ''], ['sand in the shoe', ''], ['the ladder is tall', ''],
     ['a deal is a deal', ''], ['head to toe', ''], ['hold the line', ''], ['all in a line', ''], ['idle hands', ''],
     ['a lantern in the hall', ''], ['dust on the road', ''], ['a house on the hill', ''], ['the hall is dark', ''],
-    // the home-row seed (2026-09-15): phrases over s l a h e i t n d o, before r u arrive
+    // the home-row seed (2026-09-15): phrases typed with s l a h e i t n d o, before r u arrive
     ['the old hat', ''], ['sold as is', ''], ['sand and stone', ''], ['on and on', ''], ['so it is', ''],
     ['not at all', ''], ['in the shade', ''], ['toast and tea', ''], ['hold it', ''], ['a dish and a stool', ''],
     ['old and done', ''], ['stand and listen', ''], ['a hat on the head', ''], ['the last one', ''], ['stone on stone', ''],

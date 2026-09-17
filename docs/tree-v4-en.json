@@ -1,6 +1,6 @@
 {
  "course": "en",
- "generated": "2026-09-16",
+ "generated": "2026-09-17",
  "lessons": [
   {
    "id": "I-01",
@@ -11,7 +11,7 @@
     "l"
    ],
    "rung": "streams",
-   "what": "streams over s l",
+   "what": "streams typed with s l",
    "alpha": [
     "s",
     "l"
@@ -34,7 +34,7 @@
     "h"
    ],
    "rung": "streams",
-   "what": "streams over a h",
+   "what": "streams typed with a h",
    "alpha": [
     "a",
     "h"
@@ -87,7 +87,7 @@
     "i"
    ],
    "rung": "streams",
-   "what": "streams over e i",
+   "what": "streams typed with e i",
    "alpha": [
     "e",
     "i"
@@ -174,7 +174,7 @@
     "n"
    ],
    "rung": "streams",
-   "what": "streams over t n",
+   "what": "streams typed with t n",
    "alpha": [
     "t",
     "n"
@@ -270,7 +270,7 @@
     "o"
    ],
    "rung": "streams",
-   "what": "streams over d o",
+   "what": "streams typed with d o",
    "alpha": [
     "d",
     "o"
@@ -399,7 +399,7 @@
     "u"
    ],
    "rung": "streams",
-   "what": "streams over r u",
+   "what": "streams typed with r u",
    "alpha": [
     "r",
     "u"
@@ -536,7 +536,7 @@
     "."
    ],
    "rung": "streams",
-   "what": "streams over c m .",
+   "what": "streams typed with c m .",
    "alpha": [
     "c",
     "m"
@@ -739,7 +739,7 @@
     "y"
    ],
    "rung": "streams",
-   "what": "streams over g y",
+   "what": "streams typed with g y",
    "alpha": [
     "g",
     "y"
@@ -882,7 +882,7 @@
     ","
    ],
    "rung": "streams",
-   "what": "streams over ,",
+   "what": "streams typed with ,",
    "alpha": [],
    "marks": [],
    "digits": [],
@@ -947,7 +947,7 @@
     "w"
    ],
    "rung": "streams",
-   "what": "streams over f w",
+   "what": "streams typed with f w",
    "alpha": [
     "f",
     "w"
@@ -1098,7 +1098,7 @@
     "-"
    ],
    "rung": "streams",
-   "what": "streams over ' -",
+   "what": "streams typed with ' -",
    "alpha": [],
    "marks": [],
    "digits": [],
@@ -1168,7 +1168,7 @@
     "p"
    ],
    "rung": "streams",
-   "what": "streams over b p",
+   "what": "streams typed with b p",
    "alpha": [
     "b",
     "p"
@@ -1324,7 +1324,7 @@
     "k"
    ],
    "rung": "streams",
-   "what": "streams over k",
+   "what": "streams typed with k",
    "alpha": [
     "k"
    ],
@@ -1478,7 +1478,7 @@
     "!"
    ],
    "rung": "streams",
-   "what": "streams over ? !",
+   "what": "streams typed with ? !",
    "alpha": [],
    "marks": [],
    "digits": [],
@@ -1552,7 +1552,7 @@
     "v"
    ],
    "rung": "streams",
-   "what": "streams over v",
+   "what": "streams typed with v",
    "alpha": [
     "v"
    ],
@@ -1709,7 +1709,7 @@
     "\""
    ],
    "rung": "streams",
-   "what": "streams over \"",
+   "what": "streams typed with \"",
    "alpha": [],
    "marks": [],
    "digits": [],
@@ -1784,7 +1784,7 @@
     "j"
    ],
    "rung": "streams",
-   "what": "streams over j",
+   "what": "streams typed with j",
    "alpha": [
     "j"
    ],
@@ -1944,7 +1944,7 @@
     "x"
    ],
    "rung": "streams",
-   "what": "streams over x",
+   "what": "streams typed with x",
    "alpha": [
     "x"
    ],
@@ -2109,7 +2109,7 @@
     ")"
    ],
    "rung": "streams",
-   "what": "streams over : ; ( )",
+   "what": "streams typed with : ; ( )",
    "alpha": [],
    "marks": [],
    "digits": [],
@@ -2193,7 +2193,7 @@
     "q"
    ],
    "rung": "streams",
-   "what": "streams over q",
+   "what": "streams typed with q",
    "alpha": [
     "q"
    ],
@@ -2361,7 +2361,7 @@
     "z"
    ],
    "rung": "streams",
-   "what": "streams over z",
+   "what": "streams typed with z",
    "alpha": [
     "z"
    ],
@@ -2653,7 +2653,7 @@
     "5"
    ],
    "rung": "streams",
-   "what": "streams over 1 2 3 4 5",
+   "what": "streams typed with 1 2 3 4 5",
    "alpha": [],
    "marks": [],
    "digits": [],
@@ -2948,7 +2948,7 @@
     "0"
    ],
    "rung": "streams",
-   "what": "streams over 6 7 8 9 0",
+   "what": "streams typed with 6 7 8 9 0",
    "alpha": [],
    "marks": [],
    "digits": [],
@@ -4056,7 +4056,7 @@
     "="
    ],
    "rung": "streams",
-   "what": "streams over % * + =",
+   "what": "streams typed with % * + =",
    "alpha": [],
    "marks": [],
    "digits": [],
@@ -4082,7 +4082,7 @@
     ">"
    ],
    "rung": "streams",
-   "what": "streams over / \\ [ ] { } < >",
+   "what": "streams typed with / \\ [ ] { } < >",
    "alpha": [],
    "marks": [],
    "digits": [],
@@ -4180,7 +4180,7 @@
     "`"
    ],
    "rung": "streams",
-   "what": "streams over @ # $ & ^ ~ | _ `",
+   "what": "streams typed with @ # $ & ^ ~ | _ `",
    "alpha": [],
    "marks": [],
    "digits": [],

@@ -1274,8 +1274,8 @@ If a recipe or a tier disagrees with a rule, the recipe is wrong.
    see Course exceptions: EN).
 2. **Alphabet = union of the inputs.** A material's letter set is the union of
    what went into it, computed live from the recipe graph and the current Mk
-   levels. Feed a Smelter iron + copper → syllables over а о е н; iron + stone
-   → over а о и т. Upgrade iron and every downstream lesson widens (bronze
+   levels. Feed a Smelter iron + copper → syllables typed with а о е н; iron + stone
+   → typed with а о и т. Upgrade iron and every downstream lesson widens (bronze
    @T0 = {а о е н}, @T1 = {а о п р е н}). Strict union stops at parts; from
    moldings on, the alphabet is the full unlocked set and inputs set the
    *focus* (weight and content family) instead.

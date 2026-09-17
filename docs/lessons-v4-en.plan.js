@@ -27,8 +27,8 @@
 // - C17 is the straight double quote alone (no guillemets); C24 has no numero
 //   sign (English writes "No.").
 //
-// The shape every letter group follows: intro (streams over its own keys),
-// syllables with the first ores, focused words over everything unlocked,
+// The shape every letter group follows: intro (streams typed with its own keys),
+// syllables with the first ores, focused words typed with everything unlocked,
 // then a sentence lesson or a gather. The vowel banks are I-02 a h and I-03
 // e i (I-01 s l is the consonant bank), chosen per pair by counting as A3
 // says: a group that pairs with s l takes e i or a h beside it, and q takes
@@ -48,8 +48,8 @@ I('I-03', ['e', 'i'], 'E I', 'the first reach: middle fingers straight up; words
 E('E-02', ['I-01', 'I-03'], 'syllables', null, 'se le is el; a second alphabet, same rung: a home key and a reach in every pair');
 E('E-03', ['E-01', 'I-03'], 'words', ['func'], 'the first real words: she, he, his, has, is, as, else');
 I('I-04', ['t', 'n'], 'T N', 'index fingers, the first diagonal reaches: the, that, this, it, in, at, an');
-E('E-04', ['E-02', 'I-04'], 'words', ['things', 'nature', 'home'], 'nouns over six letters: nest, tent, tin, net, list, line, tile');
-E('E-05', ['E-03', 'I-04', 'I-02'], 'words', ['func'], 'little words over eight letters: the, this, that, then, it, in, at, an; a h come back as the flux');
+E('E-04', ['E-02', 'I-04'], 'words', ['things', 'nature', 'home'], 'nouns typed with six letters: nest, tent, tin, net, list, line, tile');
+E('E-05', ['E-03', 'I-04', 'I-02'], 'words', ['func'], 'little words typed with eight letters: the, this, that, then, it, in, at, an; a h come back as the flux');
 
 // ---- C5: d o ----
 I('I-05', ['d', 'o'], 'D O', 'back to the home row with d, and o straight up: and, to, on, not, one');
@@ -61,7 +61,7 @@ E('E-08', ['E-05', 'I-05'], 'phrases', null, 'first phrases: salt and sand, hand
 I('I-06', ['r', 'u'], 'R U', 'index fingers straight up: the last vowel');
 E('E-09', ['I-06', 'I-05', 'I-01'], 'syllables', null, 'ru ur ro or with d o', { focus: true });
 E('E-10', ['E-09', 'E-07'], 'words', ['home', 'things', 'rail'], 'home and road words leaning on r u: door, road, route, rust, hour, house, ruin', { focus: true });
-E('E-11', ['E-08', 'E-10'], 'phrases', null, 'GATHER 1: phrases over the first twelve letters', { gather: true });
+E('E-11', ['E-08', 'E-10'], 'phrases', null, 'GATHER 1: phrases typed with the first twelve letters', { gather: true });
 
 // ---- C7: c m and the period ----
 I('I-07', ['c', 'm', '.'], 'C M .', 'the bottom row, middle and index, and the period on its own key: sentences are within reach');
@@ -77,7 +77,7 @@ E('E-15', ['E-14', 'I-08', 'E-08'], 'sentences', 'names', 'capitalised sentences
 I('I-09', ['g', 'y'], 'G Y', 'index inner home and index top inner: -ing and -ly; you, they, my');
 E('E-16', ['I-09', 'I-01', 'I-02'], 'syllables', null, 'ga ag gas; ay ly hy', { focus: true });
 E('E-17', ['E-16', 'E-13'], 'words', ['verbs'], 'verbs and their -ing leaning on g y: go, get, dig, try, say, stay, carry, going, saying', { focus: true });
-E('E-18', ['E-15', 'E-17'], 'sentences', 'period', 'GATHER 2: sentences over sixteen letters', { gather: true });
+E('E-18', ['E-15', 'E-17'], 'sentences', 'period', 'GATHER 2: sentences typed with sixteen letters', { gather: true });
 
 // ---- C10: the comma ----
 I('I-10', [','], ',', 'the comma on its own key, unshifted: not the hurdle it is in ЙЦУКЕН, but clauses keep their column');

@@ -143,7 +143,7 @@
   ];
 
   // ---- consonant clusters: the Foundry's grammar (frequent onsets/codas) ----
-  // phase 4: syllables over the T2–T3 letters — added only where the table
+  // phase 4: syllables typed with the T2–T3 letters — added only where the table
   // has none, weights on the table's 1–10 scale
   const MORE_SYLLABLES = [
     ['ды', 18], ['да', 30], ['до', 28], ['де', 26], ['ди', 14], ['ад', 10], ['од', 12], ['ед', 8], ['ид', 6], ['ыл', 8], ['ыт', 7], ['ын', 6],

@@ -6,10 +6,10 @@
 // Columns: every introduction opens a column (C1..C24); an expansion sits in
 // the column of its newest input. Pages take columns after the keyboard.
 //
-// The shape every letter group follows: intro (streams over its own keys),
+// The shape every letter group follows: intro (streams typed with its own keys),
 // syllables with the first ores (I-01 о а, I-02 е н, I-03 и т are the vowel
 // banks that partner every later pair, so the first lessons stay useful all
-// game), focused words over everything unlocked, then a sentence lesson or a
+// game), focused words typed with everything unlocked, then a sentence lesson or a
 // gather. Marks get an intro and one expansion that needs them.
 'use strict';
 
@@ -26,8 +26,8 @@ I('I-03', ['и', 'т'], 'B N', 'index bottom; words open here');
 E('E-02', ['I-01', 'I-03'], 'syllables', null, 'та то ти; a second alphabet, same rung');
 E('E-03', ['E-01', 'I-03'], 'words', ['func'], 'the first real words: тот, нет, она, они');
 I('I-04', ['с', 'л'], 'C K', 'the two most frequent consonants after н т');
-E('E-04', ['E-02', 'I-04'], 'words', ['things', 'nature', 'home'], 'nouns over six letters: стол, лист, лиса');
-E('E-05', ['E-03', 'I-04', 'I-02'], 'words', ['func'], 'little words over eight letters; е н come back as the flux');
+E('E-04', ['E-02', 'I-04'], 'words', ['things', 'nature', 'home'], 'nouns typed with six letters: стол, лист, лиса');
+E('E-05', ['E-03', 'I-04', 'I-02'], 'words', ['func'], 'little words typed with eight letters; е н come back as the flux');
 
 // ---- C5: в р ----
 I('I-05', ['в', 'р'], 'D H', 'middle home and index home');
@@ -39,7 +39,7 @@ E('E-08', ['E-05', 'I-05'], 'phrases', null, 'first phrases: он не один,
 I('I-06', ['к', 'п'], 'R G', 'index top and index home, inner');
 E('E-09', ['I-06', 'I-05', 'I-01'], 'syllables', null, 'ка ко па по with в р; tin + copper + coal → bronze', { focus: true });
 E('E-10', ['E-09', 'E-07'], 'words', ['home', 'things', 'rail'], 'home and road words leaning on к п: окно, пол, поезд', { focus: true });
-E('E-11', ['E-08', 'E-10'], 'phrases', null, 'GATHER 1: phrases over the first twelve letters', { gather: true });
+E('E-11', ['E-08', 'E-10'], 'phrases', null, 'GATHER 1: phrases typed with the first twelve letters', { gather: true });
 
 // ---- C7: м д and the period ----
 I('I-07', ['м', 'д', '.'], 'V L /', 'index bottom, ring home, and the period on the Slash key: sentences are within reach');
@@ -55,7 +55,7 @@ E('E-15', ['E-14', 'I-08', 'E-08'], 'sentences', 'names', 'capitalised sentences
 I('I-09', ['у', 'ь'], 'E M', 'middle top and index bottom, inner; the soft sign');
 E('E-16', ['I-09', 'I-01', 'I-02'], 'syllables', null, 'ну ту; нь ть: the soft sign; manganese + coal + iron ore → steel', { focus: true });
 E('E-17', ['E-16', 'E-13'], 'words', ['verbs'], 'infinitives and verbs leaning on у ь: делать, думать, спать', { focus: true });
-E('E-18', ['E-15', 'E-17'], 'sentences', 'period', 'GATHER 2: sentences over sixteen letters', { gather: true });
+E('E-18', ['E-15', 'E-17'], 'sentences', 'period', 'GATHER 2: sentences typed with sixteen letters', { gather: true });
 
 // ---- C10: the comma ----
 I('I-10', [','], 'Shift+/', 'the signature hurdle: the period key, shifted', { hurdle: true });

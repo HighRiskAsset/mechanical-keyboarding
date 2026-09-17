@@ -159,7 +159,7 @@ for (const l of plan.lessons) {
   const funcWords = words.filter((x) => x.set === 'func').length;
   l.pool.words = words.length; l.pool.syllables = syl.length; l.pool.phrases = phrases.length; l.pool.func = funcWords;
   if (l.kind === 'intro') {
-    l.what = l.caps ? 'capitals of every unlocked letter' : `streams over ${l.keys.join(' ')}`;
+    l.what = l.caps ? 'capitals of every unlocked letter' : `streams typed with ${l.keys.join(' ')}`;
     l.samples = l.caps ? NAMES.filter((n) => writableWord(n.toLowerCase(), unlocked[l.col].letters)).slice(0, 3) : [l.keys.join(' ')];
     continue;
   }

@@ -16,7 +16,7 @@ kinds:
 - **Introduction.** New keys enter the game here (a mine, a well, a seam).
 - **Expansion.** A recipe whose inputs are earlier products. The lesson is
   the inputs' lessons, widened.
-- **Page.** A recipe over the finished keyboard with a content category.
+- **Page.** A recipe typed with the finished keyboard, with a content category.
 
 Materials and machines are not part of the plan. Lessons carry ids (I-03,
 E-14, P-02) until the naming pass. Naming is aesthetic and mechanical and
@@ -104,8 +104,8 @@ inputs set the focus: which letters are weighted, which content family the
 pool comes from.
 
 The shape every new group follows (agreed 2026-09-10): its introduction
-(streams over the new keys), then syllables with one or two old products,
-then words that lean on the new keys over everything unlocked, then a
+(streams typed with the new keys), then syllables with one or two old products,
+then words that lean on the new keys, typed with everything unlocked, then a
 gather back into the whole. Never introduction straight to pages.
 
 The syllable partners are always the first ores (RU: о а, е н, и т), chosen
@@ -124,7 +124,7 @@ late lessons name their focus instead.
 
 The rungs: 1 streams, 2 syllables, 3 words, 4 phrases, 5 sentences,
 6 full sentences (every mark, capitals, digits), 7 pages. A lesson sits on
-the highest rung whose pool over its alphabet clears a threshold measured
+the highest rung whose pool typed with its alphabet clears a threshold measured
 against the course's real word and sentence lists.
 
 Proposed thresholds (per course, tune against the corpus):
@@ -163,7 +163,7 @@ against every input.
 For each candidate group of keys, score:
 
 - coverage gained (share of running text),
-- words unlocked (new real words in the top list over the resulting alphabet),
+- words unlocked (new real words in the top list typed with the resulting alphabet),
 - comfort (home before top before bottom; index and middle before ring
   before pinky; both hands in a group where possible),
 - vowel balance (the first group holds a vowel; a vowel joins at least every
@@ -413,10 +413,10 @@ says. Both are annotated tunes, not rule breaks.
 | C3 | e i | the first reach, middle fingers straight up; words open: she, his, seal, else, hail | |
 | C4 | t n | index fingers, the first diagonal reaches; the, that, this, it, in, at, an | |
 | C5 | d o | d back on home, o straight up; and, to, on, not, one; phrases open | |
-| C6 | r u | index fingers straight up; the last vowel; gather 1 over twelve letters (81%) | u this late: the home row came first |
+| C6 | r u | index fingers straight up; the last vowel; gather 1 typed with twelve letters (81%) | u this late: the home row came first |
 | C7 | c m . | the bottom row; the period on its own key; sentences open; home and family | the Period key, not Slash |
 | C8 | Shift | capitals, and the pronoun I | |
-| C9 | g y | -ing and -ly; you, they, my; verbs; gather 2 over sixteen letters | |
+| C9 | g y | -ing and -ly; you, they, my; verbs; gather 2 typed with sixteen letters | |
 | C10 | , | clauses | on its own key, unshifted: not a hurdle here |
 | C11 | f w | of, for, from, if; we, was, with, what, when, where, who, how, now; things and places | f, the left bump, arrives here |
 | C12 | ' - | the apostrophe (the EN hurdle) with the hyphen: the two marks that live inside a word; contractions | takes the dash column; no em dash in EN scope |
@@ -524,7 +524,7 @@ write `js/tree-ru.js` and `js/tree-en.js`, the modules the game loads.
   marks alike, so a new raw keeps arriving all game (the last at C23).
   Every other introduction is a recipe on the newest raw and the previous
   column's newest material, so new keys need the lesson before them; its
-  lesson is still the streams over its new keys. Which groups are mines is
+  lesson is still the streams typed with its new keys. Which groups are mines is
   a free choice; what a raw is comes with naming.
 - **One recipe per lesson, one material per recipe,** plus byproducts:
   one from three of the gathers and from five key-group recipes, two from

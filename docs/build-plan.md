@@ -120,7 +120,7 @@ build/kit flow — only the curriculum and the drills change.
 **Acceptance.**
 - A fresh save shows exactly а о lit at the iron mine, е н at copper, и т at
   stone; the Mk1 drill is two positions with hints, then blind streams.
-- Bronze drills syllables over {а о е н} only; cast iron over {а о и т} only;
+- Bronze drills syllables typed with {а о е н} only; cast iron with {а о и т} only;
   every syllable shown is in `SYLLABLES`.
 - Unlocking в л requires all six T0 letters past bar 0; then п р, then с б,
   in that order and no other.
