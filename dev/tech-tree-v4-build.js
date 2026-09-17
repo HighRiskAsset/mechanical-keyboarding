@@ -74,7 +74,11 @@ for (const l of lessons) {
     const bys = Object.keys(producers).filter((m) => poolOfMat[m] === 'byproduct' && byId[producers[m][0]].col <= l.col)
       .sort((a, b) => ((consumersOf[a] || new Set()).size - (consumersOf[b] || new Set()).size) || (byId[producers[b][0]].col - byId[producers[a][0]].col));
     const b = bys.length ? bys[0] : null;
-    inputs = [t, b || latestRawBefore(l.col) || 'R1'].filter(Boolean);
+    // an extended page also takes the extended keys' materials its plan
+    // names (2026-09-17), so those lessons have a taker once pages have no
+    // engine; two of them fill the recipe, and the byproduct steps aside
+    const ext = l.inputs.map((i) => byId[i]).filter((x) => x && x.kind === 'intro' && x.ext && outputOf[x.id]).map((x) => outputOf[x.id]);
+    inputs = [t].concat(ext.slice(0, 2), ext.length >= 2 ? [] : [b || latestRawBefore(l.col) || 'R1']).filter(Boolean);
   } else {
     inputs = [...new Set(l.inputs.map((i) => outputOf[i]).filter(Boolean))];
   }
@@ -146,6 +150,13 @@ const placeOf = (id) => (isMine(byId[id]) ? mineOf[id].id : machineOf[id].id);
 
 // ---- quantities: a run of a recipe consumes and yields so many of each ----
 const Q = mech.quantities || { byShape: {}, byLesson: {} };
+// the feeders: a lesson whose material a key group's recipe takes is the
+// material the whole next column is made from, so it is reached by every
+// price there and, at one a run, would be the longest lesson of its column
+// however the prices fall. quantities.feederYield makes it yield that many
+// a run instead (user ruling 2026-09-17: no lesson long by accident)
+const FEEDERS = new Set();
+for (const l of lessons) if (l.kind === 'intro' && !isMine(l)) for (const m of inputsOf[l.id]) FEEDERS.add(producers[m][0]);
 const quantitiesOf = (l) => {
   if (l._q) return l._q;
   const base = (Q.byLesson || {})[l.id] || (Q.byShape || {})[l.roster] || { in: [], out: [] };
@@ -155,6 +166,7 @@ const quantitiesOf = (l) => {
   ordered.forEach((m, i) => { qin[m] = (base.in[i] || 1) * (rungOf(l) === 'words' && poolOfMat[m] === 'syllables' ? mech.ratioRules.syllablesIntoWords : 1); });
   const qout = {};
   outputsOf(l).forEach((m, i) => { qout[m] = base.out[i] || 1; });
+  if (Q.feederYield && FEEDERS.has(l.id) && !(Q.byLesson || {})[l.id]) qout[outputOf[l.id]] = Math.max(qout[outputOf[l.id]], Q.feederYield);
   return (l._q = { in: qin, out: qout });
 };
 const qtyIn = (l, m) => (l.kind === 'intro' && isMine(l) ? 0 : quantitiesOf(l).in[m] || 1);
@@ -196,7 +208,51 @@ const solidRawBefore = (c) => { let r = null; for (const id of mech.mines) if (b
 const P = mech.pricing;
 const purchases = [];
 const byAsks = {};
-const priceFor = (mat, budget, col) => ({ id: mat, qty: qtyFor(mat, budget, col) });
+// no price asks more of a material than the bag can hold (pricing.maxQty is
+// chain.js TUNING.BAG_CAP): a price past it can never be paid
+const MAXQ = P.maxQty || Infinity;
+const priceFor = (mat, budget, col) => ({ id: mat, qty: Math.min(MAXQ, qtyFor(mat, budget, col)) });
+// a budget priced over `n` of the candidates, the least loaded first under
+// leveling (their given order without), and where a material's quantity
+// would pass the bag's cap the rest of its share moves on to the next
+function spread(cands, budget, col, n) {
+  const order = pickLeveled(cands, cands.length, col);
+  const price = [];
+  const slots = Math.min(n, order.length);
+  let left = budget, i = 0;
+  while (i < order.length && (left > 1e-6 || price.length < slots)) {
+    const mat = order[i++];
+    const share = price.length < slots ? Math.min(left, budget / slots) : left;
+    if (share <= 1e-6) break;
+    const per = unitMinutes(mat, col) || CH[rungOf(byId[producers[mat][0]])] / cpm(col);
+    const want = Math.max(1, Math.round((share * P.pace) / per));
+    const qty = Math.min(MAXQ, want);
+    price.push({ id: mat, qty });
+    left -= (qty * per) / P.pace;
+  }
+  return price;
+}
+// ---- leveling (user ruling 2026-09-17: no lesson is long or short by
+// accident of where it stands in the graph). Where a purchase has a choice
+// of materials, it is priced in the ones whose lessons have had the least
+// hand time so far, an introduction measured against pricing.level.intro
+// minutes and a recipe against pricing.level.recipe. The load is tracked as
+// the purchases are made, by the same replay the hours come from, and a
+// material nobody has asked for yet is preferred, so every new material is
+// still asked for. Without pricing.level the old round-robin stands. ----
+const LEVEL = P.level || null;
+const load = {}, askedN = {};
+const loadOf = (id) => load[id] || 0;
+const targetOf = (l) => (l.kind === 'intro' ? LEVEL.intro : LEVEL.recipe) || 1;
+const minutesOf = (mat, qty, col) => { const acc = {}; demand(mat, qty, col, acc); const out = {}; for (const [id, q] of Object.entries(acc)) out[id] = q * CH[rungOf(byId[id])] / cpm(col); return out; };
+const notePrice = (price, col) => { for (const ing of price) { askedN[ing.id] = (askedN[ing.id] || 0) + 1; for (const [id, m] of Object.entries(minutesOf(ing.id, ing.qty, col))) load[id] = loadOf(id) + m; } };
+// how loaded the lessons a unit of `mat` falls on already are, each weighted by its share of the unit
+const loadScore = (mat, col) => { const bd = minutesOf(mat, 1, col); const tot = Object.values(bd).reduce((a, b) => a + b, 0) || 1; let s = 0; for (const [id, m] of Object.entries(bd)) s += (m / tot) * loadOf(id) / targetOf(byId[id]); return s; };
+const pickLeveled = (cands, n, col) => {
+  const uniq = [...new Set(cands)];
+  if (!LEVEL) return uniq.slice(0, n);
+  return uniq.map((m) => ({ m, s: loadScore(m, col) * (askedN[m] ? 1 : 0.5) })).sort((a, b) => a.s - b.s).slice(0, n).map((x) => x.m);
+};
 for (let c = 1; c <= maxCol; c++) {
   // 1. a new mine
   for (const id of mech.mines.filter((id) => byId[id].col === c && !P.firstFree.includes(id))) {
@@ -204,13 +260,14 @@ for (let c = 1; c <= maxCol; c++) {
     const newest = [...new Set(partsAt(c - 1))];
     if (!newest.length) { const g = ingotAt(c - 1); if (g) newest.push(g); }
     if (!newest.length) newest.push(solidRawBefore(c - 1) || 'R1');
-    for (const m of newest) price.push(priceFor(m, P.mine.newest / newest.length, c));
+    price.push(...spread(newest, P.mine.newest, c, newest.length));
     const review = ingotBelow(c - 2) || newestBelow(c - 2, newest[0]);
     if (review && !newest.includes(review)) price.push(priceFor(review, P.mine.review, c));
     // and some of the previous raw: a new mine costs the old ore
     const prevRaw = solidRawBefore(c - 1);
     if (prevRaw && P.mine.raw) price.push(priceFor(prevRaw, P.mine.raw, c));
     purchases.push({ col: c, kind: 'mine', target: id, label: `${mineOf[id].id} (${byId[id].keys.join(' ')}) makes ${outputOf[id]}`, price });
+    notePrice(price, c);
   }
   // 2. machines whose first recipe lives here: the newest material and the
   //    newest raw; a machine whose first recipe is a page asks for every
@@ -218,8 +275,10 @@ for (let c = 1; c <= maxCol; c++) {
   for (const m of machines.filter((m) => m.col === c)) {
     const price = [];
     const prevPages = byId[m.recipes[0]].kind === 'page' ? [...new Set(lessons.filter((l) => l.kind === 'page' && l.col === c - 1).map((l) => outputOf[l.id]))] : [];
-    const newest = prevPages.length ? prevPages : [newestBelow(c - 1)].filter(Boolean);
-    for (const mat of newest) price.push(priceFor(mat, P.build.newest / newest.length, c));
+    // the newest material: with leveling, the least-loaded of the previous column's
+    const prevMade = madeAt(c - 1);
+    const newest = prevPages.length ? prevPages : (LEVEL && prevMade.length ? prevMade : [newestBelow(c - 1)].filter(Boolean));
+    price.push(...spread(newest, P.build.newest, c, prevPages.length || 1));
     // the newest raw, and the byproduct with the fewest takers so far once one exists
     const bys = Object.keys(producers).filter((x) => poolOfMat[x] === 'byproduct' && byId[producers[x][0]].col < c)
       .sort((a, b) => (consumersOf[a].size + (byAsks[a] || 0)) - (consumersOf[b].size + (byAsks[b] || 0)));
@@ -228,18 +287,28 @@ for (let c = 1; c <= maxCol; c++) {
     if (bys.length) byAsks[bys[0]] = (byAsks[bys[0]] || 0) + 1;
     for (const x of extra) if (!newest.includes(x)) price.push(priceFor(x, P.build.raw / extra.length, c));
     purchases.push({ col: c, kind: 'build', target: m.id, label: `${m.id}, ${m.shapeText} (${m.recipes.length} recipes, C${m.col} to C${m.lastCol})`, price });
+    notePrice(price, c);
   }
   // 3. automation for lessons two columns old, paid with two of this
   //    column's materials in turn (pages only when there is nothing else),
   //    so every new material gets asked for
   const made = [...new Set(madeAt(c))];
-  const pool = made.filter((m) => poolOfMat[m] !== 'pages').length ? made.filter((m) => poolOfMat[m] !== 'pages') : made;
+  const notPage = (ms) => ms.filter((m) => poolOfMat[m] !== 'pages');
+  const pool = notPage(made).length ? notPage(made) : made;
+  // with leveling the previous column's materials are candidates too, so a
+  // column that makes one material does not put every engine on one lesson
+  const cands = LEVEL ? [...new Set(pool.concat(notPage(madeAt(c - 1))))] : pool;
   let k = 0;
   for (const l of lessons) {
     if (l.automatedAt !== undefined || l.col + 2 !== c) continue;
-    const mats = pool.length ? [...new Set([pool[k++ % pool.length], pool[k++ % pool.length]])] : [solidRawBefore(c) || 'R1'];
-    purchases.push({ col: c, kind: 'auto', target: l.id, label: `${l.id} at ${placeOf(l.id)}`, price: mats.map((m) => priceFor(m, P.automation.later / mats.length, c)) });
+    // a rung the mech layer names in automation.never gets no engine: it is
+    // typed by hand for the rest of the game (the pages, user ruling 2026-09-17)
+    if ((P.automation.never || []).includes(rungOf(l))) continue;
+    const mats = !cands.length ? [solidRawBefore(c) || 'R1'] : LEVEL ? cands : [...new Set([pool[k++ % pool.length], pool[k++ % pool.length]])];
+    const price = LEVEL && cands.length ? spread(mats, P.automation.later, c, 2) : mats.map((m) => priceFor(m, P.automation.later / mats.length, c));
+    purchases.push({ col: c, kind: 'auto', target: l.id, label: `${l.id} at ${placeOf(l.id)}`, price });
     l.automatedAt = c;
+    notePrice(price, c);
   }
   // 4. a print run for each column of pages: so many of each page material
   //    made in this column, and half as many of the previous column's; the
@@ -323,8 +392,8 @@ for (const l of lessons) {
 }
 for (const mat of materials) {
   const n = consumersOf[mat].size + asked[mat].size;
-  // a fluid can only be an input, and the last column's pages have no column after them: one taker is enough there
-  const need = isFluid(mat) || (poolOfMat[mat] === 'pages' && byId[producers[mat][0]].col >= maxCol) ? 1 : 2;
+  // a fluid can only be an input, the last column's pages have no column after them, and an extended lesson's material is optional by design: one taker is enough there
+  const need = isFluid(mat) || (poolOfMat[mat] === 'pages' && byId[producers[mat][0]].col >= maxCol) || byId[producers[mat][0]].ext ? 1 : 2;
   if (n < need) problems.push(`${mat}: only ${n} consumer`);
   const cols = producers[mat].map((id) => byId[id].col);
   for (let i = 1; i < cols.length; i++) if (cols[i] - cols[i - 1] < (mech.shareGap || 2)) problems.push(`${mat}: recipes ${producers[mat][i - 1]} and ${producers[mat][i]} are only ${cols[i] - cols[i - 1]} column apart`);

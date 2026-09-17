@@ -9,6 +9,8 @@
 //   BOT_HOURS=40    stop when the bot's clock passes this many hours
 //   BOT_ENGINES=0   the old way: carry everything, automate nothing
 //   COURSE=en       play the English tree (default ru); only that course's files are loaded
+//   BOT_OUT=path    also write the run as JSON: the totals, and what the hands spent at every
+//                   lesson (keystrokes, units, the hours it was worked, when its engine came)
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const ROOT = path.join(__dirname, '..');
 const mapId = process.argv[2] || 'range';
@@ -48,6 +50,14 @@ const fail = (msg, a) => { throw new Error(msg + (a ? ' @ ' + name(a) : '')); };
 
 let keys = 0, slot = 0, trips = 0, lastAt = null;
 const counts = {}, builds = [], trail = [], switches = {}, sample = [];
+// what the hands spent at every lesson: keystrokes and units, the first and
+// last hour it was worked, and the hours its engines were bought at. A
+// mine's lesson is its raw's; a recipe's is its own. Nothing here changes
+// what the bot does.
+const byLesson = {};
+const lessonRow = (id) => (byLesson[id] = byLesson[id] || { keys: 0, units: 0, firstH: null, lastH: null, autoH: [] });
+const spentAt = (id, ks, units) => { const b = lessonRow(id); b.keys += ks; b.units += units; const h = hours(); if (b.firstH === null) b.firstH = h; b.lastH = h; };
+const opened = {};   // introduction id -> the hour its keys came open
 function apply(a) {
   counts[a.type] = (counts[a.type] || 0) + 1;
   const at = (a.m || a.from || {}).id || a.kind || null;
@@ -59,10 +69,12 @@ function apply(a) {
   if (a.type === 'work') {
     const m = a.m;
     if (m.kind === 'mine') {
-      for (let n = 0; a.fill ? (m.buf.out[m.ore] || 0) < CAP : (p.bag[m.ore] || 0) < a.target; n++) {
+      let n = 0;
+      for (; a.fill ? (m.buf.out[m.ore] || 0) < CAP : (p.bag[m.ore] || 0) < a.target; n++) {
         if (n > 20000) fail('mine work never ends', a);
         SIM.emit(p, m, m.ore, 1); p.seen[m.ore] = true; keys++;
       }
+      spentAt(CHAIN.mineLesson(m.ore), n, n);   // one ore a keystroke (app.js workKeystroke)
       return;
     }
     if (m.recipe !== a.r.out) fail('work at a machine set to another recipe', a);
@@ -74,6 +86,7 @@ function apply(a) {
       keys += CHAIN.perUnit(a.r);
       if (++units > 20000) fail('work never ends', a);
     }
+    spentAt(a.r.lesson, units * CHAIN.perUnit(a.r), units);
     return;
   }
   if (a.type === 'build') {
@@ -120,6 +133,7 @@ function apply(a) {
     CHAIN.spendCost(p.bag, price);
     a.m.autoOn = a.m.autoOn || {};
     a.m.autoOn[CHAIN.autoKey(a.m, r, p)] = true;
+    lessonRow(a.m.kind === 'mine' ? CHAIN.mineLesson(a.m.ore) : r.lesson).autoH.push(+hours().toFixed(2));
     builds.push('⚙ ' + (a.m.kind === 'mine' ? CHAIN.mineName(a.m.ore) : CHAIN.kindName(a.m.kind) + ' ' + a.m.id + ' ' + r.lesson + ' → ' + CHAIN.matName(r.out)) + ' @' + hours().toFixed(1) + 'h');
     return;
   }
@@ -159,6 +173,15 @@ try {
     if (steps >= SAMPLE_AT && steps < SAMPLE_AT + 40) sample.push(`[${steps}] ` + name(a));
     const keys0 = keys, trips0 = trips;
     apply(a);
+    // a key group's keys open the first time every input of its recipe has
+    // been held (app.js checkIntroUnlocks); the harness used to count only
+    // the mines' keys
+    for (const l of CHAIN.INTROS) {
+      if (l.kind !== 'keys' || p.unlocked[l.id]) continue;
+      const r = CHAIN.recipeOfLesson(l.id);
+      if (r && CHAIN.inputsExist(r, p)) E.unlockIntro(p, l.id);
+    }
+    for (const l of CHAIN.INTROS) if (p.unlocked[l.id] && opened[l.id] === undefined) opened[l.id] = +hours().toFixed(2);
     const typed = (keys - keys0) / CPS, walked = trips > trips0 ? SECS.walk : 0;
     const rest = SECS[a.type] || 0;
     spent.typing += typed; spent.walking += walked;
@@ -179,6 +202,21 @@ console.log(JSON.stringify({
   moves: counts, machines: kinds, runs: p.belts.length, keysOpen: CHAIN.unlockedKeys(p).length,
 }, null, 1));
 console.log('trips between places:', trips, ' batch budget (max):', BOT.tune.BATCH_KS.max);
+// the hands at every lesson, in the tree's order
+const lessonCol = (id) => ((CHAIN.LESSON[id] || {}).col || 0);
+const lessonRows = Object.entries(byLesson).sort((a, b) => lessonCol(a[0]) - lessonCol(b[0]) || a[0].localeCompare(b[0]))
+  .map(([id, b]) => `${id.padEnd(9)} C${String(lessonCol(id)).padEnd(3)} ${(b.keys / CPS / 3600).toFixed(2).padStart(6)} h  ${String(b.keys).padStart(7)} keys  ${String(b.units).padStart(6)} units  worked ${b.firstH.toFixed(1)}h..${b.lastH.toFixed(1)}h` + (b.autoH.length ? `  engine at ${b.autoH.join(', ')}h` : ''));
+console.log('hands at every lesson (hours at the keys, keystrokes, units, when):\n  ' + lessonRows.join('\n  '));
+console.log('keys opened at:', Object.entries(opened).sort((a, b) => a[1] - b[1]).map(([id, h]) => `${id} ${h}h`).join(' · '));
+if (process.env.BOT_OUT) {
+  fs.writeFileSync(process.env.BOT_OUT, JSON.stringify({
+    map: mapId, course, outcome, steps, keystrokes: keys, cps: CPS, engines: BOT.tune.ENGINES, hoursBudget: HOURS,
+    hoursOnTheClock: +hours().toFixed(2), hoursSpent: Object.fromEntries(Object.entries(spent).map(([k, s]) => [k, +(s / 3600).toFixed(2)])),
+    moves: counts, machines: kinds, runs: p.belts.length, keysOpen: CHAIN.unlockedKeys(p).length,
+    byLesson, opened, builds,
+  }, null, 1));
+  console.log('wrote ' + process.env.BOT_OUT);
+}
 console.log('sampled moves:\n  ' + sample.join('\n  '));
 console.log('bag at the end:', JSON.stringify(Object.fromEntries(Object.entries(p.bag).filter(([, n]) => n > 0).map(([k, n]) => [CHAIN.matName(k), n]))));
 console.log('buffers at the end:', JSON.stringify(p.machines.filter((m) => m.buf && (Object.values(m.buf.in).some((n) => n > 0) || Object.values(m.buf.out).some((n) => n > 0)))

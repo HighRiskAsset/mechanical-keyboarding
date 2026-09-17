@@ -55,17 +55,26 @@ module.exports = {
   // lesson counts double on top of these.
   quantities: {
     byShape: {
-      '1b0p>1b0p': { in: [1], out: [1] },
-      '1b0p>2b0p': { in: [1], out: [2, 1] },
+      // the two one-in shapes are the key groups' (a new group's keys are
+      // typed on the previous column's newest material): four a run, so the
+      // column they open is not made of that one lesson (2026-09-17)
+      '1b0p>1b0p': { in: [1], out: [4] },
+      '1b0p>2b0p': { in: [1], out: [4, 1] },
       '2b0p>1b0p': { in: [1, 1], out: [1] },
       '3b0p>1b0p': { in: [1, 1, 1], out: [1] },
       '2b0p>2b0p': { in: [1, 1], out: [1, 1] },
-      '2b0p>3b0p': { in: [3, 2], out: [1, 3, 4] },
+      // the gathers with three outputs took three of their sentence input a
+      // run, which tripled that lesson (2026-09-17: one and two)
+      '2b0p>3b0p': { in: [1, 2], out: [1, 3, 4] },
       '3b0p>2b0p': { in: [2, 1, 1], out: [2, 1] },
       '1b1p>1b1p': { in: [1, 2], out: [1, 1] },
       '2b1p>1b1p': { in: [1, 1, 2], out: [1, 1] },
     },
     byLesson: {},
+    // a feeder is the lesson whose material a key group's recipe takes: the
+    // whole next column is made from it, so every price there reaches it. It
+    // yields this many a run (a byLesson entry for it overrides). 2026-09-17.
+    feederYield: 2,
   },
   ratioRules: { syllablesIntoWords: 2 },
 
@@ -75,8 +84,19 @@ module.exports = {
     pace: 1.2,
     mine: { newest: 9, review: 5, raw: 3 },   // a new mine: the previous column's materials, an older one, and some of the previous raw
     build: { newest: 8, raw: 4 },          // a machine: the newest material and the newest raw
-    automation: { later: 8 },              // a recipe's or a mine's automation: two materials from two columns later
+    // a recipe's or a mine's automation: two materials from two columns later.
+    // A page never gets an engine: pages are the hand-typed volume, and an
+    // engine on them left the completion bought by machines (user ruling
+    // 2026-09-17).
+    automation: { later: 8, never: ['pages'] },
     pageRun: 6,                            // a page column's print run: this many of each page material made there
+    // leveling (user ruling 2026-09-17: no lesson long or short by accident
+    // of where it stands in the graph): where a purchase has a choice of
+    // materials it takes the ones whose lessons have had the least hand time
+    // so far, an introduction measured against so many minutes, a recipe
+    // against so many. Weights, not caps.
+    level: { intro: 6, recipe: 12 },
+    maxQty: 300,                           // the bag's cap (js/chain.js TUNING.BAG_CAP): no price asks more of one material
     firstFree: ['I-01'],                   // the first mine is there at the start
   },
 

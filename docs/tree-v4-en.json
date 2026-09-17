@@ -5186,7 +5186,9 @@
     "E-41",
     "E-45",
     "E-48",
-    "E-50"
+    "E-50",
+    "PX-math",
+    "PX-code"
    ]
   },
   {
@@ -5219,9 +5221,7 @@
     "P-dia-3",
     "P-tech-2",
     "P-triv-3",
-    "P-tech-3",
-    "PX-math",
-    "PX-code"
+    "P-tech-3"
    ]
   }
  ],
@@ -5282,7 +5282,7 @@
    "outputs": [
     {
      "id": "W1",
-     "qty": 1
+     "qty": 2
     }
    ]
   },
@@ -5298,7 +5298,7 @@
    "outputs": [
     {
      "id": "K1",
-     "qty": 2
+     "qty": 4
     },
     {
      "id": "B1",
@@ -5410,7 +5410,7 @@
    "outputs": [
     {
      "id": "P1",
-     "qty": 1
+     "qty": 2
     }
    ]
   },
@@ -5426,7 +5426,7 @@
    "outputs": [
     {
      "id": "K2",
-     "qty": 1
+     "qty": 4
     }
    ]
   },
@@ -5554,7 +5554,7 @@
    "outputs": [
     {
      "id": "T1",
-     "qty": 1
+     "qty": 2
     }
    ]
   },
@@ -5570,7 +5570,7 @@
    "outputs": [
     {
      "id": "K3",
-     "qty": 2
+     "qty": 4
     },
     {
      "id": "B3",
@@ -5652,7 +5652,7 @@
    "inputs": [
     {
      "id": "T2",
-     "qty": 3
+     "qty": 1
     },
     {
      "id": "W7",
@@ -5662,7 +5662,7 @@
    "outputs": [
     {
      "id": "T3",
-     "qty": 1
+     "qty": 2
     },
     {
      "id": "B4",
@@ -5686,7 +5686,7 @@
    "outputs": [
     {
      "id": "K4",
-     "qty": 1
+     "qty": 4
     }
    ]
   },
@@ -5774,7 +5774,7 @@
    "outputs": [
     {
      "id": "T5",
-     "qty": 1
+     "qty": 2
     }
    ]
   },
@@ -5790,7 +5790,7 @@
    "outputs": [
     {
      "id": "K5",
-     "qty": 2
+     "qty": 4
     },
     {
      "id": "B6",
@@ -5882,7 +5882,7 @@
    "outputs": [
     {
      "id": "T7",
-     "qty": 1
+     "qty": 2
     },
     {
      "id": "B7",
@@ -5902,7 +5902,7 @@
    "outputs": [
     {
      "id": "K6",
-     "qty": 1
+     "qty": 4
     }
    ]
   },
@@ -5990,7 +5990,7 @@
    "outputs": [
     {
      "id": "T9",
-     "qty": 1
+     "qty": 2
     }
    ]
   },
@@ -6006,7 +6006,7 @@
    "outputs": [
     {
      "id": "K7",
-     "qty": 2
+     "qty": 4
     },
     {
      "id": "B8",
@@ -6064,7 +6064,7 @@
    "inputs": [
     {
      "id": "T9",
-     "qty": 3
+     "qty": 1
     },
     {
      "id": "W11",
@@ -6106,7 +6106,7 @@
    "outputs": [
     {
      "id": "T11",
-     "qty": 1
+     "qty": 2
     }
    ]
   },
@@ -6122,7 +6122,7 @@
    "outputs": [
     {
      "id": "K8",
-     "qty": 1
+     "qty": 4
     }
    ]
   },
@@ -6250,7 +6250,7 @@
    "outputs": [
     {
      "id": "T13",
-     "qty": 1
+     "qty": 2
     },
     {
      "id": "B11",
@@ -6270,7 +6270,7 @@
    "outputs": [
     {
      "id": "K9",
-     "qty": 2
+     "qty": 4
     },
     {
      "id": "B12",
@@ -6362,7 +6362,7 @@
    "outputs": [
     {
      "id": "T15",
-     "qty": 1
+     "qty": 2
     }
    ]
   },
@@ -6378,7 +6378,7 @@
    "outputs": [
     {
      "id": "K10",
-     "qty": 1
+     "qty": 4
     }
    ]
   },
@@ -6432,7 +6432,7 @@
    "inputs": [
     {
      "id": "T15",
-     "qty": 3
+     "qty": 1
     },
     {
      "id": "W15",
@@ -6514,7 +6514,7 @@
    "outputs": [
     {
      "id": "T17",
-     "qty": 1
+     "qty": 2
     }
    ]
   },
@@ -6590,7 +6590,7 @@
    "outputs": [
     {
      "id": "K11",
-     "qty": 1
+     "qty": 4
     }
    ]
   },
@@ -6910,7 +6910,7 @@
    "outputs": [
     {
      "id": "K12",
-     "qty": 1
+     "qty": 4
     }
    ]
   },
@@ -6926,16 +6926,20 @@
    "outputs": [
     {
      "id": "K13",
-     "qty": 1
+     "qty": 4
     }
    ]
   },
   {
    "lesson": "PX-math",
-   "machine": "M12",
+   "machine": "M10",
    "inputs": [
     {
      "id": "T19",
+     "qty": 1
+    },
+    {
+     "id": "K12",
      "qty": 1
     },
     {
@@ -6962,20 +6966,24 @@
    "outputs": [
     {
      "id": "K14",
-     "qty": 1
+     "qty": 4
     }
    ]
   },
   {
    "lesson": "PX-code",
-   "machine": "M12",
+   "machine": "M10",
    "inputs": [
     {
      "id": "T19",
      "qty": 1
     },
     {
-     "id": "B9",
+     "id": "K13",
+     "qty": 1
+    },
+    {
+     "id": "K14",
      "qty": 1
     }
    ],
@@ -7062,7 +7070,7 @@
    "price": [
     {
      "id": "R1",
-     "qty": 405
+     "qty": 300
     },
     {
      "id": "R1",
@@ -7105,12 +7113,16 @@
    "target": "I-01",
    "price": [
     {
+     "id": "W1",
+     "qty": 44
+    },
+    {
      "id": "S2",
      "qty": 65
     },
     {
-     "id": "W1",
-     "qty": 22
+     "id": "S1",
+     "qty": 1
     }
    ],
    "label": "I-01 at R1 mine"
@@ -7121,8 +7133,8 @@
    "target": "M2",
    "price": [
     {
-     "id": "W1",
-     "qty": 59
+     "id": "S2",
+     "qty": 206
     },
     {
      "id": "R3",
@@ -7138,7 +7150,7 @@
    "price": [
     {
      "id": "W1",
-     "qty": 59
+     "qty": 118
     },
     {
      "id": "R3",
@@ -7154,11 +7166,15 @@
    "price": [
     {
      "id": "K1",
-     "qty": 51
+     "qty": 177
     },
     {
      "id": "B1",
-     "qty": 25
+     "qty": 44
+    },
+    {
+     "id": "W3",
+     "qty": 1
     }
    ],
    "label": "I-02 at R2 mine"
@@ -7170,11 +7186,11 @@
    "price": [
     {
      "id": "W2",
-     "qty": 23
+     "qty": 31
     },
     {
      "id": "W3",
-     "qty": 22
+     "qty": 40
     }
    ],
    "label": "E-01 at M1"
@@ -7185,12 +7201,12 @@
    "target": "I-05",
    "price": [
     {
-     "id": "W2",
-     "qty": 29
+     "id": "W3",
+     "qty": 58
     },
     {
-     "id": "W3",
-     "qty": 33
+     "id": "W2",
+     "qty": 35
     },
     {
      "id": "S2",
@@ -7213,8 +7229,8 @@
      "qty": 103
     },
     {
-     "id": "W4",
-     "qty": 15
+     "id": "P1",
+     "qty": 48
     }
    ],
    "label": "I-03 at R3 mine"
@@ -7225,12 +7241,16 @@
    "target": "E-02",
    "price": [
     {
-     "id": "P1",
+     "id": "W4",
      "qty": 21
     },
     {
+     "id": "P1",
+     "qty": 51
+    },
+    {
      "id": "S3",
-     "qty": 103
+     "qty": 1
     }
    ],
    "label": "E-02 at M1"
@@ -7241,12 +7261,12 @@
    "target": "E-03",
    "price": [
     {
-     "id": "W4",
-     "qty": 22
+     "id": "W2",
+     "qty": 87
     },
     {
-     "id": "P1",
-     "qty": 21
+     "id": "W4",
+     "qty": 25
     }
    ],
    "label": "E-03 at M1"
@@ -7258,7 +7278,7 @@
    "price": [
     {
      "id": "P1",
-     "qty": 59
+     "qty": 123
     },
     {
      "id": "R4",
@@ -7277,8 +7297,16 @@
    "target": "M5",
    "price": [
     {
+     "id": "W4",
+     "qty": 51
+    },
+    {
      "id": "P1",
-     "qty": 59
+     "qty": 1
+    },
+    {
+     "id": "S3",
+     "qty": 1
     },
     {
      "id": "R4",
@@ -7298,11 +7326,11 @@
    "price": [
     {
      "id": "K2",
-     "qty": 25
+     "qty": 183
     },
     {
-     "id": "S4",
-     "qty": 20
+     "id": "P2",
+     "qty": 9
     }
    ],
    "label": "I-04 at M2"
@@ -7313,12 +7341,16 @@
    "target": "E-04",
    "price": [
     {
-     "id": "W5",
-     "qty": 7
+     "id": "B2",
+     "qty": 9
     },
     {
-     "id": "P2",
-     "qty": 5
+     "id": "W5",
+     "qty": 13
+    },
+    {
+     "id": "S4",
+     "qty": 2
     }
    ],
    "label": "E-04 at M1"
@@ -7329,12 +7361,16 @@
    "target": "E-05",
    "price": [
     {
-     "id": "B2",
-     "qty": 6
+     "id": "K2",
+     "qty": 189
     },
     {
-     "id": "K2",
-     "qty": 27
+     "id": "P2",
+     "qty": 10
+    },
+    {
+     "id": "B2",
+     "qty": 1
     }
    ],
    "label": "E-05 at M3"
@@ -7345,16 +7381,16 @@
    "target": "I-07",
    "price": [
     {
-     "id": "S4",
-     "qty": 20
+     "id": "P2",
+     "qty": 8
     },
     {
      "id": "W5",
-     "qty": 7
+     "qty": 11
     },
     {
-     "id": "P2",
-     "qty": 5
+     "id": "S4",
+     "qty": 54
     },
     {
      "id": "S3",
@@ -7373,8 +7409,16 @@
    "target": "M6",
    "price": [
     {
+     "id": "K2",
+     "qty": 300
+    },
+    {
+     "id": "P2",
+     "qty": 8
+    },
+    {
      "id": "B2",
-     "qty": 13
+     "qty": 1
     },
     {
      "id": "R4",
@@ -7390,11 +7434,11 @@
    "price": [
     {
      "id": "W6",
-     "qty": 5
+     "qty": 7
     },
     {
      "id": "T1",
-     "qty": 3
+     "qty": 8
     }
    ],
    "label": "I-05 at R4 mine"
@@ -7406,11 +7450,15 @@
    "price": [
     {
      "id": "W6",
-     "qty": 7
+     "qty": 9
     },
     {
      "id": "T1",
-     "qty": 3
+     "qty": 9
+    },
+    {
+     "id": "W5",
+     "qty": 1
     }
    ],
    "label": "E-06 at M1"
@@ -7421,12 +7469,12 @@
    "target": "E-07",
    "price": [
     {
-     "id": "W6",
-     "qty": 7
+     "id": "T1",
+     "qty": 10
     },
     {
-     "id": "T1",
-     "qty": 4
+     "id": "W6",
+     "qty": 10
     }
    ],
    "label": "E-07 at M3"
@@ -7437,12 +7485,16 @@
    "target": "E-08",
    "price": [
     {
-     "id": "W6",
-     "qty": 8
+     "id": "T1",
+     "qty": 11
     },
     {
-     "id": "T1",
-     "qty": 4
+     "id": "W5",
+     "qty": 41
+    },
+    {
+     "id": "P2",
+     "qty": 1
     }
    ],
    "label": "E-08 at M1"
@@ -7453,12 +7505,16 @@
    "target": "I-06",
    "price": [
     {
+     "id": "T2",
+     "qty": 7
+    },
+    {
      "id": "K3",
-     "qty": 11
+     "qty": 46
     },
     {
      "id": "B3",
-     "qty": 5
+     "qty": 1
     }
    ],
    "label": "I-06 at M4"
@@ -7470,11 +7526,15 @@
    "price": [
     {
      "id": "T2",
-     "qty": 4
+     "qty": 7
     },
     {
      "id": "K3",
-     "qty": 12
+     "qty": 47
+    },
+    {
+     "id": "B3",
+     "qty": 1
     }
    ],
    "label": "E-09 at M3"
@@ -7485,12 +7545,16 @@
    "target": "E-10",
    "price": [
     {
-     "id": "B3",
-     "qty": 7
+     "id": "T2",
+     "qty": 8
     },
     {
-     "id": "T2",
-     "qty": 4
+     "id": "K3",
+     "qty": 52
+    },
+    {
+     "id": "B3",
+     "qty": 1
     }
    ],
    "label": "E-10 at M1"
@@ -7501,12 +7565,12 @@
    "target": "E-11",
    "price": [
     {
-     "id": "K3",
-     "qty": 16
+     "id": "T2",
+     "qty": 9
     },
     {
-     "id": "B3",
-     "qty": 8
+     "id": "K3",
+     "qty": 58
     }
    ],
    "label": "E-11 at M5"
@@ -7518,7 +7582,7 @@
    "price": [
     {
      "id": "T2",
-     "qty": 11
+     "qty": 22
     },
     {
      "id": "S4",
@@ -7538,15 +7602,15 @@
    "price": [
     {
      "id": "T2",
-     "qty": 10
+     "qty": 19
+    },
+    {
+     "id": "K3",
+     "qty": 2
     },
     {
      "id": "R4",
      "qty": 90
-    },
-    {
-     "id": "B3",
-     "qty": 4
     }
    ],
    "label": "M7, 2 belts in → 3 belts out (3 recipes, C9 to C22)"
@@ -7561,8 +7625,8 @@
      "qty": 103
     },
     {
-     "id": "W7",
-     "qty": 10
+     "id": "B4",
+     "qty": 9
     }
    ],
    "label": "I-07 at R5 mine"
@@ -7573,12 +7637,16 @@
    "target": "E-12",
    "price": [
     {
-     "id": "T3",
-     "qty": 2
+     "id": "W7",
+     "qty": 18
     },
     {
-     "id": "B4",
-     "qty": 6
+     "id": "T3",
+     "qty": 9
+    },
+    {
+     "id": "B5",
+     "qty": 1
     }
    ],
    "label": "E-12 at M6"
@@ -7589,12 +7657,12 @@
    "target": "E-13",
    "price": [
     {
-     "id": "B5",
-     "qty": 9
+     "id": "W7",
+     "qty": 27
     },
     {
      "id": "S6",
-     "qty": 103
+     "qty": 102
     }
    ],
    "label": "E-13 at M6"
@@ -7610,7 +7678,11 @@
     },
     {
      "id": "T3",
-     "qty": 3
+     "qty": 13
+    },
+    {
+     "id": "B4",
+     "qty": 1
     }
    ],
    "label": "E-14 at M1"
@@ -7621,12 +7693,20 @@
    "target": "I-08",
    "price": [
     {
-     "id": "K4",
-     "qty": 5
+     "id": "T4",
+     "qty": 8
     },
     {
-     "id": "T4",
-     "qty": 2
+     "id": "K4",
+     "qty": 56
+    },
+    {
+     "id": "B4",
+     "qty": 1
+    },
+    {
+     "id": "T3",
+     "qty": 1
     }
    ],
    "label": "I-08 at M2"
@@ -7637,12 +7717,20 @@
    "target": "E-15",
    "price": [
     {
-     "id": "K4",
-     "qty": 5
+     "id": "T4",
+     "qty": 8
     },
     {
-     "id": "T4",
-     "qty": 2
+     "id": "K4",
+     "qty": 57
+    },
+    {
+     "id": "B4",
+     "qty": 1
+    },
+    {
+     "id": "T3",
+     "qty": 1
     }
    ],
    "label": "E-15 at M3"
@@ -7654,7 +7742,7 @@
    "price": [
     {
      "id": "T4",
-     "qty": 10
+     "qty": 24
     },
     {
      "id": "S6",
@@ -7677,8 +7765,8 @@
      "qty": 103
     },
     {
-     "id": "W8",
-     "qty": 18
+     "id": "T5",
+     "qty": 11
     }
    ],
    "label": "I-09 at R6 mine"
@@ -7689,12 +7777,12 @@
    "target": "E-16",
    "price": [
     {
-     "id": "T5",
-     "qty": 4
+     "id": "W8",
+     "qty": 22
     },
     {
      "id": "S7",
-     "qty": 103
+     "qty": 102
     }
    ],
    "label": "E-16 at M3"
@@ -7705,12 +7793,20 @@
    "target": "E-17",
    "price": [
     {
-     "id": "W8",
-     "qty": 27
+     "id": "T5",
+     "qty": 14
     },
     {
-     "id": "T5",
-     "qty": 4
+     "id": "W8",
+     "qty": 26
+    },
+    {
+     "id": "K4",
+     "qty": 1
+    },
+    {
+     "id": "T4",
+     "qty": 1
     }
    ],
    "label": "E-17 at M1"
@@ -7721,12 +7817,16 @@
    "target": "E-18",
    "price": [
     {
-     "id": "S7",
-     "qty": 103
+     "id": "T5",
+     "qty": 16
+    },
+    {
+     "id": "K4",
+     "qty": 169
     },
     {
      "id": "W8",
-     "qty": 35
+     "qty": 1
     }
    ],
    "label": "E-18 at M7"
@@ -7737,12 +7837,12 @@
    "target": "I-10",
    "price": [
     {
-     "id": "K5",
-     "qty": 18
+     "id": "T6",
+     "qty": 10
     },
     {
-     "id": "B6",
-     "qty": 9
+     "id": "K5",
+     "qty": 70
     }
    ],
    "label": "I-10 at M4"
@@ -7753,12 +7853,12 @@
    "target": "E-19",
    "price": [
     {
-     "id": "T6",
-     "qty": 5
+     "id": "B6",
+     "qty": 18
     },
     {
-     "id": "K5",
-     "qty": 19
+     "id": "T6",
+     "qty": 10
     }
    ],
    "label": "E-19 at M3"
@@ -7770,7 +7870,7 @@
    "price": [
     {
      "id": "T6",
-     "qty": 17
+     "qty": 29
     },
     {
      "id": "S7",
@@ -7790,7 +7890,7 @@
    "price": [
     {
      "id": "T6",
-     "qty": 15
+     "qty": 26
     },
     {
      "id": "R7",
@@ -7813,8 +7913,8 @@
      "qty": 103
     },
     {
-     "id": "W9",
-     "qty": 18
+     "id": "T7",
+     "qty": 12
     }
    ],
    "label": "I-11 at R7 mine"
@@ -7825,12 +7925,16 @@
    "target": "E-20",
    "price": [
     {
-     "id": "T7",
-     "qty": 5
+     "id": "W9",
+     "qty": 22
     },
     {
      "id": "B7",
-     "qty": 5
+     "qty": 6
+    },
+    {
+     "id": "S8",
+     "qty": 8
     }
    ],
    "label": "E-20 at M3"
@@ -7841,12 +7945,12 @@
    "target": "E-21",
    "price": [
     {
-     "id": "S8",
-     "qty": 103
-    },
-    {
      "id": "W9",
      "qty": 27
+    },
+    {
+     "id": "S8",
+     "qty": 102
     }
    ],
    "label": "E-21 at M1"
@@ -7857,12 +7961,16 @@
    "target": "E-22",
    "price": [
     {
+     "id": "W9",
+     "qty": 35
+    },
+    {
      "id": "T7",
-     "qty": 6
+     "qty": 16
     },
     {
      "id": "B7",
-     "qty": 6
+     "qty": 1
     }
    ],
    "label": "E-22 at M1"
@@ -7873,12 +7981,16 @@
    "target": "I-12",
    "price": [
     {
-     "id": "K6",
-     "qty": 9
+     "id": "T8",
+     "qty": 6
     },
     {
      "id": "S9",
-     "qty": 9
+     "qty": 55
+    },
+    {
+     "id": "W10",
+     "qty": 1
     }
    ],
    "label": "I-12 at M2"
@@ -7889,12 +8001,16 @@
    "target": "E-23",
    "price": [
     {
-     "id": "W10",
-     "qty": 4
+     "id": "K6",
+     "qty": 72
     },
     {
      "id": "T8",
-     "qty": 3
+     "qty": 6
+    },
+    {
+     "id": "S9",
+     "qty": 2
     }
    ],
    "label": "E-23 at M3"
@@ -7906,15 +8022,15 @@
    "price": [
     {
      "id": "S9",
-     "qty": 10
-    },
-    {
-     "id": "W10",
-     "qty": 4
+     "qty": 55
     },
     {
      "id": "T8",
-     "qty": 3
+     "qty": 6
+    },
+    {
+     "id": "W10",
+     "qty": 11
     },
     {
      "id": "S8",
@@ -7933,8 +8049,8 @@
    "target": "M9",
    "price": [
     {
-     "id": "T8",
-     "qty": 7
+     "id": "S9",
+     "qty": 147
     },
     {
      "id": "R8",
@@ -7954,7 +8070,15 @@
    "price": [
     {
      "id": "T9",
-     "qty": 6
+     "qty": 11
+    },
+    {
+     "id": "S9",
+     "qty": 73
+    },
+    {
+     "id": "T8",
+     "qty": 1
     }
    ],
    "label": "I-13 at R8 mine"
@@ -7966,7 +8090,15 @@
    "price": [
     {
      "id": "T9",
-     "qty": 7
+     "qty": 12
+    },
+    {
+     "id": "T8",
+     "qty": 9
+    },
+    {
+     "id": "W10",
+     "qty": 1
     }
    ],
    "label": "E-24 at M3"
@@ -7978,7 +8110,15 @@
    "price": [
     {
      "id": "T9",
-     "qty": 8
+     "qty": 14
+    },
+    {
+     "id": "W10",
+     "qty": 24
+    },
+    {
+     "id": "T8",
+     "qty": 1
     }
    ],
    "label": "E-25 at M8"
@@ -7990,7 +8130,15 @@
    "price": [
     {
      "id": "T9",
-     "qty": 9
+     "qty": 15
+    },
+    {
+     "id": "W10",
+     "qty": 34
+    },
+    {
+     "id": "T8",
+     "qty": 1
     }
    ],
    "label": "E-26 at M5"
@@ -8001,12 +8149,16 @@
    "target": "I-14",
    "price": [
     {
-     "id": "K7",
-     "qty": 17
+     "id": "T10",
+     "qty": 5
     },
     {
-     "id": "B8",
-     "qty": 9
+     "id": "B9",
+     "qty": 12
+    },
+    {
+     "id": "B10",
+     "qty": 1
     }
    ],
    "label": "I-14 at M4"
@@ -8018,11 +8170,11 @@
    "price": [
     {
      "id": "S10",
-     "qty": 17
+     "qty": 55
     },
     {
      "id": "W11",
-     "qty": 7
+     "qty": 16
     }
    ],
    "label": "E-27 at M3"
@@ -8033,12 +8185,16 @@
    "target": "E-28",
    "price": [
     {
-     "id": "T10",
-     "qty": 2
+     "id": "K7",
+     "qty": 77
+    },
+    {
+     "id": "B8",
+     "qty": 19
     },
     {
      "id": "B9",
-     "qty": 5
+     "qty": 1
     }
    ],
    "label": "E-28 at M8"
@@ -8049,12 +8205,16 @@
    "target": "E-29",
    "price": [
     {
-     "id": "B10",
-     "qty": 8
+     "id": "W11",
+     "qty": 24
     },
     {
-     "id": "K7",
-     "qty": 22
+     "id": "B9",
+     "qty": 19
+    },
+    {
+     "id": "T10",
+     "qty": 1
     }
    ],
    "label": "E-29 at M8"
@@ -8065,16 +8225,16 @@
    "target": "I-17",
    "price": [
     {
-     "id": "S10",
-     "qty": 25
+     "id": "T10",
+     "qty": 6
     },
     {
      "id": "W11",
-     "qty": 11
+     "qty": 23
     },
     {
-     "id": "T10",
-     "qty": 2
+     "id": "S10",
+     "qty": 65
     },
     {
      "id": "S9",
@@ -8093,8 +8253,8 @@
    "target": "M10",
    "price": [
     {
-     "id": "B10",
-     "qty": 25
+     "id": "B9",
+     "qty": 49
     },
     {
      "id": "R8",
@@ -8105,7 +8265,7 @@
      "qty": 90
     }
    ],
-   "label": "M10, 3 belts in → 1 belt out (7 recipes, C17 to C24)"
+   "label": "M10, 3 belts in → 1 belt out (9 recipes, C17 to C31)"
   },
   {
    "col": 17,
@@ -8114,7 +8274,15 @@
    "price": [
     {
      "id": "T11",
-     "qty": 6
+     "qty": 12
+    },
+    {
+     "id": "W11",
+     "qty": 31
+    },
+    {
+     "id": "B9",
+     "qty": 1
     }
    ],
    "label": "I-15 at R9 mine"
@@ -8126,7 +8294,11 @@
    "price": [
     {
      "id": "T11",
-     "qty": 7
+     "qty": 13
+    },
+    {
+     "id": "B9",
+     "qty": 27
     }
    ],
    "label": "E-30 at M9"
@@ -8137,12 +8309,16 @@
    "target": "I-16",
    "price": [
     {
-     "id": "K8",
-     "qty": 8
+     "id": "T12",
+     "qty": 6
     },
     {
      "id": "S11",
-     "qty": 8
+     "qty": 49
+    },
+    {
+     "id": "W12",
+     "qty": 1
     }
    ],
    "label": "I-16 at M2"
@@ -8153,12 +8329,20 @@
    "target": "E-31",
    "price": [
     {
-     "id": "W12",
-     "qty": 4
+     "id": "K8",
+     "qty": 65
     },
     {
      "id": "T12",
+     "qty": 6
+    },
+    {
+     "id": "S11",
      "qty": 2
+    },
+    {
+     "id": "W12",
+     "qty": 1
     }
    ],
    "label": "E-31 at M3"
@@ -8169,12 +8353,16 @@
    "target": "E-32",
    "price": [
     {
-     "id": "K8",
-     "qty": 10
+     "id": "T12",
+     "qty": 7
+    },
+    {
+     "id": "W12",
+     "qty": 19
     },
     {
      "id": "S11",
-     "qty": 9
+     "qty": 2
     }
    ],
    "label": "E-32 at M8"
@@ -8186,11 +8374,11 @@
    "price": [
     {
      "id": "W12",
-     "qty": 5
+     "qty": 25
     },
     {
      "id": "T12",
-     "qty": 3
+     "qty": 9
     }
    ],
    "label": "E-33 at M7"
@@ -8201,16 +8389,16 @@
    "target": "I-19",
    "price": [
     {
-     "id": "S11",
-     "qty": 15
-    },
-    {
      "id": "W12",
-     "qty": 7
+     "qty": 25
     },
     {
      "id": "T12",
-     "qty": 4
+     "qty": 9
+    },
+    {
+     "id": "S11",
+     "qty": 65
     },
     {
      "id": "S10",
@@ -8234,7 +8422,7 @@
     },
     {
      "id": "W13",
-     "qty": 7
+     "qty": 17
     }
    ],
    "label": "I-17 at R10 mine"
@@ -8246,11 +8434,11 @@
    "price": [
     {
      "id": "T13",
-     "qty": 3
+     "qty": 11
     },
     {
      "id": "B11",
-     "qty": 3
+     "qty": 6
     }
    ],
    "label": "E-34 at M10"
@@ -8261,12 +8449,16 @@
    "target": "I-18",
    "price": [
     {
+     "id": "T14",
+     "qty": 8
+    },
+    {
      "id": "K9",
-     "qty": 12
+     "qty": 52
     },
     {
      "id": "B12",
-     "qty": 6
+     "qty": 1
     }
    ],
    "label": "I-18 at M4"
@@ -8278,11 +8470,15 @@
    "price": [
     {
      "id": "T14",
-     "qty": 4
+     "qty": 8
+    },
+    {
+     "id": "W13",
+     "qty": 22
     },
     {
      "id": "K9",
-     "qty": 14
+     "qty": 1
     }
    ],
    "label": "E-35 at M10"
@@ -8293,12 +8489,16 @@
    "target": "E-36",
    "price": [
     {
-     "id": "B12",
-     "qty": 8
+     "id": "T14",
+     "qty": 9
     },
     {
-     "id": "T14",
-     "qty": 5
+     "id": "K9",
+     "qty": 61
+    },
+    {
+     "id": "B12",
+     "qty": 1
     }
    ],
    "label": "E-36 at M8"
@@ -8309,12 +8509,12 @@
    "target": "E-37",
    "price": [
     {
-     "id": "K9",
-     "qty": 19
+     "id": "T14",
+     "qty": 10
     },
     {
-     "id": "B12",
-     "qty": 9
+     "id": "W13",
+     "qty": 35
     }
    ],
    "label": "E-37 at M8"
@@ -8326,7 +8526,7 @@
    "price": [
     {
      "id": "T14",
-     "qty": 17
+     "qty": 29
     },
     {
      "id": "S12",
@@ -8350,7 +8550,11 @@
     },
     {
      "id": "T15",
-     "qty": 4
+     "qty": 9
+    },
+    {
+     "id": "T14",
+     "qty": 1
     }
    ],
    "label": "I-19 at R11 mine"
@@ -8366,7 +8570,15 @@
     },
     {
      "id": "T15",
-     "qty": 4
+     "qty": 10
+    },
+    {
+     "id": "K9",
+     "qty": 8
+    },
+    {
+     "id": "B12",
+     "qty": 1
     }
    ],
    "label": "E-38 at M10"
@@ -8377,12 +8589,12 @@
    "target": "E-39",
    "price": [
     {
-     "id": "W14",
-     "qty": 13
+     "id": "T15",
+     "qty": 11
     },
     {
-     "id": "T15",
-     "qty": 5
+     "id": "W14",
+     "qty": 13
     }
    ],
    "label": "E-39 at M8"
@@ -8393,12 +8605,16 @@
    "target": "E-40",
    "price": [
     {
-     "id": "W14",
-     "qty": 14
+     "id": "K9",
+     "qty": 169
+    },
+    {
+     "id": "B12",
+     "qty": 42
     },
     {
      "id": "T15",
-     "qty": 5
+     "qty": 1
     }
    ],
    "label": "E-40 at M5"
@@ -8409,12 +8625,12 @@
    "target": "I-20",
    "price": [
     {
-     "id": "K10",
-     "qty": 7
+     "id": "S14",
+     "qty": 43
     },
     {
-     "id": "S14",
-     "qty": 6
+     "id": "T16",
+     "qty": 3
     }
    ],
    "label": "I-20 at M2"
@@ -8425,12 +8641,16 @@
    "target": "E-41",
    "price": [
     {
-     "id": "W15",
-     "qty": 3
+     "id": "B14",
+     "qty": 11
     },
     {
-     "id": "T16",
-     "qty": 1
+     "id": "B13",
+     "qty": 8
+    },
+    {
+     "id": "K10",
+     "qty": 3
     }
    ],
    "label": "E-41 at M10"
@@ -8457,15 +8677,7 @@
    "target": "I-23",
    "price": [
     {
-     "id": "S14",
-     "qty": 4
-    },
-    {
-     "id": "W15",
-     "qty": 1
-    },
-    {
-     "id": "T16",
+     "id": "G2",
      "qty": 1
     },
     {
@@ -8473,7 +8685,15 @@
      "qty": 1
     },
     {
-     "id": "G2",
+     "id": "W15",
+     "qty": 4
+    },
+    {
+     "id": "S14",
+     "qty": 24
+    },
+    {
+     "id": "T16",
      "qty": 1
     },
     {
@@ -8493,11 +8713,11 @@
    "target": "M11",
    "price": [
     {
-     "id": "G1",
-     "qty": 2
+     "id": "G2",
+     "qty": 3
     },
     {
-     "id": "G2",
+     "id": "G1",
      "qty": 2
     },
     {
@@ -8518,7 +8738,11 @@
    "price": [
     {
      "id": "T17",
-     "qty": 2
+     "qty": 6
+    },
+    {
+     "id": "S14",
+     "qty": 49
     }
    ],
    "label": "I-21 at R12 mine"
@@ -8530,7 +8754,15 @@
    "price": [
     {
      "id": "T17",
-     "qty": 3
+     "qty": 9
+    },
+    {
+     "id": "B13",
+     "qty": 15
+    },
+    {
+     "id": "T16",
+     "qty": 1
     }
    ],
    "label": "E-42 at M9"
@@ -8542,7 +8774,15 @@
    "price": [
     {
      "id": "T17",
-     "qty": 4
+     "qty": 11
+    },
+    {
+     "id": "W15",
+     "qty": 25
+    },
+    {
+     "id": "B13",
+     "qty": 1
     }
    ],
    "label": "E-43 at M6"
@@ -8554,7 +8794,15 @@
    "price": [
     {
      "id": "T17",
-     "qty": 5
+     "qty": 13
+    },
+    {
+     "id": "W15",
+     "qty": 34
+    },
+    {
+     "id": "B13",
+     "qty": 1
     }
    ],
    "label": "E-44 at M8"
@@ -8593,12 +8841,12 @@
    "target": "I-22",
    "price": [
     {
-     "id": "K11",
-     "qty": 7
+     "id": "T19",
+     "qty": 5
     },
     {
      "id": "T18",
-     "qty": 3
+     "qty": 8
     }
    ],
    "label": "I-22 at M4"
@@ -8609,12 +8857,16 @@
    "target": "E-45",
    "price": [
     {
-     "id": "T19",
-     "qty": 3
+     "id": "K11",
+     "qty": 66
     },
     {
-     "id": "K11",
-     "qty": 8
+     "id": "T19",
+     "qty": 5
+    },
+    {
+     "id": "T18",
+     "qty": 1
     }
    ],
    "label": "E-45 at M10"
@@ -8625,12 +8877,12 @@
    "target": "E-46",
    "price": [
     {
-     "id": "T18",
-     "qty": 4
+     "id": "T19",
+     "qty": 6
     },
     {
-     "id": "T19",
-     "qty": 3
+     "id": "T18",
+     "qty": 9
     }
    ],
    "label": "E-46 at M8"
@@ -8641,47 +8893,15 @@
    "target": "E-47",
    "price": [
     {
-     "id": "K11",
-     "qty": 12
-    },
-    {
-     "id": "T18",
-     "qty": 5
-    }
-   ],
-   "label": "E-47 at M7"
-  },
-  {
-   "col": 24,
-   "kind": "auto",
-   "target": "P-lore-1",
-   "price": [
-    {
      "id": "T19",
-     "qty": 5
-    },
-    {
-     "id": "K11",
-     "qty": 21
-    }
-   ],
-   "label": "P-lore-1 at M8"
-  },
-  {
-   "col": 24,
-   "kind": "auto",
-   "target": "P-let-1",
-   "price": [
-    {
-     "id": "T18",
      "qty": 7
     },
     {
-     "id": "T19",
-     "qty": 5
+     "id": "K11",
+     "qty": 86
     }
    ],
-   "label": "P-let-1 at M8"
+   "label": "E-47 at M7"
   },
   {
    "col": 24,
@@ -8721,12 +8941,16 @@
    "target": "I-23",
    "price": [
     {
+     "id": "G11",
+     "qty": 3
+    },
+    {
      "id": "G9",
      "qty": 2
     },
     {
      "id": "G10",
-     "qty": 2
+     "qty": 1
     }
    ],
    "label": "I-23 at R13 mine"
@@ -8737,63 +8961,23 @@
    "target": "E-48",
    "price": [
     {
-     "id": "G11",
+     "id": "G10",
      "qty": 2
     },
     {
      "id": "G9",
      "qty": 2
+    },
+    {
+     "id": "G11",
+     "qty": 1
+    },
+    {
+     "id": "T19",
+     "qty": 1
     }
    ],
    "label": "E-48 at M10"
-  },
-  {
-   "col": 25,
-   "kind": "auto",
-   "target": "P-lit-1",
-   "price": [
-    {
-     "id": "G10",
-     "qty": 3
-    },
-    {
-     "id": "G11",
-     "qty": 3
-    }
-   ],
-   "label": "P-lit-1 at M11"
-  },
-  {
-   "col": 25,
-   "kind": "auto",
-   "target": "P-triv-1",
-   "price": [
-    {
-     "id": "G9",
-     "qty": 3
-    },
-    {
-     "id": "G10",
-     "qty": 3
-    }
-   ],
-   "label": "P-triv-1 at M11"
-  },
-  {
-   "col": 25,
-   "kind": "auto",
-   "target": "P-lore-2",
-   "price": [
-    {
-     "id": "G11",
-     "qty": 3
-    },
-    {
-     "id": "G9",
-     "qty": 3
-    }
-   ],
-   "label": "P-lore-2 at M11"
   },
   {
    "col": 25,
@@ -8833,10 +9017,6 @@
    "target": "M12",
    "price": [
     {
-     "id": "G9",
-     "qty": 2
-    },
-    {
      "id": "G10",
      "qty": 2
     },
@@ -8845,15 +9025,19 @@
      "qty": 2
     },
     {
+     "id": "G9",
+     "qty": 1
+    },
+    {
      "id": "R13",
      "qty": 90
     },
     {
-     "id": "B10",
+     "id": "B9",
      "qty": 14
     }
    ],
-   "label": "M12, 2 belts in → 1 belt out (8 recipes, C26 to C31)"
+   "label": "M12, 2 belts in → 1 belt out (6 recipes, C26 to C28)"
   },
   {
    "col": 26,
@@ -8866,7 +9050,11 @@
     },
     {
      "id": "G13",
-     "qty": 3
+     "qty": 2
+    },
+    {
+     "id": "G14",
+     "qty": 1
     }
    ],
    "label": "I-24 at M4"
@@ -8881,8 +9069,12 @@
      "qty": 3
     },
     {
+     "id": "G13",
+     "qty": 2
+    },
+    {
      "id": "G12",
-     "qty": 3
+     "qty": 1
     }
    ],
    "label": "E-49 at M11"
@@ -8893,63 +9085,19 @@
    "target": "E-50",
    "price": [
     {
+     "id": "G12",
+     "qty": 3
+    },
+    {
      "id": "G13",
      "qty": 3
     },
     {
      "id": "G14",
-     "qty": 3
+     "qty": 1
     }
    ],
    "label": "E-50 at M10"
-  },
-  {
-   "col": 26,
-   "kind": "auto",
-   "target": "P-lit-2",
-   "price": [
-    {
-     "id": "G12",
-     "qty": 4
-    },
-    {
-     "id": "G13",
-     "qty": 4
-    }
-   ],
-   "label": "P-lit-2 at M11"
-  },
-  {
-   "col": 26,
-   "kind": "auto",
-   "target": "P-let-2",
-   "price": [
-    {
-     "id": "G14",
-     "qty": 4
-    },
-    {
-     "id": "G12",
-     "qty": 4
-    }
-   ],
-   "label": "P-let-2 at M11"
-  },
-  {
-   "col": 26,
-   "kind": "auto",
-   "target": "P-dia-1",
-   "price": [
-    {
-     "id": "G13",
-     "qty": 4
-    },
-    {
-     "id": "G14",
-     "qty": 4
-    }
-   ],
-   "label": "P-dia-1 at M11"
   },
   {
    "col": 26,
@@ -9029,54 +9177,6 @@
   },
   {
    "col": 27,
-   "kind": "auto",
-   "target": "P-triv-2",
-   "price": [
-    {
-     "id": "G15",
-     "qty": 4
-    },
-    {
-     "id": "G16",
-     "qty": 4
-    }
-   ],
-   "label": "P-triv-2 at M11"
-  },
-  {
-   "col": 27,
-   "kind": "auto",
-   "target": "P-dia-2",
-   "price": [
-    {
-     "id": "G17",
-     "qty": 4
-    },
-    {
-     "id": "G15",
-     "qty": 4
-    }
-   ],
-   "label": "P-dia-2 at M11"
-  },
-  {
-   "col": 27,
-   "kind": "auto",
-   "target": "P-lore-3",
-   "price": [
-    {
-     "id": "G16",
-     "qty": 4
-    },
-    {
-     "id": "G17",
-     "qty": 4
-    }
-   ],
-   "label": "P-lore-3 at M11"
-  },
-  {
-   "col": 27,
    "kind": "print",
    "target": "pages 6",
    "price": [
@@ -9109,42 +9209,6 @@
   },
   {
    "col": 28,
-   "kind": "auto",
-   "target": "P-tech-1",
-   "price": [
-    {
-     "id": "K12",
-     "qty": 360
-    }
-   ],
-   "label": "P-tech-1 at M11"
-  },
-  {
-   "col": 28,
-   "kind": "auto",
-   "target": "P-lit-3",
-   "price": [
-    {
-     "id": "K12",
-     "qty": 360
-    }
-   ],
-   "label": "P-lit-3 at M12"
-  },
-  {
-   "col": 28,
-   "kind": "auto",
-   "target": "P-let-3",
-   "price": [
-    {
-     "id": "K12",
-     "qty": 360
-    }
-   ],
-   "label": "P-let-3 at M12"
-  },
-  {
-   "col": 28,
    "kind": "print",
    "target": "pages 7",
    "price": [
@@ -9169,42 +9233,6 @@
   },
   {
    "col": 29,
-   "kind": "auto",
-   "target": "P-dia-3",
-   "price": [
-    {
-     "id": "K13",
-     "qty": 360
-    }
-   ],
-   "label": "P-dia-3 at M12"
-  },
-  {
-   "col": 29,
-   "kind": "auto",
-   "target": "P-tech-2",
-   "price": [
-    {
-     "id": "K13",
-     "qty": 360
-    }
-   ],
-   "label": "P-tech-2 at M12"
-  },
-  {
-   "col": 29,
-   "kind": "auto",
-   "target": "P-triv-3",
-   "price": [
-    {
-     "id": "K13",
-     "qty": 360
-    }
-   ],
-   "label": "P-triv-3 at M12"
-  },
-  {
-   "col": 29,
    "kind": "print",
    "target": "pages 8",
    "price": [
@@ -9222,23 +9250,15 @@
   {
    "col": 30,
    "kind": "auto",
-   "target": "P-tech-3",
-   "price": [
-    {
-     "id": "K14",
-     "qty": 360
-    }
-   ],
-   "label": "P-tech-3 at M12"
-  },
-  {
-   "col": 30,
-   "kind": "auto",
    "target": "X-01",
    "price": [
     {
      "id": "K14",
-     "qty": 360
+     "qty": 300
+    },
+    {
+     "id": "K13",
+     "qty": 300
     }
    ],
    "label": "X-01 at M4"
@@ -9250,22 +9270,14 @@
    "price": [
     {
      "id": "G20",
-     "qty": 7
+     "qty": 4
+    },
+    {
+     "id": "K14",
+     "qty": 300
     }
    ],
    "label": "X-02 at M4"
-  },
-  {
-   "col": 31,
-   "kind": "auto",
-   "target": "PX-math",
-   "price": [
-    {
-     "id": "G20",
-     "qty": 7
-    }
-   ],
-   "label": "PX-math at M12"
   },
   {
    "col": 31,
@@ -9321,16 +9333,24 @@
    "raw": 4
   },
   "automation": {
-   "later": 8
+   "later": 8,
+   "never": [
+    "pages"
+   ]
   },
   "pageRun": 6,
+  "level": {
+   "intro": 6,
+   "recipe": 12
+  },
+  "maxQty": 300,
   "firstFree": [
    "I-01"
   ]
  },
  "hours": {
-  "keyboard": 18.838650462962963,
-  "completion": 22.332428240740747,
-  "all": 25.723539351851848
+  "keyboard": 18.199048032407397,
+  "completion": 21.205325810185172,
+  "all": 22.729770254629617
  }
 }
