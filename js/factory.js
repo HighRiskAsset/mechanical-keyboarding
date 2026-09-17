@@ -77,8 +77,8 @@
   // is what tells those names apart, and three of them cut to the same
   // head would be worse than no name at all.
   const textW = (s) => PIXELS.textTex(s, PIXELS.P.paper2).width;
-  function fitName(name) {
-    const max = HUD_W - HUD_TEXT_X - 2;
+  function fitName(name, w) {
+    const max = (w || HUD_W) - HUD_TEXT_X - 2;
     let s = String(name || '').toUpperCase();
     if (textW(s) <= max) return s;
     const at = s.lastIndexOf(' ');
@@ -223,6 +223,7 @@
     app.canvas.style.width = ((viewW * S) / dpr) + 'px';
     app.canvas.style.height = ((viewH * S) / dpr) + 'px';
     layoutHud();
+    if (long) layoutLong();
     if (window.SKY) SKY.resize(viewW, viewH, S);
   }
 
@@ -322,6 +323,7 @@
   // and the frame does the rest, so a burst of arrivals restarts the same
   // flash instead of stacking a dozen of them.
   function pulseInv(key, out) {
+    if (long) longPulse[key] = { t: 0, life: 15, out: !!out };
     const r = hudRows[key];
     if (!r) return;
     r.pulse = { t: 0, life: 15, out: !!out };
@@ -352,7 +354,220 @@
       r.t.tint = k < 0.55 ? (p.out ? 0x7fc9a8 : 0xfff0a6) : 0xffffff;
       if (k >= 1) { r.pulse = null; r.flash.visible = false; r.ic.y = r.iy; r.t.tint = 0xffffff; }
     }
+    if (long) tickLong(dt, breath);
   }
+
+  // ---------- the bag unrolled: the panel while the pause menu is up ----------
+  // Paused, the player can read every material the bag has seen (user,
+  // 2026-09-17), and the panel is where the bag is read, so the panel itself
+  // unrolls: the same plate, font, icons, marks and flashes, its top line
+  // where it stood, running the full height of the screen over the keyboard,
+  // and as wide as the longest name needs, so no name is cut. The canvas ends
+  // above the keyboard, so the unrolled panel is a canvas of its own laid
+  // over the page at the world's scale and drawn from the same pixels, while
+  // the panel in the world steps out of sight. It keeps no bag of its own:
+  // the caller hands it the rows in the order to show them, their names, a
+  // way to read a count, and the words of the sort switch on its top line
+  // (user, 2026-09-17), and moves its cursor; a material's row has nothing
+  // to press, the switch is the one thing that does.
+  let long = null, longEl = null, longX = null;
+  const longPulse = {};
+  const longIcons = new Map();   // material|frame → the flat icon canvas
+  const LONG_HEAD = -2;          // the cursor's index when it is on the sort switch
+  const LONG_GAP = 6;            // between the switch and the first row: a rule and the "more above" arrow
+  const LONG_FOOT = 7;           // below the last row, for "more below"
+  function longIcon(mat, f) {
+    const key = mat + '|' + f;
+    let c = longIcons.get(key);
+    if (!c) { c = PIXELS.matCanvas(mat, f); longIcons.set(key, c); }
+    return c;
+  }
+  // the whole name, in the panel's capitals, unless the screen has no room
+  // for it; then the panel's own cut, at the width there is
+  const longName = (k) => (long.cut ? fitName(long.names[k] || k, long.W) : String(long.names[k] || k).toUpperCase());
+  function showLongHud(opts) {
+    if (!app) return null;
+    if (!longEl) {
+      longEl = document.createElement('canvas');
+      longEl.id = 'hud-long';
+      document.body.appendChild(longEl);
+      longX = longEl.getContext('2d');
+    }
+    long = { keys: [], names: {}, head: ['', ''], count: opts.count, top: 0, cur: -1, maxLeft: 0, W: HUD_W, H: 1, hy: 0, y0: 0, rows: 1, cut: false };
+    for (const k of Object.keys(longPulse)) delete longPulse[k];
+    if (uiC) uiC.visible = false;
+    return setLongHudKeys(opts.keys, opts.names, opts.head);
+  }
+  function hideLongHud() {
+    long = null;
+    if (longEl) longEl.hidden = true;
+    if (uiC) uiC.visible = hudShown;
+  }
+  // the rows changed (a material seen while paused, the sort switched): the
+  // widest name may have too, so the panel is measured again from the whole
+  // screen's width. `head` is the switch's two words, [label, setting].
+  function setLongHudKeys(keys, names, head) {
+    if (!long) return null;
+    long.keys = keys.slice();
+    long.names = names || {};
+    if (head) long.head = head;
+    long.maxLeft = 0;
+    return layoutLong();
+  }
+  // the leftmost page x the panel may reach, when something else needs the
+  // screen to its left (the pause window, on a narrow screen)
+  function fitLongHud(maxLeft) {
+    if (!long) return null;
+    long.maxLeft = Math.max(0, maxLeft || 0);
+    return layoutLong();
+  }
+  function layoutLong() {
+    const L = long;
+    if (!L || !app) return null;
+    const rect = app.canvas.getBoundingClientRect();
+    const unit = (rect.width / app.canvas.width) * S;   // page px per world px
+    // the panel's right edge and top line stay exactly where they are in play:
+    // the sort switch takes the first row's place and the rows follow under
+    // it. The canvas starts on the same pixel grid, at or above the page top.
+    const right = rect.left + (viewW - 2) * unit;
+    const rowTop = rect.top + 2 * unit;
+    const above = Math.max(0, Math.ceil(rowTop / unit));
+    const top = rowTop - above * unit;
+    L.hy = Math.max(above, 2);
+    L.y0 = L.hy + HUD_ROW + LONG_GAP;
+    L.H = Math.max(L.y0 + HUD_ROW + LONG_FOOT, Math.ceil((window.innerHeight - top) / unit));
+    let nameW = 0;
+    for (const k of L.keys) nameW = Math.max(nameW, textW(String(L.names[k] || k).toUpperCase()));
+    const want = Math.max(nameW + HUD_TEXT_X + 2, headW() + 8);
+    const room = Math.floor((right - L.maxLeft) / unit);
+    L.W = Math.max(HUD_W, Math.min(want, room));
+    L.cut = want > L.W;
+    L.rows = Math.max(1, Math.floor((L.H - L.y0 - LONG_FOOT) / HUD_ROW));
+    L.top = Math.max(0, Math.min(L.top, L.keys.length - L.rows));
+    L.unit = unit;
+    L.left = right - L.W * unit;
+    L.pageTop = top;
+    if (longEl.width !== L.W * S) longEl.width = L.W * S;
+    if (longEl.height !== L.H * S) longEl.height = L.H * S;
+    longEl.style.left = L.left + 'px';
+    longEl.style.top = top + 'px';
+    longEl.style.width = L.W * unit + 'px';
+    longEl.style.height = L.H * unit + 'px';
+    // an empty bag has no panel in play either
+    longEl.hidden = !L.keys.length;
+    drawLong(0.96);
+    return longBox();
+  }
+  function longBox() {
+    const L = long;
+    return L && { el: longEl, left: L.left, width: L.W * L.unit, rowH: HUD_ROW * L.unit, top: L.top, rows: L.rows, n: L.keys.length };
+  }
+  // scroll by whole rows, so a row is never cut in half at an edge
+  function scrollLongHud(n) {
+    const L = long;
+    if (!L) return null;
+    L.top = Math.max(0, Math.min(L.top + n, L.keys.length - L.rows));
+    drawLong(0.96);
+    return longBox();
+  }
+  // Puts the cursor on row `i` (-1 for none, LONG_HEAD for the sort switch).
+  // With `reveal` the panel scrolls to show it; without, a wheel may have
+  // left it out of view. Returns the row's box on the page, or null when it
+  // is not on screen.
+  function setLongHudCursor(i, reveal) {
+    const L = long;
+    if (!L) return null;
+    L.cur = i;
+    if (i >= 0 && reveal) {
+      if (i < L.top) L.top = i;
+      else if (i >= L.top + L.rows) L.top = i - L.rows + 1;
+    }
+    drawLong(0.96);
+    if (i === LONG_HEAD) return { x: L.left, y: L.pageTop + L.hy * L.unit, h: HUD_ROW * L.unit };
+    if (i < L.top || i >= L.top + L.rows) return null;
+    return { x: L.left, y: L.pageTop + (L.y0 + (i - L.top) * HUD_ROW) * L.unit, h: HUD_ROW * L.unit };
+  }
+  // the row under a page y: an index, LONG_HEAD on the switch, or -1
+  function longHudRowAt(pageY) {
+    const L = long;
+    if (!L) return -1;
+    const wy = (pageY - L.pageTop) / L.unit;
+    if (wy >= L.hy && wy < L.hy + HUD_ROW) return LONG_HEAD;
+    const i = L.top + Math.floor((wy - L.y0) / HUD_ROW);
+    return wy >= L.y0 && i >= L.top && i < Math.min(L.keys.length, L.top + L.rows) ? i : -1;
+  }
+  const headW = () => textW(long.head[0]) + 4 + textW(long.head[1]);
+  function tickLong(dt, breath) {
+    for (const [k, p] of Object.entries(longPulse)) { p.t += dt; if (p.t >= p.life) delete longPulse[k]; }
+    drawLong(breath);
+  }
+  function drawLong(breath) {
+    const L = long, x = longX;
+    if (!L || !x || !L.keys.length) return;
+    x.setTransform(S, 0, 0, S, 0, 0);
+    x.imageSmoothingEnabled = false;
+    x.clearRect(0, 0, L.W, L.H);
+    // the play panel's plum, a little more solid: it lies over the dimmed
+    // keyboard as well as the world
+    x.globalAlpha = 0.9;
+    x.fillStyle = '#221d29';
+    x.fillRect(0, 0, L.W, L.H);
+    // the sort switch: a line that reads as a control (a faint plate of its
+    // own, lit like a row under the cursor), its label dim and its setting
+    // bright, and a rule under it; it stays put while the rows scroll
+    x.fillStyle = PIXELS.P.paper;
+    x.globalAlpha = L.cur === LONG_HEAD ? 0.16 : 0.07;
+    x.fillRect(1, L.hy + 1, L.W - 2, HUD_ROW - 1);
+    x.fillStyle = PIXELS.P.paper2;
+    x.globalAlpha = 0.35;
+    x.fillRect(2, L.hy + HUD_ROW + 1, L.W - 4, 1);
+    x.globalAlpha = 1;
+    const label = PIXELS.textCanvas(L.head[0], PIXELS.P.paper2);
+    x.drawImage(label, 3, L.hy + 4);
+    x.drawImage(PIXELS.textCanvas(L.head[1], PIXELS.P.paper), 3 + label.width + 4, L.hy + 4);
+    const end = Math.min(L.keys.length, L.top + L.rows);
+    for (let i = L.top; i < end; i++) {
+      const k = L.keys[i], y = L.y0 + (i - L.top) * HUD_ROW;
+      const mk = invMarks[k];
+      if (mk) {
+        x.fillStyle = cssColor(mk === 'out' ? MARK_OUT : MARK_IN);
+        x.globalAlpha = 0.85 * breath * 0.52;
+        x.fillRect(1, y + 1, L.W - 2, HUD_ROW - 1);
+        x.globalAlpha = 0.85 * breath;
+        x.fillRect(1, y + 1, 3, HUD_ROW - 1);
+      }
+      // the cursor's row is lit a shade, under the menu's own hand
+      if (i === L.cur) {
+        x.fillStyle = PIXELS.P.paper;
+        x.globalAlpha = 0.16;
+        x.fillRect(1, y + 1, L.W - 2, HUD_ROW - 1);
+      }
+      let lift = 0, fg = PIXELS.P.paper;
+      const p = longPulse[k];
+      if (p) {
+        const t = Math.min(1, p.t / p.life);
+        x.fillStyle = p.out ? '#7fc9a8' : '#f2c14e';
+        x.globalAlpha = (1 - t) * (p.out ? 0.34 : 0.55);
+        x.fillRect(1, y + 1, L.W - 2, HUD_ROW - 1);
+        if (t < 0.55) { lift = p.out ? 1 : -1; fg = p.out ? '#7fc9a8' : '#fff0a6'; }
+      }
+      x.globalAlpha = 1;
+      x.drawImage(longIcon(k, (matFrame + i * 5) % PIXELS.MAT_SPARK_FRAMES), 3, y + 2 + lift);
+      x.drawImage(PIXELS.textCanvas(longName(k), PIXELS.P.paper2), HUD_TEXT_X - 1, y);
+      const t = PIXELS.textCanvas(String(L.count(k)), fg);
+      x.drawImage(t, L.W - 3 - t.width, y + 7);
+    }
+    // a small arrow where there are more rows that way
+    x.globalAlpha = 1;
+    x.fillStyle = PIXELS.P.paper2;
+    const arrow = (y, up) => {
+      const cx = Math.floor(L.W / 2);
+      for (let r = 0; r < 3; r++) { const w = up ? 1 + r * 2 : 5 - r * 2; x.fillRect(cx - (w >> 1), y + r, w, 1); }
+    };
+    if (L.top > 0) arrow(L.y0 - 4, true);
+    if (end < L.keys.length) arrow(L.y0 + L.rows * HUD_ROW + 2, false);
+  }
+
   // the hold-to-interact bar over the operator; its color says what the hold
   // will do (gold = menu, green = lay the belt here, red = drop the spool)
   let chargeColor = 0xf2c14e;
@@ -2355,6 +2570,8 @@
     // the walker's own rules, for a caller planning a walk (js/bot.js)
     canStep, dockAt, SPEED, DOCK_RANGE,
     setInvValue, invScreenPos, setHudKeys, setInvMarks, setCharge, pulseInv, setHudShown,
+    // the panel unrolled while the pause menu is up
+    showLongHud, hideLongHud, setLongHudKeys, fitLongHud, scrollLongHud, setLongHudCursor, longHudRowAt, LONG_HEAD,
     hudCapacity: () => Math.max(1, Math.floor((viewH - 7) / HUD_ROW)),   // rows the panel can show without leaving the canvas
     onDock: null,
   };

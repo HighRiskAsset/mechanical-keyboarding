@@ -50,7 +50,9 @@ made on a single mocked screen before anything is built.
    below). Never a smooth face next to pixel icons, never pixel windows with
    anti-aliased corners.
 4. **Nothing scrolls inside a menu.** A card that does not fit pages, like
-   the guide already does.
+   the guide already does. One exception, asked for by the user on
+   2026-09-17: the bag's panel, unrolled beside the pause menu, scrolls
+   (docs/bag-view-plan.md). It scrolls whole rows and shows no scrollbar.
 5. **No grey, no bevel, no blocky caps.** Those three are the Minecraft
    tell: grey stone buttons with a light top edge and a dark bottom edge,
    and a square 5x7 capitals font. Wood, iron, brass, enamel, paper and ink
@@ -337,7 +339,8 @@ Never Press Start 2P or any square-capitals face (rule 5).
    world, menu), the title art, the webfont.
 2. **Skeleton**: the title screen replaces the picker; the header comes out
    of play; the readout strip joins the inventory panel on the canvas; the
-   pause menu on Escape; the switches move to it.
+   pause menu on Escape; the switches move to it. While the pause menu is
+   up, the bag's panel unrolls beside it (docs/bag-view-plan.md).
 3. **Cards** onto the window component, paged where needed.
 4. **Verification**, silent (both audio switches and weather off): EN and
    RU; 1366x800, 1920x1080 and the 760px breakpoint; no scrollbar anywhere

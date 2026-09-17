@@ -352,6 +352,7 @@
     siteTex: (w, h) => cachedTex('site:' + (w || 48) + 'x' + (h || 32), () => siteMarker(w, h)),
     // text and icons
     textTex: (str, fg) => cachedTex('t:' + fg + '|' + str, () => textCanvas(str, fg)),
+    textCanvas,   // the same line as a canvas, for the unrolled bag panel
     // the 12px menu icons: one per machine kind, plus 'belt' and 'pipe' for
     // the rows that build a run
     kindIconTex: (kind) => cellTex('materials', iconName(kind), 0),

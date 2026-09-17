@@ -257,10 +257,13 @@
   const countHint = {};
   let hudKeysShown = [];
   const invValue = (k) => profile.bag[k] || 0;
+  // every material the bag has seen, newest in the tree first: the panel
+  // shows the head of this list in play and all of it while paused
+  const bagKeys = () => CHAIN.MAT_IDS.filter((m) => profile.seen[m] && !CHAIN.isFluid(m)).reverse();
   function hudKeys(marks) {
     const cap = FACTORY.hudCapacity();
     const newestFirst = (a, b) => CHAIN.MAT_IDS.indexOf(b) - CHAIN.MAT_IDS.indexOf(a);
-    const seen = CHAIN.MAT_IDS.filter((m) => profile.seen[m] && !CHAIN.isFluid(m)).sort(newestFirst);
+    const seen = bagKeys();
     const focus = Object.keys(marks || {}).sort(newestFirst);
     // what the focus names that the newest would not show on their own goes
     // below them; each one added costs the newest a row, which may push
@@ -2129,6 +2132,7 @@
     }
     // above the sim's own beat: the marks answer the cursor, not the clock
     refreshInvMarks();
+    refreshBag();
     const dt = SIM.tick(profile, Date.now());
     if (dt <= 0) return;
     simSaveAcc += dt;
@@ -2182,6 +2186,9 @@
     // a press on blank card (or the title's open ground) keeps the focus
     // where it is; only a control takes it
     overlayCard.onmousedown = (e) => { if (!e.target.closest('button, a, input, select, textarea, [tabindex]')) e.preventDefault(); };
+    // the unrolled bag belongs to the pause menu alone: any other card (the
+    // guide or settings opened from it) puts the panel back in the world
+    if (name !== 'pause') closeBag();
     overlayCard.innerHTML = html;
     overlayName = name || null;
     // the title owns the viewport and the pause menu is a narrow window; every
@@ -2198,6 +2205,7 @@
   }
   function hideOverlay() {
     document.body.classList.remove('title-up');
+    closeBag();
     FACTORY.setHudShown(true);
     // the card's keys go with it, and so does its focus: a hidden button
     // must not keep hearing Enter and Escape
@@ -2621,22 +2629,42 @@
         ${stat('acc', 'statAccuracy')}${stat('wpm', 'statWpm')}${stat('streak', 'statStreak')}${stat('time', 'statAtKeys')}
       </div>
       ${rows.map((r) => `<button class="mrow" id="${r.id}"><i class="cursor"></i><span>${r.label}</span>${r.right || ''}</button>`).join('')}
-      <div class="pause-help">${T.t('pauseHelp')}</div>
+      <div class="pause-help" id="pause-help"></div>
     `, false, 'pause');
     const btns = rows.map((r) => $(r.id));
-    rows.forEach((r, i) => { btns[i].onclick = r.act; btns[i].addEventListener('mouseenter', () => btns[i].focus()); });
+    rows.forEach((r, i) => {
+      btns[i].onclick = r.act;
+      btns[i].addEventListener('mouseenter', () => leaveBag(r.id));
+      // a row of the list taking the cursor, by key or by mouse, takes it off the bag
+      btns[i].addEventListener('focus', () => { bagRow = r.id; if (bagOn) { bagOn = false; placeBagCursor(false); } });
+    });
     overlayCard.onkeydown = (e) => {
-      const i = btns.indexOf(document.activeElement);
       const k = keyName(e);
+      // the cursor on the bag: the arrows walk its rows, ← and Escape go back
+      // to the list; Enter or Space turns the sort switch, and a material's
+      // row has nothing to press
+      if (bagOn) {
+        if (k === 'ArrowUp' || k === 'ArrowDown') moveBagCursor(k === 'ArrowUp' ? -1 : 1);
+        else if (k === 'ArrowLeft' || k === 'Escape') leaveBag(bagRow);
+        else if ((k === 'Enter' || k === 'Space') && bagCur === BAG_SORT) { if (!e.repeat) toggleBagSort(); }
+        else if (k !== 'Enter' && k !== 'Space' && k !== 'ArrowRight') return;
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      const i = btns.indexOf(document.activeElement);
       if (k === 'ArrowUp') btns[(i < 0 ? 0 : i + btns.length - 1) % btns.length].focus();
       else if (k === 'ArrowDown') btns[(i < 0 ? 0 : i + 1) % btns.length].focus();
       else if ((k === 'Enter' || k === 'Space') && i >= 0) { if (!e.repeat) rows[i].act(); }
+      else if (k === 'ArrowRight') enterBag();
       else if (k === 'Escape') hideOverlay();
       else return;
       e.preventDefault();
       e.stopPropagation();
     };
-    btns[0].focus();
+    placeBag();
+    if (bagOn) placeBagCursor(true);
+    else { btns[0].focus(); placeBagCursor(false); }
   }
   function focusRow(id) { const el = $(id); if (el) el.focus(); }
   // the corner's tooltips follow the language
@@ -2644,6 +2672,229 @@
     $('btn-settings').title = T.t('menuTip');
     if ($('btn-debug')) $('btn-debug').title = T.t('dbgTitle');
   }
+
+  // ---------- the bag unrolled beside the pause menu ----------
+  // While paused, the bag's panel runs the full height of the screen and
+  // lists every material the bag has seen, newest at the top and the first
+  // ores at the bottom, each name whole (user, 2026-09-17). It is a view: the
+  // wheel and the arrows scroll it, → from the list puts the cursor on it,
+  // and the pause window's help line says where the row under the cursor
+  // comes from and which lesson makes it. The one control on it is the sort
+  // switch on its top line, above the first row: the tree's order or A to Z
+  // (user, same day), remembered in this browser as a matter of taste, never
+  // in the save. js/factory.js draws it; this keeps its rows, cursor and keys.
+  const BAG_SORT = '#sort';   // the cursor's place when it is on the switch
+  let bagOpen = false, bagOn = false, bagCur = null, bagRow = 'pm-resume', bagShown = '', bagWheel = 0;
+  let bagList = [];
+  let bagSort = 'tree';
+  try { if (localStorage.getItem('mk.bagSort') === 'abc') bagSort = 'abc'; } catch { /* the tree's order stands */ }
+  const bagHand = document.createElement('i');
+  bagHand.className = 'cursor bag-hand';
+  bagHand.hidden = true;
+  document.body.appendChild(bagHand);
+  // the pause window keeps this much clear of the panel beside it
+  const BAG_GAP = 16;
+  function placeBag() {
+    if (!profile) return;
+    const seen = bagKeys();
+    bagShown = seen.join();
+    const names = {};
+    for (const k of seen) names[k] = matName(k);
+    if (bagSort === 'abc') {
+      const by = new Intl.Collator(T.getLang(), { sensitivity: 'base', numeric: true });
+      bagList = seen.slice().sort((a, b) => by.compare(names[a], names[b]));
+    } else bagList = seen;
+    const head = [T.t('bagSortLabel'), T.t(bagSort === 'abc' ? 'bagSortAbc' : 'bagSortTree')];
+    let box = bagOpen ? FACTORY.setLongHudKeys(bagList, names, head) : FACTORY.showLongHud({ keys: bagList, names, head, count: invValue });
+    if (!box) return;
+    if (!bagOpen) {
+      bagOpen = true;
+      box.el.onwheel = onBagWheel;
+      box.el.onmousemove = (e) => pointBag(e.clientY);
+      box.el.onclick = (e) => { if (FACTORY.longHudRowAt(e.clientY) === FACTORY.LONG_HEAD) toggleBagSort(); };
+    }
+    // a panel whose names need the room pushes the pause window left, as far
+    // as the screen allows; past that, the panel takes what width is left
+    overlayCard.style.transform = '';
+    if (!box.n) return;
+    const card = overlayCard.getBoundingClientRect();
+    const over = card.right + BAG_GAP - box.left;
+    if (over > 0) {
+      const shift = Math.min(over, Math.max(0, card.left - BAG_GAP));
+      overlayCard.style.transform = `translateX(${-Math.round(shift)}px)`;
+      if (shift < over) FACTORY.fitLongHud(card.right - Math.round(shift) + BAG_GAP);
+    }
+  }
+  function closeBag() {
+    if (!bagOpen) return;
+    bagOpen = false;
+    bagOn = false;
+    bagCur = null;
+    bagWheel = 0;
+    bagHand.hidden = true;
+    overlayCard.style.transform = '';
+    FACTORY.hideLongHud();
+  }
+  // a material seen while paused comes in at the top; the cursor keeps its row
+  function refreshBag() {
+    if (bagOpen && bagKeys().join() !== bagShown) { placeBag(); placeBagCursor(false); }
+  }
+  function enterBag() {
+    if (!bagOpen || !bagList.length) return;
+    const box = FACTORY.scrollLongHud(0);
+    // back onto the row it left, if that row is still in view; else the top one
+    const i = bagList.indexOf(bagCur);
+    if (i < box.top || i >= box.top + box.rows) bagCur = bagList[box.top];
+    bagOn = true;
+    takeBagFocus();
+    placeBagCursor(true);
+  }
+  // the list's row lets go of the cursor, and is remembered for the way back
+  function takeBagFocus() {
+    const el = document.activeElement;
+    if (!overlayCard.contains(el)) return;
+    if (el.id) bagRow = el.id;
+    el.blur();
+  }
+  // back to the list, onto the row it left (the focus event alone is not
+  // enough: a window without focus moves the focus but never announces it)
+  function leaveBag(id) {
+    if (bagOn) { bagOn = false; placeBagCursor(false); }
+    focusRow(id);
+  }
+  // the arrows walk the rows; above the first row is the sort switch
+  function moveBagCursor(d) {
+    const i = (bagCur === BAG_SORT ? -1 : bagList.indexOf(bagCur)) + d;
+    bagCur = i < 0 ? BAG_SORT : bagList[Math.min(bagList.length - 1, i)];
+    placeBagCursor(true);
+  }
+  function toggleBagSort() {
+    bagSort = bagSort === 'abc' ? 'tree' : 'abc';
+    try { localStorage.setItem('mk.bagSort', bagSort); } catch { /* for this visit only */ }
+    placeBag();
+    FACTORY.scrollLongHud(-bagList.length);   // a new order is read from its top
+    placeBagCursor(false);
+  }
+  // the hand, the lit row and the help line all follow the one cursor
+  function placeBagCursor(reveal) {
+    const help = $('pause-help');
+    const onSort = bagOn && bagCur === BAG_SORT;
+    const i = !bagOn ? -1 : onSort ? FACTORY.LONG_HEAD : bagList.indexOf(bagCur);
+    const at = bagOpen ? FACTORY.setLongHudCursor(i, reveal) : null;
+    bagHand.hidden = !at;
+    if (at) {
+      bagHand.style.left = Math.round(at.x - 26) + 'px';
+      bagHand.style.top = Math.round(at.y + at.h / 2 - 16) + 'px';
+    }
+    if (!help) return;
+    if (i === -1) { help.innerHTML = `<span class="bag-keys">${T.t('pauseHelp')}</span>`; return; }
+    help.innerHTML = '<b class="bag-name"></b><span class="bag-src"></span><span class="bag-lesson"></span>';
+    const [name, src, lesson] = help.children;
+    if (onSort) {
+      name.textContent = T.t('bagSortName');
+      src.textContent = T.t(bagSort === 'abc' ? 'bagSortAbcNote' : 'bagSortTreeNote');
+      return;
+    }
+    name.textContent = matName(bagCur);
+    src.textContent = bagSource(bagCur);
+    keycapText(lesson, bagLesson(bagCur));
+  }
+  // text in which js/i18n.js marked each key (U+E000 key U+E001) is laid out
+  // with those keys as small keycaps, so a comma or a quote key reads as a key
+  // and not as the sentence's own punctuation
+  function keycapText(el, text) {
+    el.textContent = '';
+    String(text).split(/(.*?)/).forEach((part, i) => {
+      if (!part) return;
+      if (i % 2) { const k = document.createElement('kbd'); k.textContent = part; el.appendChild(k); }
+      else el.appendChild(document.createTextNode(part));
+    });
+  }
+  // the mouse over the panel takes the cursor to the row under it
+  function pointBag(pageY) {
+    const i = FACTORY.longHudRowAt(pageY);
+    if (i === -1) return;
+    const key = i === FACTORY.LONG_HEAD ? BAG_SORT : bagList[i];
+    if (bagOn && key === bagCur) return;
+    bagCur = key;
+    if (!bagOn) {
+      bagOn = true;
+      takeBagFocus();
+    }
+    placeBagCursor(false);
+  }
+  // the wheel moves whole rows, a notch at a time or a trackpad's worth
+  function onBagWheel(e) {
+    e.preventDefault();
+    const box = FACTORY.scrollLongHud(0);
+    if (!box) return;
+    const dy = e.deltaMode === 1 ? e.deltaY * box.rowH : e.deltaMode === 2 ? e.deltaY * box.rows * box.rowH : e.deltaY;
+    if (dy * bagWheel < 0) bagWheel = 0;   // a turn of the wheel the other way starts fresh
+    bagWheel += dy;
+    const n = Math.trunc(bagWheel / box.rowH);
+    if (!n) return;
+    bagWheel -= n * box.rowH;
+    FACTORY.scrollLongHud(n);
+    // the rows slide under a still pointer, so the cursor takes the new one
+    if (bagOn) { const i = FACTORY.longHudRowAt(e.clientY); if (i >= 0) bagCur = bagList[i]; }
+    placeBagCursor(false);
+  }
+  // where a material comes from, in the tree's words: the mine that digs a
+  // raw, the machine and inputs of the recipe that makes it, or the recipe
+  // it falls out of as a byproduct. Never what uses it.
+  function bagSource(mat) {
+    const m = CHAIN.MATS[mat];
+    if (!m) return '';
+    if (m.form === 'raw') return T.t('bagFromMine', { mine: mineName(mat) });
+    const r = CHAIN.RECIPES.find((x) => x.out === mat) || CHAIN.recipeFor(mat);
+    if (!r) return '';
+    if (r.out !== mat) return T.t('bagFromBy', { kind: kindName(r.kind), main: matName(r.out) });
+    const mats = Object.keys(r.in || {}).map(matName);
+    const list = mats.length > 1 ? mats.slice(0, -1).join(', ') + ' ' + T.t('bagAnd') + ' ' + mats[mats.length - 1] : mats.join('');
+    return T.t('bagFromMade', { kind: kindName(r.kind), mats: list });
+  }
+  // and the lesson whose typing makes it, for the record only (nothing in the
+  // game asks the player to know it): its code, the keys it is typed on, what
+  // gets typed, and a taste of it. The words are built from the tree's own
+  // fields (the lesson's keys, letters, the keys it leans on, its rung, the
+  // tag after "words:" or "sentences:", a page's genre and grade, and its
+  // samples); js/i18n.js turns them into a line in the interface's language.
+  function bagLesson(mat) {
+    const id = (CHAIN.MATS[mat] || {}).madeBy;
+    const l = id && CHAIN.LESSON[id];
+    if (!l) return '';
+    const cap = (k) => (k.length === 1 ? k.toUpperCase() : k);
+    const what = String(l.what || '');
+    const tag = what.includes(':') ? what.slice(what.indexOf(':') + 1).trim() : '';
+    const samples = [...new Set(l.samples || [])];
+    const p = {
+      id, type: l.rung, keys: (l.keys || []).map(cap), letters: (l.alpha || []).map(cap), focus: (l.focus || []).map(cap),
+      topics: tag ? tag.split(/,\s*/) : [], kind: tag, eg: [], quote: false,
+    };
+    if (p.keys.includes('Shift')) { p.type = 'shift'; p.eg = samples.slice(0, 3); }
+    else if (l.rung === 'streams') p.type = 'keys';
+    else if (l.rung === 'pages') {
+      p.type = 'page';
+      p.genre = (what.match(/^(lore|letters|famous|fun|dialogue|mathematical)/) || [])[1] || '';
+      p.grade = (what.match(/grade (\d+)/) || [])[1] || '';
+      // the page's opening words, enough to know it by
+      const words = String((CHAIN.TREE.pages || {})[id] || samples[0] || '').split(' ');
+      let open = '';
+      for (const w of words) { if ((open + ' ' + w).length > 30) break; open = open ? open + ' ' + w : w; }
+      if (open) { p.eg = [open + (open.length < words.join(' ').length ? '…' : '')]; p.quote = true; }
+    } else if (l.rung === 'sentences' || l.rung === 'full') {
+      p.type = 'sentences';
+      // the shortest that is more than a word (a bare name is not a sentence)
+      const short = samples.filter((s) => s.trim().includes(' ')).sort((a, b) => a.length - b.length)[0];
+      if (short && short.length <= 40) { p.eg = [short]; p.quote = true; }
+    } else p.eg = samples.slice(0, l.rung === 'phrases' ? 2 : 3);
+    return T.t('bagLesson', p);
+  }
+  window.addEventListener('resize', () => {
+    if (!bagOpen) return;
+    // after the world's canvas has taken its new size
+    requestAnimationFrame(() => requestAnimationFrame(() => { if (bagOpen) { placeBag(); placeBagCursor(false); } }));
+  });
 
   // ---------- settings ----------
   const DONATE = [

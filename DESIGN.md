@@ -113,7 +113,29 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   greyed menu row still prints the short count in red, so a hidden row can
   never hide a shortage. Materials are never retired; rows go quiet instead.
   Considered and not taken: scrolling, tabs, sorting, a search, an inventory
-  screen (all make management a thing). Still open: pages and byproducts on
+  screen (all make management a thing). **The one exception is the pause
+  menu (user, 2026-09-17):** while it is up the panel unrolls. It keeps its
+  place and first row, runs the full height of the screen over the keyboard,
+  widens to the left until every name is whole, and lists every discovered
+  material, newest at the top and the first ores at the bottom. The wheel
+  and the arrows scroll it a whole row at a time; → from the pause list puts
+  the menu's hand on a row, and the pause window's help line then says where
+  that material comes from (its mine, or the machine and inputs of the recipe
+  that makes it, or the recipe it falls out of), never what uses it, and on a
+  line under that, for information only, the lesson that makes it in human
+  words: its code, the keys it is typed on (drawn as keycaps), what gets
+  typed, and a taste of it ("Lesson E-01: syllables typed with S L A H, mostly A H
+  · al, ha, as"), built from the lesson's own fields in the tree
+  (`bagLesson` in js/app.js, `bagLesson` in js/i18n.js). The panel's top line is its one control, a sort
+  switch (same day): NEWEST (the tree's order, newest first) or A-Z, turned
+  by Enter, Space or a click and remembered in the browser (`mk.bagSort`),
+  never in the save. Nothing else: no search, no filters, a material's row
+  has nothing to press. The canvas ends above the
+  keyboard, so the unrolled panel is a canvas of its own over the page,
+  drawn at the world's scale from the same font and icons (`showLongHud` in
+  js/factory.js), and the panel in the world steps out of sight meanwhile;
+  a narrow screen pushes the pause window left before it cuts a name. Plan:
+  docs/bag-view-plan.md. Still open: pages and byproducts on
   a shelf of their own at the place that spends them; an audit of how far
   back prices reach; automated goods leaving the bag for bins and belts.
   Nothing is kept in the save for this: the rows follow `seen` and the tree.
@@ -610,6 +632,8 @@ Named **Mechanical Keyboarding** 2026-08-13, replacing the «Завод» placeh
   gear opens **the pause menu**: the session readouts (accuracy, WPM,
   streak, time at the keys), Sound, Music, Sky and weather, How to play,
   Settings, Change world. A card opened from a menu closes back to it.
+  Beside it the bag's panel unrolls to every discovered material (see "The
+  panel is not the bag").
 - **Settings menu** (a row of the pause menu, or of the title → overlay
   card): the current world + «Change» (to the title screen); the same two switches; save file
   export/import (JSON wrapper `{app, version:1, map, profile, sound,

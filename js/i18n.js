@@ -122,7 +122,54 @@
       pauseOn: 'on',
       pauseOff: 'off',
       pauseChangeWorld: 'Change world',
-      pauseHelp: '<b>↑↓</b> choose · <b>Enter</b> pick · <b>Esc</b> back',
+      pauseHelp: '<b>↑↓</b> choose · <b>Enter</b> pick · <b>→</b> bag · <b>Esc</b> back',
+      // the bag unrolled beside the pause menu: where the row under the cursor comes from
+      bagFromMine: (p) => `Dug at the ${p.mine}.`,
+      bagFromMade: (p) => `Made at the ${p.kind} from ${p.mats}.`,
+      bagFromBy: (p) => `Comes off the ${p.kind} making ${p.main}.`,
+      bagAnd: 'and',
+      // the lesson that makes it: the keys and what is typed on them (js/app.js bagLesson)
+      bagLesson: (p) => {
+        const keys = (a) => a.map((k) => '' + k + '').join(' ');   // each key drawn as a keycap (js/app.js keycapText)
+        const and = (a) => (a.length > 1 ? a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1] : a.join(''));
+        const typedWith = `typed with ${p.letters.length > 8 ? `${p.letters.length} letters` : keys(p.letters)}`;
+        const mostly = p.focus.length ? `, mostly ${keys(p.focus)}` : '';
+        const TOPIC = { things: 'things', nature: 'nature', home: 'home', rail: 'the railway', people: 'people', time: 'time', place: 'places', life: 'life', work: 'work' };
+        const SENT = {
+          period: 'plain sentences ending in a period', names: 'sentences with capitals and names', clauses: 'sentences joined with commas',
+          contractions: 'sentences with apostrophes and hyphens', dash: 'sentences with dashes', past: 'sentences in the past tense',
+          questions: 'questions and exclamations', dialogue: 'dialogue in quotation marks', mixed: 'sentences with every mark so far',
+          lists: 'lists and asides with colons, semicolons and brackets', numbers: 'sentences with numbers',
+          dates: 'full sentences with dates, prices and numbers', everything: 'full sentences using the whole keyboard',
+        };
+        const GENRE = { lore: 'lore, the machines talking', letters: 'letters', famous: 'famous literature', fun: 'fun trivia', dialogue: 'dialogue and theatre', mathematical: 'mathematical and technical writing' };
+        let body;
+        if (p.type === 'keys') body = p.keys.length > 1 ? `the new keys ${keys(p.keys)}, typed on their own` : `the new key ${keys(p.keys)}, typed on its own`;
+        else if (p.type === 'shift') body = 'the Shift key, capitals of every letter so far';
+        else if (p.type === 'syllables') body = `syllables ${typedWith}${mostly}`;
+        else if (p.type === 'phrases') body = `short phrases ${typedWith}${mostly}`;
+        else if (p.type === 'words') {
+          const kinds = [];
+          if (p.topics.includes('func')) kinds.push('little words');
+          if (p.topics.includes('adj')) kinds.push('adjectives');
+          if (p.topics.includes('verbs')) kinds.push('verbs');
+          const about = p.topics.filter((t) => TOPIC[t]).map((t) => TOPIC[t]);
+          if (about.length) kinds.push('words about ' + and(about));
+          body = `${and(kinds) || 'words'} ${typedWith}${mostly}`;
+        } else if (p.type === 'sentences') body = `${SENT[p.kind] || 'sentences'}${mostly}`;
+        else body = `a page of ${GENRE[p.genre] || 'writing'}${p.grade ? `, grade ${p.grade}` : ''}`;
+        // quoted, unless the sample carries quotation marks of its own
+        const eg = p.eg.length ? ' · ' + (p.quote ? p.eg.map((s) => (/["“”]/.test(s) ? s : `“${s}”`)) : p.eg).join(', ') : '';
+        return `Lesson ${p.id}: ${body}${eg}`;
+      },
+      // its sort switch, in the panel's own capitals (the pixel font has no colon), and
+      // the line it gets under the cursor
+      bagSortLabel: 'SORT',
+      bagSortTree: 'NEWEST',
+      bagSortAbc: 'A-Z',
+      bagSortName: 'Sort',
+      bagSortTreeNote: 'Newest first, the first ores last. Enter or a click: A to Z.',
+      bagSortAbcNote: 'A to Z. Enter or a click: newest first.',
       menuTip: 'Menu (Esc)',
       collectedMark: 'collected',
       moneyVal: (p) => `${p.n} ₽`,
@@ -418,7 +465,50 @@
       pauseOn: 'вкл',
       pauseOff: 'выкл',
       pauseChangeWorld: 'Сменить мир',
-      pauseHelp: '<b>↑↓</b> выбрать · <b>Enter</b> открыть · <b>Esc</b> назад',
+      pauseHelp: '<b>↑↓</b> выбрать · <b>Enter</b> открыть · <b>→</b> сумка · <b>Esc</b> назад',
+      bagFromMine: (p) => `Добывается: ${p.mine}.`,
+      bagFromMade: (p) => `Делается на машине «${p.kind}» из: ${p.mats}.`,
+      bagFromBy: (p) => `Побочный продукт машины «${p.kind}», когда она делает: ${p.main}.`,
+      bagAnd: 'и',
+      bagLesson: (p) => {
+        const keys = (a) => a.map((k) => '' + k + '').join(' ');
+        const n = p.letters.length, n10 = n % 10, n100 = n % 100;
+        const bukv = n10 === 1 && n100 !== 11 ? 'буквы' : 'букв';   // «из 21 буквы», «из 14 букв»
+        const from = n > 8 ? `из ${n} ${bukv}` : `из букв ${keys(p.letters)}`;
+        const mostly = p.focus.length ? `, чаще ${keys(p.focus)}` : '';
+        const TOPIC = { things: 'вещи', nature: 'природа', home: 'дом', rail: 'железная дорога', people: 'люди', time: 'время', place: 'места', life: 'жизнь', work: 'работа' };
+        const SENT = {
+          period: 'простые предложения с точкой', names: 'предложения с заглавными и именами', clauses: 'предложения с запятыми',
+          contractions: 'предложения с апострофами и дефисами', dash: 'предложения с тире', past: 'предложения в прошедшем времени',
+          questions: 'вопросы и восклицания', dialogue: 'диалог в кавычках', mixed: 'предложения со всеми знаками до сих пор',
+          lists: 'списки и пояснения: двоеточие, точка с запятой, скобки', numbers: 'предложения с числами',
+          dates: 'полные предложения с датами, ценами и числами', everything: 'полные предложения на всю клавиатуру',
+        };
+        const GENRE = { lore: 'легенды, машины говорят', letters: 'письма', famous: 'классическая литература', fun: 'занятные факты', dialogue: 'диалоги и театр', mathematical: 'математика и техника' };
+        let body;
+        if (p.type === 'keys') body = p.keys.length > 1 ? `новые клавиши ${keys(p.keys)}, по отдельности` : `новая клавиша ${keys(p.keys)}, отдельно`;
+        else if (p.type === 'shift') body = 'клавиша Shift, заглавные всех букв до сих пор';
+        else if (p.type === 'syllables') body = `слоги ${from}${mostly}`;
+        else if (p.type === 'phrases') body = `короткие фразы ${from}${mostly}`;
+        else if (p.type === 'words') {
+          const kinds = [];
+          if (p.topics.includes('func')) kinds.push('служебные слова');
+          if (p.topics.includes('adj')) kinds.push('прилагательные');
+          if (p.topics.includes('verbs')) kinds.push('глаголы');
+          const about = p.topics.filter((t) => TOPIC[t]).map((t) => TOPIC[t]);
+          if (about.length) kinds.push(`слова на темы «${about.join(', ')}»`);
+          body = `${kinds.join(', ') || 'слова'} ${from}${mostly}`;
+        } else if (p.type === 'sentences') body = `${SENT[p.kind] || 'предложения'}${mostly}`;
+        else body = `страница: ${GENRE[p.genre] || 'текст'}${p.grade ? `, уровень ${p.grade}` : ''}`;
+        const eg = p.eg.length ? ' · ' + (p.quote ? p.eg.map((s) => (/["«»„“]/.test(s) ? s : `«${s}»`)) : p.eg).join(', ') : '';
+        return `Урок ${p.id}: ${body}${eg}`;
+      },
+      bagSortLabel: 'ПОРЯДОК',
+      bagSortTree: 'НОВЫЕ',
+      bagSortAbc: 'А-Я',
+      bagSortName: 'Порядок',
+      bagSortTreeNote: 'Сначала новые, первые руды в конце. Enter или щелчок: по алфавиту.',
+      bagSortAbcNote: 'По алфавиту. Enter или щелчок: сначала новые.',
       menuTip: 'Меню (Esc)',
       collectedMark: 'собрано',
       moneyVal: (p) => `${p.n} ₽`,
